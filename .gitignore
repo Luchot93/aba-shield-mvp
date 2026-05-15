@@ -1,0 +1,9 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+.DS_Store
+*.local
+.claude/
+Re_ Crm system workflow /
+Re_ Crm system workflow/

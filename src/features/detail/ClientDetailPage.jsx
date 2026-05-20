@@ -14,6 +14,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [formDrafts,     setFormDrafts]     = useState({});
   const [viewStage,      setViewStage]      = useState(null);
   const [noteText,       setNoteText]       = useState('');
+  const [activeTab,      setActiveTab]      = useState('notes');
   const pickerRef = useRef(null);
 
   useEffect(() => {
@@ -22,6 +23,12 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, [openPicker]);
+
+  // Auto-switch tab when entering/leaving read-only (past-stage) mode.
+  // Uses viewStage (state) not isReadOnly (derived after early return) to stay above early-return boundary.
+  useEffect(() => {
+    setActiveTab(viewStage !== null ? 'documents' : 'notes');
+  }, [viewStage]);
 
   if (!client) return null;
 
@@ -64,7 +71,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
   const addNote = () => {
     if (!noteText.trim()) return;
-    const note = { id:`note_${Date.now()}`, text:noteText.trim(), author:currentUser.name, timestamp:new Date().toISOString() };
+    const note = { id:`note_${Date.now()}`, text:noteText.trim(), author:currentUser.name, timestamp:new Date().toISOString(), stage:client.stage };
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, case_notes:[note, ...(c.case_notes||[])] } : c));
     setNoteText('');
   };
@@ -439,7 +446,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
       {/* ── body ── */}
       <div className="max-w-5xl mx-auto px-6 py-6">
-        <div className="grid gap-6" style={{ gridTemplateColumns:'1fr 300px' }}>
+        <div className="grid gap-6 overflow-hidden" style={{ gridTemplateColumns:'1fr 380px' }}>
 
           {/* left: checklist */}
           <div className="space-y-4">
@@ -467,8 +474,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               </div>
             )}
 
-            <div className="bg-white rounded-xl border border-stone-200" data-testid="checklist-panel">
-              <div className="px-5 py-4 border-b border-stone-100">
+            <div className="bg-white rounded-xl border border-stone-200 flex flex-col" data-testid="checklist-panel">
+              {/* Card header */}
+              <div className="px-5 py-4 border-b border-stone-100 flex-shrink-0">
                 <h2 className="text-sm font-semibold text-slate-900" style={{ fontFamily:'Syne, sans-serif' }}>
                   {isReadOnly
                     ? `${SM[viewStage]?.label} checklist`
@@ -484,152 +492,198 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   <p className="text-xs text-slate-400 mt-0.5">{completeCount} of {displayItems.length} complete</p>
                 )}
               </div>
-              <div className="px-5">
+
+              {/* Scrollable checklist items */}
+              <div className="flex-1 overflow-y-auto px-5">
                 {displayItems.length === 0
                   ? <p className="py-6 text-sm text-center text-slate-400">No checklist items.</p>
                   : displayItems.map(item => <React.Fragment key={item.key}>{CheckRow({ item, readOnly: isReadOnly })}</React.Fragment>)}
               </div>
-            </div>
 
-            {/* advance / resolution buttons — hidden in read-only mode */}
-            {!isReadOnly && client.stage !== 'denied' && nextStage && (
-              <div>
-                <button data-testid="advance-btn"
-                  disabled={!canAdvance}
-                  onClick={() => canAdvance && setConfirmAdvance(nextStage)}
-                  className={`w-full py-3 rounded-xl text-sm font-semibold transition-all ${canAdvance ? 'text-white shadow-sm hover:opacity-90' : 'bg-stone-100 text-stone-400 cursor-not-allowed'}`}
-                  style={canAdvance ? { background:'#0D9488' } : {}}>
-                  {canAdvance ? `Advance to ${SM[nextStage].label} →` : 'Complete all items to advance'}
-                </button>
-                {hasBlock && <p className="text-xs text-red-600 text-center mt-2">⚠ One or more items are blocking advance</p>}
-              </div>
-            )}
-
-            {!isReadOnly && client.stage === 'denied' && (() => {
-              const deniedItems = getStageItems('denied');
-              const deniedAllDone = deniedItems.every(it => itemComplete(it, client, staff));
-              return (
-                <div>
-                  <div className="flex gap-3">
-                    <button data-testid="resolve-authorized"
-                      disabled={!deniedAllDone}
-                      onClick={() => deniedAllDone && setConfirmAdvance('authorized')}
-                      className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${deniedAllDone ? 'text-white hover:opacity-90' : 'bg-stone-100 text-stone-400 cursor-not-allowed'}`}
-                      style={deniedAllDone ? { background:'#059669' } : {}}>
-                      Move to Authorized →
-                    </button>
-                    <button data-testid="resolve-submitted" onClick={() => setConfirmAdvance('submitted')}
-                      className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background:'#D97706' }}>
-                      Return to Submitted →
-                    </button>
-                  </div>
-                  {!deniedAllDone && (
-                    <p className="text-xs text-slate-400 text-center mt-2">Complete all items above to resolve</p>
-                  )}
-                </div>
-              );
-            })()}
-          </div>
-
-          {/* right: activity + docs */}
-          <div className="space-y-4">
-            {/* Case Notes */}
-            <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-              <div className="px-4 py-3 border-b border-stone-100 flex items-center gap-2">
-                <svg className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h6m-6 4h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
-                </svg>
-                <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Case Notes</h3>
-              </div>
-
-              {/* Input row */}
-              <div className="px-4 pt-3 pb-3 border-b border-stone-100">
-                <div className="flex gap-2 items-start">
-                  <textarea
-                    data-testid="case-note-input"
-                    rows={3}
-                    value={noteText}
-                    onChange={e => setNoteText(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addNote(); }}
-                    placeholder="Add a case note…"
-                    className="flex-1 px-3 py-2 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 resize-none placeholder:text-slate-400 text-slate-700 leading-relaxed"
-                  />
-                  <button
-                    data-testid="add-note-btn"
-                    onClick={addNote}
-                    disabled={!noteText.trim()}
-                    className="flex-shrink-0 px-3 py-2 text-xs font-semibold text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-                    style={{ background:'#0D9488' }}>
-                    Add Note
+              {/* Pinned advance / resolution footer — hidden in read-only mode */}
+              {!isReadOnly && client.stage !== 'denied' && nextStage && (
+                <div className="flex-shrink-0 border-t border-stone-100 p-4">
+                  <button data-testid="advance-btn"
+                    disabled={!canAdvance}
+                    onClick={() => canAdvance && setConfirmAdvance(nextStage)}
+                    className={`w-full py-3 rounded-xl text-sm font-semibold transition-all ${canAdvance ? 'text-white shadow-sm hover:opacity-90' : 'bg-stone-100 text-stone-400 cursor-not-allowed'}`}
+                    style={canAdvance ? { background:'#0D9488' } : {}}>
+                    {canAdvance ? `Advance to ${SM[nextStage].label} →` : 'Complete all items to advance'}
                   </button>
+                  {hasBlock && <p className="text-xs text-red-600 text-center mt-2">⚠ One or more items are blocking advance</p>}
                 </div>
-              </div>
+              )}
 
-              {/* Notes list */}
-              <div className="divide-y divide-stone-50 max-h-72 overflow-y-auto" data-testid="case-notes-list">
-                {(client.case_notes||[]).length === 0
-                  ? <p className="px-4 py-5 text-xs text-center text-slate-400 italic">No case notes yet. Add the first note above.</p>
-                  : (client.case_notes||[]).map((n, i) => (
-                    <div key={n.id} className="px-4 py-3">
-                      <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{n.text}</p>
-                      <p className="text-[10px] text-slate-400 mt-1.5" style={{ fontFamily:'DM Mono, monospace' }}>
-                        {n.author} · {new Date(n.timestamp).toLocaleDateString('en-US',{ month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })}
-                      </p>
-                    </div>
-                  ))
-                }
-              </div>
-            </div>
-
-            {/* Activity Log */}
-            <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-              <div className="px-4 py-3 border-b border-stone-100">
-                <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Activity</h3>
-              </div>
-              <div className="divide-y divide-stone-50 max-h-72 overflow-y-auto" data-testid="activity-log">
-                {client.activity_log.length === 0
-                  ? <p className="px-4 py-5 text-xs text-center text-slate-400">No activity yet.</p>
-                  : client.activity_log.map(e => (
-                    <div key={e.id} className="px-4 py-2.5">
-                      <div className="text-xs text-slate-700">{e.action}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5" style={{ fontFamily:'DM Mono, monospace' }}>
-                        {new Date(e.ts).toLocaleDateString()} · {e.by}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
-              <div className="px-4 py-3 border-b border-stone-100">
-                <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Documents</h3>
-              </div>
-              <div className="divide-y divide-stone-50 max-h-72 overflow-y-auto" data-testid="documents-panel">
-                {visibleDocs.length === 0
-                  ? <p className="px-4 py-5 text-xs text-center text-slate-400">{isReadOnly ? 'No documents uploaded in this stage.' : 'No documents uploaded yet.'}</p>
-                  : visibleDocs.map(d => (
-                    <div key={d.id} className="px-4 py-2.5 flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-medium text-slate-700 truncate">{d.label}</div>
-                        <div className="text-[10px] text-slate-400 mt-0.5" style={{ fontFamily:'DM Mono, monospace' }}>
-                          {new Date(d.uploaded_at).toLocaleDateString()} · {d.by}
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const blob = new Blob([`Document: ${d.label}\nUploaded: ${new Date(d.uploaded_at).toLocaleString()}\nBy: ${d.by}`], { type:'text/plain' });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url; a.download = `${d.label.replace(/\s+/g,'_')}.txt`;
-                          a.click(); URL.revokeObjectURL(url);
-                        }}
-                        className="flex-shrink-0 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold text-teal-700 border border-teal-200 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors leading-none">
-                        <span className="flex items-center" style={{ lineHeight:0 }}><Ico.Download/></span>
-                        <span>Download</span>
+              {!isReadOnly && client.stage === 'denied' && (() => {
+                const deniedItems = getStageItems('denied');
+                const deniedAllDone = deniedItems.every(it => itemComplete(it, client, staff));
+                return (
+                  <div className="flex-shrink-0 border-t border-stone-100 p-4">
+                    <div className="flex gap-3">
+                      <button data-testid="resolve-authorized"
+                        disabled={!deniedAllDone}
+                        onClick={() => deniedAllDone && setConfirmAdvance('authorized')}
+                        className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${deniedAllDone ? 'text-white hover:opacity-90' : 'bg-stone-100 text-stone-400 cursor-not-allowed'}`}
+                        style={deniedAllDone ? { background:'#059669' } : {}}>
+                        Move to Authorized →
+                      </button>
+                      <button data-testid="resolve-submitted" onClick={() => setConfirmAdvance('submitted')}
+                        className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background:'#D97706' }}>
+                        Return to Submitted →
                       </button>
                     </div>
-                  ))}
-              </div>
+                    {!deniedAllDone && (
+                      <p className="text-xs text-slate-400 text-center mt-2">Complete all items above to resolve</p>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* right: tabbed context panel */}
+          <div className="bg-white rounded-xl border border-stone-200 flex flex-col overflow-hidden" style={{ alignSelf:'start' }}>
+            {/* Tab bar */}
+            <div className="flex border-b border-stone-100 flex-shrink-0">
+              {[
+                { key:'notes',     label:'Notes',     count:(client.case_notes||[]).length },
+                { key:'documents', label:'Documents',  count:visibleDocs.length },
+                { key:'activity',  label:'Activity',   count:client.activity_log.length },
+              ].map(tab => (
+                <button key={tab.key}
+                  data-testid={`detail-tab-${tab.key}`}
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+                    activeTab === tab.key
+                      ? 'border-teal-500 text-teal-700'
+                      : 'border-transparent text-slate-500 hover:text-slate-700'
+                  }`}>
+                  {tab.label}
+                  {tab.count > 0 && (
+                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                      activeTab === tab.key ? 'bg-teal-100 text-teal-700' : 'bg-stone-100 text-slate-500'
+                    }`}>{tab.count}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            <div className="flex-1 overflow-y-auto" style={{ maxHeight:'calc(100vh - 320px)' }}>
+
+              {/* Notes tab */}
+              {activeTab === 'notes' && (
+                <>
+                  <div className="px-4 pt-3 pb-3 border-b border-stone-100">
+                    <div className="flex gap-2 items-start">
+                      <textarea
+                        data-testid="case-note-input"
+                        rows={3}
+                        value={noteText}
+                        onChange={e => setNoteText(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addNote(); }}
+                        placeholder="Add a case note…"
+                        className="flex-1 px-3 py-2 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 resize-none placeholder:text-slate-400 text-slate-700 leading-relaxed"
+                      />
+                      <button
+                        data-testid="add-note-btn"
+                        onClick={addNote}
+                        disabled={!noteText.trim()}
+                        className="flex-shrink-0 px-3 py-2 text-xs font-semibold text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                        style={{ background:'#0D9488' }}>
+                        Add Note
+                      </button>
+                    </div>
+                  </div>
+                  <div className="divide-y divide-stone-50" data-testid="case-notes-list">
+                    {(client.case_notes||[]).length === 0
+                      ? <p className="px-4 py-5 text-xs text-center text-slate-400 italic">No case notes yet. Add the first note above.</p>
+                      : (client.case_notes||[]).map(n => (
+                        <div key={n.id} className="px-4 py-3">
+                          <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{n.text}</p>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <p className="text-[10px] text-slate-400" style={{ fontFamily:'DM Mono, monospace' }}>
+                              {n.author} · {new Date(n.timestamp).toLocaleDateString('en-US',{ month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+                            </p>
+                            {n.stage && SM[n.stage] && (
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${SM[n.stage].pill}`}>
+                                {SM[n.stage].label}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    }
+                  </div>
+                </>
+              )}
+
+              {/* Documents tab */}
+              {activeTab === 'documents' && (
+                <>
+                  {isReadOnly && visibleDocs.length < client.documents.length && (
+                    <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700">
+                      Showing documents from <strong>{SM[viewStage]?.label}</strong> only
+                    </div>
+                  )}
+                  <div className="divide-y divide-stone-50" data-testid="documents-panel">
+                  {visibleDocs.length === 0
+                    ? <p className="px-4 py-5 text-xs text-center text-slate-400">{isReadOnly ? 'No documents uploaded in this stage.' : 'No documents uploaded yet.'}</p>
+                    : visibleDocs.map(d => (
+                      <div key={d.id} className="px-4 py-2.5 flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-medium text-slate-700 truncate">{d.label}</div>
+                          <div className="text-[10px] text-slate-400 mt-0.5" style={{ fontFamily:'DM Mono, monospace' }}>
+                            {new Date(d.uploaded_at).toLocaleDateString()} · {d.by}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            const blob = new Blob([`Document: ${d.label}\nUploaded: ${new Date(d.uploaded_at).toLocaleString()}\nBy: ${d.by}`], { type:'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url; a.download = `${d.label.replace(/\s+/g,'_')}.txt`;
+                            a.click(); URL.revokeObjectURL(url);
+                          }}
+                          className="flex-shrink-0 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold text-teal-700 border border-teal-200 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors leading-none">
+                          <span className="flex items-center" style={{ lineHeight:0 }}><Ico.Download/></span>
+                          <span>Download</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Activity tab */}
+              {activeTab === 'activity' && (
+                <div className="divide-y divide-stone-50" data-testid="activity-log">
+                  {client.activity_log.length === 0
+                    ? <p className="px-4 py-5 text-xs text-center text-slate-400">No activity yet.</p>
+                    : client.activity_log.map(e => {
+                        const isStageMove = e.action.startsWith('Moved to');
+                        return isStageMove ? (
+                          <div key={e.id} className="px-4 py-3 bg-teal-50 flex items-start gap-2.5">
+                            <span className="mt-0.5 flex-shrink-0 text-teal-500 text-sm leading-none">→</span>
+                            <div>
+                              <div className="text-xs font-semibold text-teal-800">{e.action}</div>
+                              <div className="text-[10px] text-teal-600/70 mt-0.5" style={{ fontFamily:'DM Mono, monospace' }}>
+                                {new Date(e.ts).toLocaleDateString()} · {e.by}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div key={e.id} className="px-4 py-2.5">
+                            <div className="text-xs text-slate-700">{e.action}</div>
+                            <div className="text-[10px] text-slate-400 mt-0.5" style={{ fontFamily:'DM Mono, monospace' }}>
+                              {new Date(e.ts).toLocaleDateString()} · {e.by}
+                            </div>
+                          </div>
+                        );
+                      })}
+                </div>
+              )}
+
             </div>
           </div>
         </div>

@@ -107,6 +107,11 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
               </div>
             </div>
 
+            {/* Helper text */}
+            <p className="px-5 py-2.5 text-xs text-gray-400 border-b border-stone-100 flex-shrink-0">
+              In production, all notifications are also delivered by email to assigned staff.
+            </p>
+
             {/* List */}
             <div className="flex-1 overflow-y-auto min-h-0">
               {notifications.length === 0

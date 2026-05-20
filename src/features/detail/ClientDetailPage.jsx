@@ -13,6 +13,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [openPicker,     setOpenPicker]     = useState(null);
   const [formDrafts,     setFormDrafts]     = useState({});
   const [viewStage,      setViewStage]      = useState(null);
+  const [noteText,       setNoteText]       = useState('');
   const pickerRef = useRef(null);
 
   useEffect(() => {
@@ -59,6 +60,13 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const pushLog = action => {
     const entry = { id:`log_${Date.now()}`, action, ts:new Date().toISOString(), by:currentUser.name };
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, activity_log:[entry, ...c.activity_log] } : c));
+  };
+
+  const addNote = () => {
+    if (!noteText.trim()) return;
+    const note = { id:`note_${Date.now()}`, text:noteText.trim(), author:currentUser.name, timestamp:new Date().toISOString() };
+    setClients(prev => prev.map(c => c.id === client.id ? { ...c, case_notes:[note, ...(c.case_notes||[])] } : c));
+    setNoteText('');
   };
 
   const doAdvance = toStage => {
@@ -525,6 +533,55 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
           {/* right: activity + docs */}
           <div className="space-y-4">
+            {/* Case Notes */}
+            <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
+              <div className="px-4 py-3 border-b border-stone-100 flex items-center gap-2">
+                <svg className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7 8h10M7 12h6m-6 4h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
+                </svg>
+                <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Case Notes</h3>
+              </div>
+
+              {/* Input row */}
+              <div className="px-4 pt-3 pb-3 border-b border-stone-100">
+                <div className="flex gap-2 items-start">
+                  <textarea
+                    data-testid="case-note-input"
+                    rows={3}
+                    value={noteText}
+                    onChange={e => setNoteText(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) addNote(); }}
+                    placeholder="Add a case note…"
+                    className="flex-1 px-3 py-2 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 resize-none placeholder:text-slate-400 text-slate-700 leading-relaxed"
+                  />
+                  <button
+                    data-testid="add-note-btn"
+                    onClick={addNote}
+                    disabled={!noteText.trim()}
+                    className="flex-shrink-0 px-3 py-2 text-xs font-semibold text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+                    style={{ background:'#0D9488' }}>
+                    Add Note
+                  </button>
+                </div>
+              </div>
+
+              {/* Notes list */}
+              <div className="divide-y divide-stone-50 max-h-72 overflow-y-auto" data-testid="case-notes-list">
+                {(client.case_notes||[]).length === 0
+                  ? <p className="px-4 py-5 text-xs text-center text-slate-400 italic">No case notes yet. Add the first note above.</p>
+                  : (client.case_notes||[]).map((n, i) => (
+                    <div key={n.id} className="px-4 py-3">
+                      <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">{n.text}</p>
+                      <p className="text-[10px] text-slate-400 mt-1.5" style={{ fontFamily:'DM Mono, monospace' }}>
+                        {n.author} · {new Date(n.timestamp).toLocaleDateString('en-US',{ month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+                      </p>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+
+            {/* Activity Log */}
             <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
               <div className="px-4 py-3 border-b border-stone-100">
                 <h3 className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Activity</h3>

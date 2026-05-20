@@ -22,7 +22,22 @@ export const SEED_CLIENTS = () => [
     cl.denied.supporting_docs = true;
     cl.denied.peer_to_peer_completed = true;
   }
-  return { ...c, pipeline_entry:true, smart_assessment_session_id:null, checklist:cl, documents:[], activity_log:[] };
+
+  const SEED_NOTES = {
+    c9: [
+      { id:'n9b', text:'RBT confirmed availability for 3x/week sessions starting next Monday. Parent agreed to morning slot.', author:'Tanya Reyes', timestamp:'2026-05-18T09:15:00Z' },
+      { id:'n9a', text:'Called caregiver, left voicemail re: schedule change for upcoming assessment week.', author:'Dr. Priya Sharma', timestamp:'2026-05-15T14:32:00Z' },
+    ],
+    c10: [
+      { id:'n10b', text:'Reauth paperwork submitted to Cigna. Expect decision within 10 business days per rep.', author:'Jordan Ellis', timestamp:'2026-05-19T11:05:00Z' },
+      { id:'n10a', text:'Family reported positive progress with self-regulation goals this month. Updated behavior plan accordingly.', author:'Jordan Ellis', timestamp:'2026-05-12T16:45:00Z' },
+    ],
+    c11: [
+      { id:'n11a', text:'Discussed session frequency reduction with caregiver — agreed to move from 5x to 4x/week pending reauth approval.', author:'Dr. Rachel Kim', timestamp:'2026-05-17T10:20:00Z' },
+    ],
+  };
+
+  return { ...c, pipeline_entry:true, smart_assessment_session_id:null, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [] };
 });
 
 export const SEED_STAFF = () => [

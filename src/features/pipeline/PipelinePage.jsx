@@ -12,6 +12,7 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
   const [newClientId,    setNewClientId]    = useState(null);
   const [summaryFilter,  setSummaryFilter]  = useState('all');
   const [pipelineFilter, setPipelineFilter] = useState('all');
+  const [searchQuery,    setSearchQuery]    = useState('');
 
   const pipelineClients = clients.filter(c => c.pipeline_entry);
 
@@ -32,12 +33,17 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
     return true;
   });
 
-  const displayClients = afterSummary.filter(c => {
-    if (pipelineFilter === 'all')      return true;
-    if (pipelineFilter === 'blockers') { const st = getChecklistStatus(c); return st && st.type === 'missing'; }
-    if (pipelineFilter === 'mycases')  return c.bcba_id === currentUser.id || c.rbt_id === currentUser.id;
-    return true;
-  });
+  const displayClients = afterSummary
+    .filter(c => {
+      if (pipelineFilter === 'all')      return true;
+      if (pipelineFilter === 'blockers') { const st = getChecklistStatus(c); return st && st.type === 'missing'; }
+      if (pipelineFilter === 'mycases')  return c.bcba_id === currentUser.id || c.rbt_id === currentUser.id;
+      return true;
+    })
+    .filter(c => {
+      if (!searchQuery.trim()) return true;
+      return c.name.toLowerCase().includes(searchQuery.toLowerCase());
+    });
 
   const handleSaveClient = form => {
     const id = `c${Date.now()}`;
@@ -142,6 +148,29 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
             </button>
           );
         })}
+
+        {/* Search */}
+        <div className="relative" style={{ minWidth:'200px', maxWidth:'260px' }}>
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+            <Ico.Search/>
+          </div>
+          <input
+            data-testid="pipeline-search"
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search clients…"
+            className="w-full pl-8 pr-7 py-1.5 text-xs border border-stone-200 rounded-xl bg-white outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 placeholder:text-slate-400"
+          />
+          {searchQuery && (
+            <button
+              data-testid="pipeline-search-clear"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+              <Ico.X/>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Kanban board */}

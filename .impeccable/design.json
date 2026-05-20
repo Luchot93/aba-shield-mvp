@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-20T00:00:00Z",
+  "title": "Design System: ABA Shield CRM",
+  "extensions": {
+    "colorMeta": {
+      "teal-action":   { "role": "primary",  "displayName": "Teal Action",   "canonical": "oklch(55% 0.13 178)", "tonalRamp": ["#042f2e","#134e4a","#115e59","#0f766e","#0d9488","#14b8a6","#2dd4bf","#99f6e4","#ccfbf1"] },
+      "teal-deep":     { "role": "primary",  "displayName": "Teal Deep",     "canonical": "oklch(49% 0.12 178)", "tonalRamp": ["#042f2e","#134e4a","#115e59","#0f766e","#0d9488","#14b8a6","#2dd4bf","#99f6e4","#ccfbf1"] },
+      "teal-bright":   { "role": "primary",  "displayName": "Teal Bright",   "canonical": "oklch(76% 0.15 178)", "tonalRamp": ["#042f2e","#134e4a","#115e59","#0f766e","#0d9488","#14b8a6","#2dd4bf","#99f6e4","#ccfbf1"] },
+      "navy-shell":    { "role": "neutral",  "displayName": "Navy Shell",    "canonical": "oklch(15% 0.03 240)", "tonalRamp": ["#020617","#0b1220","#0f172a","#1e293b","#334155","#475569","#64748b","#94a3b8","#cbd5e1"] },
+      "warm-canvas":   { "role": "neutral",  "displayName": "Warm Canvas",   "canonical": "oklch(97% 0.005 80)",  "tonalRamp": ["#1c1917","#292524","#44403c","#78716c","#a8a29e","#d6d3d1","#e7e5e0","#f5f5f4","#fafaf8"] },
+      "surface-white": { "role": "neutral",  "displayName": "Surface White", "canonical": "oklch(100% 0 0)",      "tonalRamp": ["#1c1917","#292524","#44403c","#78716c","#a8a29e","#d6d3d1","#e7e5e0","#f5f5f4","#ffffff"] },
+      "status-urgent": { "role": "semantic", "displayName": "Urgent Red",    "canonical": "oklch(63% 0.22 27)",   "tonalRamp": ["#7f1d1d","#991b1b","#b91c1c","#dc2626","#ef4444","#f87171","#fca5a5","#fecaca","#fee2e2"] },
+      "status-warning":{ "role": "semantic", "displayName": "Warning Amber", "canonical": "oklch(67% 0.17 65)",   "tonalRamp": ["#78350f","#92400e","#b45309","#d97706","#f59e0b","#fbbf24","#fcd34d","#fde68a","#fef3c7"] },
+      "status-success":{ "role": "semantic", "displayName": "Success Green", "canonical": "oklch(53% 0.14 155)",  "tonalRamp": ["#052e16","#14532d","#166534","#15803d","#16a34a","#22c55e","#4ade80","#86efac","#dcfce7"] }
+    },
+    "typographyMeta": {
+      "display":  { "displayName": "Display",  "purpose": "Page-level route titles only. One per screen." },
+      "headline": { "displayName": "Headline", "purpose": "Panel headings, modal titles, large stat numbers." },
+      "title":    { "displayName": "Title",    "purpose": "Card headers, section labels." },
+      "body":     { "displayName": "Body",     "purpose": "All primary reading content." },
+      "label":    { "displayName": "Label",    "purpose": "Chips, badges, uppercase section dividers." },
+      "mono":     { "displayName": "Mono",     "purpose": "Cert numbers, IDs, timestamps only. The Mono Contract." }
+    },
+    "shadows": [
+      { "name": "hover-whisper", "value": "0 1px 4px rgba(0,0,0,0.06)",   "purpose": "Card hover state. Not visible at rest." },
+      { "name": "card-raised",   "value": "0 2px 8px rgba(0,0,0,0.08)",   "purpose": "Expanded or selected card (e.g. open staff card)." },
+      { "name": "modal-overlay", "value": "0 25px 50px rgba(0,0,0,0.25)", "purpose": "Sliding panels, modals, dropdowns that float above the canvas." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for all state transitions (color, opacity, shadow)." },
+      { "name": "duration-fast",  "value": "150ms", "purpose": "Hover / focus state changes. Chip selection." },
+      { "name": "duration-base",  "value": "200ms", "purpose": "Card expand, panel slide-in." }
+    ],
+    "breakpoints": [
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single call-to-action. Teal fill, white text. Used for stage advancement, invite, new client.",
+      "html": "<button class=\"ds-btn-primary\">Advance Stage</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 6px; background: #0D9488; color: #ffffff; padding: 8px 16px; border-radius: 12px; border: none; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0D9488; } .ds-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action: cancel, edit, navigate. Stone background, no teal.",
+      "html": "<button class=\"ds-btn-ghost\">Edit</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; gap: 6px; background: #F5F5F4; color: #334155; padding: 6px 12px; border-radius: 8px; border: 1px solid #E7E5E0; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-ghost:hover { background: #E7E5E0; } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0D9488; }"
+    },
+    {
+      "name": "Filter Chip — Active",
+      "kind": "chip",
+      "refersTo": "chip-active",
+      "description": "Active filter state. Teal fill signals the current selection.",
+      "html": "<button class=\"ds-chip-active\">Blockers only</button>",
+      "css": ".ds-chip-active { display: inline-flex; align-items: center; background: #0D9488; color: #ffffff; padding: 4px 12px; border-radius: 8px; border: 1px solid #0F766E; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; }"
+    },
+    {
+      "name": "Filter Chip — Inactive",
+      "kind": "chip",
+      "refersTo": "chip-inactive",
+      "description": "Inactive filter state. White background, stone border.",
+      "html": "<button class=\"ds-chip-inactive\">All</button>",
+      "css": ".ds-chip-inactive { display: inline-flex; align-items: center; background: #ffffff; color: #475569; padding: 4px 12px; border-radius: 8px; border: 1px solid #E7E5E0; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: border-color 150ms, color 150ms; } .ds-chip-inactive:hover { border-color: #5eead4; color: #0D9488; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard text field. Stone border at rest, teal border + ring on focus.",
+      "html": "<div class=\"ds-input-wrap\"><input class=\"ds-input\" type=\"text\" placeholder=\"Search clients…\" /></div>",
+      "css": ".ds-input-wrap { position: relative; } .ds-input { width: 100%; background: #ffffff; color: #0F172A; padding: 8px 12px; border-radius: 12px; border: 1px solid #E7E5E0; font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: #94A3B8; } .ds-input:focus { border-color: #0D9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.15); }"
+    },
+    {
+      "name": "Client Card",
+      "kind": "card",
+      "description": "The primary pipeline record unit. White surface on warm canvas, stone border, teal border on hover.",
+      "html": "<div class=\"ds-client-card\"><div class=\"ds-client-card-name\">Isabella Moore</div><div class=\"ds-client-card-meta\">Authorized · Aetna</div></div>",
+      "css": ".ds-client-card { background: #ffffff; border: 1px solid #E7E5E0; border-radius: 12px; padding: 12px 16px; cursor: pointer; transition: border-color 150ms, box-shadow 150ms; } .ds-client-card:hover { border-color: #99f6e4; box-shadow: 0 1px 4px rgba(0,0,0,0.06); } .ds-client-card-name { font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; color: #0F172A; } .ds-client-card-meta { font-family: 'DM Sans', sans-serif; font-size: 12px; color: #64748B; margin-top: 2px; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "custom",
+      "description": "Inline pill badge for stage, cert, and authorization status. Always includes a text label.",
+      "html": "<span class=\"ds-badge ds-badge--urgent\">Expired 2026-06-20</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 4px; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700; border: 1px solid transparent; } .ds-badge--urgent { background: #FEF2F2; color: #B91C1C; border-color: #FECACA; } .ds-badge--warning { background: #FFFBEB; color: #B45309; border-color: #FDE68A; } .ds-badge--success { background: #F0FDF4; color: #15803D; border-color: #BBF7D0; } .ds-badge--info { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }"
+    },
+    {
+      "name": "Navigation Bar",
+      "kind": "nav",
+      "description": "Dark navy shell with teal brand mark. Active route has teal-tinted highlight.",
+      "html": "<nav class=\"ds-nav\"><span class=\"ds-nav-brand\">ABA <span class=\"ds-nav-brand-accent\">Shield</span></span><a class=\"ds-nav-item ds-nav-item--active\" href=\"#\">Pipeline</a><a class=\"ds-nav-item\" href=\"#\">Clients</a></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; gap: 4px; background: #0B1220; padding: 0 24px; height: 56px; border-bottom: 1px solid #1E293B; } .ds-nav-brand { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: #ffffff; margin-right: 16px; } .ds-nav-brand-accent { color: #2DD4BF; } .ds-nav-item { position: relative; padding: 6px 14px; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; color: #94A3B8; text-decoration: none; transition: color 150ms, background 150ms; } .ds-nav-item:hover { color: #e2e8f0; background: rgba(255,255,255,0.05); } .ds-nav-item--active { color: #ffffff; background: rgba(13,148,136,0.25); border: 1px solid rgba(13,148,136,0.4); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Confident Clinician",
+    "overview": "ABA Shield presents itself the way a skilled clinician presents in a care setting: measured, authoritative, and focused. Every visual decision reflects the practitioner using the tool — someone who commands their workflow without drama, reads status at a glance, and trusts the system to get out of the way. The interface doesn't perform competence; it enables it.\n\nThe visual language is restrained teal-on-warm-white. A single action color (teal) carries all interactive weight; the warm off-white canvas (#F8F7F4) prevents the sterility of pure white without introducing warmth that might feel frivolous in a clinical context.\n\nThis system explicitly rejects the dense gray aesthetic of legacy EHR software, the pastel-gradient friendliness of consumer wellness apps, and the metric-card-on-dark-background pattern common to startup dashboards.",
+    "keyCharacteristics": [
+      "Warm off-white canvas, not clinical white",
+      "Single teal action color — its presence is the signal",
+      "Syne for display authority, DM Sans for clarity, DM Mono for technical data",
+      "Flat surfaces by default; borders and subtle shadows define depth",
+      "Status via color + icon pair — never color alone"
+    ],
+    "rules": [
+      { "name": "The One Voice Rule",     "body": "Teal appears on ≤10% of any given screen. Its rarity is the system's pulse.", "section": "colors" },
+      { "name": "The Status Pair Rule",   "body": "Every status indicator pairs color with an icon or text label. Color alone is inaccessible and ambiguous.", "section": "colors" },
+      { "name": "The Mono Contract",      "body": "DM Mono appears only on values the user might copy exactly. Never on UI labels, headings, or descriptive text.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. Shadow appears only as a response to state change.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep teal to ≤10% of any screen.",
+      "Do pair every status color with a text label or icon.",
+      "Do use DM Mono exclusively for copyable values (cert numbers, IDs, timestamps).",
+      "Do use Syne only for display-level headings.",
+      "Do apply focus:border-teal-400 focus:ring-2 focus:ring-teal-100 consistently across all inputs.",
+      "Do use the warm canvas (#F8F7F4) as the app background — never pure white.",
+      "Do pair shadow with state change — flat at rest, whisper on hover."
+    ],
+    "donts": [
+      "Don't use legacy EHR aesthetics: dense gray layouts, flat blue borders, small gray text on gray backgrounds.",
+      "Don't use gradient text (background-clip: text).",
+      "Don't use border-left greater than 1px as a colored accent stripe on cards or list items.",
+      "Don't use dark mode for aesthetic reasons.",
+      "Don't use consumer health aesthetics: pastel gradients, rounded blob shapes.",
+      "Don't invent a new accent color. Teal is the only action color.",
+      "Don't add a second display font. The typographic system is fixed."
+    ]
+  }
+}

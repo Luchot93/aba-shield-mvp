@@ -24,7 +24,11 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
   const markOneRead = id =>
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
 
-  const borderColor = u => u === 'urgent' ? '#EF4444' : u === 'warning' ? '#F59E0B' : '#CBD5E1';
+  const rowBg = (urgency, read) => {
+    if (urgency === 'urgent')  return read ? 'bg-red-50/40'    : 'bg-red-50/70';
+    if (urgency === 'warning') return read ? 'bg-amber-50/40'  : 'bg-amber-50/70';
+    return read ? 'bg-white' : 'bg-stone-50';
+  };
 
   return (
     <>
@@ -120,12 +124,7 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
                   <div
                     key={n.id}
                     data-testid={`notif-${n.id}`}
-                    className="px-4 py-3"
-                    style={{
-                      borderLeft: `3px solid ${borderColor(n.urgency)}`,
-                      background: n.read ? '#fff' : '#FAFAF8',
-                      borderBottom: '1px solid #E7E5E0',
-                    }}>
+                    className={`px-4 py-3 border-b border-stone-100 ${rowBg(n.urgency, n.read)}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm leading-snug ${n.read ? 'font-normal text-slate-500' : 'font-medium text-slate-800'}`}>

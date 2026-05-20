@@ -97,16 +97,18 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
       </div>
 
       {/* Stats strip */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="flex items-center gap-0 mb-6 bg-white rounded-xl border border-stone-200 divide-x divide-stone-100 overflow-hidden">
         {[
-          { label:'Active Staff',   value:totalActive,  sub:`of ${enriched.length} total`, color:'#059669' },
-          { label:'Total Cases',    value:totalCases,   sub:'across all staff',             color:'#0D9488' },
-          { label:'Cert Expiring',  value:expiringSoon, sub:'within 60 days',              color:'#D97706' },
+          { label:'Active Staff',  value:totalActive,  sub:`of ${enriched.length} total`, color:'#059669' },
+          { label:'Total Cases',   value:totalCases,   sub:'across all staff',            color:'#0D9488' },
+          { label:'Cert Expiring', value:expiringSoon, sub:'within 60 days',             color:'#D97706' },
         ].map((s,i) => (
-          <div key={i} className="bg-white rounded-xl border border-stone-200 px-5 py-4">
-            <div className="text-3xl font-bold" style={{ color:s.color, fontFamily:'Syne, sans-serif' }}>{s.value}</div>
-            <div className="text-sm font-medium text-slate-800 mt-0.5">{s.label}</div>
-            <div className="text-xs text-slate-400 mt-0.5">{s.sub}</div>
+          <div key={i} className="flex-1 flex items-center justify-center gap-3 px-5 py-3.5">
+            <span className="text-2xl font-bold leading-none flex-shrink-0" style={{ color:s.color, fontFamily:'Syne, sans-serif' }}>{s.value}</span>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-slate-700 leading-tight">{s.label}</div>
+              <div className="text-[11px] text-slate-400 leading-tight mt-0.5">{s.sub}</div>
+            </div>
           </div>
         ))}
       </div>

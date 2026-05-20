@@ -277,6 +277,7 @@ test.describe('ABA Shield — Pipeline Kanban', () => {
 
   test('upload button marks item complete and adds to documents', async ({ page }) => {
     await page.locator('[data-testid="card-name-c1"]').click();
+    await page.locator('[data-testid="detail-tab-documents"]').click();
     await expect(page.locator('[data-testid="documents-panel"]')).toContainText('No documents uploaded yet.');
     await page.locator('[data-testid="upload-referral_form"]').click();
     await expect(page.locator('[data-testid="documents-panel"]')).toContainText('Referral request form');
@@ -285,6 +286,7 @@ test.describe('ABA Shield — Pipeline Kanban', () => {
   test('upload action appears in activity log', async ({ page }) => {
     await page.locator('[data-testid="card-name-c1"]').click();
     await page.locator('[data-testid="upload-referral_form"]').click();
+    await page.locator('[data-testid="detail-tab-activity"]').click();
     await expect(page.locator('[data-testid="activity-log"]')).toContainText('Uploaded: Referral request form');
   });
 

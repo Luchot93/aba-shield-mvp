@@ -27,9 +27,8 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
   return (
     <div
       onClick={handleClick}
-      className={`bg-white rounded-lg border cursor-pointer group transition-all duration-200
-        hover:shadow-md hover:-translate-y-px
-        ${isNew ? 'ring-2 ring-teal-400 ring-offset-1 shadow-md' : 'border-stone-200 hover:border-stone-300'}`}
+      className={`bg-white rounded-lg border cursor-pointer group transition-all duration-150
+        ${isNew ? 'ring-2 ring-teal-400 ring-offset-1 shadow-sm' : 'border-stone-200 hover:border-teal-200 hover:shadow-sm'}`}
       data-testid={`card-${client.id}`}
     >
       {/* Denied banner */}

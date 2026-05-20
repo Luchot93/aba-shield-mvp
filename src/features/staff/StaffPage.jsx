@@ -3,7 +3,7 @@ import { Ico } from '../../components/icons.jsx';
 import StaffCard from './components/StaffCard.jsx';
 import InvitePanel from './components/InvitePanel.jsx';
 
-export default function StaffPage({ staff, setStaff, clients, currentUser }) {
+export default function StaffPage({ staff, setStaff, clients, currentUser, onSelectClient }) {
   const [tab,        setTab]        = useState('all');
   const [search,     setSearch]     = useState('');
   const [filter,     setFilter]     = useState('all');
@@ -132,15 +132,23 @@ export default function StaffPage({ staff, setStaff, clients, currentUser }) {
         </div>
         <div className="flex items-center gap-1.5">
           {CHIPS.map(c => (
-            <button key={c.key} onClick={() => setFilter(c.key)} data-testid={`staff-filter-${c.key}`}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${
-                filter === c.key
-                  ? 'text-white border-teal-600'
-                  : 'text-slate-600 border-stone-200 bg-white hover:border-teal-300 hover:text-teal-700'
-              }`}
-              style={filter === c.key ? { background:'#0D9488' } : {}}>
-              {c.label}
-            </button>
+            <span key={c.key} className={c.key === 'expiring' ? 'relative group/certchip' : undefined}>
+              <button onClick={() => setFilter(c.key)} data-testid={`staff-filter-${c.key}`}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${
+                  filter === c.key
+                    ? 'text-white border-teal-600'
+                    : 'text-slate-600 border-stone-200 bg-white hover:border-teal-300 hover:text-teal-700'
+                }`}
+                style={filter === c.key ? { background:'#0D9488' } : {}}>
+                {c.label}
+              </button>
+              {c.key === 'expiring' && (
+                <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1.5 w-64 rounded-md bg-slate-700 px-2.5 py-1.5 text-[10px] leading-snug text-slate-100 opacity-0 group-hover/certchip:opacity-100 transition-opacity duration-150 z-50 shadow-lg text-center whitespace-normal">
+                  Professional certification only (BCBA or RBT credential). Staff training deadlines are tracked separately.
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-slate-700"/>
+                </span>
+              )}
+            </span>
           ))}
         </div>
       </div>
@@ -150,7 +158,7 @@ export default function StaffPage({ staff, setStaff, clients, currentUser }) {
         ? <div className="py-16 text-center text-sm text-slate-400" data-testid="staff-empty">No staff match your search.</div>
         : <div className="grid gap-3" style={{ gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))' }} data-testid="staff-grid">
             {filtered.map(s => (
-              <StaffCard key={s.id} member={s} clients={clients} onEdit={handleEdit} currentUser={currentUser}/>
+              <StaffCard key={s.id} member={s} clients={clients} onEdit={handleEdit} currentUser={currentUser} onSelectClient={onSelectClient}/>
             ))}
           </div>
       }

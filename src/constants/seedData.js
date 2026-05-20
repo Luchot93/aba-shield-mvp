@@ -26,14 +26,14 @@ export const SEED_CLIENTS = () => [
 });
 
 export const SEED_STAFF = () => [
-  { id:'s1',  name:'Dr. Rachel Kim',   initials:'RK', email:'r.kim@abashield.com',    role:'bcba', cert_number:'BCBA-112233', cert_expiry:'2027-06-30', status:'active'  },
-  { id:'s2',  name:'Marcus Webb',      initials:'MW', email:'m.webb@abashield.com',   role:'bcba', cert_number:'BCBA-445566', cert_expiry:'2026-11-15', status:'active'  },
-  { id:'s3',  name:'Dr. Priya Sharma', initials:'PS', email:'p.sharma@abashield.com', role:'bcba', cert_number:'BCBA-778899', cert_expiry:'2027-03-31', status:'active'  },
-  { id:'s4',  name:'Jordan Ellis',     initials:'JE', email:'j.ellis@abashield.com',  role:'bcba', cert_number:'BCBA-334455', cert_expiry:'2026-06-20', status:'active'  },
-  { id:'s5',  name:'Tanya Reyes',      initials:'TR', email:'t.reyes@abashield.com',  role:'rbt',  cert_number:'RBT-881122',  cert_expiry:'2026-12-31', status:'active'  },
-  { id:'s6',  name:'Devon Clark',      initials:'DC', email:'d.clark@abashield.com',  role:'rbt',  cert_number:'RBT-334455',  cert_expiry:'2026-10-15', status:'active'  },
-  { id:'s7',  name:'Aaliyah Foster',   initials:'AF', email:'a.foster@abashield.com', role:'rbt',  cert_number:'RBT-667788',  cert_expiry:'2027-01-28', status:'active'  },
-  { id:'s8',  name:'Carlos Mendez',    initials:'CM', email:'c.mendez@abashield.com', role:'rbt',  cert_number:'RBT-990011',  cert_expiry:'2026-08-10', status:'active'  },
-  { id:'s9',  name:'Yuki Tanaka',      initials:'YT', email:'y.tanaka@abashield.com', role:'rbt',  cert_number:'RBT-223344',  cert_expiry:'2027-04-22', status:'pending' },
-  { id:'s10', name:'Brianna Stone',    initials:'BS', email:'b.stone@abashield.com',  role:'rbt',  cert_number:'RBT-556677',  cert_expiry:'2026-07-05', status:'pending' },
+  { id:'s1',  name:'Dr. Rachel Kim',   initials:'RK', email:'r.kim@abashield.com',    phone:'(555) 201-0034', role:'bcba', cert_number:'BCBA-112233', cert_expiry:'2027-06-30', status:'active'  },
+  { id:'s2',  name:'Marcus Webb',      initials:'MW', email:'m.webb@abashield.com',   phone:'(555) 304-0187', role:'bcba', cert_number:'BCBA-445566', cert_expiry:'2026-11-15', status:'active'  },
+  { id:'s3',  name:'Dr. Priya Sharma', initials:'PS', email:'p.sharma@abashield.com', phone:'(555) 407-0256', role:'bcba', cert_number:'BCBA-778899', cert_expiry:'2027-03-31', status:'active'  },
+  { id:'s4',  name:'Jordan Ellis',     initials:'JE', email:'j.ellis@abashield.com',  phone:'(555) 512-0093', role:'bcba', cert_number:'BCBA-334455', cert_expiry:'2026-06-20', status:'active'  },
+  { id:'s5',  name:'Tanya Reyes',      initials:'TR', email:'t.reyes@abashield.com',  phone:'(555) 618-0342', role:'rbt',  cert_number:'RBT-881122',  cert_expiry:'2026-12-31', status:'active'  },
+  { id:'s6',  name:'Devon Clark',      initials:'DC', email:'d.clark@abashield.com',  phone:'(555) 720-0165', role:'rbt',  cert_number:'RBT-334455',  cert_expiry:'2026-10-15', status:'active'  },
+  { id:'s7',  name:'Aaliyah Foster',   initials:'AF', email:'a.foster@abashield.com', phone:'(555) 823-0471', role:'rbt',  cert_number:'RBT-667788',  cert_expiry:'2027-01-28', status:'active'  },
+  { id:'s8',  name:'Carlos Mendez',    initials:'CM', email:'c.mendez@abashield.com', phone:'(555) 916-0088', role:'rbt',  cert_number:'RBT-990011',  cert_expiry:'2026-08-10', status:'active'  },
+  { id:'s9',  name:'Yuki Tanaka',      initials:'YT', email:'y.tanaka@abashield.com', phone:'(555) 103-0529', role:'rbt',  cert_number:'RBT-223344',  cert_expiry:'2027-04-22', status:'pending' },
+  { id:'s10', name:'Brianna Stone',    initials:'BS', email:'b.stone@abashield.com',  phone:'(555) 205-0617', role:'rbt',  cert_number:'RBT-556677',  cert_expiry:'2026-07-05', status:'pending' },
 ];

@@ -14,6 +14,7 @@ export default function App() {
   const [staff,           setStaff]          = useState(SEED_STAFF);
   const [notifications,   setNotifications]  = useState([]);
   const [selectedClient,  setSelectedClient] = useState(null);
+  const [detailFromPage,  setDetailFromPage] = useState('pipeline');
   const [recentlyMovedId, setRecentlyMovedId]= useState(null);
 
   const currentUser = { id:'u1', name:'Admin User', role:'admin' };
@@ -70,15 +71,16 @@ export default function App() {
             clients={clients}
             staff={enrichedStaff}
             setClients={setClients}
-            setSelectedClient={setSelectedClient}
+            setSelectedClient={c => { setDetailFromPage('pipeline'); setSelectedClient(c); }}
             currentUser={currentUser}
             addNotif={addNotif}
             onClientAdvanced={handleClientAdvanced}
             recentlyMovedId={recentlyMovedId}
           />
         : <main className="max-w-7xl mx-auto px-6 py-8">
-            {page==='clients' && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={setSelectedClient} currentUser={currentUser}/>}
-            {page==='staff'   && <StaffPage staff={staff} setStaff={setStaff} clients={clients} currentUser={currentUser}/>}
+            {page==='clients' && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={c => { setDetailFromPage('clients'); setSelectedClient(c); }} currentUser={currentUser}/>}
+            {page==='staff'   && <StaffPage staff={staff} setStaff={setStaff} clients={clients} currentUser={currentUser}
+                                  onSelectClient={c => { setDetailFromPage('staff'); setSelectedClient(c); }}/>}
           </main>
       }
 
@@ -88,7 +90,8 @@ export default function App() {
           clients={clients}
           staff={enrichedStaff}
           setClients={setClients}
-          onBack={() => setSelectedClient(null)}
+          onBack={() => { setSelectedClient(null); if (detailFromPage === 'staff') setPage('staff'); }}
+          backLabel={detailFromPage === 'staff' ? 'Back to staff' : detailFromPage === 'clients' ? 'Back to clients' : 'Back to pipeline'}
           currentUser={currentUser}
           addNotif={addNotif}
           onClientAdvanced={handleClientAdvanced}

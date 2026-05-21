@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Ico } from '../../components/icons.jsx';
 import StaffCard from './components/StaffCard.jsx';
 import InvitePanel from './components/InvitePanel.jsx';
+import { isAdmin } from '../../utils/permissions.js';
 
 export default function StaffPage({ staff, setStaff, clients, currentUser, onSelectClient }) {
   const [tab,        setTab]        = useState('all');
@@ -87,7 +88,7 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
             {enriched.length} team members · {enriched.filter(s=>s.role==='bcba').length} BCBAs · {enriched.filter(s=>s.role==='rbt').length} RBTs
           </p>
         </div>
-        {currentUser?.role === 'admin' && (
+        {isAdmin(currentUser?.role) && (
           <button onClick={() => setShowInvite(true)} data-testid="invite-btn"
             className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity"
             style={{ background:'#0D9488' }}>

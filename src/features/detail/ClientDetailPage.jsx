@@ -3,6 +3,7 @@ import { STAGES, SM, NEXT_STAGE } from '../../constants/stages.js';
 import { REAUTH_ITEMS, getStageItems } from '../../constants/checklist.js';
 import { itemComplete, itemBlocks } from '../../utils/checklist.js';
 import { mkNotif } from '../../utils/notifications.js';
+import { isAdmin, canEdit } from '../../utils/permissions.js';
 import { Ico } from '../../components/icons.jsx';
 import StagePill from '../../components/StagePill.jsx';
 import Avatar from '../../components/Avatar.jsx';
@@ -31,6 +32,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   }, [viewStage]);
 
   if (!client) return null;
+
+  const userCanEdit = canEdit(currentUser.role, client, currentUser.id);
 
   const bcba  = staff.find(s => s.id === client.bcba_id);
   const rbt   = staff.find(s => s.id === client.rbt_id);
@@ -126,7 +129,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
       <div className="flex items-center gap-2">
         <Avatar initials={assigned.initials} role={item.role} size="sm"/>
         <span className="text-sm text-slate-700">{assigned.name}</span>
-        {currentUser.role === 'admin' && (
+        {isAdmin(currentUser.role) && (
           <div className="relative">
             <button onClick={() => setOpenPicker(p => p === pid ? null : pid)}
               className="text-xs text-teal-600 hover:text-teal-800 underline">Change</button>
@@ -400,7 +403,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   ? <>
                       <Avatar initials={person.initials} role={person.role} size="sm"/>
                       <span className="text-sm text-slate-700">{person.name}</span>
-                      {!isReadOnly && currentUser.role === 'admin' && (
+                      {!isReadOnly && isAdmin(currentUser.role) && (
                         <div className="relative">
                           <button onClick={() => setOpenPicker(p => p === pid ? null : pid)}
                             className="text-xs text-teal-600 hover:text-teal-800 underline">Change</button>
@@ -477,17 +480,22 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
             <div className="bg-white rounded-xl border border-stone-200 flex flex-col" data-testid="checklist-panel">
               {/* Card header */}
               <div className="px-5 py-4 border-b border-stone-100 flex-shrink-0">
-                <h2 className="text-sm font-semibold text-slate-900" style={{ fontFamily:'Syne, sans-serif' }}>
-                  {isReadOnly
-                    ? `${SM[viewStage]?.label} checklist`
-                    : client.stage === 'denied'
-                    ? 'Resolution checklist'
-                    : isReauthSvc
-                    ? 'Reauthorization cycle'
-                    : nextStage
-                    ? `To advance to ${SM[nextStage].label}`
-                    : 'Services'}
-                </h2>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-sm font-semibold text-slate-900 flex-1" style={{ fontFamily:'Syne, sans-serif' }}>
+                    {isReadOnly
+                      ? `${SM[viewStage]?.label} checklist`
+                      : client.stage === 'denied'
+                      ? 'Resolution checklist'
+                      : isReauthSvc
+                      ? 'Reauthorization cycle'
+                      : nextStage
+                      ? `To advance to ${SM[nextStage].label}`
+                      : 'Services'}
+                  </h2>
+                  {!isReadOnly && !userCanEdit && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 flex-shrink-0">Read only</span>
+                  )}
+                </div>
                 {displayItems.length > 0 && (
                   <p className="text-xs text-slate-400 mt-0.5">{completeCount} of {displayItems.length} complete</p>
                 )}
@@ -497,11 +505,11 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               <div className="flex-1 overflow-y-auto px-5">
                 {displayItems.length === 0
                   ? <p className="py-6 text-sm text-center text-slate-400">No checklist items.</p>
-                  : displayItems.map(item => <React.Fragment key={item.key}>{CheckRow({ item, readOnly: isReadOnly })}</React.Fragment>)}
+                  : displayItems.map(item => <React.Fragment key={item.key}>{CheckRow({ item, readOnly: isReadOnly || !userCanEdit })}</React.Fragment>)}
               </div>
 
-              {/* Pinned advance / resolution footer — hidden in read-only mode */}
-              {!isReadOnly && client.stage !== 'denied' && nextStage && (
+              {/* Pinned advance / resolution footer — hidden in read-only mode or for non-editors */}
+              {!isReadOnly && userCanEdit && client.stage !== 'denied' && nextStage && (
                 <div className="flex-shrink-0 border-t border-stone-100 p-4">
                   <button data-testid="advance-btn"
                     disabled={!canAdvance}
@@ -514,7 +522,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 </div>
               )}
 
-              {!isReadOnly && client.stage === 'denied' && (() => {
+              {!isReadOnly && userCanEdit && client.stage === 'denied' && (() => {
                 const deniedItems = getStageItems('denied');
                 const deniedAllDone = deniedItems.every(it => itemComplete(it, client, staff));
                 return (

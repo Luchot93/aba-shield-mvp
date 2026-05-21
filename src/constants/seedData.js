@@ -52,3 +52,10 @@ export const SEED_STAFF = () => [
   { id:'s9',  name:'Yuki Tanaka',      initials:'YT', email:'y.tanaka@abashield.com', phone:'(555) 103-0529', role:'rbt',  cert_number:'RBT-223344',  cert_expiry:'2027-04-22', status:'pending' },
   { id:'s10', name:'Brianna Stone',    initials:'BS', email:'b.stone@abashield.com',  phone:'(555) 205-0617', role:'rbt',  cert_number:'RBT-556677',  cert_expiry:'2026-07-05', status:'pending' },
 ];
+
+export const SEED_USERS = [
+  { id:'u1', name:'Admin User',    email:'admin@abashield.com', role:'admin' },
+  { id:'u2', name:'Dr. Ana Reyes', email:'ana@abashield.com',   role:'bcba'  },
+  { id:'u3', name:'Dr. Sara Kim',  email:'sara@abashield.com',  role:'bcaba' },
+  { id:'u4', name:'James Torres',  email:'james@abashield.com', role:'rbt'   },
+];

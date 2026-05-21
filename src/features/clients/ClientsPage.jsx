@@ -6,6 +6,7 @@ import StagePill from '../../components/StagePill.jsx';
 import Avatar from '../../components/Avatar.jsx';
 import NewClientModal from '../pipeline/components/NewClientModal.jsx';
 import ImportPanel from './components/ImportPanel.jsx';
+import { isAdmin } from '../../utils/permissions.js';
 
 const FILTER_GROUPS = {
   all:            null,
@@ -52,7 +53,6 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
   const [showNew,    setShowNew]    = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [toast,      setToast]      = useState(null);
-  const isAdmin = currentUser.role === 'admin';
 
   const showToast = (msg, type='success') => {
     setToast({ msg, type });

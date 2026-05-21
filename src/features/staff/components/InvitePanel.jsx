@@ -18,9 +18,10 @@ export default function InvitePanel({ onClose, onInvite, pendingInvites, onRevok
   };
 
   const ROLE_COLORS = {
-    bcba: 'bg-teal-50 text-teal-700 border-teal-200',
-    rbt:  'bg-blue-50 text-blue-700 border-blue-200',
-    admin:'bg-purple-50 text-purple-700 border-purple-200',
+    bcba:  'bg-teal-50 text-teal-700 border-teal-200',
+    bcaba: 'bg-teal-50 text-teal-700 border-teal-200',
+    rbt:   'bg-blue-50 text-blue-700 border-blue-200',
+    admin: 'bg-purple-50 text-purple-700 border-purple-200',
   };
 
   return (
@@ -43,7 +44,7 @@ export default function InvitePanel({ onClose, onInvite, pendingInvites, onRevok
               Role <span className="text-red-500">*</span>
             </label>
             <div className="flex gap-2">
-              {[['bcba','BCBA'],['rbt','RBT'],['admin','Admin']].map(([val, lbl]) => (
+              {[['bcba','BCBA'],['bcaba','BCaBA'],['rbt','RBT'],['admin','Admin']].map(([val, lbl]) => (
                 <button key={val} onClick={() => setF('role', val)}
                   data-testid={`role-${val}`}
                   className={`flex-1 py-2 text-xs font-semibold rounded-lg border transition-all ${

@@ -1,10 +1,19 @@
 import { test, expect } from '@playwright/test';
 
+// Helper: log in as admin before interacting with the app.
+// Admin lands on Metrics after login; navigate to Pipeline so pipeline tests start in the right place.
+async function loginAsAdmin(page) {
+  await page.goto('/');
+  await page.click('button:has-text("Sign in")');
+  await page.waitForSelector('[data-testid="metrics-page"]');
+  await page.getByRole('button', { name: 'Pipeline' }).click();
+  await page.waitForSelector('[data-testid="new-client-btn"]');
+}
+
 test.describe('ABA Shield — Pipeline Kanban', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('[data-testid="new-client-btn"]');
+    await loginAsAdmin(page);
   });
 
   // ── Nav ──────────────────────────────────────────────────────────────────
@@ -338,9 +347,9 @@ test.describe('ABA Shield — Pipeline Kanban', () => {
   });
 
   test('BCBA header row shows assigned BCBA name', async ({ page }) => {
-    // c4 (Emma Thompson) has bcba_id s1 = Dr. Rachel Kim
+    // c4 (Emma Thompson) has bcba_id u2 = Dr. Ana Reyes
     await page.locator('[data-testid="card-name-c4"]').click();
-    await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('Dr. Rachel Kim');
+    await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('Dr. Ana Reyes');
   });
 
 });
@@ -351,8 +360,7 @@ test.describe('ABA Shield — Pipeline Kanban', () => {
 test.describe('ABA Shield — Clients Page', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('[data-testid="new-client-btn"]');
+    await loginAsAdmin(page);
     await page.getByRole('button', { name: 'Clients' }).click();
     await page.waitForSelector('[data-testid="clients-page"]');
   });
@@ -510,16 +518,15 @@ test.describe('ABA Shield — Clients Page', () => {
 test.describe('ABA Shield — Staff Page', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('[data-testid="new-client-btn"]');
+    await loginAsAdmin(page);
     await page.getByRole('button', { name: 'Staff' }).click();
     await page.waitForSelector('[data-testid="staff-page"]');
   });
 
   // ── Grid renders ──────────────────────────────────────────────────────────
-  test('shows all 10 seed staff cards', async ({ page }) => {
+  test('shows all 12 seed staff cards', async ({ page }) => {
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(10);
+    await expect(cards).toHaveCount(12);
   });
 
   test('stats strip shows correct totals', async ({ page }) => {
@@ -530,16 +537,16 @@ test.describe('ABA Shield — Staff Page', () => {
   });
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
-  test('BCBAs tab shows only 4 BCBAs', async ({ page }) => {
+  test('BCBAs tab shows only 5 BCBAs', async ({ page }) => {
     await page.getByTestId('tab-bcbas').click();
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(4);
+    await expect(cards).toHaveCount(5);
   });
 
-  test('RBTs tab shows only 6 RBTs', async ({ page }) => {
+  test('RBTs tab shows only 7 RBTs', async ({ page }) => {
     await page.getByTestId('tab-rbts').click();
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(6);
+    await expect(cards).toHaveCount(7);
   });
 
   // ── Search ────────────────────────────────────────────────────────────────
@@ -565,9 +572,9 @@ test.describe('ABA Shield — Staff Page', () => {
   // ── Filter chips ──────────────────────────────────────────────────────────
   test('Available filter shows only active staff', async ({ page }) => {
     await page.getByTestId('staff-filter-available').click();
-    // 8 active in seed data
+    // 10 active in seed data (u2 + u4 + s1-s8)
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(8);
+    await expect(cards).toHaveCount(10);
   });
 
   // ── Card expand ───────────────────────────────────────────────────────────
@@ -578,9 +585,9 @@ test.describe('ABA Shield — Staff Page', () => {
   });
 
   test('expanded card shows assigned clients', async ({ page }) => {
-    // s1 (Rachel Kim) is assigned to c4 and c5
-    await page.locator('[data-testid="staff-card-s1"]').click();
-    await expect(page.locator('[data-testid="staff-expanded-s1"]')).toContainText('Emma Thompson');
+    // u2 (Dr. Ana Reyes) is assigned to 10 clients including Emma Thompson (c4)
+    await page.locator('[data-testid="staff-card-u2"]').click();
+    await expect(page.locator('[data-testid="staff-expanded-u2"]')).toContainText('Emma Thompson');
   });
 
   // ── Edit ─────────────────────────────────────────────────────────────────
@@ -681,8 +688,7 @@ test.describe('ABA Shield — Staff Page', () => {
 test.describe('ABA Shield — Notifications', () => {
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForSelector('[data-testid="new-client-btn"]');
+    await loginAsAdmin(page);
   });
 
   // ── Bell badge ────────────────────────────────────────────────────────────
@@ -758,6 +764,88 @@ test.describe('ABA Shield — Notifications', () => {
     // Bell should now show notification
     await page.locator('[data-testid="bell-btn"]').click();
     await expect(page.locator('[data-testid="notif-panel"]')).toContainText('Mason Garcia');
+  });
+
+});
+
+test.describe('ABA Shield — Metrics page', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+  });
+
+  test('Metrics nav item is visible for admin', async ({ page }) => {
+    await expect(page.getByRole('button', { name: 'Metrics' })).toBeVisible();
+  });
+
+  test('navigating to Metrics renders the page', async ({ page }) => {
+    await page.getByRole('button', { name: 'Metrics' }).click();
+    await expect(page.locator('[data-testid="metrics-page"]')).toBeVisible();
+  });
+
+  test('stalled cases card renders a number', async ({ page }) => {
+    await page.getByRole('button', { name: 'Metrics' }).click();
+    await expect(page.locator('[data-testid="metric-stalled"]')).toBeVisible();
+  });
+
+  test('reauth at risk card renders', async ({ page }) => {
+    await page.getByRole('button', { name: 'Metrics' }).click();
+    await expect(page.locator('[data-testid="metric-reauth"]')).toBeVisible();
+  });
+
+  test('cert compliance card shows a percentage', async ({ page }) => {
+    await page.getByRole('button', { name: 'Metrics' }).click();
+    await expect(page.locator('[data-testid="metric-compliance"]')).toContainText('%');
+  });
+
+  test('clients by stage chart renders', async ({ page }) => {
+    await page.getByRole('button', { name: 'Metrics' }).click();
+    await expect(page.locator('[data-testid="chart-by-stage"]')).toBeVisible();
+  });
+
+  test('denial chart renders', async ({ page }) => {
+    await page.getByRole('button', { name: 'Metrics' }).click();
+    await expect(page.locator('[data-testid="chart-denials"]')).toBeVisible();
+  });
+
+  test('cert timeline chart renders', async ({ page }) => {
+    await page.getByRole('button', { name: 'Metrics' }).click();
+    await expect(page.locator('[data-testid="chart-cert-timeline"]')).toBeVisible();
+  });
+
+});
+
+test.describe('ABA Shield — Login gate', () => {
+
+  test('login page renders when not authenticated', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expect(page.locator('[data-testid="new-client-btn"]')).not.toBeVisible();
+  });
+
+  test('correct credentials show the app', async ({ page }) => {
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'admin@abashield.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.click('button:has-text("Sign in")');
+    // Admin lands on Metrics after login
+    await expect(page.locator('[data-testid="metrics-page"]')).toBeVisible();
+  });
+
+  test('wrong credentials show error', async ({ page }) => {
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'wrong@email.com');
+    await page.fill('input[type="password"]', 'wrongpass');
+    await page.click('button:has-text("Sign in")');
+    await expect(page.locator('text=Invalid email or password')).toBeVisible();
+  });
+
+  test('role switcher is visible after login', async ({ page }) => {
+    await page.goto('/');
+    await page.fill('input[type="email"]', 'admin@abashield.com');
+    await page.fill('input[type="password"]', 'admin123');
+    await page.click('button:has-text("Sign in")');
+    await expect(page.locator('text=Testing as:')).toBeVisible();
   });
 
 });

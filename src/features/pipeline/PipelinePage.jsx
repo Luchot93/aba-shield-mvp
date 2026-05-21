@@ -3,6 +3,7 @@ import { STAGES } from '../../constants/stages.js';
 import { mkChecklist } from '../../constants/checklist.js';
 import { getChecklistStatus } from '../../utils/checklist.js';
 import { mkNotif } from '../../utils/notifications.js';
+import { isAdmin } from '../../utils/permissions.js';
 import { Ico } from '../../components/icons.jsx';
 import KanbanColumn from './components/KanbanColumn.jsx';
 import NewClientModal from './components/NewClientModal.jsx';
@@ -97,13 +98,15 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
             {pipelineClients.length} clients · {STAGES.filter(s => pipelineClients.some(c => c.stage===s)).length} active stages
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          data-testid="new-client-btn"
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
-          style={{ background:'#0D9488', fontFamily:'DM Sans, sans-serif' }}>
-          <Ico.Plus/> NEW CLIENT +
-        </button>
+        {isAdmin(currentUser.role) && (
+          <button
+            onClick={() => setShowModal(true)}
+            data-testid="new-client-btn"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
+            style={{ background:'#0D9488', fontFamily:'DM Sans, sans-serif' }}>
+            <Ico.Plus/> NEW CLIENT +
+          </button>
+        )}
       </div>
 
       {/* Summary bar */}

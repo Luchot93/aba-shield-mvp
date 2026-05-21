@@ -7,6 +7,9 @@ import PipelinePage from './features/pipeline/PipelinePage.jsx';
 import ClientsPage from './features/clients/ClientsPage.jsx';
 import StaffPage from './features/staff/StaffPage.jsx';
 import ClientDetailPage from './features/detail/ClientDetailPage.jsx';
+import MetricsPage from './features/metrics/MetricsPage.jsx';
+import LoginPage from './auth/LoginPage.jsx';
+import SetPasswordPage from './auth/SetPasswordPage.jsx';
 
 export default function App() {
   const [page,            setPage]           = useState('pipeline');
@@ -17,7 +20,14 @@ export default function App() {
   const [detailFromPage,  setDetailFromPage] = useState('pipeline');
   const [recentlyMovedId, setRecentlyMovedId]= useState(null);
 
-  const currentUser = { id:'u1', name:'Admin User', role:'admin' };
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Set landing page based on role when user logs in or switches role
+  useEffect(() => {
+    if (currentUser) {
+      setPage(currentUser.role === 'admin' ? 'metrics' : 'pipeline');
+    }
+  }, [currentUser]);
 
   const handleClientAdvanced = useCallback(clientId => {
     setRecentlyMovedId(clientId);
@@ -61,10 +71,30 @@ export default function App() {
     active_case_count: clients.filter(c => c.bcba_id===s.id || c.rbt_id===s.id).length,
   }));
 
+  if (!currentUser) {
+    const isInvite = new URLSearchParams(window.location.search).get('invite') === 'true';
+    return (
+      <>
+        <FontLoader/>
+        {isInvite
+          ? <SetPasswordPage
+              invitedEmail="sara@abashield.com"
+              onSetPassword={() => {
+                // Clear the query param and log the invited user in to Pipeline
+                window.history.replaceState({}, '', window.location.pathname);
+                setCurrentUser({ id:'u3', name:'Dr. Sara Kim', email:'sara@abashield.com', role:'bcaba' });
+              }}
+            />
+          : <LoginPage onLogin={setCurrentUser}/>
+        }
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen" style={{ background:'#F8F7F4', fontFamily:'DM Sans, sans-serif' }}>
       <FontLoader/>
-      <NavBar page={page} setPage={setPage} notifications={notifications} setNotifications={setNotifications} currentUser={currentUser}/>
+      <NavBar page={page} setPage={setPage} notifications={notifications} setNotifications={setNotifications} currentUser={currentUser} setCurrentUser={setCurrentUser}/>
 
       {page === 'pipeline'
         ? <PipelinePage
@@ -81,6 +111,11 @@ export default function App() {
             {page==='clients' && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={c => { setDetailFromPage('clients'); setSelectedClient(c); }} currentUser={currentUser}/>}
             {page==='staff'   && <StaffPage staff={staff} setStaff={setStaff} clients={clients} currentUser={currentUser}
                                   onSelectClient={c => { setDetailFromPage('staff'); setSelectedClient(c); }}/>}
+            {page==='metrics' && (
+              currentUser.role === 'admin'
+                ? <MetricsPage clients={clients} staff={staff}/>
+                : <div className="flex items-center justify-center h-64 text-sm text-slate-500">Access restricted</div>
+            )}
           </main>
       }
 

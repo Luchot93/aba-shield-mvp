@@ -1,10 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Ico } from './icons.jsx';
 import { relTime } from '../utils/notifications.js';
+import { SEED_USERS } from '../constants/seedData.js';
+import { isAdmin } from '../utils/permissions.js';
 
-export default function NavBar({ page, setPage, notifications, setNotifications, currentUser }) {
-  const [notifOpen, setNotifOpen] = useState(false);
-  const notifPanelRef = useRef(null);
+const ROLE_BADGE = {
+  admin: 'bg-purple-500/20 text-purple-300',
+  bcba:  'bg-teal-500/20 text-teal-300',
+  bcaba: 'bg-teal-500/20 text-teal-300',
+  rbt:   'bg-blue-500/20 text-blue-300',
+};
+
+const initials = name => name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+export default function NavBar({ page, setPage, notifications, setNotifications, currentUser, setCurrentUser }) {
+  const [notifOpen,     setNotifOpen]     = useState(false);
+  const [switcherOpen,  setSwitcherOpen]  = useState(false);
+  const notifPanelRef  = useRef(null);
+  const switcherRef    = useRef(null);
   const unread = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
@@ -17,6 +30,17 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [notifOpen]);
+
+  useEffect(() => {
+    if (!switcherOpen) return;
+    const handler = e => {
+      if (switcherRef.current && !switcherRef.current.contains(e.target)) {
+        setSwitcherOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [switcherOpen]);
 
   const markAllRead = () =>
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -42,7 +66,10 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
           </div>
 
           <nav className="flex items-center gap-0.5 flex-1">
-            {[['pipeline','Pipeline'],['clients','Clients'],['staff','Staff']].map(([id,label]) => (
+            {[
+              ...(isAdmin(currentUser?.role) ? [['metrics','Metrics']] : []),
+              ['pipeline','Pipeline'],['clients','Clients'],['staff','Staff'],
+            ].map(([id,label]) => (
               <button key={id} onClick={() => setPage(id)}
                 className={`relative px-3.5 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${page===id ? 'text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
                 style={{ fontFamily:'DM Sans, sans-serif' }}>
@@ -68,10 +95,56 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
               )}
             </button>
             <div className="h-5 w-px mx-1" style={{ background:'#1E293B' }}/>
-            <div className="flex items-center gap-2.5 pl-1">
-              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white"
-                style={{ background:'linear-gradient(135deg,#0D9488,#0284C7)', fontFamily:'DM Sans, sans-serif' }}>AU</div>
-              <span className="text-sm text-slate-300" style={{ fontFamily:'DM Sans, sans-serif' }}>{currentUser.name}</span>
+
+            {/* Role switcher */}
+            <div className="relative" ref={switcherRef}>
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] text-slate-500 mb-0.5 pr-1">Testing as:</span>
+                <button
+                  onClick={() => setSwitcherOpen(o => !o)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ background: switcherOpen ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.1)' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+                  onMouseLeave={e => !switcherOpen && (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white flex-shrink-0"
+                    style={{ background:'linear-gradient(135deg,#0D9488,#0284C7)', fontFamily:'DM Sans, sans-serif' }}>
+                    {initials(currentUser.name)}
+                  </div>
+                  <span className="text-sm text-white" style={{ fontFamily:'DM Sans, sans-serif' }}>{currentUser.name}</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${ROLE_BADGE[currentUser.role] || ROLE_BADGE.rbt}`}>
+                    {currentUser.role}
+                  </span>
+                  <span className="text-slate-400 text-xs">▾</span>
+                </button>
+              </div>
+
+              {switcherOpen && (
+                <div className="absolute right-0 top-full mt-1 rounded-xl shadow-xl z-50 overflow-hidden border"
+                  style={{ background:'#1E293B', borderColor:'rgba(255,255,255,0.1)', minWidth:'220px' }}>
+                  {SEED_USERS.map(u => (
+                    <button key={u.id}
+                      onClick={() => { setCurrentUser(u); setSwitcherOpen(false); }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
+                      style={{ color:'white' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                      <div className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold text-white flex-shrink-0"
+                        style={{ background:'linear-gradient(135deg,#0D9488,#0284C7)' }}>
+                        {initials(u.name)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-white truncate">{u.name}</div>
+                      </div>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${ROLE_BADGE[u.role] || ROLE_BADGE.rbt}`}>
+                        {u.role}
+                      </span>
+                      {currentUser.id === u.id && (
+                        <span className="text-teal-400 text-xs flex-shrink-0">✓</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

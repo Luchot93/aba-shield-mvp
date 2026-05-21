@@ -347,9 +347,9 @@ test.describe('ABA Shield — Pipeline Kanban', () => {
   });
 
   test('BCBA header row shows assigned BCBA name', async ({ page }) => {
-    // c4 (Emma Thompson) has bcba_id s1 = Dr. Rachel Kim
+    // c4 (Emma Thompson) has bcba_id u2 = Dr. Ana Reyes
     await page.locator('[data-testid="card-name-c4"]').click();
-    await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('Dr. Rachel Kim');
+    await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('Dr. Ana Reyes');
   });
 
 });
@@ -524,9 +524,9 @@ test.describe('ABA Shield — Staff Page', () => {
   });
 
   // ── Grid renders ──────────────────────────────────────────────────────────
-  test('shows all 10 seed staff cards', async ({ page }) => {
+  test('shows all 12 seed staff cards', async ({ page }) => {
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(10);
+    await expect(cards).toHaveCount(12);
   });
 
   test('stats strip shows correct totals', async ({ page }) => {
@@ -537,16 +537,16 @@ test.describe('ABA Shield — Staff Page', () => {
   });
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
-  test('BCBAs tab shows only 4 BCBAs', async ({ page }) => {
+  test('BCBAs tab shows only 5 BCBAs', async ({ page }) => {
     await page.getByTestId('tab-bcbas').click();
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(4);
+    await expect(cards).toHaveCount(5);
   });
 
-  test('RBTs tab shows only 6 RBTs', async ({ page }) => {
+  test('RBTs tab shows only 7 RBTs', async ({ page }) => {
     await page.getByTestId('tab-rbts').click();
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(6);
+    await expect(cards).toHaveCount(7);
   });
 
   // ── Search ────────────────────────────────────────────────────────────────
@@ -572,9 +572,9 @@ test.describe('ABA Shield — Staff Page', () => {
   // ── Filter chips ──────────────────────────────────────────────────────────
   test('Available filter shows only active staff', async ({ page }) => {
     await page.getByTestId('staff-filter-available').click();
-    // 8 active in seed data
+    // 10 active in seed data (u2 + u4 + s1-s8)
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(8);
+    await expect(cards).toHaveCount(10);
   });
 
   // ── Card expand ───────────────────────────────────────────────────────────
@@ -585,9 +585,9 @@ test.describe('ABA Shield — Staff Page', () => {
   });
 
   test('expanded card shows assigned clients', async ({ page }) => {
-    // s1 (Rachel Kim) is assigned to c4 and c5
-    await page.locator('[data-testid="staff-card-s1"]').click();
-    await expect(page.locator('[data-testid="staff-expanded-s1"]')).toContainText('Emma Thompson');
+    // u2 (Dr. Ana Reyes) is assigned to 10 clients including Emma Thompson (c4)
+    await page.locator('[data-testid="staff-card-u2"]').click();
+    await expect(page.locator('[data-testid="staff-expanded-u2"]')).toContainText('Emma Thompson');
   });
 
   // ── Edit ─────────────────────────────────────────────────────────────────

@@ -1,0 +1,185 @@
+import React from 'react';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function computeBaseline(goal) {
+  if (!goal.baselinePercent && goal.baselinePercent !== 0) return '–';
+  const pct  = goal.baselinePercent;
+  const opps = goal.baselineOpportunities || '?';
+  return `${pct}% across ${opps} opportunities`;
+}
+
+function computeCurrentLevel(goal) {
+  if (goal.currentLevel) return goal.currentLevel;
+  if (!goal.baselinePercent && goal.baselinePercent !== 0) return 'NEW';
+  const prompt = goal.baselinePromptingLevel || goal.promptingLevel?.[0] || 'prompting';
+  return `${goal.baselinePercent}% correct with ${prompt} prompting`;
+}
+
+function computeMastery(goal) {
+  const pct      = goal.masteryCriteriaPercent   || '80';
+  const sessions = goal.masteryCriteriaSessions  || '3';
+  const settings = goal.masteryCriteriaSettings  || '2';
+  const prompt   = goal.masteryCriteriaPromptingLevel || goal.masteryCriteriaPrompting || 'independent';
+  return `Client will demonstrate ${goal.targetSkill || 'the target skill'} with ${pct}% accuracy across ${sessions} consecutive sessions across ${settings} people/settings with ${prompt} level of prompting.`;
+}
+
+function computeSTO(goal) {
+  if (goal.sto) return goal.sto;
+  const pct      = goal.masteryCriteriaPercent  || '80';
+  const sessions = goal.masteryCriteriaSessions || '3';
+  return `Client will demonstrate ${goal.targetSkill || 'the target skill'} with ${Math.round(Number(pct) * 0.5) || 40}% accuracy across ${sessions} consecutive sessions with decreasing prompt support.`;
+}
+
+// Extract [BCBA to complete: ...] blocks from draftContent
+function extractBcbaNotes(draftContent) {
+  if (!draftContent) return [];
+  const re = /\[BCBA to complete:[^\]]*\]/g;
+  const matches = [];
+  let m;
+  while ((m = re.exec(draftContent)) !== null) matches.push(m[0]);
+  return matches;
+}
+
+// Extract overview/intro text (everything before the first goal block)
+function extractOverview(draftContent) {
+  if (!draftContent) return '';
+  // Take text before first '##' goal heading
+  const idx = draftContent.search(/^##\s+\d/m);
+  if (idx === -1) return '';
+  return draftContent.slice(0, idx)
+    .replace(/^#+\s*/gm, '')
+    .replace(/\*\*/g, '')
+    .replace(/\[BCBA to complete:[^\]]*\]/g, '')
+    .trim();
+}
+
+// ─── Table ────────────────────────────────────────────────────────────────────
+
+const TH = ({ children }) => (
+  <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 bg-stone-50 border-b border-r border-stone-200 last:border-r-0 whitespace-nowrap">
+    {children}
+  </th>
+);
+
+const TD = ({ children }) => (
+  <td className="px-3 py-2.5 text-[13px] text-slate-700 border-r border-stone-100 last:border-r-0 align-top"
+    style={{ fontFamily: 'Georgia, "Times New Roman", serif', lineHeight: 1.65 }}>
+    {children}
+  </td>
+);
+
+// ─── GoalBlock ────────────────────────────────────────────────────────────────
+
+function GoalBlock({ goal, index }) {
+  const strategies = Array.isArray(goal.teachingStrategies)
+    ? goal.teachingStrategies.join(', ')
+    : (goal.teachingStrategies || '');
+
+  return (
+    <div className="mb-8">
+      {/* Goal heading */}
+      <h3 className="text-[15px] font-bold text-slate-800 mb-2"
+        style={{ fontFamily: 'DM Sans, sans-serif' }}>
+        Goal {index + 1}: {goal.targetSkill || 'Untitled Goal'}
+      </h3>
+
+      {/* Operational definition */}
+      {goal.operationalDefinition && (
+        <p className="text-[14px] text-slate-700 mb-2 leading-relaxed"
+          style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+          <strong style={{ fontFamily: 'DM Sans, sans-serif' }}>Operational Definition:</strong>{' '}
+          {goal.operationalDefinition}
+        </p>
+      )}
+
+      {/* Teaching strategies */}
+      {strategies && (
+        <p className="text-[14px] text-slate-700 mb-3 leading-relaxed"
+          style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+          <strong style={{ fontFamily: 'DM Sans, sans-serif' }}>Teaching Strategies:</strong>{' '}
+          {strategies}
+        </p>
+      )}
+
+      {/* Data table */}
+      <div className="overflow-x-auto mb-3 rounded-lg border border-stone-200">
+        <table className="w-full border-collapse text-left">
+          <thead>
+            <tr>
+              <TH>Target Behavior</TH>
+              <TH>6-Month Target (STO)</TH>
+              <TH>Baseline Data</TH>
+              <TH>Current Level</TH>
+              <TH>Mastery Criteria (LTO)</TH>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="bg-white">
+              <TD>{goal.targetSkill || '–'}</TD>
+              <TD>{computeSTO(goal)}</TD>
+              <TD>{computeBaseline(goal)}</TD>
+              <TD>{computeCurrentLevel(goal)}</TD>
+              <TD>{computeMastery(goal)}</TD>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Generalization */}
+      {goal.generalizationNotes && (
+        <p className="text-[14px] text-slate-700 leading-relaxed"
+          style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+          <strong style={{ fontFamily: 'DM Sans, sans-serif' }}>Generalization &amp; Maintenance:</strong>{' '}
+          {goal.generalizationNotes}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ─── SkillAcquisitionsReviewView ──────────────────────────────────────────────
+
+export default function SkillAcquisitionsReviewView({ session, draftContent }) {
+  const skillGoals  = session?.sections?.skill_acquisitions?.skillGoals ?? [];
+  const overview    = extractOverview(draftContent);
+  const bcbaNotes   = extractBcbaNotes(draftContent);
+
+  return (
+    <div style={{ fontFamily: 'DM Sans, sans-serif' }}>
+
+      {/* Overview paragraph */}
+      {overview && (
+        <p className="text-[14px] text-slate-700 mb-6 leading-relaxed"
+          style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}>
+          {overview}
+        </p>
+      )}
+
+      {/* One block per goal */}
+      {skillGoals.length === 0 ? (
+        <p className="text-sm text-slate-400 py-4 text-center">
+          No skill goals found. Add goals in the Interview tab.
+        </p>
+      ) : (
+        skillGoals.map((goal, i) => (
+          <GoalBlock key={goal.id ?? i} goal={goal} index={i} />
+        ))
+      )}
+
+      {/* BCBA Clinical Notes */}
+      {bcbaNotes.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-stone-200">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+            Clinical Notes
+          </p>
+          {bcbaNotes.map((note, i) => (
+            <span key={i} className="placeholder-block block mb-2">
+              {note}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

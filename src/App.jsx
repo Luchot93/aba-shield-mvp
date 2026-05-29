@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { SEED_CLIENTS, SEED_STAFF } from './constants/seedData.js';
+import { SEED_CLIENTS, SEED_STAFF, makeAssessmentSession } from './constants/seedData.js';
 import { mkNotif } from './utils/notifications.js';
 import FontLoader from './components/FontLoader.jsx';
 import NavBar from './components/NavBar.jsx';
@@ -8,6 +8,8 @@ import ClientsPage from './features/clients/ClientsPage.jsx';
 import StaffPage from './features/staff/StaffPage.jsx';
 import ClientDetailPage from './features/detail/ClientDetailPage.jsx';
 import MetricsPage from './features/metrics/MetricsPage.jsx';
+import AssessmentsPage from './features/assessment/AssessmentsPage.jsx';
+import AssessmentFeature from './features/assessment/AssessmentFeature.jsx';
 import LoginPage from './auth/LoginPage.jsx';
 import SetPasswordPage from './auth/SetPasswordPage.jsx';
 
@@ -19,6 +21,7 @@ export default function App() {
   const [selectedClient,  setSelectedClient] = useState(null);
   const [detailFromPage,  setDetailFromPage] = useState('pipeline');
   const [recentlyMovedId, setRecentlyMovedId]= useState(null);
+  const [assessmentClientId, setAssessmentClientId] = useState(null);
 
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -66,6 +69,17 @@ export default function App() {
     }
   }, []);
 
+  // Auto-create assessment sessions for assessment-stage clients that don't have one yet
+  useEffect(() => {
+    setClients(prev => prev.map(c => {
+      if (c.stage === 'assessment' && c.assessment_session == null) {
+        const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
+        return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned') };
+      }
+      return c;
+    }));
+  }, []);
+
   const enrichedStaff = staff.map(s => ({
     ...s,
     active_case_count: clients.filter(c => c.bcba_id===s.id || c.rbt_id===s.id).length,
@@ -108,16 +122,32 @@ export default function App() {
             recentlyMovedId={recentlyMovedId}
           />
         : <main className="max-w-7xl mx-auto px-6 py-8">
-            {page==='clients' && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={c => { setDetailFromPage('clients'); setSelectedClient(c); }} currentUser={currentUser}/>}
-            {page==='staff'   && <StaffPage staff={staff} setStaff={setStaff} clients={clients} currentUser={currentUser}
-                                  onSelectClient={c => { setDetailFromPage('staff'); setSelectedClient(c); }}/>}
-            {page==='metrics' && (
+            {page==='clients'     && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={c => { setDetailFromPage('clients'); setSelectedClient(c); }} currentUser={currentUser}/>}
+            {page==='staff'       && <StaffPage staff={staff} setStaff={setStaff} clients={clients} currentUser={currentUser}
+                                      onSelectClient={c => { setDetailFromPage('staff'); setSelectedClient(c); }}/>}
+            {page==='metrics'     && (
               currentUser.role === 'admin'
                 ? <MetricsPage clients={clients} staff={staff}/>
                 : <div className="flex items-center justify-center h-64 text-sm text-slate-500">Access restricted</div>
             )}
+            {page==='assessments' && (
+              <AssessmentsPage clients={clients} staff={enrichedStaff} currentUser={currentUser}
+                onOpenAssessment={(clientId) => { setAssessmentClientId(clientId); setPage('assessment'); }} />
+            )}
           </main>
       }
+
+      {page === 'assessment' && assessmentClientId && (
+        <AssessmentFeature
+          clientId={assessmentClientId}
+          clients={clients}
+          staff={enrichedStaff}
+          setClients={setClients}
+          currentUser={currentUser}
+          addNotif={addNotif}
+          onBack={() => { setPage('assessments'); setAssessmentClientId(null); }}
+        />
+      )}
 
       {selectedClient && (
         <ClientDetailPage

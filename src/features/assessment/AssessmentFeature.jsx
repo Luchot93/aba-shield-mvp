@@ -1,0 +1,245 @@
+import React, { useState } from 'react';
+import AssessmentInterviewPage from './AssessmentInterviewPage.jsx';
+import AssessmentChecklistPage from './AssessmentChecklistPage.jsx';
+import AssessmentReviewPage    from './AssessmentReviewPage.jsx';
+import { completeSession, canExport } from './assessmentStore.js';
+
+// ─── Status tag config ────────────────────────────────────────────────────────
+
+const STATUS_TAG = {
+  not_started: { label: 'NOT STARTED', dot: '#94A3B8', bg: 'rgba(148,163,184,0.10)', color: '#64748B' },
+  in_progress: { label: 'IN PROGRESS', dot: '#F59E0B', bg: 'rgba(251,191,36,0.10)',  color: '#92400E' },
+  in_review:   { label: 'IN REVIEW',   dot: '#60A5FA', bg: 'rgba(96,165,250,0.10)',  color: '#1E40AF' },
+  complete:    { label: 'COMPLETED',   dot: '#34D399', bg: 'rgba(52,211,153,0.10)',  color: '#065F46' },
+  ready_to_review: { label: 'IN REVIEW', dot: '#60A5FA', bg: 'rgba(96,165,250,0.10)', color: '#1E40AF' },
+};
+
+// ─── AssessmentFeature ────────────────────────────────────────────────────────
+
+export default function AssessmentFeature({
+  clientId, clients, staff, setClients, currentUser, addNotif, onClose, onBack,
+}) {
+  const handleClose = onClose ?? onBack;
+
+  const [page,          setPage]          = useState('interview');
+  const [targetSection, setTargetSection] = useState(null);
+  const [isExporting,   setIsExporting]   = useState(false);
+
+  // Navigate between pages, optionally jumping to a specific section
+  const handleNavigate = (newPage, sectionKey = null) => {
+    if (sectionKey) setTargetSection(sectionKey);
+    setPage(newPage);
+  };
+
+  const client  = clients?.find(c => c.id === clientId);
+  const session = client?.assessment_session ?? null;
+
+  const status      = session?.status ?? 'not_started';
+  const tagMeta     = STATUS_TAG[status] ?? STATUS_TAG.not_started;
+  const exportReady = canExport(client);
+
+  const totalSections    = session?.totalInterviewSections ?? 10;
+  const sectionsWithData = session?.sectionsWithData       ?? 0;
+  const sectionsApproved = session?.sectionsApproved       ?? 0;
+
+  // Progress bar: during interview track captured; during review track approved
+  const isReviewPhase = page === 'review';
+  const progressDone  = isReviewPhase ? sectionsApproved : sectionsWithData;
+  const progressPct   = Math.min(100, Math.round((progressDone / totalSections) * 100));
+  const progressLabel = isReviewPhase
+    ? `${sectionsApproved} of ${totalSections} sections approved`
+    : `${sectionsWithData} of ${totalSections} sections captured`;
+
+  // ── Export ─────────────────────────────────────────────────────────────────
+
+  const handleExport = () => {
+    if (!session || isExporting) return;
+    setIsExporting(true);
+
+    const sectionsResult = {};
+    Object.entries(session.sections).forEach(([key, sec]) => {
+      sectionsResult[key] = {
+        title:         sec.title,
+        content:       sec.draftContent ?? '',
+        approvalState: sec.approvalState,
+        skillGoals:    sec.skillGoals ?? [],
+      };
+    });
+
+    const result = {
+      exportedAt: new Date().toISOString(),
+      exportedBy: currentUser?.name ?? 'BCBA',
+      clientId,
+      clientName: session.clientName,
+      sessionId:  session.id,
+      sections:   sectionsResult,
+    };
+
+    completeSession(setClients, clientId, result);
+
+    try {
+      const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href     = url;
+      a.download = `assessment_${clientId}_${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (_) {}
+
+    addNotif?.({
+      type: 'success',
+      message: `Assessment exported for ${session.clientName ?? 'client'}.`,
+    });
+
+    setTimeout(() => {
+      setIsExporting(false);
+      handleClose?.();
+    }, 1500);
+  };
+
+  // ── Top bar ────────────────────────────────────────────────────────────────
+
+  // Back button behaviour depends on current page
+  const handleBack = page === 'interview' ? handleClose : () => setPage('interview');
+  const backLabel  = page === 'interview' ? 'Assessments' : 'Interview';
+
+  // Right-side action button
+  const ActionButton = () => {
+    if (page === 'interview') {
+      return (
+        <button
+          onClick={() => setPage('checklist')}
+          className="flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-xl text-white hover:opacity-90 active:scale-[0.97] transition-all"
+          style={{ background: '#0D9488' }}>
+          Ready to Generate
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </button>
+      );
+    }
+
+    if (page === 'checklist') {
+      // Checklist has its own generate button — no duplicate needed here
+      return null;
+    }
+
+    if (page === 'review') {
+      return (
+        <button
+          onClick={handleExport}
+          disabled={!exportReady || isExporting}
+          className={`
+            relative flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-xl
+            overflow-hidden transition-all
+            ${exportReady && !isExporting
+              ? 'text-white hover:opacity-90 active:scale-[0.97] cursor-pointer'
+              : 'text-slate-400 bg-stone-100 border border-stone-200 cursor-not-allowed'
+            }
+          `}
+          style={exportReady && !isExporting ? { background: '#0D9488' } : {}}>
+          {isExporting && (
+            <span className="absolute inset-0 pointer-events-none"
+              style={{ animation: 'export-sweep 1.2s ease-in-out infinite', background: 'rgba(255,255,255,0.18)' }}
+            />
+          )}
+          {isExporting ? (
+            <>
+              <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={3}/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              Exporting…
+            </>
+          ) : (
+            <>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+              </svg>
+              {exportReady ? 'Export Assessment' : 'Approve All Sections'}
+            </>
+          )}
+        </button>
+      );
+    }
+
+    return null;
+  };
+
+  // ── Layout ─────────────────────────────────────────────────────────────────
+
+  const pageProps = {
+    clientId,
+    clients,
+    staff,
+    setClients,
+    currentUser,
+    session,
+    addNotif,
+    onNavigate: handleNavigate,
+    hideTopBar: true,
+    onBack: handleClose,
+    targetSection,
+    onTargetSectionHandled: () => setTargetSection(null),
+  };
+
+  return (
+    <div
+      className="fixed top-14 inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden"
+      style={{ fontFamily: 'DM Sans, sans-serif', background: '#FAFAF9' }}>
+
+      {/* ── Single top bar ─────────────────────────────────────────────── */}
+      <div className="flex-shrink-0 flex items-center gap-3 px-4 bg-white border-b border-stone-200"
+        style={{ minHeight: 52 }}>
+
+        {/* Back button */}
+        <button
+          onClick={handleBack}
+          className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-500 hover:text-slate-800 transition-colors flex-shrink-0">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+          </svg>
+          {backLabel}
+        </button>
+
+        {/* Divider */}
+        <span className="w-px h-4 bg-stone-200 flex-shrink-0"/>
+
+        {/* Client name */}
+        <p className="text-[13px] font-bold text-slate-800 truncate" style={{ maxWidth: 180 }}>
+          {session?.clientName ?? client?.name ?? 'Assessment'}
+        </p>
+
+        {/* Status tag */}
+        <span
+          className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide flex-shrink-0"
+          style={{ background: tagMeta.bg, color: tagMeta.color }}>
+          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0 animate-pulse"
+            style={{ background: tagMeta.dot }}/>
+          {tagMeta.label}
+        </span>
+
+        <div className="flex-1"/>
+
+        {/* Right action */}
+        <ActionButton />
+      </div>
+
+
+      {/* ── Page content ───────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-hidden">
+        {page === 'interview' && (
+          <AssessmentInterviewPage {...pageProps} />
+        )}
+        {page === 'checklist' && (
+          <AssessmentChecklistPage {...pageProps} />
+        )}
+        {page === 'review' && (
+          <AssessmentReviewPage {...pageProps} />
+        )}
+      </div>
+    </div>
+  );
+}

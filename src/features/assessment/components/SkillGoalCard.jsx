@@ -3,6 +3,24 @@ import { createPortal } from 'react-dom';
 import { useAutoSave } from '../../../hooks/useAutoSave.js';
 import { updateSkillGoal, removeSkillGoal } from '../assessmentStore.js';
 
+const DOMAINS = [
+  'Communication',
+  'Social',
+  'Adaptive / Self-Help',
+  'Academic',
+  'Motor',
+  'Play',
+];
+
+const DOMAIN_COLORS = {
+  'Communication':      { bg: 'rgba(20,184,166,0.1)',  text: '#0D9488' },
+  'Social':             { bg: 'rgba(139,92,246,0.1)',  text: '#7C3AED' },
+  'Adaptive / Self-Help': { bg: 'rgba(245,158,11,0.1)', text: '#B45309' },
+  'Academic':           { bg: 'rgba(59,130,246,0.1)',  text: '#1D4ED8' },
+  'Motor':              { bg: 'rgba(236,72,153,0.1)',  text: '#BE185D' },
+  'Play':               { bg: 'rgba(34,197,94,0.1)',   text: '#15803D' },
+};
+
 const TEACHING_STRATEGIES = [
   'Discrete Trial Training (DTT)',
   'Natural Environment Teaching (NET)',
@@ -469,6 +487,12 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
         <span className="flex-1 text-sm font-semibold text-slate-700 truncate">
           {goal.targetSkill || <span className="text-slate-400 font-normal">Untitled goal</span>}
         </span>
+        {goal.domain && !expanded && (
+          <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md"
+            style={{ background: DOMAIN_COLORS[goal.domain]?.bg ?? 'rgba(20,184,166,0.1)', color: DOMAIN_COLORS[goal.domain]?.text ?? '#0D9488' }}>
+            {goal.domain}
+          </span>
+        )}
         <svg className={`w-4 h-4 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
           fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
@@ -499,6 +523,27 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
                 });
               }}
             />
+          </div>
+
+          {/* Domain Category */}
+          <div>
+            <SectionLabel>Domain</SectionLabel>
+            <div className="flex flex-wrap gap-1.5">
+              {DOMAINS.map(d => {
+                const active = goal.domain === d;
+                const colors = DOMAIN_COLORS[d];
+                return (
+                  <button key={d} type="button"
+                    onClick={() => updateSkillGoal(setClients, clientId, goal.id, { domain: active ? '' : d })}
+                    className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-all ${
+                      active ? 'border-transparent' : 'border-stone-200 bg-white text-slate-500 hover:border-teal-300'
+                    }`}
+                    style={active ? { background: colors.bg, color: colors.text, borderColor: 'transparent' } : {}}>
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Operational Definition */}
@@ -628,6 +673,37 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
                 onChange={setVal('masteryCriteriaPromptingLevel')}
               />
               <span>level of prompting.</span>
+            </p>
+          </div>
+
+          {/* ── Short-Term Objective (STO) ──────────────────────────────── */}
+          <div className="rounded-xl px-4 py-3.5" style={{ background: 'rgba(20,184,166,0.04)', border: '1px solid rgba(20,184,166,0.18)' }}>
+            <SectionLabel>Short-Term Objective (STO)</SectionLabel>
+            <p className="text-[14px] text-slate-600 flex flex-wrap items-center gap-x-1.5 min-h-[2rem]">
+              <span>Client will demonstrate</span>
+              <InlineNum
+                value={goal.stoPercent}
+                onChange={val => updateSkillGoal(setClients, clientId, goal.id, { stoPercent: val })}
+                placeholder="80"
+                width="3.5rem"
+              />
+              <span>% accuracy on</span>
+              <input
+                type="text"
+                value={goal.stoSkillDescription ?? ''}
+                onChange={e => updateSkillGoal(setClients, clientId, goal.id, { stoSkillDescription: e.target.value })}
+                placeholder="skill or step description"
+                className="inline-block text-[13px] font-medium text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-1 px-0.5"
+                style={{ width: '13rem', fontFamily: 'DM Sans, sans-serif', lineHeight: 1.6 }}
+              />
+              <span>within</span>
+              <InlineNum
+                value={goal.stoWeeks}
+                onChange={val => updateSkillGoal(setClients, clientId, goal.id, { stoWeeks: val })}
+                placeholder="12"
+                width="3rem"
+              />
+              <span>weeks of program start.</span>
             </p>
           </div>
 

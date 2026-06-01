@@ -126,7 +126,182 @@ const assemblyTranscribePlugin = () => ({
   },
 });
 
+// ─── Anthropic Claude proxy plugin ──────────────────────────────────────────
+//
+// POST /api/generate
+//   Request:  { sectionKey, sectionPrompt, clientName, sectionTitle }
+//   Response: { content: string } | { error: string }
+//
+// POST /api/generate-definition
+//   Request:  { skillName: string }
+//   Response: { text: string } | { error: string }
+//
+// VITE_DEMO_MODE=true  → returns fast mock responses, zero API cost
+// VITE_DEMO_MODE=false → uses Claude API (requires ANTHROPIC_API_KEY in .env.local)
+//
+// The API key (ANTHROPIC_API_KEY) never leaves the server process — no VITE_ prefix,
+// so it is never injected into the browser bundle.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const DEMO_DEFINITIONS = {
+  default: 'The target skill is operationally defined as the learner independently completing the specified task across three consecutive probe sessions with no more than one gestural prompt, as measured by direct observation using a task-analysis data sheet.',
+};
+
+const anthropicPlugin = () => ({
+  name: 'anthropic-generate',
+  configureServer(server) {
+
+    // ── /api/generate-definition ─────────────────────────────────────────────
+    server.middlewares.use('/api/generate-definition', async (req, res) => {
+      res.setHeader('Content-Type', 'application/json');
+
+      if (req.method !== 'POST') {
+        res.statusCode = 405;
+        res.end(JSON.stringify({ error: 'Method not allowed' }));
+        return;
+      }
+
+      const isDemoMode = process.env.VITE_DEMO_MODE !== 'false';
+
+      // ── DEMO MODE ───────────────────────────────────────────────────────────
+      if (isDemoMode) {
+        await new Promise(r => setTimeout(r, 600)); // feel like real latency
+        const body = JSON.parse((await readBody(req)).toString());
+        const skill = body.skillName || '';
+        const text  = DEMO_DEFINITIONS[skill] ?? DEMO_DEFINITIONS.default;
+        res.end(JSON.stringify({ text, demo: true }));
+        return;
+      }
+
+      // ── REAL MODE ───────────────────────────────────────────────────────────
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: 'ANTHROPIC_API_KEY not set in .env.local' }));
+        return;
+      }
+
+      try {
+        const { skillName } = JSON.parse((await readBody(req)).toString());
+
+        const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5',
+            max_tokens: 300,
+            system: 'You are a Board Certified Behavior Analyst writing precise operational definitions for ABA skill acquisition programs. Write in third person. Be clinical, measurable, and concise.',
+            messages: [
+              {
+                role: 'user',
+                content: `Write an operational definition for this ABA target skill: "${skillName}". The definition must describe exactly what the learner does that counts as the behavior, how it is measured, and the criteria for mastery. 2–3 sentences maximum.`,
+              },
+            ],
+          }),
+        });
+
+        if (!claudeRes.ok) {
+          const err = await claudeRes.text();
+          throw new Error(`Anthropic API error ${claudeRes.status}: ${err}`);
+        }
+
+        const data = await claudeRes.json();
+        const text = data.content?.[0]?.text ?? '';
+        res.end(JSON.stringify({ text }));
+      } catch (err) {
+        console.error('[Anthropic /api/generate-definition]', err.message);
+        res.statusCode = 502;
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+
+    // ── /api/generate ────────────────────────────────────────────────────────
+    server.middlewares.use('/api/generate', async (req, res) => {
+      res.setHeader('Content-Type', 'application/json');
+
+      if (req.method !== 'POST') {
+        res.statusCode = 405;
+        res.end(JSON.stringify({ error: 'Method not allowed' }));
+        return;
+      }
+
+      const isDemoMode = process.env.VITE_DEMO_MODE !== 'false';
+
+      // ── DEMO MODE — this endpoint should not be called in demo mode,
+      //    but guard here so a stale call never silently fails
+      if (isDemoMode) {
+        res.statusCode = 400;
+        res.end(JSON.stringify({ error: 'VITE_DEMO_MODE=true — /api/generate is not available in demo mode. Set VITE_DEMO_MODE=false to enable real AI generation.' }));
+        return;
+      }
+
+      // ── REAL MODE ───────────────────────────────────────────────────────────
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: 'ANTHROPIC_API_KEY not set in .env.local' }));
+        return;
+      }
+
+      try {
+        const { sectionKey, sectionPrompt, clientName, sectionTitle } = JSON.parse((await readBody(req)).toString());
+
+        const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'claude-opus-4-5',
+            max_tokens: 1500,
+            system: [
+              'You are a licensed Board Certified Behavior Analyst (BCBA) writing a formal, billable ABA assessment report.',
+              'Write in professional clinical prose. Third person. Past tense for history; present tense for current status.',
+              'Use specific observable behavioral language. No filler phrases. No hedging.',
+              'Format as flowing paragraphs — no bullet points, no headers, no markdown.',
+              'Each section should be 150–400 words unless the data warrants more.',
+            ].join(' '),
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  `Client: ${clientName}`,
+                  `Section: ${sectionTitle}`,
+                  '',
+                  'Write the clinical narrative for this section based on the following structured intake data:',
+                  '',
+                  sectionPrompt,
+                ].join('\n'),
+              },
+            ],
+          }),
+        });
+
+        if (!claudeRes.ok) {
+          const err = await claudeRes.text();
+          throw new Error(`Anthropic API error ${claudeRes.status}: ${err}`);
+        }
+
+        const data    = await claudeRes.json();
+        const content = data.content?.[0]?.text ?? '';
+        console.log(`[Anthropic /api/generate] ${sectionKey} — ${content.length} chars`);
+        res.end(JSON.stringify({ content }));
+      } catch (err) {
+        console.error('[Anthropic /api/generate]', err.message);
+        res.statusCode = 502;
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+  },
+});
+
 export default defineConfig({
-  plugins: [react(), assemblyTranscribePlugin()],
+  plugins: [react(), assemblyTranscribePlugin(), anthropicPlugin()],
   base: '/ABA_Shield_V0/',
 });

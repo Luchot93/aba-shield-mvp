@@ -6,6 +6,8 @@ import { markSectionEdited, setDraftContent } from '../assessmentStore.js';
 import RichEditor from './RichEditor.jsx';
 import SkillAcquisitionsEditor from './SkillAcquisitionsEditor.jsx';
 import SkillAcquisitionsReviewView from './SkillAcquisitionsReviewView.jsx';
+import MaladaptiveBehaviorsReviewView from './MaladaptiveBehaviorsReviewView.jsx';
+import MaladaptiveBehaviorsEditor from './MaladaptiveBehaviorsEditor.jsx';
 
 // ─── Placeholder regex ────────────────────────────────────────────────────────
 const PLACEHOLDER_RE = /\[BCBA to complete:[^\]]*\]/g;
@@ -50,29 +52,30 @@ const VIEW_COMPONENTS = {
   ),
   table: ({ children }) => (
     <div className="overflow-x-auto mb-4">
-      <table className="w-full text-[12px] border-collapse border border-stone-200">
+      <table className="w-full text-[12px] border-collapse"
+        style={{ border: '1px solid #B2D8D3' }}>
         {children}
       </table>
     </div>
   ),
   thead: ({ children }) => (
-    <thead className="bg-stone-50">{children}</thead>
+    <thead style={{ background: '#E8F5F3' }}>{children}</thead>
   ),
   tbody: ({ children }) => (
     <tbody>{children}</tbody>
   ),
   tr: ({ children }) => (
-    <tr className="md-table-row border-b border-stone-100">{children}</tr>
+    <tr className="md-table-row" style={{ borderBottom: '1px solid #B2D8D3' }}>{children}</tr>
   ),
   th: ({ children }) => (
-    <th className="px-3 py-2 text-left font-semibold text-slate-600 border-r border-stone-200 last:border-r-0"
-      style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>
+    <th className="px-3 py-2 text-left font-semibold"
+      style={{ color: '#2D7D6F', borderRight: '1px solid #B2D8D3', wordBreak: 'break-word', whiteSpace: 'normal' }}>
       {children}
     </th>
   ),
   td: ({ children }) => (
-    <td className="px-3 py-2 text-slate-700 border-r border-stone-200 last:border-r-0 align-top"
-      style={{ wordBreak: 'break-word', whiteSpace: 'normal' }}>
+    <td className="px-3 py-2 text-slate-700 align-top"
+      style={{ borderRight: '1px solid #B2D8D3', wordBreak: 'break-word', whiteSpace: 'normal' }}>
       {children}
     </td>
   ),
@@ -117,7 +120,7 @@ function renderWithPlaceholders(text) {
 
 // ─── InlineEditor ─────────────────────────────────────────────────────────────
 
-export default function InlineEditor({ clientId, sectionKey, section, session, setClients }) {
+export default function InlineEditor({ clientId, sectionKey, section, session, setClients, onNavigate }) {
   const [editing,   setEditing]   = useState(false);
   const [hasEdited, setHasEdited] = useState(false);
   const anchorRef = useRef(null); // points to the section card (set via callback ref from parent)
@@ -136,6 +139,7 @@ export default function InlineEditor({ clientId, sectionKey, section, session, s
   const { saveState } = useAutoSave(content, handleChange, 800);
 
   const isSkillAcquisitions = sectionKey === 'skill_acquisitions';
+  const isMaladaptive       = sectionKey === 'behavior_targets';
 
   // Close editor and scroll the section card back into view at the top of the scroll pane
   const handleClose = useCallback(() => {
@@ -199,6 +203,37 @@ export default function InlineEditor({ clientId, sectionKey, section, session, s
           </svg>
         </button>
         <SkillAcquisitionsReviewView session={session} draftContent={content} />
+      </div>
+    );
+  }
+
+  // Maladaptive Behaviors: structured card editor (same pattern as Skill Acquisitions)
+  if (isMaladaptive) {
+    if (editing) {
+      return (
+        <div ref={editorRef}>
+          <MaladaptiveBehaviorsEditor
+            session={session}
+            clientId={clientId}
+            setClients={setClients}
+            onClose={handleClose}
+          />
+        </div>
+      );
+    }
+    return (
+      <div className="group relative">
+        <button
+          onClick={() => setEditing(true)}
+          title="Edit behaviors"
+          className="absolute top-0 right-0 flex items-center justify-center w-7 h-7 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-150 hover:bg-teal-50"
+          style={{ color: '#0D9488' }}>
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round"
+              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 013.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+          </svg>
+        </button>
+        <MaladaptiveBehaviorsReviewView session={session} draftContent={content} />
       </div>
     );
   }

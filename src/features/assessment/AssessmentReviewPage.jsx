@@ -72,7 +72,7 @@ function ApprovalBar({ session }) {
 // ─── AssessmentReviewPage ─────────────────────────────────────────────────────
 
 export default function AssessmentReviewPage({
-  clientId, clients, setClients, currentUser, session, addNotif,
+  clientId, clients, setClients, currentUser, session, addNotif, onNavigate,
 }) {
   const scrollRef = useRef(null);
 
@@ -108,6 +108,7 @@ export default function AssessmentReviewPage({
               setClients={setClients}
               config={SECTION_CONFIG[key]}
               addNotif={addNotif}
+              onNavigate={onNavigate}
             />
           ))}
 

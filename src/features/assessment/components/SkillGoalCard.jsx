@@ -3,6 +3,24 @@ import { createPortal } from 'react-dom';
 import { useAutoSave } from '../../../hooks/useAutoSave.js';
 import { updateSkillGoal, removeSkillGoal } from '../assessmentStore.js';
 
+const DOMAINS = [
+  'Communication',
+  'Social',
+  'Adaptive / Self-Help',
+  'Academic',
+  'Motor',
+  'Play',
+];
+
+const DOMAIN_COLORS = {
+  'Communication':      { bg: 'rgba(20,184,166,0.1)',  text: '#0D9488' },
+  'Social':             { bg: 'rgba(139,92,246,0.1)',  text: '#7C3AED' },
+  'Adaptive / Self-Help': { bg: 'rgba(245,158,11,0.1)', text: '#B45309' },
+  'Academic':           { bg: 'rgba(59,130,246,0.1)',  text: '#1D4ED8' },
+  'Motor':              { bg: 'rgba(236,72,153,0.1)',  text: '#BE185D' },
+  'Play':               { bg: 'rgba(34,197,94,0.1)',   text: '#15803D' },
+};
+
 const TEACHING_STRATEGIES = [
   'Discrete Trial Training (DTT)',
   'Natural Environment Teaching (NET)',
@@ -396,24 +414,18 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
       setAiError(null);
       updateSkillGoal(setClients, clientId, goal.id, { definitionIsLoading: true });
       try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
+        // Route through the Vite dev-server proxy (/api/generate-definition).
+        // In production this becomes your backend endpoint.
+        // The Anthropic API key lives in .env.local (server-side only) and is
+        // never exposed to the browser bundle.
+        const res = await fetch('/api/generate-definition', {
           method: 'POST',
-          headers: {
-            'x-api-key': '',
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'claude-3-haiku-20240307',
-            max_tokens: 300,
-            messages: [{
-              role: 'user',
-              content: `Write a concise, observable, and measurable operational definition for the ABA skill target: "${val}". 2–3 sentences, clinical tone, no jargon beyond standard ABA terminology.`,
-            }],
-          }),
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ skillName: val }),
         });
         const data = await res.json();
-        const text = data?.content?.[0]?.text ?? '';
+        if (!res.ok) throw new Error(data.error ?? 'Server error');
+        const text = data.text ?? '';
         if (!defRef.current?.trim() && text) {
           defRef.current = text;
           updateSkillGoal(setClients, clientId, goal.id, {
@@ -469,6 +481,12 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
         <span className="flex-1 text-sm font-semibold text-slate-700 truncate">
           {goal.targetSkill || <span className="text-slate-400 font-normal">Untitled goal</span>}
         </span>
+        {goal.domain && !expanded && (
+          <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md"
+            style={{ background: DOMAIN_COLORS[goal.domain]?.bg ?? 'rgba(20,184,166,0.1)', color: DOMAIN_COLORS[goal.domain]?.text ?? '#0D9488' }}>
+            {goal.domain}
+          </span>
+        )}
         <svg className={`w-4 h-4 text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
           fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
@@ -499,6 +517,27 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
                 });
               }}
             />
+          </div>
+
+          {/* Domain Category */}
+          <div>
+            <SectionLabel>Domain</SectionLabel>
+            <div className="flex flex-wrap gap-1.5">
+              {DOMAINS.map(d => {
+                const active = goal.domain === d;
+                const colors = DOMAIN_COLORS[d];
+                return (
+                  <button key={d} type="button"
+                    onClick={() => updateSkillGoal(setClients, clientId, goal.id, { domain: active ? '' : d })}
+                    className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-all ${
+                      active ? 'border-transparent' : 'border-stone-200 bg-white text-slate-500 hover:border-teal-300'
+                    }`}
+                    style={active ? { background: colors.bg, color: colors.text, borderColor: 'transparent' } : {}}>
+                    {d}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Operational Definition */}
@@ -631,6 +670,42 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
             </p>
           </div>
 
+          {/* ── Short-Term Objective (STO) ──────────────────────────────── */}
+          <div className="rounded-xl px-4 py-3.5 space-y-2.5" style={{ background: 'rgba(20,184,166,0.04)', border: '1px solid rgba(20,184,166,0.18)' }}>
+            <SectionLabel>Short-Term Objective (STO)</SectionLabel>
+            {/* Row 1 — percent */}
+            <p className="text-[14px] text-slate-600 flex flex-wrap items-center gap-x-1.5">
+              <span>Client will demonstrate</span>
+              <InlineNum
+                value={goal.stoPercent}
+                onChange={val => updateSkillGoal(setClients, clientId, goal.id, { stoPercent: val })}
+                placeholder="80"
+                width="3.5rem"
+              />
+              <span>% accuracy on:</span>
+            </p>
+            {/* Row 2 — full-width description */}
+            <input
+              type="text"
+              value={goal.stoSkillDescription ?? ''}
+              onChange={e => updateSkillGoal(setClients, clientId, goal.id, { stoSkillDescription: e.target.value })}
+              placeholder="skill or step description…"
+              className="w-full text-[13px] font-medium text-teal-700 bg-white/60 border border-teal-200 rounded-lg px-3 py-1.5 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100 transition-all placeholder:text-teal-300"
+              style={{ fontFamily: 'DM Sans, sans-serif' }}
+            />
+            {/* Row 3 — weeks */}
+            <p className="text-[14px] text-slate-600 flex flex-wrap items-center gap-x-1.5">
+              <span>within</span>
+              <InlineNum
+                value={goal.stoWeeks}
+                onChange={val => updateSkillGoal(setClients, clientId, goal.id, { stoWeeks: val })}
+                placeholder="12"
+                width="3rem"
+              />
+              <span>weeks of program start.</span>
+            </p>
+          </div>
+
           {/* Generalization */}
           <div>
             <SectionLabel>Generalization &amp; Maintenance</SectionLabel>
@@ -638,7 +713,7 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
               value={goal.generalizationNotes ?? ''}
               onChange={set('generalizationNotes')}
               placeholder="Describe planned generalization strategies across people, settings, and materials…"
-              rows={2}
+              rows={5}
               className="demo-input resize-y leading-relaxed"
               style={{ fontFamily: 'DM Sans, sans-serif' }}
             />

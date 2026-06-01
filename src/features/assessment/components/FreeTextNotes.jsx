@@ -16,23 +16,6 @@ export default function FreeTextNotes({ clientId, sectionKey, section, setClient
 
   return (
     <div style={{ fontFamily: 'DM Sans, sans-serif' }}>
-      {/* Recording captured pill */}
-      {hasTranscript && (
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full mb-2 text-[11px] font-semibold"
-          style={{
-            background: 'rgba(20,184,166,0.10)',
-            color: '#0D9488',
-            border: '1px solid rgba(20,184,166,0.25)',
-          }}>
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round"
-              d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
-            <path strokeLinecap="round" strokeLinejoin="round"
-              d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/>
-          </svg>
-          Recording captured — AI will use both
-        </div>
-      )}
 
       {/* Notes label + save state */}
       <div className="flex items-center justify-between mb-1.5">
@@ -60,6 +43,27 @@ export default function FreeTextNotes({ clientId, sectionKey, section, setClient
           fontFamily: 'DM Sans, sans-serif',
         }}
       />
+
+      {/* AI source indicator — always visible so clinician knows notes feed the draft */}
+      <div className="flex items-center gap-1.5 mt-2">
+        {hasTranscript ? (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ background: 'rgba(20,184,166,0.10)', color: '#0D9488', border: '1px solid rgba(20,184,166,0.25)' }}>
+            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Transcript + notes → AI draft
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ background: 'rgba(148,163,184,0.10)', color: '#64748B', border: '1px solid rgba(148,163,184,0.20)' }}>
+            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            Notes → AI draft
+          </span>
+        )}
+      </div>
     </div>
   );
 }

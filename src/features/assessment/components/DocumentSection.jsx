@@ -29,9 +29,67 @@ function effectiveBadge(approvalState) {
   }
 }
 
+// ─── Source provenance chips ──────────────────────────────────────────────────
+// Shows clinicians exactly which form inputs fed this section's AI draft.
+
+const STRUCTURED_SECTIONS = new Set([
+  'demographics', 'communication', 'safety', 'medical_necessity',
+  'crisis_plan', 'behavior_targets', 'skill_acquisitions',
+]);
+
+function SourceChips({ section, sectionKey }) {
+  const hasTranscript  = !!(section?.transcript?.trim());
+  const hasNotes       = !!(section?.notes?.trim());
+  const hasStructured  = STRUCTURED_SECTIONS.has(sectionKey);
+
+  // Only show if at least one source is present
+  if (!hasTranscript && !hasNotes && !hasStructured) return null;
+
+  const Chip = ({ icon, label, teal }) => (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+      style={teal
+        ? { background: 'rgba(20,184,166,0.10)', color: '#0D9488', border: '1px solid rgba(20,184,166,0.22)' }
+        : { background: 'rgba(148,163,184,0.10)', color: '#64748B', border: '1px solid rgba(148,163,184,0.20)' }
+      }>
+      {icon}
+      {label}
+    </span>
+  );
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 pt-2 pb-1">
+      <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mr-0.5">
+        Sourced from
+      </span>
+      {hasTranscript && (
+        <Chip teal label="Transcript" icon={
+          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/>
+          </svg>
+        }/>
+      )}
+      {hasNotes && (
+        <Chip teal label="Clinical notes" icon={
+          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        }/>
+      )}
+      {hasStructured && (
+        <Chip teal label="Structured form" icon={
+          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+        }/>
+      )}
+    </div>
+  );
+}
+
 // ─── DocumentSection ──────────────────────────────────────────────────────────
 
-export default function DocumentSection({ clientId, sectionKey, session, setClients, config, addNotif }) {
+export default function DocumentSection({ clientId, sectionKey, session, setClients, config, addNotif, onNavigate }) {
   const section       = session?.sections?.[sectionKey];
   if (!section) return null;
 
@@ -95,7 +153,11 @@ export default function DocumentSection({ clientId, sectionKey, session, setClie
           section={section}
           session={session}
           setClients={setClients}
+          onNavigate={onNavigate}
         />
+
+        {/* Source provenance chips — shows what data fed this section's draft */}
+        <SourceChips section={section} sectionKey={sectionKey} />
 
         {/* Action row */}
         <div className="pt-1 border-t" style={{ borderColor: colors.border }}>

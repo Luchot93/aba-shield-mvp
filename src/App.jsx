@@ -160,6 +160,11 @@ export default function App() {
           currentUser={currentUser}
           addNotif={addNotif}
           onClientAdvanced={handleClientAdvanced}
+          onOpenAssessment={(clientId) => {
+            setSelectedClient(null);
+            setAssessmentClientId(clientId);
+            setPage('assessment');
+          }}
         />
       )}
     </div>

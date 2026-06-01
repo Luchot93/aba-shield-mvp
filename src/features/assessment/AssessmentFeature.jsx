@@ -83,17 +83,38 @@ export default function AssessmentFeature({
     try {
       const clientName = session.clientName ?? client?.name ?? 'Client';
       const blob = await generateAssessmentDoc(session, clientName);
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href     = url;
-      // filename: "Marcus_Rivera_ABA_Assessment_2026-06-01.docx"
       const safeName = clientName.replace(/\s+/g, '_');
       const dateStr  = new Date().toISOString().slice(0, 10);
-      a.download = `${safeName}_ABA_Assessment_${dateStr}.docx`;
+      const fileName = `${safeName}_ABA_Assessment_${dateStr}.docx`;
+
+      // Trigger browser download
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href     = url;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      // Store as base64 so it can be re-downloaded from the Documents tab
+      const arrayBuffer = await blob.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const dataUrl = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`;
+
+      // Push into client.documents so it appears automatically in the CRM
+      const doc = {
+        id:          `doc_${Date.now()}`,
+        type:        'assessment',
+        label:       fileName,
+        uploaded_at: new Date().toISOString(),
+        by:          currentUser?.name ?? 'BCBA',
+        stage:       client?.stage ?? 'assessment',
+        dataUrl,
+      };
+      setClients(prev => prev.map(c =>
+        c.id === clientId ? { ...c, documents: [...(c.documents ?? []), doc] } : c
+      ));
     } catch (err) {
       console.error('DOCX generation failed:', err);
       addNotif?.({ type: 'error', message: 'Document generation failed. Please try again.' });
@@ -103,7 +124,7 @@ export default function AssessmentFeature({
 
     addNotif?.({
       type: 'success',
-      message: `Assessment exported as Word document for ${session.clientName ?? 'client'}.`,
+      message: `Assessment saved to ${client?.name ?? 'client'}'s Documents tab.`,
     });
 
     setIsExporting(false);

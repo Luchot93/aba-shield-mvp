@@ -8,7 +8,7 @@ import { Ico } from '../../components/icons.jsx';
 import StagePill from '../../components/StagePill.jsx';
 import Avatar from '../../components/Avatar.jsx';
 
-export default function ClientDetailPage({ clientId, clients, staff, setClients, onBack, backLabel, currentUser, addNotif, onClientAdvanced }) {
+export default function ClientDetailPage({ clientId, clients, staff, setClients, onBack, backLabel, currentUser, addNotif, onClientAdvanced, onOpenAssessment }) {
   const client = clients.find(c => c.id === clientId);
   const [confirmAdvance, setConfirmAdvance] = useState(null);
   const [openPicker,     setOpenPicker]     = useState(null);
@@ -320,10 +320,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     ? <span className="text-sm text-slate-400 italic">No session linked</span>
                     : <button data-testid="open-smart-assessment"
                         onClick={() => {
-                          const sid = `session_${Date.now()}`;
-                          patchClient({ smart_assessment_session_id: sid });
-                          patchCL(item.clSec, item.key, true);
-                          pushLog('Smart Assessment session linked');
+                          pushLog('Smart Assessment opened');
+                          onOpenAssessment?.(client.id);
                         }}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90"
                         style={{ background:'linear-gradient(135deg,#7C3AED,#5B21B6)' }}>
@@ -647,11 +645,17 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         </div>
                         <button
                           onClick={() => {
-                            const blob = new Blob([`Document: ${d.label}\nUploaded: ${new Date(d.uploaded_at).toLocaleString()}\nBy: ${d.by}`], { type:'text/plain' });
-                            const url = URL.createObjectURL(blob);
                             const a = document.createElement('a');
-                            a.href = url; a.download = `${d.label.replace(/\s+/g,'_')}.txt`;
-                            a.click(); URL.revokeObjectURL(url);
+                            if (d.dataUrl) {
+                              a.href = d.dataUrl;
+                              a.download = d.label;
+                            } else {
+                              const blob = new Blob([`Document: ${d.label}\nUploaded: ${new Date(d.uploaded_at).toLocaleString()}\nBy: ${d.by}`], { type:'text/plain' });
+                              const url = URL.createObjectURL(blob);
+                              a.href = url; a.download = `${d.label.replace(/\s+/g,'_')}.txt`;
+                              setTimeout(() => URL.revokeObjectURL(url), 1000);
+                            }
+                            a.click();
                           }}
                           className="flex-shrink-0 inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-[10px] font-semibold text-teal-700 border border-teal-200 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors leading-none">
                           <span className="flex items-center" style={{ lineHeight:0 }}><Ico.Download/></span>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SECTION_ORDER, SECTION_TITLES } from './sectionConfig.js';
 import { setDraftContent } from './assessmentStore.js';
+import { generateDraft } from './lib/generateDraft.js';
 
 // ─── Demo drafts (Marcus – fictional ABA assessment) ──────────────────────────
 
@@ -24,7 +25,7 @@ const MARCUS_DRAFTS = {
 
 **Prior ABA Services:** Marcus received ABA through Sunshine Behavioral Health (October 2022–June 2023, 15 hrs/week center-based). Services were discontinued when the family relocated. No ABA services in the interim period.
 
-**Assessment Date:** May 22, 2026 | **Assessment Type:** Initial Comprehensive | **BCBA:** [BCBA to complete: clinician name and credentials]`,
+**Assessment Date:** May 22, 2026 | **Assessment Type:** Initial Comprehensive | **BCBA:** Dr. Ana Reyes, BCBA-D`,
 
   presenting_concerns: `## Presenting Concerns
 
@@ -42,9 +43,9 @@ School reports corroborate aggression, noting 3 documented incidents of hitting 
 
 ### Clinical Impression
 
-[BCBA to complete: functional hypothesis for aggression based on interview data — consider escape/demand avoidance and attention functions given onset following aide reassignment]
+Interview data strongly supports an escape function as the primary maintaining variable for Physical Aggression. Aggression consistently results in demand removal at home, and the onset correlation with the paraprofessional aide reassignment in October 2025 is clinically significant — the loss of structured 1:1 predictability at school appears to have increased Marcus's overall demand burden, generalizing the escape-maintained pattern into home settings. Attention is a secondary function for sibling-directed incidents, where Marcus's behavior reliably produces caregiver proximity. Biting, which has occurred exclusively during physical intervention attempts, further supports an escape hypothesis: the behavior escalated specifically in contexts where the demand was being maintained despite prior protest.
 
-[BCBA to complete: note whether regression in self-care warrants medical consult to rule out sensory processing changes or co-occurring medical issues]
+The abrupt regression in bathing — a skill Marcus had mastered independently by age 7 — warrants consultation with OT Ms. Sarah Mills to assess for new or shifting sensory processing changes since the January 2025 evaluation. Coordinating with Dr. Adriana Costa to rule out co-occurring medical contributors is also recommended. The regression does not appear to have a medical trigger per current history, but the sensory profile and anxiety diagnosis make an updated sensory assessment clinically appropriate before assuming purely behavioral function.
 
 The severity of aggression and the functional impact across home and school settings indicate immediate clinical priority for behavior reduction programming alongside skill acquisition. No indications requiring immediate higher level of care at this time, though threshold for psychiatric consultation should be discussed with the family if aggression escalates further.`,
 
@@ -68,7 +69,9 @@ A feeding evaluation was completed by OT Sarah Mills (January 2025) — results 
 
 ### Clinical Notes
 
-[BCBA to complete: prioritize dressing targets (buttons/snaps, shoelaces) as functional adaptive skills; coordinate with OT on feeding protocol; note clothing sensitivities as setting event for morning behavioral escalation]`,
+The most functionally significant self-help targets for ABA programming are dressing (buttons and snaps, shoelace tying) and bathing desensitization. These skills carry direct daily living impact and, in the case of bathing, overlap directly with the Bathing Refusal behavior target. Coordination with OT Ms. Sarah Mills — who conducted the feeding evaluation in January 2025 and identified sensory-based avoidance with a conditioned aversive response component — is recommended to develop an integrated feeding and grooming protocol. Feeding targets should be introduced gradually using a food chaining approach consistent with the OT's findings; ABA can reinforce approach behavior while OT manages sensory hierarchy.
+
+Clothing sensitivities function as a meaningful setting event for morning behavioral escalation. When sensory-aversive clothing is applied (seamed tags, stiff fabric), Marcus's threshold for behavioral escalation during subsequent demands decreases substantially. Ensuring compliant adaptive clothing is available and managing the dressing sequence proactively is a recommended caregiver training priority.`,
 
   daily_living: `## Daily Living Skills
 
@@ -92,7 +95,11 @@ Preferred activities include watching specific YouTube channels (trains, science
 
 ### Clinical Notes
 
-[BCBA to complete: identify morning routine steps for discrete trial support; assess community reintegration targets; document LEGO/screen time as high-preference reinforcers; coordinate with family on chore rotation as skill-building target]`,
+Based on caregiver report, the morning routine currently averages 55–70 minutes with 8 discrete steps; completion drops from approximately 80% to 40% when Marcus's preferred parent (his father) is unavailable. Steps involving sensory demands — particularly face washing and bathing — present the highest resistance and are priority targets for task analysis and backward chaining instruction. The visual schedule currently in use (laminated, bedroom wall) is an existing strength to preserve and build upon; fading to a portable checklist is a medium-term goal once step compliance is established with both caregivers.
+
+Community reintegration is a long-term clinical priority. Marcus previously managed familiar environments (library, local playground, the family's preferred restaurant) and community access is a meaningful quality-of-life goal the family has explicitly named. A graduated community exposure hierarchy — beginning with brief, predictable outings to known locations at low-demand times — should be incorporated into the treatment plan once behavioral stabilization at home is achieved.
+
+LEGO building (up to 45 minutes independent engagement, advanced instruction-manual builds) and YouTube access (trains and science content) are confirmed high-preference reinforcers and will be embedded as contingent reinforcement across the treatment plan. The family has expressed interest in age-appropriate household chore participation as a skill-building target; carrying dishes, sorting laundry, and setting the table are recommended starting points to build contribution and independence within the home routine.`,
 
   safety: `## Safety Concerns
 
@@ -112,9 +119,9 @@ No law enforcement involvement. No injuries to others requiring medical attentio
 
 ### Clinical Safety Assessment
 
-[BCBA to complete: document current aggression risk level — recommend rating as MODERATE given daily frequency, topography including biting, and impact on family safety and sibling]
+Aggression risk is rated HIGH at initial presentation. This rating reflects: (1) daily frequency of 3–7 incidents per day over a sustained period; (2) topography that includes biting, with two documented incidents in the past 60 days producing visible bruising lasting approximately one week on the primary caregiver; (3) the escalating trajectory over the past eight months; and (4) safety impact on the younger sibling, who has begun actively avoiding Marcus and limiting normal household activity as a result. Open-hand hitting (approximately 70% of incidents) and object throwing (1–2 times per week) round out the topography. No injuries have required medical attention; however, the biting incidents meet the threshold for injury-producing behavior and must be addressed as the primary clinical urgency. Physical intervention by caregivers during escalation has directly precipitated both biting incidents — this is a critical safety note for RBT training and caregiver guidance.
 
-[BCBA to complete: confirm no mandated reporting triggers from today's interview; document in session notes]
+Mandated reporting requirements were reviewed during this clinical interview. No indicators meeting reporting threshold were identified at this time. This review has been documented in session notes per agency protocol.
 
 Home environment appears structured, supportive, and appropriate for ABA services. Family is engaged, consistent, and motivated. No concerns regarding child welfare at this time.`,
 
@@ -142,7 +149,9 @@ No AAC system is in place. Verbal speech is the primary communication mode. Curr
 
 ### SLP Coordination Notes
 
-[BCBA to complete: coordinate with Ms. Cruz on shared pragmatics targets; note FCT mands for help-seeking and break-requesting as highest-priority ABA communication goals; identify verbal behavior targets to embed across session activities]`,
+Coordination with Ms. Daniela Cruz (SLP, 30 min/week at Sunset Elementary, focus: pragmatics and social communication) is a clinical priority. The most significant communication gap identified in this assessment is Marcus's inability to use language to request help or a break before escalating behaviorally — this absence of functional self-advocacy language is the direct antecedent to physical aggression across the majority of observed incidents. Functional Communication Training (FCT) targeting help-seeking mands — specifically "I need help," "I need a break," and "I need a minute" — will serve as the primary replacement behavior for the Physical Aggression behavior target, and should be a shared ABA-SLP goal with consistent implementation across both contexts.
+
+Additional verbal behavior targets to embed across ABA session activities include: labeling internal emotional states (frustrated, scared, overwhelmed), conversational turn-taking in non-preferred task contexts, and requesting negotiation language for transition demands (e.g., "Can I finish this first?"). These targets align directly with Ms. Cruz's pragmatics focus and will be coordinated to ensure consistency of language models and reinforcement across providers. Shared data tracking on unprompted help-seeking mands across school and ABA contexts is recommended.`,
 
   self_stim: `## Self-Stimulatory Behavior
 
@@ -168,7 +177,9 @@ Sensory tools currently in use: noise-canceling headphones at school, weighted l
 
 ### Clinical Notes
 
-[BCBA to complete: assess clinical significance of stigmatizing self-stim; determine whether reduction programming is indicated or whether environmental modification and peer education are the appropriate first-line response; document OT sensory plan coordination]`,
+Clinical review of Marcus's self-stimulatory behaviors indicates that hand-flapping, rocking, and verbal scripting are primarily automatic in function and serve a sensory-regulatory role. Reduction programming for these behaviors is not recommended as a first-line clinical priority; targeting automatic sensory behaviors for elimination without a comprehensive functional behavior assessment and clear evidence of functional impairment is inconsistent with current ethical practice standards. The stigmatizing impact of hand-flapping at school is a legitimate clinical concern — the appropriate first-line response is environmental modification (education of peers and school staff regarding Marcus's regulatory needs, neurodiversity-affirming framing) rather than behavior reduction.
+
+Coordination with Ms. Sarah Mills (OT, evaluation completed January 2025, documented sensory modulation difficulties with mixed hyper/hyposensitivity and proprioceptive seeking) is recommended to integrate the existing sensory diet into ABA session planning. The sensory accommodations currently in use at school — noise-canceling headphones, weighted lap pad, fidget tools — should be consistently available during ABA sessions as well. This integration is expected to reduce the overall frequency of self-regulatory behaviors in high-demand contexts by addressing the sensory antecedents that elevate them.`,
 
   medical_necessity: `## Medical Necessity
 
@@ -190,9 +201,11 @@ At school, documented aggression toward peers has resulted in disciplinary actio
 
 ### Clinical Justification
 
-[BCBA to complete: document specific ICD-10 deficits and excesses mapping to Florida Blue/Medicaid medical necessity criteria; articulate ABA as appropriate level of care given diagnosis, functional impact, and prior partial response to ABA; specify recommended hours (recommend 20–25 hrs/week given severity); note that prior ABA services were beneficial per caregiver report and that regression occurred after discontinuation]
+Applied Behavior Analysis is clinically justified as the appropriate level of care for Marcus Rivera, meeting Florida Blue and Florida Medicaid medical necessity criteria on the following grounds: (1) Primary diagnosis of ASD Level 2 (F84.0), confirmed via ADOS-2 Module 3, ADI-R, and Vineland-3 Adaptive Behavior Scales, requiring substantial support across multiple domains; (2) co-occurring ADHD Combined Presentation (F90.2) and Generalized Anxiety Disorder (F41.1), both confirmed by Dr. Adriana Costa on March 10, 2025, contributing to a complex behavioral profile; (3) documented daily behavioral excesses posing an active safety risk to caregivers and siblings — physical aggression at 3–7 incidents per day, including biting with documented visible bruising — meeting clinical severity threshold; (4) clinically significant regression in a previously mastered adaptive skill (independent bathing, age 7), representing a meaningful loss of functional independence; and (5) functional impairment across home, school, and community settings sufficient to require full-day 1:1 paraprofessional school support and has led the family to eliminate all community participation over the past four months.
 
-[BCBA to complete: document expected treatment targets and measurable outcomes for 6-month authorization period; identify barriers including transportation and language access needs for Spanish-speaking extended family]`,
+Prior ABA services through Sunshine Behavioral Health (October 2022–June 2023, 15 hours/week, center-based) were beneficial per caregiver report, with demonstrated behavioral improvement during the service period. Regression occurred within months of discontinuation following family relocation, directly supporting medical necessity for reauthorization. Both the referring developmental pediatrician (Dr. Adriana Costa) and the diagnosing psychologist (Dr. Elena Vargas) have provided letters of support for this referral.
+
+Recommended service intensity: 20–25 hours per week, center-based with home component, consistent with the severity of behavioral presentation, current functioning level, prior partial response, and level of family engagement. Expected treatment targets and measurable outcomes for the 6-month authorization period include: Physical Aggression reduction from baseline 5 incidents/day to ≤1 incident/day; Bathing Refusal duration reduction from 45–60 minutes to ≤5 minutes; mastery of Functional Help-Seeking (80% independent across home and school settings); Morning Routine Completion within 30 minutes at 100% step accuracy; and re-establishment of community participation in at least two familiar settings. Identified barriers include after-school scheduling and transportation coordination, and language access — the maternal grandparents, who provide after-school care three days per week, are Spanish-speaking. Spanish-language caregiver training materials and a bilingual clinical contact are recommended components of the treatment plan.`,
 
   skill_acquisitions: `## 1. **Functional Help-Seeking (Verbal Request)**
 
@@ -268,7 +281,9 @@ Community social settings (playground, library events) after school mastery achi
 
 ### Functional Hypothesis
 
-[BCBA to complete: formalize the functional hypothesis for aggression based on interview data; note whether indirect FBA (FAST/MAS) should be completed prior to BIP development or whether sufficient information exists from interview; specify reinforcement contingencies to address in BIP]
+Based on indirect assessment data collected during this caregiver interview, the hypothesized function of Physical Aggression is negative reinforcement (escape from demands), with attention as a secondary function for sibling-directed incidents. This hypothesis is supported by: (1) consistent demand removal following aggressive incidents as reported by both caregivers across multiple settings; (2) highest behavioral occurrence during demand-rich periods — weekday post-school transitions, morning grooming demands, and sibling interactions that disrupt preferred activities; (3) temporal onset correlation with loss of structured 1:1 support following aide reassignment in October 2025; and (4) the two biting incidents occurring exclusively during physical intervention — a context in which demands were being actively maintained despite protest. Administration of the Functional Assessment Screening Tool (FAST) by the primary caregiver is recommended prior to BIP finalization, as the volume and specificity of interview data collected is sufficient to begin preliminary BIP development in parallel. Reinforcement contingencies to address in the BIP include: eliminating demand removal contingent on aggression, implementing FCT to provide a functional escape route, and differentially reinforcing appropriate verbal help-seeking and break-requesting across all caregivers and settings.
+
+For Bathing Refusal, the functional hypothesis is escape from a sensory-aversive grooming task. The antecedent (verbal bathing cue, proximity to bathroom) is highly specific and the consequence (avoidance of the bathing sequence) is consistent across all reported episodes. A sensory desensitization hierarchy coordinated with OT is the indicated intervention approach.
 
 **Proposed Intervention Strategy (Preliminary):**
 - FCT to replace aggression with appropriate help-seeking and break-requesting
@@ -276,7 +291,7 @@ Community social settings (playground, library events) after school mastery achi
 - Planned ignoring for minor aggression with immediate redirection to alternative behavior
 - Parent training: caregiver consistency in demand presentation and not removing demands following aggression
 
-[BCBA to complete: specify measurement system — recommend event recording for all aggressive incidents with ABC notation; establish baseline data collection before BIP implementation]`,
+All aggressive incidents will be measured using event recording with same-day ABC (Antecedent-Behavior-Consequence) notation completed by the RBT in session and by caregivers via a structured daily log. A minimum of 10 school days of baseline data will be collected across both home and school contexts before implementing extinction or differential reinforcement components of the BIP. Baseline data will be graphed and reviewed with the supervising BCBA prior to BIP activation. Duration recording will be used for Bathing Refusal episodes, defined as onset at first verbal refusal through caregiver's report of routine completion or episode end.`,
 
   crisis_plan: `## Crisis Plan
 
@@ -305,16 +320,18 @@ Caregiver-identified early warning signs that Marcus is approaching a behavioral
 
 ### Emergency Contacts & Protocols
 
-- **Primary emergency contact:** Daniela Rivera (mother) — (305) 555-XXXX [BCBA to complete: confirm current contact number]
-- **Secondary:** Javier Rivera (father) — [BCBA to complete: confirm current contact number]
-- **Treating physician:** Dr. Adriana Costa — (305) 555-XXXX [BCBA to complete: confirm clinic number]
+- **Primary emergency contact:** Daniela Rivera (mother) — (305) 555-0302
+- **Secondary:** Javier Rivera (father) — (305) 555-0303
+- **Treating physician:** Dr. Adriana Costa (prescribing physician) — (305) 555-0410
 - **Family protocol for emergency services:** Family will call 911 if Marcus or another person is in immediate danger of injury they cannot manage. They have been counseled to inform dispatch that Marcus has autism and to request a CIT (Crisis Intervention Team) officer if available in their jurisdiction.
 
 ### Clinical Crisis Protocol
 
-[BCBA to complete: document the specific internal crisis protocol including: RBT-to-BCBA call threshold (recommend: any bite, any injury to another person, any episode lasting >20 minutes); physical management procedures authorized (recommend: no physical management — redirection only, removal of at-risk individuals, space creation); document crisis plan acknowledgment signature requirement prior to service start]
+RBT-to-BCBA call threshold: any biting incident regardless of injury; any physical aggression resulting in visible injury to another person; any behavioral episode (combined escalation and return-to-baseline period) lasting more than 20 consecutive minutes without improvement. The BCBA must be reached within 30 minutes of incident onset; the RBT should attempt contact within 7 minutes of incident and document all attempts.
 
-[BCBA to complete: confirm whether psychiatric consultation is warranted before services begin — given current aggression frequency and biting, recommend consulting with Dr. Costa regarding whether medication evaluation for anxiety/aggression is appropriate concurrently with ABA initiation]`,
+Physical management procedures: No physical management or blocking procedures are authorized under this crisis plan. The RBT's response is limited to (1) moving out of Marcus's immediate reach, (2) removing the younger sibling and other at-risk individuals from the environment calmly and without escalation, and (3) creating distance while maintaining calm, low-verbal presence. Physical redirection has directly precipitated both documented biting incidents — RBTs must not attempt to physically guide or redirect Marcus during a crisis episode. Session suspension is indicated if Marcus initiates biting toward the RBT or directs object-throwing at the RBT with intent; the RBT should move out of range, contact the supervising BCBA immediately, and not re-engage until BCBA advises. This crisis plan must be reviewed, signed, and on file before services begin. Signature of both primary caregivers and the supervising BCBA is required.
+
+Psychiatric consultation with Dr. Adriana Costa is recommended prior to or concurrent with ABA service initiation. Given the current frequency of physical aggression, the presence of biting producing documented injury, and the co-occurring Generalized Anxiety Disorder diagnosis, a medication review — specifically to assess whether pharmacological support for anxiety and impulse dysregulation may be appropriate alongside ABA — is clinically warranted. Dr. Costa is the treating physician and is already involved in this referral; a formal consultation request should be made at intake.`,
 };
 
 // ─── Loading messages ─────────────────────────────────────────────────────────
@@ -421,7 +438,11 @@ As noted in presenting concerns, Emma accepts 6 foods. She uses a spoon for yogu
 
 ### Clinical Notes
 
-[BCBA to complete: prioritize toilet training protocol (initiation fading, pants management); coordinate with OT on feeding protocol and sensory integration for grooming tolerance; note tactile sensitivities as daily antecedent to behavioral escalation]`,
+Toilet training is an immediate clinical priority. Emma currently has urinary continence during the school day on a timed schedule (every 90 minutes with verbal prompt) but does not self-initiate; home initiation rate is approximately 20% per caregiver report. Bowel training has not yet been established — Emma relies on pull-ups at naptime for bowel elimination and full-time pull-ups otherwise. ABA toilet training programming will target: (1) independent toileting initiation using a schedule-fading protocol, moving from prompted every 90 minutes toward self-initiated trips; (2) pants management (pulling down and up) as a prerequisite self-help step, addressed via task analysis and physical prompting hierarchy; and (3) generalization across home and school settings and multiple caregivers. Coordination with Emma's school team is needed to align home and school schedules.
+
+Coordination with OT on the feeding protocol is recommended, building on the March 2024 sensory-based avoidance assessment. A food chaining approach, targeting foods adjacent to Emma's current 6 accepted foods along sensory dimensions (texture, color, brand), is the appropriate starting point. ABA can support approach behavior and reinforce exploration without requiring consumption, in coordination with OT's sensory hierarchy.
+
+Tactile sensitivities — specifically the requirement for seamless socks and tagless shirts, and behavioral escalation when seamed or ill-fitting clothing is applied — function as a significant daily antecedent to behavioral escalation. Mornings involving clothing management before the sensory preferences are met are elevated-risk periods for head banging and transition refusal. Ensuring compliant adaptive clothing and building tolerance gradually via desensitization is a clinical priority, coordinated with OT.`,
 
   daily_living: `## Daily Living Skills
 
@@ -445,7 +466,11 @@ Preferred activities include cause-and-effect toy play, tablet-based video apps 
 
 ### Clinical Notes
 
-[BCBA to complete: document specific visual support formats that are effective; add elopement safety protocol as immediate priority; identify highest-value reinforcers beyond screen time to expand reinforcer menu]`,
+Visual supports are an established strength in Emma's learning profile. Photo-based visual schedules (photographs, not icons or cartoon symbols) are effective at school and should be implemented consistently at home — Emma does not currently have a visual schedule at home, and the absence of this structure is a contributing factor to the high rate of transition-related behavioral escalation (approximately 70% of transitions result in head banging or tantrum). Providing caregivers with a home photo schedule replicating the school format is a first-session priority.
+
+Elopement is an immediate safety priority and must be addressed in the crisis plan and caregiver training before ABA home services begin. Emma has eloped from the school building twice this academic year and from the home front yard on three documented occasions since October. While door-top deadbolts and a door alarm have been effective at home since installation, elopement risk must be explicitly included in the RBT safety protocol, and visual supervision at all times during home sessions is required.
+
+Current reinforcer menu is dominated by iPad access (water videos, sensory YouTube content) estimated at 3–4 hours/day. While screen access is a reliable reinforcer, over-reliance on a single category reduces schedule flexibility and potency. Preference assessment should be completed in the first week of services to identify and rank alternative high-preference reinforcers. Based on parent interview, high-value candidates include: light-up spinning toys, vestibular stimulation (spinning in a therapy chair), vanilla wafer cookies, and tickle play. Expanding the reinforcer menu across sensory categories will improve treatment efficiency and allow natural environment teaching in non-screen contexts.`,
 
   safety: `## Safety Concerns
 
@@ -467,7 +492,13 @@ Emma engages in scratching and pinching when communication attempts fail or when
 
 ### Clinical Notes
 
-[BCBA to complete: complete functional behavior assessment for SIB and aggression; document emergency safety protocol for elopement; evaluate for sensory regulation supports that may reduce SIB frequency; confirm mandated reporting review completed]`,
+Functional behavior assessment is required before implementing behavior reduction programming for head banging and aggression. At minimum, an indirect assessment (MAS or FAST completed by primary caregivers) and systematic direct observation across home and school contexts should be completed. Given the frequency, intensity, and injury risk of head banging (4–8 episodes/day, visible marks documented, escalating force during full behavioral escalation), a structured functional analysis is recommended prior to any extinction-based procedures. School direct observation data, including ABCs across naturally occurring episodes, should be obtained and reviewed before programming begins.
+
+Elopement emergency protocol: Emma must never be in a home session without locked perimeter security (door-top deadbolts active, door alarm armed). RBT must maintain direct visual supervision at all times during sessions. If elopement occurs during an ABA session, the RBT must follow immediately using a calm, neutral tone without shouting; contact the supervising BCBA within 15 minutes of any elopement incident; and complete an incident report prior to session end. Do not physically block or grab Emma during active elopement — maintain proximity and guide back to safe area calmly.
+
+Evaluation of sensory regulation supports is recommended via coordination with Emma's OT (see self_stim section). Proprioceptive and vestibular input prior to high-demand transitions has been identified as a potential antecedent modification to reduce the sensory-automatic component of head banging.
+
+Mandated reporting requirements were reviewed during this clinical interview. The documented SIB (visible marks from head banging) was assessed in context — parents have installed protective foam padding and are actively seeking appropriate intervention. No indicators meeting threshold for a mandated report were identified at this time. This review has been documented in session notes.`,
 
   communication: `## Communication
 
@@ -487,9 +518,13 @@ Emma currently uses a 12-symbol PECS binder (Phase I–II) at school. Home imple
 
 ### Clinical Notes
 
-[BCBA to complete: coordinate with SLP Ms. Rivera on FCT implementation using PECS; prioritize mand training for food and break requests as highest-frequency needs; document communication book contents and add "help," "break," and "I want" core vocabulary as immediate targets; support family in AAC device trial]`,
+Coordination with the school SLP is an immediate clinical priority. Emma is currently in Phase II of PECS at school (single exchange, prompted) and an AAC trial (Proloquo2Go) was initiated two weeks prior to this assessment, with full physical prompting still required for all symbol activations. The family reports home implementation of PECS is inconsistent — the binder is used at meals approximately 50% of the time — and they have not received sufficient training to support the AAC device at home. Providing parent training in PECS Phase II–III and introductory Proloquo2Go navigation is a first-month priority.
 
-  self_stimulatory: `## Self-Stimulatory Behavior
+The highest-frequency communication needs identified in this assessment are: requesting food (meal and snack contexts, multiple times daily), requesting "break" or "all done" during demand contexts (the communicative escape function directly linked to head banging), and indicating "help" when task difficulty triggers frustration. These three mand targets — food request, break, help — should be the initial PECS and AAC programming priorities, coordinated across ABA, school SLP, and home contexts.
+
+Current PECS communication binder contents should be documented at intake. Core vocabulary items "help," "break," "I want," and "all done" should be added as immediate targets if not already present. Coordination with the school SLP to ensure consistent symbol sets across PECS binder and Proloquo2Go device vocabulary is essential for cross-modality learning.`,
+
+  self_stim: `## Self-Stimulatory Behavior
 
 ### Observed Stereotypies
 
@@ -505,7 +540,11 @@ Toe-walking has been flagged by the pediatric orthopedist as requiring monitorin
 
 ### Clinical Notes
 
-[BCBA to complete: determine whether response interruption/redirection is appropriate for visual stereotypy during instructional periods; do not target sensory-regulatory stereotypies (hand-flapping, vocalizing) for reduction without functional behavior assessment; document baseline rates]`,
+Clinical review of Emma's stereotypy profile indicates that the majority of her repetitive behaviors (hand-flapping, rocking, high-pitched vocalizing, face-rubbing) serve a sensory-regulatory or automatic function and should not be targeted for reduction without functional behavior assessment confirming a function other than sensory regulation. Reducing automatic sensory behaviors without addressing the underlying sensory need is likely to increase behavioral stress and may elevate head banging frequency, making this a clinical risk rather than a treatment benefit.
+
+Object spinning and visual fixation (ceiling fans, reflective surfaces) are more complex cases. When visual fixation crowds out instructional engagement — which school staff have documented during group activities — Response Interruption and Redirection (RIRD) is an evidence-based procedure that may be appropriate; however, it should only be implemented following baseline data collection confirming that visual stereotypy is interfering with learning opportunities, and in coordination with OT's sensory diet to address the underlying sensory need.
+
+Baseline rates for all stereotypies should be documented during the first two weeks of service via session observation, including frequency counts and percentage of intervals engaged in each behavior across instructional and unstructured contexts. OT coordination is recommended to implement a sensory diet targeting proprioceptive and vestibular input (identified as primary seeking domains in the OT evaluation) as an antecedent modification across the school day and home routine — no sensory diet is currently in place at home, which represents a gap in the existing intervention ecosystem.`,
 
   medical_necessity: `## Medical Necessity
 
@@ -525,7 +564,9 @@ Based on the severity of Emma's presenting profile, recommendation is for 30–3
 
 ### Clinical Notes
 
-[BCBA to complete: complete standardized adaptive behavior assessment (Vineland-3 or ABAS-3) to document functional deficit baseline; obtain diagnostic records from Dr. Patel; confirm insurance authorization requirements for recommended service hours]`,
+Completion of a standardized adaptive behavior assessment — Vineland-3 or ABAS-3 — is required to formally document the functional deficit baseline that supports the recommended 30 hours per week service intensity. Parent interview data collected during this assessment suggests a Vineland Adaptive Behavior Composite in the 40–50 standard score range, consistent with the Level 3 ASD classification, but formal administration is necessary for insurance authorization documentation. The diagnostic evaluation completed by Dr. Robert Chen (Palm Beach Children's Hospital, March 2024) included the Vineland-3 as part of the diagnostic battery — obtaining this report on file will supplement or replace the need for a full re-administration if the report is recent enough to meet the insurer's documentation window.
+
+Humana's authorization requirements for the recommended 30 hours per week should be confirmed with the clinical authorization team at intake. Typical documentation requirements include: diagnostic records (ADOS-2, ADI-R, Vineland-3 from March 2024 evaluation), referring provider letter from Dr. Robert Chen or current pediatrician Dr. Sarah Mills, this completed ABA assessment report, and a signed treatment plan with measurable goals. Parent-signed informed consent and crisis plan acknowledgment are required before services begin. The IEP team's current discussion regarding potential placement change for fall adds clinical urgency to the authorization timeline — this context should be noted in the authorization request letter.`,
 
   skill_acquisitions: `## Skill Acquisition Plan
 
@@ -552,7 +593,11 @@ Emma will stop walking and remain stationary for 5 seconds in response to "stop"
 
 ### Clinical Notes
 
-[BCBA to complete: complete preference assessment to identify current high-preference reinforcers; coordinate with SLP on AAC device selection and vocabulary programming; establish baseline data for all skill targets prior to programming; write complete skill acquisition programs with task analyses, prompting hierarchies, and data collection procedures]`,
+A formal preference assessment should be completed during the first week of services to establish a ranked reinforcer hierarchy for use across all skill acquisition programs. Based on parent interview, the following items have been identified as high-preference candidates: light-up spinning toys, iPad access (water/sensory YouTube videos), vanilla wafer cookies, vestibular input (spinning in a therapy chair), and tickle play. Multiple stimuli without replacement (MSWO) or paired choice assessment across these categories will generate a valid reinforcer hierarchy for initial programming.
+
+Coordination with the school SLP on AAC device selection and Proloquo2Go vocabulary programming is required before communication skill acquisition programs can be finalized. The vocabulary sets trained in ABA must align with those in use during school SLP sessions to ensure cross-context generalization and avoid teaching competing symbol-label pairings.
+
+Baseline data for all five skill targets must be collected via structured probe sessions before programming begins — minimum of 3 probe sessions across 2 days per target. Task analyses and prompting hierarchies for Toilet Training (initiation fading) and Functional Requesting (PECS Phase II–III advancement and AAC activation) must be written and reviewed with the supervising BCBA prior to initial treatment sessions. Data collection sheets with frequency, duration, or percentage correct formats (as appropriate per target) should be prepared and reviewed with the RBT at the initial training meeting.`,
 
   behavior_targets: `## Behavior Targets
 
@@ -584,7 +629,11 @@ Emma will stop walking and remain stationary for 5 seconds in response to "stop"
 
 ### Clinical Notes
 
-[BCBA to complete: complete functional behavior assessment — at minimum an indirect assessment and direct observation; functional analysis is recommended given the safety risk of SIB; obtain school direct observation data prior to programming; establish RBT and caregiver safety protocols before beginning extinction-based procedures]`,
+Functional behavior assessment is required before implementing any extinction-based procedures for Head Banging or Tantrum/Drop. At minimum, an indirect assessment (MAS completed by both primary caregivers independently) and systematic direct observation across home and school settings must be completed and reviewed with the supervising BCBA. Given the safety risk of SIB — observable marks documented, force escalating with emotional arousal, frequency averaging 6 episodes per day — a structured functional analysis in a controlled setting is strongly recommended prior to implementing differential reinforcement or extinction components of the behavior plan. This recommendation is consistent with BACB ethical guidelines for behaviors posing risk of physical harm.
+
+School direct observation data must be obtained from Emma's school-based BCBA (who currently delivers 10 hours per week through a separate provider) before home programming begins. Coordinating with the existing provider to review their behavioral data, current protocols, and any informal functional assessment data already collected will prevent contradictory procedures across settings and may significantly accelerate the assessment phase.
+
+RBT and caregiver safety protocols must be established and trained before first session: (1) No physical blocking of head banging — create safe space by padding or moving Emma to a padded area if possible without escalating; (2) Do not remove demands or provide preferred items contingent on head banging or tantrum/drop; (3) BCBA contact threshold: any SIB resulting in visible skin break, bruise, or injury; any single head impact against a hard surface with significant force; any behavioral episode exceeding 15 minutes continuous escalation without response to prevention strategies.`,
 
   crisis_plan: `## Crisis Plan
 
@@ -614,7 +663,11 @@ Emma presents with two behaviors that elevate safety risk and require a document
 
 ### Emergency Contacts
 
-[BCBA to complete: insert emergency contact hierarchy — parent primary, parent secondary, BCBA, agency emergency line]
+- **Primary (Parent):** Linda Thompson (mother) — (561) 555-0167
+- **Secondary (Parent):** David Thompson (father) — (561) 555-0168
+- **Supervising BCBA:** Dr. Ana Reyes, BCBA-D — available via agency emergency line during session hours
+- **Treating Pediatrician:** Dr. Sarah Mills — (561) 555-0200
+- **Agency Emergency Line:** Contact the ABA Shield clinical on-call line for any incident outside of BCBA direct availability
 
 ### Plan Review
 
@@ -676,19 +729,61 @@ export default function AssessmentChecklistPage({
     setIsGenerating(true);
     setLoadingStep(0);
 
-    for (let i = 0; i < LOADING_MESSAGES.length; i++) {
-      setLoadingMessage(LOADING_MESSAGES[i]);
-      setLoadingStep(i + 1);
-      await new Promise(r => setTimeout(r, 580));
+    // ── Feature flag: VITE_DEMO_MODE ─────────────────────────────────────────
+    // true  (default) → hardcoded demo drafts, zero API cost
+    // false           → real Claude generation via /api/generate
+    //
+    // To go live: set VITE_DEMO_MODE=false + ANTHROPIC_API_KEY in .env.local,
+    // then restart the dev server (or redeploy). No other changes needed.
+    // ─────────────────────────────────────────────────────────────────────────
+    const isDemoMode = import.meta.env.VITE_DEMO_MODE !== 'false';
+
+    if (isDemoMode) {
+      // ── DEMO PATH — simulate realistic loading, then inject hardcoded drafts
+      for (let i = 0; i < LOADING_MESSAGES.length; i++) {
+        setLoadingMessage(LOADING_MESSAGES[i]);
+        setLoadingStep(i + 1);
+        await new Promise(r => setTimeout(r, 580));
+      }
+      const DRAFTS = getDrafts(clientId);
+      for (const [key, content] of Object.entries(DRAFTS)) {
+        setDraftContent(setClients, clientId, key, content, 'pending', content);
+      }
+      await new Promise(r => setTimeout(r, 300));
+
+    } else {
+      // ── REAL MODE — call Claude section by section via /api/generate
+      const clientName = clients.find(c => c.id === clientId)?.name ?? 'the client';
+      try {
+        setLoadingMessage('Preparing assessment data…');
+        setLoadingStep(1);
+
+        const drafts = await generateDraft(session, {
+          clientName,
+          onProgress: (sectionKey, sectionTitle, index, total) => {
+            setLoadingMessage(`Drafting ${sectionTitle}…`);
+            // Map section index onto the progress bar's scale
+            setLoadingStep(Math.max(2, Math.round(((index + 1) / (total + 1)) * LOADING_MESSAGES.length)));
+          },
+        });
+
+        for (const [key, content] of Object.entries(drafts)) {
+          setDraftContent(setClients, clientId, key, content, 'pending', content);
+        }
+
+        setLoadingMessage('Finalizing assessment document…');
+        setLoadingStep(LOADING_MESSAGES.length);
+        await new Promise(r => setTimeout(r, 500));
+
+      } catch (err) {
+        console.error('[handleGenerate]', err);
+        setIsGenerating(false);
+        // Surface the error. A proper error UI component can replace this alert.
+        window.alert(`Draft generation failed:\n\n${err.message}`);
+        return;
+      }
     }
 
-    // Populate all sections with client-specific demo drafts
-    const DRAFTS = getDrafts(clientId);
-    for (const [key, content] of Object.entries(DRAFTS)) {
-      setDraftContent(setClients, clientId, key, content, 'pending', content);
-    }
-
-    await new Promise(r => setTimeout(r, 300));
     setIsGenerating(false);
     onNavigate('review');
   };
@@ -773,9 +868,10 @@ export default function AssessmentChecklistPage({
               return (
                 <button
                   key={row.key}
-                  onClick={() => onNavigate('interview', row.key)}
-                  className="w-full rounded-2xl border bg-white px-4 py-3.5 flex items-center gap-3.5 text-left hover:shadow-sm hover:-translate-y-px active:scale-[0.99] transition-all duration-150"
-                  style={{ borderColor: isWarning ? 'rgba(251,191,36,0.4)' : isEmpty ? '#E7E5E4' : '#E7E5E4' }}>
+                  onClick={() => !isGenerating && onNavigate('interview', row.key)}
+                  disabled={isGenerating}
+                  className={`w-full rounded-2xl border bg-white px-4 py-3.5 flex items-center gap-3.5 text-left transition-all duration-150 ${isGenerating ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-sm hover:-translate-y-px active:scale-[0.99]'}`}
+                  style={{ borderColor: isWarning ? 'rgba(251,191,36,0.4)' : '#E7E5E4' }}>
 
                   {/* Number badge */}
                   <span className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold"

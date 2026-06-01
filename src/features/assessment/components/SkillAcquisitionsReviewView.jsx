@@ -57,14 +57,15 @@ function extractOverview(draftContent) {
 // ─── Table ────────────────────────────────────────────────────────────────────
 
 const TH = ({ children }) => (
-  <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest text-slate-500 bg-stone-50 border-b border-r border-stone-200 last:border-r-0 whitespace-nowrap">
+  <th className="px-3 py-2 text-left text-[9px] font-bold uppercase tracking-widest whitespace-nowrap"
+    style={{ background: '#E8F5F3', color: '#2D7D6F', borderBottom: '1px solid #B2D8D3', borderRight: '1px solid #B2D8D3' }}>
     {children}
   </th>
 );
 
 const TD = ({ children }) => (
-  <td className="px-3 py-2.5 text-[13px] text-slate-700 border-r border-stone-100 last:border-r-0 align-top"
-    style={{ fontFamily: 'Georgia, "Times New Roman", serif', lineHeight: 1.65 }}>
+  <td className="px-3 py-2.5 text-[13px] text-slate-700 align-top last:border-r-0"
+    style={{ fontFamily: 'Georgia, "Times New Roman", serif', lineHeight: 1.65, borderRight: '1px solid #B2D8D3' }}>
     {children}
   </td>
 );
@@ -103,7 +104,7 @@ function GoalBlock({ goal, index }) {
       )}
 
       {/* Data table */}
-      <div className="overflow-x-auto mb-3 rounded-lg border border-stone-200">
+      <div className="overflow-x-auto mb-3 rounded-lg" style={{ border: '1px solid #B2D8D3' }}>
         <table className="w-full border-collapse text-left">
           <thead>
             <tr>

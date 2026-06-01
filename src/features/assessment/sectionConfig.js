@@ -29,7 +29,7 @@ export const SECTION_TITLES = {
   self_stim:           'Self-Stimulatory Behavior',
   medical_necessity:   'Medical Necessity',
   skill_acquisitions:  'Skill Acquisitions',
-  behavior_targets:    'Behavior Targets',
+  behavior_targets:    'Maladaptive Behaviors',
   crisis_plan:         'Crisis Plan',
 };
 
@@ -461,7 +461,7 @@ export const SECTION_CONFIG = {
 
   behavior_targets: {
     key: 'behavior_targets',
-    title: 'Behavior Targets',
+    title: 'Maladaptive Behaviors',
     promptGroups: [
       {
         label: 'Behavior Identification',

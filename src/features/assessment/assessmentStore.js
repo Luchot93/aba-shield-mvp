@@ -281,6 +281,11 @@ const SKILL_GOAL_DEFAULTS = {
   sto: '',                           // short-term objective (6-month target)
   currentLevel: '',                  // current performance level (overridable)
   generalizationNotes: '',
+  // ── Change #6 fields ──────────────────────────────────────────────────────
+  domain: '',                        // Communication | Social | Adaptive / Self-Help | Academic | Motor | Play
+  stoPercent: '',                    // STO accuracy target (%)
+  stoSkillDescription: '',           // free-text description of the STO skill/step
+  stoWeeks: '',                      // weeks from program start to hit the STO
 };
 
 export function addSkillGoal(setClients, clientId) {

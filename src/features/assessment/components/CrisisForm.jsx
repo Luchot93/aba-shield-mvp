@@ -286,6 +286,16 @@ export default function CrisisForm({ clientId, session, setClients }) {
             onChange={v => patch({ deEscalationWorks: v })}
             multi
           />
+          <div className="mt-2">
+            <input
+              type="text"
+              value={sec.deEscalationWorksOther ?? ''}
+              onChange={e => patch({ deEscalationWorksOther: e.target.value })}
+              placeholder="Other — describe additional strategies that work…"
+              className="demo-input"
+              style={{ fontFamily: 'DM Sans, sans-serif' }}
+            />
+          </div>
         </div>
         <div>
           <p className="text-[11px] font-semibold text-red-500 mb-1.5">✕ What worsens behavior</p>
@@ -295,6 +305,16 @@ export default function CrisisForm({ clientId, session, setClients }) {
             onChange={v => patch({ deEscalationWorsens: v })}
             multi
           />
+          <div className="mt-2">
+            <input
+              type="text"
+              value={sec.deEscalationWorsensOther ?? ''}
+              onChange={e => patch({ deEscalationWorsensOther: e.target.value })}
+              placeholder="Other — describe additional triggers or things to avoid…"
+              className="demo-input"
+              style={{ fontFamily: 'DM Sans, sans-serif' }}
+            />
+          </div>
         </div>
         <div>
           <p className="text-[10px] font-semibold text-slate-400 mb-1">Clinical notes on de-escalation</p>
@@ -302,7 +322,7 @@ export default function CrisisForm({ clientId, session, setClients }) {
             value={sec.deEscalationNotes ?? ''}
             onChange={e => patch({ deEscalationNotes: e.target.value })}
             placeholder="Document sequence, timing, nuance — e.g. deep pressure works only if offered by primary caregiver, not dad…"
-            rows={2} className="demo-input resize-y" style={{ fontFamily: 'DM Sans, sans-serif' }}
+            rows={5} className="demo-input resize-y" style={{ fontFamily: 'DM Sans, sans-serif' }}
           />
         </div>
       </div>

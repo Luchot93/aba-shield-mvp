@@ -414,24 +414,18 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
       setAiError(null);
       updateSkillGoal(setClients, clientId, goal.id, { definitionIsLoading: true });
       try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
+        // Route through the Vite dev-server proxy (/api/generate-definition).
+        // In production this becomes your backend endpoint.
+        // The Anthropic API key lives in .env.local (server-side only) and is
+        // never exposed to the browser bundle.
+        const res = await fetch('/api/generate-definition', {
           method: 'POST',
-          headers: {
-            'x-api-key': '',
-            'anthropic-version': '2023-06-01',
-            'content-type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'claude-3-haiku-20240307',
-            max_tokens: 300,
-            messages: [{
-              role: 'user',
-              content: `Write a concise, observable, and measurable operational definition for the ABA skill target: "${val}". 2–3 sentences, clinical tone, no jargon beyond standard ABA terminology.`,
-            }],
-          }),
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ skillName: val }),
         });
         const data = await res.json();
-        const text = data?.content?.[0]?.text ?? '';
+        if (!res.ok) throw new Error(data.error ?? 'Server error');
+        const text = data.text ?? '';
         if (!defRef.current?.trim() && text) {
           defRef.current = text;
           updateSkillGoal(setClients, clientId, goal.id, {
@@ -677,9 +671,10 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
           </div>
 
           {/* ── Short-Term Objective (STO) ──────────────────────────────── */}
-          <div className="rounded-xl px-4 py-3.5" style={{ background: 'rgba(20,184,166,0.04)', border: '1px solid rgba(20,184,166,0.18)' }}>
+          <div className="rounded-xl px-4 py-3.5 space-y-2.5" style={{ background: 'rgba(20,184,166,0.04)', border: '1px solid rgba(20,184,166,0.18)' }}>
             <SectionLabel>Short-Term Objective (STO)</SectionLabel>
-            <p className="text-[14px] text-slate-600 flex flex-wrap items-center gap-x-1.5 min-h-[2rem]">
+            {/* Row 1 — percent */}
+            <p className="text-[14px] text-slate-600 flex flex-wrap items-center gap-x-1.5">
               <span>Client will demonstrate</span>
               <InlineNum
                 value={goal.stoPercent}
@@ -687,15 +682,19 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
                 placeholder="80"
                 width="3.5rem"
               />
-              <span>% accuracy on</span>
-              <input
-                type="text"
-                value={goal.stoSkillDescription ?? ''}
-                onChange={e => updateSkillGoal(setClients, clientId, goal.id, { stoSkillDescription: e.target.value })}
-                placeholder="skill or step description"
-                className="inline-block text-[13px] font-medium text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-1 px-0.5"
-                style={{ width: '13rem', fontFamily: 'DM Sans, sans-serif', lineHeight: 1.6 }}
-              />
+              <span>% accuracy on:</span>
+            </p>
+            {/* Row 2 — full-width description */}
+            <input
+              type="text"
+              value={goal.stoSkillDescription ?? ''}
+              onChange={e => updateSkillGoal(setClients, clientId, goal.id, { stoSkillDescription: e.target.value })}
+              placeholder="skill or step description…"
+              className="w-full text-[13px] font-medium text-teal-700 bg-white/60 border border-teal-200 rounded-lg px-3 py-1.5 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100 transition-all placeholder:text-teal-300"
+              style={{ fontFamily: 'DM Sans, sans-serif' }}
+            />
+            {/* Row 3 — weeks */}
+            <p className="text-[14px] text-slate-600 flex flex-wrap items-center gap-x-1.5">
               <span>within</span>
               <InlineNum
                 value={goal.stoWeeks}
@@ -714,7 +713,7 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
               value={goal.generalizationNotes ?? ''}
               onChange={set('generalizationNotes')}
               placeholder="Describe planned generalization strategies across people, settings, and materials…"
-              rows={2}
+              rows={5}
               className="demo-input resize-y leading-relaxed"
               style={{ fontFamily: 'DM Sans, sans-serif' }}
             />

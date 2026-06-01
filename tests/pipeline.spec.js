@@ -366,9 +366,9 @@ test.describe('ABA Shield — Clients Page', () => {
   });
 
   // ── Table renders ─────────────────────────────────────────────────────────
-  test('Clients page shows all 12 seed clients', async ({ page }) => {
+  test('Clients page shows all 13 seed clients', async ({ page }) => {
     const rows = page.locator('[data-testid="clients-table"] tbody tr');
-    await expect(rows).toHaveCount(12);
+    await expect(rows).toHaveCount(13);
   });
 
   test('all 9 column headers render', async ({ page }) => {
@@ -444,8 +444,8 @@ test.describe('ABA Shield — Clients Page', () => {
   test('In Progress filter excludes intake, services, denied', async ({ page }) => {
     await page.getByTestId('filter-in_progress').click();
     const rows = page.locator('[data-testid="clients-table"] tbody tr');
-    // stages: auth_assessment(2), assessment(1), plan_draft(1), submitted(1), authorized(1), staffing(1) = 7
-    await expect(rows).toHaveCount(7);
+    // stages: auth_assessment(2), assessment(2), plan_draft(1), submitted(1), authorized(1), staffing(1) = 8
+    await expect(rows).toHaveCount(8);
   });
 
   // ── Sort ──────────────────────────────────────────────────────────────────
@@ -493,7 +493,7 @@ test.describe('ABA Shield — Clients Page', () => {
     await page.locator('[data-testid="save-client"]').click();
     await expect(page.locator('[data-testid="clients-table"]')).toContainText('Test Import Child');
     const rows = page.locator('[data-testid="clients-table"] tbody tr');
-    await expect(rows).toHaveCount(13);
+    await expect(rows).toHaveCount(14);
   });
 
   // ── Import CSV/Excel button ───────────────────────────────────────────────

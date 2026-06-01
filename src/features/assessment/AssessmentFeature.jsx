@@ -3,6 +3,7 @@ import AssessmentInterviewPage from './AssessmentInterviewPage.jsx';
 import AssessmentChecklistPage from './AssessmentChecklistPage.jsx';
 import AssessmentReviewPage    from './AssessmentReviewPage.jsx';
 import { completeSession, canExport } from './assessmentStore.js';
+import { generateAssessmentDoc } from './lib/generateAssessmentDoc.js';
 
 // ─── Status tag config ────────────────────────────────────────────────────────
 
@@ -52,10 +53,11 @@ export default function AssessmentFeature({
 
   // ── Export ─────────────────────────────────────────────────────────────────
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!session || isExporting) return;
     setIsExporting(true);
 
+    // Build the result record (used for completeSession state)
     const sectionsResult = {};
     Object.entries(session.sections).forEach(([key, sec]) => {
       sectionsResult[key] = {
@@ -77,25 +79,34 @@ export default function AssessmentFeature({
 
     completeSession(setClients, clientId, result);
 
+    // Generate and download the Word document
     try {
-      const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+      const clientName = session.clientName ?? client?.name ?? 'Client';
+      const blob = await generateAssessmentDoc(session, clientName);
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href     = url;
-      a.download = `assessment_${clientId}_${Date.now()}.json`;
+      // filename: "Marcus_Rivera_ABA_Assessment_2026-06-01.docx"
+      const safeName = clientName.replace(/\s+/g, '_');
+      const dateStr  = new Date().toISOString().slice(0, 10);
+      a.download = `${safeName}_ABA_Assessment_${dateStr}.docx`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
-    } catch (_) {}
+    } catch (err) {
+      console.error('DOCX generation failed:', err);
+      addNotif?.({ type: 'error', message: 'Document generation failed. Please try again.' });
+      setIsExporting(false);
+      return;
+    }
 
     addNotif?.({
       type: 'success',
-      message: `Assessment exported for ${session.clientName ?? 'client'}.`,
+      message: `Assessment exported as Word document for ${session.clientName ?? 'client'}.`,
     });
 
-    setTimeout(() => {
-      setIsExporting(false);
-      handleClose?.();
-    }, 1500);
+    setIsExporting(false);
   };
 
   // ── Top bar ────────────────────────────────────────────────────────────────
@@ -150,7 +161,7 @@ export default function AssessmentFeature({
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={3}/>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
               </svg>
-              Exporting…
+              Building report…
             </>
           ) : (
             <>
@@ -158,7 +169,7 @@ export default function AssessmentFeature({
                 <path strokeLinecap="round" strokeLinejoin="round"
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
               </svg>
-              {exportReady ? 'Export Assessment' : 'Approve All Sections'}
+              {exportReady ? 'Download Report (.docx)' : 'Approve All Sections'}
             </>
           )}
         </button>

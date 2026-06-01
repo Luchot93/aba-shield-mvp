@@ -315,8 +315,8 @@ export default function SectionCard({
                 </div>
               )}
 
-              {/* Behavioral indicators — behavior_targets only */}
-              {isBehaviorTargets && (
+              {/* Behavioral indicators — antecedent tally counters for generic sections */}
+              {(section?.indicators ?? []).length > 0 && (
                 <div className="mb-3">
                   <BehavioralIndicators
                     clientId={clientId}

@@ -9,6 +9,7 @@ import SkillAcquisitionsReviewView from './SkillAcquisitionsReviewView.jsx';
 import MaladaptiveBehaviorsReviewView from './MaladaptiveBehaviorsReviewView.jsx';
 import MaladaptiveBehaviorsEditor from './MaladaptiveBehaviorsEditor.jsx';
 import CaregiverTrainingReviewView from './CaregiverTrainingReviewView.jsx';
+import CaregiverTrainingEditor from './CaregiverTrainingEditor.jsx';
 
 // ─── Placeholder regex ────────────────────────────────────────────────────────
 const PLACEHOLDER_RE = /\[BCBA to complete:[^\]]*\]/g;
@@ -166,14 +167,26 @@ export default function InlineEditor({ clientId, sectionKey, section, session, s
     });
   }, []);
 
-  // Caregiver Training: structured view — always renders from form data; AI draft shown below if present.
+  // Caregiver Training: inline structured editor + review view (same pattern as Skill Acquisitions / Maladaptive Behaviors).
   // Must be checked BEFORE the !content guard because draftContent starts null.
   if (isCaregiverTraining) {
+    if (editing) {
+      return (
+        <div ref={editorRef}>
+          <CaregiverTrainingEditor
+            session={session}
+            clientId={clientId}
+            setClients={setClients}
+            onClose={handleClose}
+          />
+        </div>
+      );
+    }
     return (
       <div className="group relative">
         <button
-          onClick={() => onNavigate?.('interview', 'caregiver_training')}
-          title="Edit in Interview tab"
+          onClick={() => setEditing(true)}
+          title="Edit section"
           className="absolute top-0 right-0 flex items-center justify-center w-7 h-7 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-150 hover:bg-teal-50"
           style={{ color: '#0D9488' }}>
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">

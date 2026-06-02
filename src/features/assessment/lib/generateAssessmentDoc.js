@@ -35,6 +35,7 @@ import {
   AlignmentType,
   BorderStyle,
   Document,
+  ImageRun,
   Packer,
   Paragraph,
   ShadingType,
@@ -45,6 +46,8 @@ import {
   UnderlineType,
   WidthType,
 } from 'docx';
+
+import { buildGraphsFromSession } from '../graphBuilder.js';
 
 // ─── Typography constants ─────────────────────────────────────────────────────
 
@@ -57,6 +60,39 @@ const TEAL         = '2D7D6F';
 const TEAL_LIGHT   = 'E8F5F3';
 const TEAL_BORDER  = 'B2D8D3';
 const SLATE        = '475569';
+
+// ─── Chart helpers ────────────────────────────────────────────────────────────
+
+/** Same normalizer as graphBuilder.js — must stay in sync. */
+const normalize = (label) =>
+  label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+/** Base64 PNG → Uint8Array (browser-safe, no Buffer needed). */
+function b64toU8(b64) {
+  const bin   = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+/**
+ * Returns a centred Paragraph containing the chart image, or null if no data.
+ * widthPx / heightPx control the rendered size in the Word document.
+ */
+function chartImage(base64, widthPx = 500, heightPx = 250) {
+  if (!base64) return null;
+  return new Paragraph({
+    children: [
+      new ImageRun({
+        type: 'png',
+        data: b64toU8(base64),
+        transformation: { width: widthPx, height: heightPx },
+      }),
+    ],
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 80, after: 100 },
+  });
+}
 
 // ─── Skill goal computation helpers ──────────────────────────────────────────
 // Mirror the logic in SkillAcquisitionsReviewView.jsx so doc and Review are in sync.
@@ -686,7 +722,7 @@ function areasRequiringIntervention(session) {
 // Built from behavior_targets.behaviorTargets[] structured data, matching the
 // MaladaptiveBehaviorsReviewView exactly (same columns, same computed STO/LTO).
 
-function maladaptiveBehaviorsSection(session) {
+function maladaptiveBehaviorsSection(session, graphs = {}) {
   const children = [sectionHeading('Maladaptive Behaviors')];
   const targets  = session.sections?.behavior_targets?.behaviorTargets ?? [];
 
@@ -798,6 +834,18 @@ function maladaptiveBehaviorsSection(session) {
     if (details.length) {
       children.push(empty(60));
       children.push(...details);
+    }
+
+    // ── Baseline frequency chart + STO trajectory chart ───────────────────────
+    const key = normalize(bt.behaviorName || '');
+    if (key) {
+      const baselineChart = chartImage(graphs[`behavior_${key}`], 500, 250);
+      const stoChart      = chartImage(graphs[`sto_${key}`],      500, 250);
+      if (baselineChart || stoChart) {
+        children.push(empty(80));
+        if (baselineChart) children.push(baselineChart);
+        if (stoChart)      children.push(stoChart);
+      }
     }
 
     children.push(empty(160));
@@ -1000,7 +1048,7 @@ function interventionsSection() {
 // This guarantees that the Word doc table always matches what the BCBA saw and
 // approved in the Review page, even if the AI draftContent was edited separately.
 
-function skillAcquisitionsSection(session) {
+function skillAcquisitionsSection(session, graphs = {}) {
   const children = [sectionHeading('Skill Acquisitions')];
   const sec   = session.sections?.skill_acquisitions;
   const goals = sec?.skillGoals ?? [];
@@ -1122,10 +1170,131 @@ function skillAcquisitionsSection(session) {
     children.push(empty(160));
   }
 
+  // ── Replacement behavior comparison chart (all goals side-by-side) ──────────
+  const rbChart = chartImage(graphs['replacement_behaviors'], 560, 280);
+  if (rbChart) {
+    children.push(
+      new Paragraph({
+        children: [new TextRun({ text: 'Baseline vs. Mastery — All Skill Targets', bold: true, size: SZ, font: FONT, color: TEAL })],
+        spacing: { before: 160, after: 60 },
+      }),
+      rbChart,
+    );
+  }
+
   return children;
 }
 
 // ─── 19. Crisis Plan ─────────────────────────────────────────────────────────
+// ─── §19 Caregiver Training Program ──────────────────────────────────────────
+// Source: caregiver_training section — structured baselines, format chips,
+// frequency, barriers, strengths, plus the AI-generated training narrative.
+// Insurance reviewers use this section to verify hours requested for caregiver
+// training are clinically justified.
+
+function caregiverTrainingSection(session, graphs = {}) {
+  const children = [sectionHeading('Caregiver Training Program')];
+  const sec = session.sections?.caregiver_training;
+
+  if (!sec) {
+    children.push(bodyPara('[Caregiver training not yet documented. Complete the Caregiver Training section in the interview.]'));
+    return children;
+  }
+
+  const bl = sec.caregiverBaselines ?? {};
+
+  // ── Observed baseline table ────────────────────────────────────────────────
+  const hasPremack      = bl.premack_baseline !== '' && bl.premack_baseline != null;
+  const hasReinforcement = bl.reinforcement_baseline !== '' && bl.reinforcement_baseline != null;
+
+  if (hasPremack || hasReinforcement) {
+    children.push(subHeading('Observed Caregiver Skill Baseline'));
+    children.push(
+      new Table({
+
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top:           { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+          bottom:        { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+          left:          { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+          right:         { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+          insideH: { style: BorderStyle.SINGLE, size: 2, color: TEAL_BORDER },
+          insideV: { style: BorderStyle.SINGLE, size: 2, color: TEAL_BORDER },
+        },
+        rows: [
+          new TableRow({
+            tableHeader: true,
+            children: [
+              new TableCell({
+                shading: { fill: TEAL_LIGHT },
+                children: [new Paragraph({ children: [new TextRun({ text: 'Strategy', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })],
+              }),
+              new TableCell({
+                shading: { fill: TEAL_LIGHT },
+                children: [new Paragraph({ children: [new TextRun({ text: 'Observed Baseline', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })],
+              }),
+            ],
+          }),
+          ...(hasPremack ? [new TableRow({ children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Premack Principle (first/then)', size: SZ_SM, font: FONT })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${bl.premack_baseline}%`, size: SZ_SM, font: FONT })] })] }),
+          ]})] : []),
+          ...(hasReinforcement ? [new TableRow({ children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Reinforcement Delivery', size: SZ_SM, font: FONT })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${bl.reinforcement_baseline}%`, size: SZ_SM, font: FONT })] })] }),
+          ]})] : []),
+        ],
+      })
+    );
+    children.push(empty(100));
+
+    // Embed caregiver skill progression charts immediately below the table
+    const premackChart = hasPremack
+      ? chartImage(graphs['caregiver_premack'], 460, 230)
+      : null;
+    const reinforcementChart = hasReinforcement
+      ? chartImage(graphs['caregiver_reinforcement'], 460, 230)
+      : null;
+    if (premackChart)       children.push(premackChart);
+    if (reinforcementChart) children.push(reinforcementChart);
+    children.push(empty(80));
+  }
+
+  // ── Training program details ───────────────────────────────────────────────
+  const formats = sec.trainingFormat ?? [];
+  const freq    = sec.trainingFrequency ?? '';
+  if (formats.length || freq) {
+    children.push(subHeading('Training Program'));
+    if (formats.length) children.push(labelVal('Format', formats.join(', ')));
+    if (freq)           children.push(labelVal('Frequency', freq));
+    children.push(empty(80));
+  }
+
+  if (sec.trainingBarriers?.trim()) {
+    children.push(labelVal('Barriers to Participation', sec.trainingBarriers));
+    children.push(empty(80));
+  }
+
+  if (sec.caregiverStrengths?.trim()) {
+    children.push(labelVal('Caregiver Strengths', sec.caregiverStrengths));
+    children.push(empty(80));
+  }
+
+  // ── AI narrative (BCBA-approved training plan) ────────────────────────────
+  const draft = sec.draftContent?.trim();
+  if (draft) {
+    children.push(subHeading('Training Plan & Objectives'));
+    children.push(...markdownToParagraphs(draft));
+  } else if (sec.notes?.trim()) {
+    children.push(subHeading('Clinical Notes'));
+    children.push(bodyPara(sec.notes));
+  } else {
+    children.push(bodyPara('[Generate the Caregiver Training section draft to include a full training plan narrative.]'));
+  }
+
+  return children;
+}
+
 // Primary source: crisis_plan.draftContent — the AI narrative the BCBA sees
 // and approves in the Review page (warning signs, de-escalation, thresholds).
 // Appended below the draft: emergency contacts table and call thresholds from
@@ -1245,6 +1414,16 @@ function manualCompletionNote() {
  * @returns {Promise<Blob>}    — .docx file blob ready for download
  */
 export async function generateAssessmentDoc(session, clientName = 'Client') {
+
+  // Build all chart images from session data.
+  // Failures are silently ignored — charts are enhancement, not blocker.
+  let graphs = {};
+  try {
+    graphs = await buildGraphsFromSession(session);
+  } catch (err) {
+    console.warn('Chart generation failed — exporting without charts:', err.message);
+  }
+
   const children = [
     // 1. Title
     ...titleBlock(session),
@@ -1271,8 +1450,8 @@ export async function generateAssessmentDoc(session, clientName = 'Client') {
     // 13. Areas Requiring Intervention (behavior targets + skill deficit summary)
     ...areasRequiringIntervention(session),
 
-    // 14. Maladaptive Behaviors (structured behavior target cards)
-    ...maladaptiveBehaviorsSection(session),
+    // 14. Maladaptive Behaviors — each behavior includes baseline + STO charts
+    ...maladaptiveBehaviorsSection(session, graphs),
 
     // 15. Reinforcement (preference assessment from notes)
     ...reinforcementSection(session),
@@ -1283,10 +1462,13 @@ export async function generateAssessmentDoc(session, clientName = 'Client') {
     // 17. Standard Intervention Techniques (clinic template list)
     ...interventionsSection(),
 
-    // 18. Skills / Replacement Behaviors (structured skill goal cards)
-    ...skillAcquisitionsSection(session),
+    // 18. Skills / Replacement Behaviors — includes replacement behavior comparison chart
+    ...skillAcquisitionsSection(session, graphs),
 
-    // 19. Crisis Plan (structured fields)
+    // 19. Caregiver Training Program — includes caregiver skill progression charts
+    ...caregiverTrainingSection(session, graphs),
+
+    // 20. Crisis Plan (structured fields)
     ...crisisPlanSection(session),
   ].filter(Boolean);
 

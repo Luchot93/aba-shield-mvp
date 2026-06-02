@@ -78,6 +78,7 @@ export default function BehaviorTargetsPanel({ clientId, session, setClients }) 
           ))}
         </div>
       )}
+
     </div>
   );
 }

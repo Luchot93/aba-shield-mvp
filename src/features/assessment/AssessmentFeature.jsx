@@ -4,6 +4,7 @@ import AssessmentChecklistPage from './AssessmentChecklistPage.jsx';
 import AssessmentReviewPage    from './AssessmentReviewPage.jsx';
 import { completeSession, canExport } from './assessmentStore.js';
 import { generateAssessmentDoc } from './lib/generateAssessmentDoc.js';
+import { generateTemplateDoc }   from './lib/docxExport.js';
 
 // ─── Status tag config ────────────────────────────────────────────────────────
 
@@ -39,17 +40,12 @@ export default function AssessmentFeature({
   const tagMeta     = STATUS_TAG[status] ?? STATUS_TAG.not_started;
   const exportReady = canExport(client);
 
-  const totalSections    = session?.totalInterviewSections ?? 10;
-  const sectionsWithData = session?.sectionsWithData       ?? 0;
-  const sectionsApproved = session?.sectionsApproved       ?? 0;
-
-  // Progress bar: during interview track captured; during review track approved
-  const isReviewPhase = page === 'review';
-  const progressDone  = isReviewPhase ? sectionsApproved : sectionsWithData;
-  const progressPct   = Math.min(100, Math.round((progressDone / totalSections) * 100));
-  const progressLabel = isReviewPhase
-    ? `${sectionsApproved} of ${totalSections} sections approved`
-    : `${sectionsWithData} of ${totalSections} sections captured`;
+  // Count sections still pending (not approved or skipped), excluding demographics
+  const pendingCount = session
+    ? Object.entries(session.sections)
+        .filter(([key, s]) => key !== 'demographics' && s.approvalState !== 'approved' && s.approvalState !== 'skipped')
+        .length
+    : 0;
 
   // ── Export ─────────────────────────────────────────────────────────────────
 
@@ -77,15 +73,15 @@ export default function AssessmentFeature({
       sections:   sectionsResult,
     };
 
-    completeSession(setClients, clientId, result);
-
-    // Generate and download the Word document
+    // Generate and download the Word document FIRST — only mark complete if it succeeds
     try {
       const clientName = session.clientName ?? client?.name ?? 'Client';
-      const blob = await generateAssessmentDoc(session, clientName);
       const safeName = clientName.replace(/\s+/g, '_');
       const dateStr  = new Date().toISOString().slice(0, 10);
       const fileName = `${safeName}_ABA_Assessment_${dateStr}.docx`;
+
+      // Generate the full dynamic document (all session data, AI narratives, structured tables).
+      const blob = await generateAssessmentDoc(session, clientName);
 
       // Trigger browser download
       const url = URL.createObjectURL(blob);
@@ -98,9 +94,16 @@ export default function AssessmentFeature({
       URL.revokeObjectURL(url);
 
       // Store as base64 so it can be re-downloaded from the Documents tab
+      // Use a chunked loop — spreading a large Uint8Array into btoa causes stack overflow
       const arrayBuffer = await blob.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const bytes  = new Uint8Array(arrayBuffer);
+      let   binary = '';
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      const base64 = btoa(binary);
       const dataUrl = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`;
+
+      // Mark session as complete — only after successful generation
+      completeSession(setClients, clientId, result);
 
       // Push into client.documents so it appears automatically in the CRM
       const doc = {
@@ -163,25 +166,19 @@ export default function AssessmentFeature({
           onClick={handleExport}
           disabled={!exportReady || isExporting}
           className={`
-            relative flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-xl
-            overflow-hidden transition-all
-            ${exportReady && !isExporting
-              ? 'text-white hover:opacity-90 active:scale-[0.97] cursor-pointer'
-              : 'text-slate-400 bg-stone-100 border border-stone-200 cursor-not-allowed'
+            flex items-center gap-2 px-4 py-2 text-[12px] font-bold rounded-xl
+            transition-all
+            ${isExporting
+              ? 'opacity-75 cursor-not-allowed text-white'
+              : exportReady
+                ? 'text-white hover:opacity-90 active:scale-[0.97] cursor-pointer'
+                : 'text-slate-400 bg-stone-100 border border-stone-200 cursor-not-allowed'
             }
           `}
-          style={exportReady && !isExporting ? { background: '#0D9488' } : {}}>
-          {isExporting && (
-            <span className="absolute inset-0 pointer-events-none"
-              style={{ animation: 'export-sweep 1.2s ease-in-out infinite', background: 'rgba(255,255,255,0.18)' }}
-            />
-          )}
+          style={exportReady || isExporting ? { background: '#0D9488' } : {}}>
           {isExporting ? (
             <>
-              <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={3}/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-              </svg>
+              <div className="w-4 h-4 animate-spin border-2 border-white border-t-transparent rounded-full flex-shrink-0" />
               Building report…
             </>
           ) : (
@@ -190,7 +187,7 @@ export default function AssessmentFeature({
                 <path strokeLinecap="round" strokeLinejoin="round"
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
               </svg>
-              {exportReady ? 'Download Report (.docx)' : 'Approve All Sections'}
+              {exportReady ? 'Download Report (.docx)' : `${pendingCount} section${pendingCount !== 1 ? 's' : ''} pending`}
             </>
           )}
         </button>
@@ -221,6 +218,19 @@ export default function AssessmentFeature({
     <div
       className="fixed top-14 inset-x-0 bottom-0 z-10 flex flex-col overflow-hidden"
       style={{ fontFamily: 'DM Sans, sans-serif', background: '#FAFAF9' }}>
+
+      {/* ── Chart generation overlay ─────────────────────────────────────── */}
+      {isExporting && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center max-w-sm w-full mx-4">
+            <div className="w-10 h-10 animate-spin border-4 border-teal-500 border-t-transparent rounded-full" />
+            <p className="text-lg font-semibold text-slate-800 mt-4">Building your report…</p>
+            <p className="text-sm text-slate-500 mt-2 text-center">
+              Generating charts and compiling assessment data. This takes a few seconds.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Single top bar ─────────────────────────────────────────────── */}
       <div className="flex-shrink-0 flex items-center gap-3 px-4 bg-white border-b border-stone-200"

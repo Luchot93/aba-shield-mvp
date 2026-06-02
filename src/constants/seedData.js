@@ -3,7 +3,7 @@ import { mkChecklist } from './checklist.js';
 const SECTION_ORDER = [
   'demographics','presenting_concerns','self_help','daily_living',
   'safety','communication','self_stim','medical_necessity',
-  'behavior_targets','skill_acquisitions','crisis_plan',
+  'behavior_targets','skill_acquisitions','caregiver_training','crisis_plan',
 ];
 
 const SECTION_TITLES = {
@@ -16,7 +16,8 @@ const SECTION_TITLES = {
   self_stim:'Self-Stimulatory Behavior',
   medical_necessity:'Medical Necessity',
   skill_acquisitions:'Skill Acquisitions',
-  behavior_targets:'Behavior Targets',
+  behavior_targets:'Maladaptive Behaviors',
+  caregiver_training:'Caregiver Training',
   crisis_plan:'Crisis Plan',
 };
 
@@ -33,6 +34,14 @@ const makeSections = () => Object.fromEntries(
     ] : [],
     skillGoals: [],
     behaviorTargets: [],
+    // Caregiver Training extra fields (populated only for caregiver_training section)
+    ...(key === 'caregiver_training' ? {
+      caregiverBaselines: { premack_baseline: '', reinforcement_baseline: '' },
+      trainingFormat: [],
+      trainingFrequency: '',
+      trainingBarriers: '',
+      caregiverStrengths: '',
+    } : {}),
     recordingState: 'idle',
     recordingDurationSeconds: 0,
     transcript: null,
@@ -55,7 +64,7 @@ export const makeAssessmentSession = (clientId, clientName, bcbaId, bcbaName) =>
   consentGranted: false,
   consentGrantedAt: null,
   sectionsWithData: 0,
-  totalInterviewSections: 10,
+  totalInterviewSections: 11,
   sectionsApproved: 0,
   clientProfile: {
     dob: '', phone: '', address: '', referralDate: '',
@@ -577,6 +586,24 @@ const MARCUS_INTERVIEW_DATA = {
         notes: 'Skill-based dual approach: (1) Morning Routine Completion goal (see Skill Acquisitions) includes bathing as Step 5 of the 8-step visual schedule — systematic desensitization embedded within the routine using backward chaining (enter bathroom → water-only contact → partial bath → full routine). (2) Bathing/Grooming Desensitization skill goal targets sensory tolerance for water temperature and hair washing specifically. FCT overlap: Marcus may use Functional Help-Seeking to request "a minute" during bathing steps — this is reinforced as appropriate self-advocacy. Regression correlates with schedule disruption Oct 2025; consistent schedule restoration is prerequisite intervention. Parent training critical: reinforce each sub-step entered, avoid extended negotiations at bathroom doorway.',
       },
     ],
+  },
+  caregiver_training: {
+    completionState: 'complete',
+    caregiverBaselines: {
+      premack_baseline: '35',
+      reinforcement_baseline: '50',
+    },
+    trainingFormat: ['In-session coaching', 'Parent sessions', 'Written guides'],
+    trainingFrequency: '2x/week',
+    trainingBarriers: 'Daniela (mother) works from home 3 days/week and is the primary implementer; Javier (father) works outside the home Mon–Fri, available evenings and weekends only. Maternal grandparents provide afterschool care 3x/week but speak primarily Spanish — written materials will need Spanish translations. Sofia (age 6, NT sibling) requires supervision during training sessions.',
+    caregiverStrengths: 'Daniela demonstrates strong motivation and has already implemented an informal visual schedule with ~80% success rate. She accurately identifies Marcus\'s early warning signs and uses a quiet-space intervention independently. Javier is engaged and participated in today\'s interview. Both parents show excellent data-keeping potential — they track incidents in a shared notes app.',
+    transcript: "Dr. Reyes: Tell me about what strategies you've tried at home — things you do instinctively that help Marcus. Daniela: The visual schedule — that was huge. I made it myself from pictures I printed. And the first-then thing, I do that naturally now. Like, first shoes then tablet. It works maybe 40% of the time? But sometimes I forget to say it and just ask him to do things and that goes badly. Javier: On weekends I try to do what Daniela does but I don't always know what step we're on in the routine. We need a shared system. Dr. Reyes: Have you ever had formal ABA parent training? Daniela: At Sunshine they did one parent meeting — it was mostly them telling us what they were doing, not really training us how to do it. Dr. Reyes: Would you be open to training during Marcus's sessions and separate parent coaching sessions? Daniela: Yes, absolutely. That's actually what I've been hoping for. Javier: If there's something we can read or watch on our own time that would help too.",
+    notes: 'Observed Daniela\'s spontaneous use of first/then (Premack) — correct structure approximately 35% of interactions observed during home visit intake. Reinforcement delivery observed at 50% — appropriate immediacy but inconsistent praise specificity. Priority skill for caregiver: precise first/then phrasing + consistent reinforcement delivery. Javier to receive Saturday parallel training sessions 2x/month. Grandparent materials: Spanish-language visual guides to be prepared. Competency benchmark: 80% correct unprompted use of both strategies across 3 consecutive observed sessions before independent implementation sign-off.',
+    approvalState: 'pending',
+    draftContent: null,
+    aiOriginalContent: null,
+    draftState: 'blank',
+    lastSavedAt: null,
   },
   crisis_plan: {
     notes: 'No prior hospitalization, psychiatric crisis, or law enforcement involvement. No suicidal ideation beyond described SIB. No prior formal crisis plan in place — this is first documented plan. Escalation sequence: warning signs → verbal protest → motor agitation → crying/screaming → physical aggression → occasional SIB. Post-episode: Marcus frequently initiates affection and apologizes verbally — remorse awareness confirmed. Guanfacine ER 1mg QD — no acute behavioral effects documented; no contraindications for de-escalation strategies. Physical redirection during escalation has precipitated 2 biting incidents.',

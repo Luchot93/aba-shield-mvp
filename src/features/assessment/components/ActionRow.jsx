@@ -6,8 +6,21 @@ export default function ActionRow({ clientId, sectionKey, section, setClients })
   const [showRevertConfirm, setShowRevertConfirm] = useState(false);
 
   const approvalState = section?.approvalState ?? 'pending';
-  const hasContent    = !!(section?.draftContent?.trim());
   const hasAiOriginal = !!(section?.aiOriginalContent);
+
+  // Structured sections are approvable when they have any data, even without draftContent
+  const hasCaregiverContent = sectionKey === 'caregiver_training' && !!(
+    (section?.caregiverBaselines?.premack_baseline       != null && section?.caregiverBaselines?.premack_baseline       !== '') ||
+    (section?.caregiverBaselines?.reinforcement_baseline != null && section?.caregiverBaselines?.reinforcement_baseline !== '') ||
+    section?.trainingFormat?.length > 0 ||
+    section?.trainingBarriers?.trim() ||
+    section?.caregiverStrengths?.trim()
+  );
+
+  const hasSkillGoals     = sectionKey === 'skill_acquisitions' && (section?.skillGoals?.length > 0);
+  const hasBehaviorTargets= sectionKey === 'behavior_targets'   && (section?.behaviorTargets?.length > 0);
+
+  const hasContent = !!(section?.draftContent?.trim()) || hasCaregiverContent || hasSkillGoals || hasBehaviorTargets;
   const isEdited      = approvalState === 'edited';
   const isApproved    = approvalState === 'approved';
   const isSkipped     = approvalState === 'skipped';
@@ -45,19 +58,19 @@ export default function ActionRow({ clientId, sectionKey, section, setClients })
           </button>
         )}
 
-        {/* Skip / Un-skip */}
+        {/* Skip / Un-skip — always available when not yet approved */}
         {!isApproved && (
           isSkipped ? (
             <button onClick={unskip}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-300 text-slate-600 bg-stone-100 hover:bg-stone-200 transition-all">
               Un-skip
             </button>
-          ) : !hasContent ? (
+          ) : (
             <button onClick={skip}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-200 text-slate-500 bg-white hover:border-stone-300 hover:bg-stone-50 transition-all">
               Skip
             </button>
-          ) : null
+          )
         )}
 
         <div className="flex-1"/>

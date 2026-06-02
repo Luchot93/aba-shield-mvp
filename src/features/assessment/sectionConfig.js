@@ -16,6 +16,7 @@ export const SECTION_ORDER = [
   'medical_necessity',
   'behavior_targets',
   'skill_acquisitions',
+  'caregiver_training',
   'crisis_plan',
 ];
 
@@ -30,6 +31,7 @@ export const SECTION_TITLES = {
   medical_necessity:   'Medical Necessity',
   skill_acquisitions:  'Skill Acquisitions',
   behavior_targets:    'Maladaptive Behaviors',
+  caregiver_training:  'Caregiver Training',
   crisis_plan:         'Crisis Plan',
 };
 
@@ -505,6 +507,42 @@ export const SECTION_CONFIG = {
           "Are there multiple functions operating across different contexts?",
           "Is a formal functional behavior assessment (FBA) indicated before treatment?",
           "Note any behaviors that may require a behavior support plan review by the team.",
+        ],
+      },
+    ],
+  },
+
+  caregiver_training: {
+    key: 'caregiver_training',
+    title: 'Caregiver Training',
+    promptGroups: [
+      {
+        label: 'Training Readiness',
+        isBcbaOnly: false,
+        prompts: [
+          "How familiar is the caregiver with ABA or behavioral strategies?",
+          "What strategies would the caregiver most like to learn to help at home?",
+          "Who in the household will be involved in implementing the program?",
+          "What times and formats work best — coaching during sessions, separate training, written guides?",
+        ],
+      },
+      {
+        label: 'Barriers & Support',
+        isBcbaOnly: false,
+        prompts: [
+          "Are there any barriers to participation — work schedule, language, other children?",
+          "What strengths does the caregiver bring that will help them learn these strategies?",
+          "Has the caregiver tried any behavioral strategies before? What worked or didn't?",
+        ],
+      },
+      {
+        label: 'Clinical Assessment',
+        isBcbaOnly: true,
+        prompts: [
+          "Assess the caregiver's observed baseline with Premack (first/then) and reinforcement delivery.",
+          "Identify which techniques are priorities for caregiver mastery given the treatment targets.",
+          "Document any concerns about caregiver consistency or follow-through.",
+          "Plan competency benchmarks and how they will be verified before independent implementation.",
         ],
       },
     ],

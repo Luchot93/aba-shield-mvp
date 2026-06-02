@@ -168,6 +168,25 @@ function buildMedicalNecessity(session) {
   return lines;
 }
 
+// ─── Caregiver Training ───────────────────────────────────────────────────────
+
+function buildCaregiverTraining(session) {
+  const sec = session.sections?.caregiver_training ?? {};
+  const bl  = sec.caregiverBaselines ?? {};
+
+  return [
+    `OBSERVED CAREGIVER BASELINES:`,
+    `  Premack Principle (first/then): ${bl.premack_baseline || '—'}%`,
+    `  Reinforcement delivery: ${bl.reinforcement_baseline || '—'}%`,
+    `\nTRAINING FORMAT: ${list(sec.trainingFormat)}`,
+    `TRAINING FREQUENCY: ${val(sec.trainingFrequency)}`,
+    `BARRIERS TO PARTICIPATION: ${val(sec.trainingBarriers, 'None reported')}`,
+    `CAREGIVER STRENGTHS: ${val(sec.caregiverStrengths, 'None reported')}`,
+    `\nINTERVIEW TRANSCRIPT:\n${val(sec.transcript, 'No transcript recorded')}`,
+    `\nCLINICIAN NOTES:\n${val(sec.notes, 'None')}`,
+  ].filter(Boolean).join('\n');
+}
+
 // ─── Crisis Plan ──────────────────────────────────────────────────────────────
 
 function buildCrisisPlan(session) {
@@ -316,6 +335,7 @@ export function buildSectionPrompts(session) {
     medical_necessity:  buildMedicalNecessity(session),
     behavior_targets:   buildBehaviorTargets(session),
     skill_acquisitions: buildSkillAcquisitions(session),
+    caregiver_training: buildCaregiverTraining(session),
     crisis_plan:        buildCrisisPlan(session),
   };
 }

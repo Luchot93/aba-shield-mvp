@@ -18,7 +18,7 @@ function _recomputeCounts(session) {
   ).length;
 
   const sectionsApproved = sections.filter(
-    s => s.approvalState === 'approved' || s.approvalState === 'skipped'
+    s => s.key !== 'demographics' && (s.approvalState === 'approved' || s.approvalState === 'skipped')
   ).length;
 
   // Never demote a completed session
@@ -297,6 +297,7 @@ export function addSkillGoal(setClients, clientId) {
     const updatedSection = {
       ...section,
       skillGoals: [...(section.skillGoals || []), newGoal],
+      completionState: 'partial',
     };
     return prev.map(c => {
       if (c.id !== clientId) return c;
@@ -321,7 +322,7 @@ export function updateSkillGoal(setClients, clientId, goalId, patch) {
       const session = c.assessment_session;
       const updatedSections = {
         ...session.sections,
-        skill_acquisitions: { ...section, skillGoals: updatedGoals },
+        skill_acquisitions: { ...section, skillGoals: updatedGoals, completionState: 'partial' },
       };
       const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
       return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
@@ -397,7 +398,7 @@ export function addBehaviorTarget(setClients, clientId) {
     if (!client) return prev;
     const section   = client.assessment_session.sections['behavior_targets'];
     const newTarget = { id: crypto.randomUUID(), ...BEHAVIOR_TARGET_DEFAULTS };
-    const updated   = { ...section, behaviorTargets: [...(section.behaviorTargets || []), newTarget] };
+    const updated   = { ...section, behaviorTargets: [...(section.behaviorTargets || []), newTarget], completionState: 'partial' };
     return prev.map(c => {
       if (c.id !== clientId) return c;
       const session = c.assessment_session;
@@ -416,7 +417,7 @@ export function updateBehaviorTarget(setClients, clientId, targetId, patch) {
     const updatedTargets = (section.behaviorTargets || []).map(t =>
       t.id === targetId ? { ...t, ...patch } : t,
     );
-    const updated = { ...section, behaviorTargets: updatedTargets };
+    const updated = { ...section, behaviorTargets: updatedTargets, completionState: 'partial' };
     const updatedSections = { ...session.sections, behavior_targets: updated };
     const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
     return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
@@ -511,10 +512,13 @@ export function completeSession(setClients, clientId, result) {
 
 // ─── Export readiness ────────────────────────────────────────────────────────
 
+// Sections excluded from the export gate — demographics has no standalone approve path
+const EXPORT_EXCLUDED = new Set(['demographics']);
+
 export function canExport(client) {
   const session = client?.assessment_session;
   if (!session) return false;
-  return Object.values(session.sections).every(
-    s => s.approvalState === 'approved' || s.approvalState === 'skipped'
-  );
+  return Object.entries(session.sections)
+    .filter(([key]) => !EXPORT_EXCLUDED.has(key))
+    .every(([, s]) => s.approvalState === 'approved' || s.approvalState === 'skipped');
 }

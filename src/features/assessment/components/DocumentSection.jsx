@@ -34,7 +34,7 @@ function effectiveBadge(approvalState) {
 
 const STRUCTURED_SECTIONS = new Set([
   'demographics', 'communication', 'safety', 'medical_necessity',
-  'crisis_plan', 'behavior_targets', 'skill_acquisitions',
+  'crisis_plan', 'behavior_targets', 'skill_acquisitions', 'caregiver_training',
 ]);
 
 function SourceChips({ section, sectionKey }) {

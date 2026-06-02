@@ -293,6 +293,31 @@ For Bathing Refusal, the functional hypothesis is escape from a sensory-aversive
 
 All aggressive incidents will be measured using event recording with same-day ABC (Antecedent-Behavior-Consequence) notation completed by the RBT in session and by caregivers via a structured daily log. A minimum of 10 school days of baseline data will be collected across both home and school contexts before implementing extinction or differential reinforcement components of the BIP. Baseline data will be graphed and reviewed with the supervising BCBA prior to BIP activation. Duration recording will be used for Bathing Refusal episodes, defined as onset at first verbal refusal through caregiver's report of routine completion or episode end.`,
 
+  caregiver_training: `## Caregiver Training Program
+
+### Training Rationale
+
+Caregiver training is a medically necessary component of Marcus's ABA programming. Consistent implementation of behavioral strategies across home settings is required to generalize treatment gains beyond clinic sessions and to prevent inadvertent reinforcement of maladaptive behaviors. Daniela Rivera serves as the primary home implementer, with Javier Rivera and the maternal grandparents functioning as secondary implementers.
+
+Observed baseline data indicate that Premack (first-then) contingencies and reinforcement delivery procedures are currently being used inconsistently. Daniela demonstrated the Premack principle correctly in approximately 35% of observed opportunities and appropriate reinforcement delivery in approximately 50% of opportunities during the intake observation. These baseline rates are below the threshold required for reliable home generalization and justify a structured caregiver training program as part of the ABA authorization.
+
+### Training Objectives
+
+**Short-Term Objectives (0–3 months):**
+- Daniela will demonstrate correct use of Premack (first-then) contingencies with 70% accuracy across 3 consecutive direct observation probes.
+- Daniela will deliver contingent reinforcement within 3 seconds of the target behavior with 70% accuracy across 3 consecutive probe sessions.
+- Both parents will correctly identify Marcus's early warning signs from a standardized checklist with 100% accuracy.
+
+**Long-Term Objective (6 months):**
+- All primary caregivers (Daniela, Javier) will demonstrate 90% accuracy on Premack and reinforcement delivery across 3 independent probes conducted without RBT verbal support.
+- Grandparents will demonstrate 80% accuracy on the priority strategies after 3 translated written guide reviews and 2 coached practice sessions.
+
+### Training Plan
+
+Training will be conducted through in-session coaching (RBT modeling and feedback during active ABA sessions) and bi-weekly parent sessions with the supervising BCBA. Written guides will be prepared and translated into Spanish for the maternal grandparents. Initial sessions will focus on reinforcement identification, contingency delivery, and data recording using a simplified frequency tally sheet. Video modeling of correct strategy use will be recorded during early sessions and shared with Javier for review outside of his work schedule.
+
+Progress toward competency benchmarks will be reviewed monthly at caregiver check-in meetings and incorporated into the authorization renewal narrative.`,
+
   crisis_plan: `## Crisis Plan
 
 ### Risk History
@@ -635,6 +660,31 @@ School direct observation data must be obtained from Emma's school-based BCBA (w
 
 RBT and caregiver safety protocols must be established and trained before first session: (1) No physical blocking of head banging — create safe space by padding or moving Emma to a padded area if possible without escalating; (2) Do not remove demands or provide preferred items contingent on head banging or tantrum/drop; (3) BCBA contact threshold: any SIB resulting in visible skin break, bruise, or injury; any single head impact against a hard surface with significant force; any behavioral episode exceeding 15 minutes continuous escalation without response to prevention strategies.`,
 
+  caregiver_training: `## Caregiver Training Program
+
+### Training Rationale
+
+Caregiver training is a medically necessary component of Emma's ABA programming. Linda Thompson (mother) is the primary home implementer and has demonstrated strong motivation and baseline knowledge of behavioral strategies. Observed baseline data show that Linda correctly applied Premack contingencies in approximately 60% of opportunities and delivered reinforcement correctly in approximately 55% of opportunities during the intake observation. While above floor-level performance, consistent 80%+ accuracy is required before independent home implementation of Emma's behavior support plan is appropriate, particularly given the safety risks associated with head banging and elopement.
+
+David Thompson (father) participates primarily on evenings and weekends and has not yet been formally assessed; initial training goals will focus on Linda achieving competency before extending the full protocol to David.
+
+### Training Objectives
+
+**Short-Term Objectives (0–3 months):**
+- Linda will demonstrate correct use of Premack (first-then) contingencies with 75% accuracy across 3 consecutive direct observation probes.
+- Linda will identify all 5 of Emma's primary reinforcers from a standardized preference assessment checklist with 100% accuracy.
+- Linda will correctly implement the elopement prevention protocol (door alarm activation, outdoor supervision procedure) during 3 consecutive probe observations.
+
+**Long-Term Objective (6 months):**
+- Linda and David will both demonstrate 90% accuracy on Premack delivery, reinforcement, and safety protocols across 3 independent probes.
+- David will complete a minimum of 4 parent training sessions and demonstrate competency on priority strategies.
+
+### Training Plan
+
+Training will be conducted through in-session coaching during Emma's ABA sessions (1 hour per week) and monthly parent-only sessions with the supervising BCBA. Written strategy guides will be provided at each training milestone. Video modeling of correct responses to head banging and elopement precursors will be created during sessions and shared with David for asynchronous review.
+
+Given Emma's school-based services (10 hours/week with a separate provider), coordination with the school BCBA will be pursued to align home and school caregiver training protocols and prevent contradictory prompting hierarchies across settings.`,
+
   crisis_plan: `## Crisis Plan
 
 ### Behavioral Risk Summary
@@ -703,17 +753,27 @@ export default function AssessmentChecklistPage({
     const hasTranscript = !!(sec?.transcript?.trim());
     const hasConflict   = !!(sec?.hasConflict);
     const isDemographics = key === 'demographics';
-    const indicatorCount = (sec?.indicators ?? []).filter(i => i.count > 0).length;
-    const skillGoalCount = (sec?.skillGoals ?? []).length;
-    const hasIndicators  = indicatorCount > 0;
-    const hasSkillGoals  = skillGoalCount > 0;
-    const hasData        = hasNotes || hasTranscript || hasIndicators || hasSkillGoals;
-    const isEmpty        = sec?.completionState === 'empty';
+    const indicatorCount      = (sec?.indicators ?? []).filter(i => i.count > 0).length;
+    const skillGoalCount      = (sec?.skillGoals ?? []).length;
+    const behaviorTargetCount = (sec?.behaviorTargets ?? []).length;
+    const hasIndicators      = indicatorCount > 0;
+    const hasSkillGoals      = skillGoalCount > 0;
+    const hasBehaviorTargets = behaviorTargetCount > 0;
+    const hasCaregiverData   = key === 'caregiver_training' && !!(
+      (sec?.caregiverBaselines?.premack_baseline != null && sec?.caregiverBaselines?.premack_baseline !== '') ||
+      (sec?.caregiverBaselines?.reinforcement_baseline != null && sec?.caregiverBaselines?.reinforcement_baseline !== '') ||
+      (sec?.trainingFormat?.length > 0) ||
+      sec?.trainingBarriers?.trim() ||
+      sec?.caregiverStrengths?.trim()
+    );
+    const hasData = hasNotes || hasTranscript || hasIndicators || hasSkillGoals || hasBehaviorTargets || hasCaregiverData;
+    const isEmpty = sec?.completionState === 'empty';
 
     return {
       key, title: SECTION_TITLES[key],
       hasData, hasDraft, hasNotes, hasTranscript, hasConflict, isEmpty, isDemographics,
       hasIndicators, indicatorCount, hasSkillGoals, skillGoalCount,
+      hasBehaviorTargets, behaviorTargetCount, hasCaregiverData,
     };
   });
 
@@ -795,11 +855,13 @@ export default function AssessmentChecklistPage({
     if (row.hasDraft)       return 'Draft ready — awaiting your review.';
     if (row.hasConflict)    return 'Conflict flagged — review before generating.';
     const parts = [];
-    if (row.hasTranscript) parts.push('transcript');
-    if (row.hasNotes)      parts.push('notes');
-    if (row.hasIndicators) parts.push(`${row.indicatorCount} indicators`);
-    if (row.hasSkillGoals) parts.push(`${row.skillGoalCount} skill goals`);
-    if (parts.length)      return `Ready — ${parts.join(' + ')} captured.`;
+    if (row.hasTranscript)      parts.push('transcript');
+    if (row.hasNotes)           parts.push('notes');
+    if (row.hasIndicators)      parts.push(`${row.indicatorCount} indicators`);
+    if (row.hasSkillGoals)      parts.push(`${row.skillGoalCount} goal${row.skillGoalCount !== 1 ? 's' : ''}`);
+    if (row.hasBehaviorTargets) parts.push(`${row.behaviorTargetCount} behavior${row.behaviorTargetCount !== 1 ? 's' : ''}`);
+    if (row.hasCaregiverData)   parts.push('baselines');
+    if (parts.length)           return `Ready — ${parts.join(' + ')} captured.`;
     return 'No data captured. Section will be skipped.';
   }
 
@@ -925,6 +987,33 @@ export default function AssessmentChecklistPage({
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                         notes
+                      </span>
+                    )}
+                    {row.hasSkillGoals && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
+                        style={{ background: 'rgba(99,102,241,0.10)', color: '#4F46E5' }}>
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        {row.skillGoalCount} goal{row.skillGoalCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {row.hasBehaviorTargets && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
+                        style={{ background: 'rgba(245,158,11,0.10)', color: '#B45309' }}>
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        {row.behaviorTargetCount} target{row.behaviorTargetCount !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {row.hasCaregiverData && (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold"
+                        style={{ background: 'rgba(20,184,166,0.10)', color: '#0D9488' }}>
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                        data
                       </span>
                     )}
                   </div>

@@ -33,45 +33,43 @@ function fillBackground(ctx, width, height) {
 // ─── renderMaladaptiveBehaviorChart ──────────────────────────────────────────
 
 /**
- * Bar chart showing per-session frequency counts against a flat baseline line.
+ * Two-bar chart: "Current Baseline" vs "Mastery Target (LTO)".
+ * Immediately shows the clinical gap — where we are vs. where we need to be.
  *
- * @param {string}   behaviorName     – e.g. "Physical Aggression"
- * @param {number}   baselineCount    – average baseline frequency per session
- * @param {number[]} observationData  – frequency count for each observed session
+ * @param {string} behaviorName   – e.g. "Physical Aggression"
+ * @param {number} baselineCount  – observed frequency at assessment
+ * @param {number} targetCount    – LTO target frequency (0 = elimination)
+ * @param {string} frequencyUnit  – e.g. "day" | "session" | "week"
  * @returns {string} base64 PNG (no data URI prefix)
  */
-export function renderMaladaptiveBehaviorChart(behaviorName, baselineCount, observationData) {
-  const data =
-    Array.isArray(observationData) && observationData.length >= 2
-      ? observationData
-      : [baselineCount, baselineCount, baselineCount];
-
-  const canvas = createOffscreenCanvas(600, 300);
+export function renderMaladaptiveBehaviorChart(behaviorName, baselineCount, targetCount, frequencyUnit = 'day') {
+  const canvas = createOffscreenCanvas(520, 300);
   const ctx    = canvas.getContext('2d');
-  fillBackground(ctx, 600, 300);
+  fillBackground(ctx, 520, 300);
+
+  const targetLabel = targetCount === 0
+    ? 'Mastery Target (Elimination)'
+    : `Mastery Target (≤${targetCount}/${frequencyUnit})`;
 
   const chart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: data.map((_, i) => `Session ${i + 1}`),
+      labels: ['Current Baseline', targetLabel],
       datasets: [
         {
-          label:           behaviorName,
-          data:            data,
-          backgroundColor: 'rgba(20,184,166,0.7)',
-          borderColor:     'rgba(20,184,166,1)',
-          borderWidth:     1,
-          borderRadius:    4,
-        },
-        {
-          label:       'Baseline',
-          data:        data.map(() => baselineCount),
-          type:        'line',
-          borderColor: 'rgba(239,68,68,0.8)',
-          borderWidth: 2,
-          borderDash:  [6, 3],
-          pointRadius: 0,
-          fill:        false,
+          label: behaviorName,
+          data:  [baselineCount, targetCount],
+          backgroundColor: [
+            'rgba(245,158,11,0.75)',   // amber — current problem level
+            'rgba(20,184,166,0.70)',   // teal  — goal / solution
+          ],
+          borderColor: [
+            'rgba(245,158,11,1)',
+            'rgba(20,184,166,1)',
+          ],
+          borderWidth:  1,
+          borderRadius: 5,
+          barPercentage: 0.55,
         },
       ],
     },
@@ -81,18 +79,25 @@ export function renderMaladaptiveBehaviorChart(behaviorName, baselineCount, obse
       plugins: {
         title: {
           display: true,
-          text:    `${behaviorName} — Baseline Frequency`,
+          text:    `${behaviorName} — Baseline vs. Mastery Target`,
           font:    { size: 14, weight: 'bold' },
+          padding: { bottom: 12 },
         },
-        legend: { position: 'bottom' },
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => ` ${ctx.parsed.y} per ${frequencyUnit}`,
+          },
+        },
       },
       scales: {
         y: {
           beginAtZero: true,
-          title: { display: true, text: 'Frequency per Session' },
+          title: { display: true, text: `Frequency per ${frequencyUnit}` },
+          ticks: { stepSize: 1 },
         },
         x: {
-          title: { display: true, text: 'Observation Session' },
+          grid: { display: false },
         },
       },
     },
@@ -119,7 +124,7 @@ export function renderSTOTrajectoryChart(behaviorName, baselineCount, masteryDat
   const stoTargets  = reductions.map(r => Math.round(baselineCount * r));
   const labels      = [
     'Baseline',
-    ...masteryDates.map((d, i) => `STO ${i + 1}\n${d}`),
+    ...masteryDates.map((d, i) => `STO ${i + 1} ${d}`),
   ];
 
   const canvas = createOffscreenCanvas(600, 300);

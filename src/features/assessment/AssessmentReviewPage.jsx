@@ -5,9 +5,9 @@ import DocumentSection from './components/DocumentSection.jsx';
 // ─── Segment approval bar ─────────────────────────────────────────────────────
 
 function ApprovalBar({ session }) {
-  // Count all 11 sections but display 10 (demographics is form-only)
+  // Exclude demographics — it's form-only with no approve/skip action
   const sections = SECTION_ORDER.filter(k => k !== 'demographics');
-  const total    = sections.length; // 10
+  const total    = sections.length;
 
   const counts = sections.reduce(
     (acc, key) => {

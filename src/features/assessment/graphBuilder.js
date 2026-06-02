@@ -62,26 +62,34 @@ export async function buildGraphsFromSession(session) {
     if (!name) continue;
 
     const baselineCount = parseFloat(bt.baselineFrequency) || 0;
-    const observationData = [baselineCount]; // single baseline point at assessment time
+    // targetFrequency: BCBA-entered LTO target; 0 means elimination (common for maladaptive)
+    const targetCount   = bt.targetFrequency !== '' && bt.targetFrequency != null
+      ? parseFloat(bt.targetFrequency)
+      : 0;
+    const frequencyUnit = bt.frequencyUnit || 'day';
 
-    // Step 1 — baseline frequency bar chart
+    // Step 1 — baseline vs mastery target bar chart
     const graphKey = `behavior_${normalize(name)}`;
     try {
       result[graphKey] = renderMaladaptiveBehaviorChart(
         name,
         baselineCount,
-        observationData,
+        targetCount,
+        frequencyUnit,
       );
     } catch (err) {
       console.warn(`Chart failed: ${graphKey}`, err);
     }
 
     // Step 2 — STO reduction trajectory line chart
-    const stoKey = `sto_${normalize(name)}`;
-    try {
-      result[stoKey] = renderSTOTrajectoryChart(name, baselineCount, masteryDates);
-    } catch (err) {
-      console.warn(`Chart failed: ${stoKey}`, err);
+    // Skip if baseline is 0 — all STO targets would also be 0, producing a flat useless line
+    if (baselineCount > 0) {
+      const stoKey = `sto_${normalize(name)}`;
+      try {
+        result[stoKey] = renderSTOTrajectoryChart(name, baselineCount, masteryDates);
+      } catch (err) {
+        console.warn(`Chart failed: ${stoKey}`, err);
+      }
     }
   }
 

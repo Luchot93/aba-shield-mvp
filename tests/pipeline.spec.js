@@ -307,13 +307,15 @@ test.describe('ABA Shield — Pipeline Kanban', () => {
     await field.fill('AUTH-123456');
   });
 
-  test('Smart Assessment bridge button links session', async ({ page }) => {
+  test('Smart Assessment bridge button navigates to assessment interview', async ({ page }) => {
     // c4 is assessment stage — has the bridge item
     await page.locator('[data-testid="card-name-c4"]').click();
     await expect(page.locator('[data-testid="open-smart-assessment"]')).toBeVisible();
     await page.locator('[data-testid="open-smart-assessment"]').click();
-    await expect(page.locator('[data-testid="session-linked-badge"]')).toBeVisible();
-    await expect(page.locator('[data-testid="open-smart-assessment"]')).not.toBeVisible();
+    // Button now navigates directly to the assessment interview:
+    // modal closes, AssessmentFeature mounts showing the client name breadcrumb
+    await expect(page.locator('[data-testid="client-detail-modal"]')).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Emma Thompson').first()).toBeVisible({ timeout: 5000 });
   });
 
   test('advance button is disabled when checklist incomplete', async ({ page }) => {

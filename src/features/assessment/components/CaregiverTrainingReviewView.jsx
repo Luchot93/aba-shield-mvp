@@ -98,9 +98,6 @@ export default function CaregiverTrainingReviewView({ session, draftContent }) {
       {/* ── Observed Baselines table ── */}
       {hasBaselines && (
         <div className="mb-6">
-          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-3">
-            Observed Caregiver Skill Baseline
-          </p>
           <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid #B2D8D3' }}>
             <table className="w-full border-collapse text-left">
               <thead>

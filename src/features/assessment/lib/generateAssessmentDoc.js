@@ -1126,6 +1126,103 @@ function skillAcquisitionsSection(session) {
 }
 
 // ─── 19. Crisis Plan ─────────────────────────────────────────────────────────
+// ─── §19 Caregiver Training Program ──────────────────────────────────────────
+// Source: caregiver_training section — structured baselines, format chips,
+// frequency, barriers, strengths, plus the AI-generated training narrative.
+// Insurance reviewers use this section to verify hours requested for caregiver
+// training are clinically justified.
+
+function caregiverTrainingSection(session) {
+  const children = [sectionHeading('Caregiver Training Program')];
+  const sec = session.sections?.caregiver_training;
+
+  if (!sec) {
+    children.push(bodyPara('[Caregiver training not yet documented. Complete the Caregiver Training section in the interview.]'));
+    return children;
+  }
+
+  const bl = sec.caregiverBaselines ?? {};
+
+  // ── Observed baseline table ────────────────────────────────────────────────
+  const hasPremack      = bl.premack_baseline !== '' && bl.premack_baseline != null;
+  const hasReinforcement = bl.reinforcement_baseline !== '' && bl.reinforcement_baseline != null;
+
+  if (hasPremack || hasReinforcement) {
+    children.push(subHeading('Observed Caregiver Skill Baseline'));
+    children.push(
+      new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: {
+          top:           { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+          bottom:        { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+          left:          { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+          right:         { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+          insideHorizontal: { style: BorderStyle.SINGLE, size: 2, color: TEAL_BORDER },
+          insideVertical:   { style: BorderStyle.SINGLE, size: 2, color: TEAL_BORDER },
+        },
+        rows: [
+          new TableRow({
+            tableHeader: true,
+            children: [
+              new TableCell({
+                shading: { fill: TEAL_LIGHT },
+                children: [new Paragraph({ children: [new TextRun({ text: 'Strategy', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })],
+              }),
+              new TableCell({
+                shading: { fill: TEAL_LIGHT },
+                children: [new Paragraph({ children: [new TextRun({ text: 'Observed Baseline', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })],
+              }),
+            ],
+          }),
+          ...(hasPremack ? [new TableRow({ children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Premack Principle (first/then)', size: SZ_SM, font: FONT })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${bl.premack_baseline}%`, size: SZ_SM, font: FONT })] })] }),
+          ]})] : []),
+          ...(hasReinforcement ? [new TableRow({ children: [
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Reinforcement Delivery', size: SZ_SM, font: FONT })] })] }),
+            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${bl.reinforcement_baseline}%`, size: SZ_SM, font: FONT })] })] }),
+          ]})] : []),
+        ],
+      })
+    );
+    children.push(empty(120));
+  }
+
+  // ── Training program details ───────────────────────────────────────────────
+  const formats = sec.trainingFormat ?? [];
+  const freq    = sec.trainingFrequency ?? '';
+  if (formats.length || freq) {
+    children.push(subHeading('Training Program'));
+    if (formats.length) children.push(labelVal('Format', formats.join(', ')));
+    if (freq)           children.push(labelVal('Frequency', freq));
+    children.push(empty(80));
+  }
+
+  if (sec.trainingBarriers?.trim()) {
+    children.push(labelVal('Barriers to Participation', sec.trainingBarriers));
+    children.push(empty(80));
+  }
+
+  if (sec.caregiverStrengths?.trim()) {
+    children.push(labelVal('Caregiver Strengths', sec.caregiverStrengths));
+    children.push(empty(80));
+  }
+
+  // ── AI narrative (BCBA-approved training plan) ────────────────────────────
+  const draft = sec.draftContent?.trim();
+  if (draft) {
+    children.push(subHeading('Training Plan & Objectives'));
+    children.push(...markdownToParagraphs(draft));
+  } else if (sec.notes?.trim()) {
+    children.push(subHeading('Clinical Notes'));
+    children.push(bodyPara(sec.notes));
+  } else {
+    children.push(bodyPara('[Generate the Caregiver Training section draft to include a full training plan narrative.]'));
+  }
+
+  return children;
+}
+
 // Primary source: crisis_plan.draftContent — the AI narrative the BCBA sees
 // and approves in the Review page (warning signs, de-escalation, thresholds).
 // Appended below the draft: emergency contacts table and call thresholds from
@@ -1286,7 +1383,10 @@ export async function generateAssessmentDoc(session, clientName = 'Client') {
     // 18. Skills / Replacement Behaviors (structured skill goal cards)
     ...skillAcquisitionsSection(session),
 
-    // 19. Crisis Plan (structured fields)
+    // 19. Caregiver Training Program
+    ...caregiverTrainingSection(session),
+
+    // 20. Crisis Plan (structured fields)
     ...crisisPlanSection(session),
   ].filter(Boolean);
 

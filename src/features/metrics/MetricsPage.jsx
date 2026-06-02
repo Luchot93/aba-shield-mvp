@@ -48,6 +48,16 @@ export default function MetricsPage({ clients, staff }) {
     : '—';
   const complianceColor = validCerts === activeStaff.length ? '#059669' : '#D97706';
 
+  // Card 6 — Caregiver training documented
+  const assessmentClients = clients.filter(c => c.stage === 'assessment');
+  const caregiverDocCount = assessmentClients.filter(c =>
+    c.assessment_session?.sections?.caregiver_training?.approvalState === 'approved'
+  ).length;
+  const caregiverColor = assessmentClients.length === 0 ? '#6B7280'
+    : caregiverDocCount === assessmentClients.length ? '#059669'
+    : caregiverDocCount > 0 ? '#D97706'
+    : '#DC2626';
+
   const CARDS = [
     {
       label: 'Stalled cases',
@@ -88,6 +98,16 @@ export default function MetricsPage({ clients, staff }) {
       color: '#0D9488',
       targetLabel: 'Target: <28 days',
       testId: 'metric-avg-time',
+    },
+    {
+      label: 'Caregiver training documented',
+      value: assessmentClients.length > 0
+        ? `${caregiverDocCount} / ${assessmentClients.length}`
+        : '—',
+      sub: 'assessment clients with approved caregiver training',
+      color: caregiverColor,
+      targetLabel: 'Target: 100% before submission',
+      testId: 'metric-caregiver-training',
     },
   ];
 

@@ -111,6 +111,17 @@ function computeSkillCurrentLevel(g) {
 }
 
 function computeSkillSTO(g) {
+  // Prefer BCBA-entered structured STO fields, then legacy free-text, then auto-formula
+  if (g.stoPercent || g.stoSkillDescription || g.stoWeeks) {
+    const pct      = g.stoPercent         || Math.round(Number(g.masteryCriteriaPercent || 80) * 0.5);
+    const desc     = g.stoSkillDescription || (g.targetSkill || 'the target skill');
+    const weeks    = g.stoWeeks           || '12';
+    const sessions = g.masteryCriteriaSessions || '3';
+    return (
+      `Client will demonstrate ${desc} with ${pct}% accuracy across ` +
+      `${sessions} consecutive sessions within ${weeks} weeks.`
+    );
+  }
   if (g.sto) return g.sto;
   const pct      = g.masteryCriteriaPercent  || '80';
   const sessions = g.masteryCriteriaSessions || '3';
@@ -493,7 +504,7 @@ function clientInfoTable(session, clientName) {
     ]}),
   ];
 
-  // Only add Medicaid row if client has Medicaid
+  // Guardian / Medicaid row
   if (p.medicaidId) {
     rows.push(new TableRow({ children: [
       mkCell('Medicaid ID',      p.medicaidId,            true),
@@ -505,6 +516,16 @@ function clientInfoTable(session, clientName) {
       mkCell('Parent / Guardian', p.parentGuardianNames),
       mkCell('Relationship',     p.relationship ?? '—'),
       mkCell('Preferred Language', p.preferredLanguage ?? 'English'),
+    ]}));
+  }
+
+  // Contact / referral row — only when at least one field is filled
+  const hasContact = p.phone || p.address || p.referralDate;
+  if (hasContact) {
+    rows.push(new TableRow({ children: [
+      mkCell('Phone',         p.phone       ?? '—'),
+      mkCell('Address',       p.address     ?? '—'),
+      mkCell('Referral Date', p.referralDate ? fmtDate(p.referralDate) : '—'),
     ]}));
   }
 
@@ -1081,10 +1102,11 @@ function skillAcquisitionsSection(session, graphs = {}) {
       }));
     }
 
-    // Teaching strategies
-    const strategies = Array.isArray(g.teachingStrategies)
-      ? g.teachingStrategies.join(', ')
-      : (g.teachingStrategies || '');
+    // Teaching strategies (include free-text "Other" if filled)
+    const strategiesArr = Array.isArray(g.teachingStrategies) ? g.teachingStrategies : [];
+    const strategiesParts = [...strategiesArr];
+    if (g.teachingStrategiesOther?.trim()) strategiesParts.push(g.teachingStrategiesOther.trim());
+    const strategies = strategiesParts.join(', ');
     if (strategies) {
       children.push(new Paragraph({
         children: [
@@ -1335,33 +1357,52 @@ function crisisPlanSection(session) {
     children.push(empty(80));
   }
 
-  // ── Threshold reference block ───────────────────────────────────────────────
-  // Only render if draft didn't already cover these (i.e., no draft exists).
-  if (!draft) {
-    const signs = [
-      ...(sec.warningSignsSelected ?? []),
-      ...(sec.warningSignsCustom?.trim() ? [sec.warningSignsCustom.trim()] : []),
-    ];
-    if (signs.length) {
-      children.push(subHeading('Early Warning Signs'));
-      for (const s of signs) children.push(bullet(s));
-      children.push(empty(80));
-    }
+  // ── Structured reference data — always rendered regardless of AI draft ────────
+  // These are precise clinical values the AI may paraphrase; showing them verbatim
+  // ensures insurance reviewers and RBTs have the exact data on file.
 
-    if (sec.deEscalationWorks?.length) {
-      children.push(subHeading('De-Escalation Strategies — Effective'));
-      for (const s of sec.deEscalationWorks) children.push(bullet(s));
-      children.push(empty(80));
-    }
-
-    if (sec.deEscalationWorsens?.length) {
-      children.push(subHeading('Strategies That Worsen Escalation — Avoid'));
-      for (const s of sec.deEscalationWorsens) children.push(bullet(s));
-      children.push(empty(80));
-    }
+  const signs = [
+    ...(sec.warningSignsSelected ?? []),
+    ...(sec.warningSignsCustom?.trim() ? [sec.warningSignsCustom.trim()] : []),
+  ];
+  if (signs.length) {
+    children.push(subHeading('Early Warning Signs'));
+    for (const s of signs) children.push(bullet(s));
+    children.push(empty(80));
   }
 
-  // BCBA / 911 / session suspension thresholds — always show (precise values)
+  const deWorks = [
+    ...(sec.deEscalationWorks ?? []),
+    ...(sec.deEscalationWorksOther?.trim() ? [sec.deEscalationWorksOther.trim()] : []),
+  ];
+  if (deWorks.length) {
+    children.push(subHeading('De-Escalation Strategies — Effective'));
+    for (const s of deWorks) children.push(bullet(s));
+    children.push(empty(80));
+  }
+
+  const deWorsens = [
+    ...(sec.deEscalationWorsens ?? []),
+    ...(sec.deEscalationWorsensOther?.trim() ? [sec.deEscalationWorsensOther.trim()] : []),
+  ];
+  if (deWorsens.length) {
+    children.push(subHeading('Strategies That Worsen Escalation — Avoid'));
+    for (const s of deWorsens) children.push(bullet(s));
+    children.push(empty(80));
+  }
+
+  if (sec.deEscalationNotes?.trim()) {
+    children.push(labelVal('De-escalation Notes', sec.deEscalationNotes));
+  }
+
+  if (sec.baselineReturnMin || sec.baselineReturnMax) {
+    const range = sec.baselineReturnMax
+      ? `${sec.baselineReturnMin || '?'}–${sec.baselineReturnMax} minutes`
+      : `${sec.baselineReturnMin} minutes`;
+    children.push(labelVal('Expected Return to Baseline', range));
+  }
+
+  // BCBA / 911 / session suspension thresholds
   if (sec.bcbaCallMinutes) {
     children.push(labelVal(
       'BCBA Call Threshold',
@@ -1374,8 +1415,27 @@ function crisisPlanSection(session) {
   if (sec.sessionSuspendThreshold && sec.sessionSuspendNotes?.trim()) {
     children.push(labelVal('Session Suspension Threshold', sec.sessionSuspendNotes));
   }
+
   if (sec.medicalNotes?.trim()) {
     children.push(labelVal('Medical Considerations', sec.medicalNotes));
+  }
+
+  const contraindications = sec.medicalContraindications ?? [];
+  if (contraindications.length) {
+    children.push(labelVal('Medical Contraindications', contraindications.join(', ')));
+  }
+
+  // ── Compliance acknowledgments — legally significant ───────────────────────
+  const ackLines = [
+    sec.caregiverSignedCrisisPlan  && 'Caregiver has signed the crisis plan',
+    sec.rbtTrainedOnPlan           && 'RBT has been trained on this crisis plan',
+    sec.crisisPlanInBsp            && 'Crisis plan is included in the BSP',
+  ].filter(Boolean);
+
+  if (ackLines.length) {
+    children.push(empty(80));
+    children.push(subHeading('Compliance Acknowledgments'));
+    for (const line of ackLines) children.push(bullet(line));
   }
 
   children.push(empty(80));

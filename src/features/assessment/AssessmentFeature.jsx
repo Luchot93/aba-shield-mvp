@@ -53,26 +53,6 @@ export default function AssessmentFeature({
     if (!session || isExporting) return;
     setIsExporting(true);
 
-    // Build the result record (used for completeSession state)
-    const sectionsResult = {};
-    Object.entries(session.sections).forEach(([key, sec]) => {
-      sectionsResult[key] = {
-        title:         sec.title,
-        content:       sec.draftContent ?? '',
-        approvalState: sec.approvalState,
-        skillGoals:    sec.skillGoals ?? [],
-      };
-    });
-
-    const result = {
-      exportedAt: new Date().toISOString(),
-      exportedBy: currentUser?.name ?? 'BCBA',
-      clientId,
-      clientName: session.clientName,
-      sessionId:  session.id,
-      sections:   sectionsResult,
-    };
-
     // Generate and download the Word document FIRST — only mark complete if it succeeds
     try {
       const clientName = session.clientName ?? client?.name ?? 'Client';
@@ -101,6 +81,29 @@ export default function AssessmentFeature({
       for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
       const base64 = btoa(binary);
       const dataUrl = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${base64}`;
+
+      // Snapshot the latest section state at the moment of export so the
+      // stored result always reflects what was actually downloaded.
+      const latestClient = clients.find(c => c.id === clientId);
+      const latestSession = latestClient?.assessment_session ?? session;
+      const sectionsResult = {};
+      Object.entries(latestSession.sections).forEach(([key, sec]) => {
+        sectionsResult[key] = {
+          title:         sec.title,
+          content:       sec.draftContent ?? '',
+          approvalState: sec.approvalState,
+          skillGoals:    sec.skillGoals ?? [],
+          behaviorTargets: sec.behaviorTargets ?? [],
+        };
+      });
+      const result = {
+        exportedAt: new Date().toISOString(),
+        exportedBy: currentUser?.name ?? 'BCBA',
+        clientId,
+        clientName: latestSession.clientName,
+        sessionId:  latestSession.id,
+        sections:   sectionsResult,
+      };
 
       // Mark session as complete — only after successful generation
       completeSession(setClients, clientId, result);

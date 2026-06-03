@@ -736,7 +736,7 @@ function getDrafts(clientId) {
 // ─── AssessmentChecklistPage ──────────────────────────────────────────────────
 
 export default function AssessmentChecklistPage({
-  clientId, clients, setClients, currentUser, session, onNavigate,
+  clientId, clients, setClients, currentUser, session, onNavigate, addNotif,
 }) {
   const [isGenerating,   setIsGenerating]   = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
@@ -838,8 +838,7 @@ export default function AssessmentChecklistPage({
       } catch (err) {
         console.error('[handleGenerate]', err);
         setIsGenerating(false);
-        // Surface the error. A proper error UI component can replace this alert.
-        window.alert(`Draft generation failed:\n\n${err.message}`);
+        addNotif?.({ type: 'error', message: `Draft generation failed: ${err.message}` });
         return;
       }
     }

@@ -166,11 +166,14 @@ function DemoInput({ value, onChange, placeholder }) {
 export default function CrisisForm({ clientId, session, setClients }) {
   const sec = session?.sections?.['crisis_plan'] ?? {};
 
-  const patch = (fields) =>
-    patchSection(setClients, clientId, 'crisis_plan', {
-      ...fields,
-      completionState: 'partial',
-    });
+  const patch = (fields) => {
+    const merged = { ...sec, ...fields };
+    const hasContacts  = (merged.emergencyContacts ?? []).some(c => c.name?.trim());
+    const hasWarnings  = (merged.warningSignsSelected ?? []).length > 0 || merged.warningSignsCustom?.trim();
+    const hasDeEsc     = (merged.deEscalationWorks ?? []).length > 0;
+    const completionState = (hasContacts && hasWarnings && hasDeEsc) ? 'complete' : 'partial';
+    patchSection(setClients, clientId, 'crisis_plan', { ...fields, completionState });
+  };
 
   // ── Emergency contacts ──
   const contacts = sec.emergencyContacts ?? [];

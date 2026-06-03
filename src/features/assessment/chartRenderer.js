@@ -117,11 +117,16 @@ export function renderMaladaptiveBehaviorChart(behaviorName, baselineCount, targ
  * @param {string}   behaviorName  – e.g. "Elopement"
  * @param {number}   baselineCount – baseline frequency per session
  * @param {string[]} masteryDates  – 9 date strings, one per STO milestone
+ * @param {number}   [targetCount=0] – LTO target (0 = elimination)
  * @returns {string} base64 PNG
  */
-export function renderSTOTrajectoryChart(behaviorName, baselineCount, masteryDates) {
-  const reductions  = [0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1];
-  const stoTargets  = reductions.map(r => Math.round(baselineCount * r));
+export function renderSTOTrajectoryChart(behaviorName, baselineCount, masteryDates, targetCount = 0) {
+  // Build 9 evenly-spaced steps from baseline down to targetCount
+  const steps = 9;
+  const stoTargets = Array.from({ length: steps }, (_, i) => {
+    const t = (i + 1) / steps; // 1/9, 2/9, ... 9/9
+    return Math.round(baselineCount + (targetCount - baselineCount) * t);
+  });
   const labels      = [
     'Baseline',
     ...masteryDates.map((d, i) => `STO ${i + 1} ${d}`),

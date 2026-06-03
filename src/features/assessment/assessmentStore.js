@@ -233,7 +233,11 @@ export function setApprovalState(setClients, clientId, sectionKey, state) {
 }
 
 export function markSectionEdited(setClients, clientId, sectionKey) {
-  patchSection(setClients, clientId, sectionKey, { approvalState: 'edited' });
+  patchSection(setClients, clientId, sectionKey, {
+    approvalState: 'edited',
+    editedAt: new Date().toISOString(),
+    wasEdited: true,
+  });
 }
 
 export function revertToAiOriginal(setClients, clientId, sectionKey) {
@@ -250,12 +254,32 @@ export function revertToAiOriginal(setClients, clientId, sectionKey) {
           ...section,
           draftContent: section.aiOriginalContent,
           approvalState: 'pending',
+          // Preserve edit history — wasEdited/editedAt intentionally kept
         },
       };
       const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
       return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
     });
   });
+}
+
+// ─── completionState helpers ──────────────────────────────────────────────────
+
+function skillGoalCompletionState(goals) {
+  if (!goals || goals.length === 0) return 'empty';
+  const allComplete = goals.every(g =>
+    g.targetSkill?.trim() && g.operationalDefinition?.trim() && g.masteryCriteriaPercent
+  );
+  return allComplete ? 'complete' : 'partial';
+}
+
+function behaviorTargetCompletionState(targets) {
+  if (!targets || targets.length === 0) return 'empty';
+  const allComplete = targets.every(t =>
+    t.behaviorName?.trim() && t.operationalDefinition?.trim() &&
+    t.hypothesizedFunction?.trim() && t.baselineFrequency
+  );
+  return allComplete ? 'complete' : 'partial';
 }
 
 // ─── Skill Goals ─────────────────────────────────────────────────────────────
@@ -294,10 +318,11 @@ export function addSkillGoal(setClients, clientId) {
     if (!client) return prev;
     const section = client.assessment_session.sections['skill_acquisitions'];
     const newGoal = { id: crypto.randomUUID(), ...SKILL_GOAL_DEFAULTS };
+    const updatedGoals = [...(section.skillGoals || []), newGoal];
     const updatedSection = {
       ...section,
-      skillGoals: [...(section.skillGoals || []), newGoal],
-      completionState: 'partial',
+      skillGoals: updatedGoals,
+      completionState: skillGoalCompletionState(updatedGoals),
     };
     return prev.map(c => {
       if (c.id !== clientId) return c;
@@ -322,7 +347,7 @@ export function updateSkillGoal(setClients, clientId, goalId, patch) {
       const session = c.assessment_session;
       const updatedSections = {
         ...session.sections,
-        skill_acquisitions: { ...section, skillGoals: updatedGoals, completionState: 'partial' },
+        skill_acquisitions: { ...section, skillGoals: updatedGoals, completionState: skillGoalCompletionState(updatedGoals) },
       };
       const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
       return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
@@ -398,7 +423,8 @@ export function addBehaviorTarget(setClients, clientId) {
     if (!client) return prev;
     const section   = client.assessment_session.sections['behavior_targets'];
     const newTarget = { id: crypto.randomUUID(), ...BEHAVIOR_TARGET_DEFAULTS };
-    const updated   = { ...section, behaviorTargets: [...(section.behaviorTargets || []), newTarget], completionState: 'partial' };
+    const updatedTargets = [...(section.behaviorTargets || []), newTarget];
+    const updated = { ...section, behaviorTargets: updatedTargets, completionState: behaviorTargetCompletionState(updatedTargets) };
     return prev.map(c => {
       if (c.id !== clientId) return c;
       const session = c.assessment_session;
@@ -417,7 +443,7 @@ export function updateBehaviorTarget(setClients, clientId, targetId, patch) {
     const updatedTargets = (section.behaviorTargets || []).map(t =>
       t.id === targetId ? { ...t, ...patch } : t,
     );
-    const updated = { ...section, behaviorTargets: updatedTargets, completionState: 'partial' };
+    const updated = { ...section, behaviorTargets: updatedTargets, completionState: behaviorTargetCompletionState(updatedTargets) };
     const updatedSections = { ...session.sections, behavior_targets: updated };
     const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
     return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };

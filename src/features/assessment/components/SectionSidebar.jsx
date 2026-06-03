@@ -33,7 +33,7 @@ export default function SectionSidebar({ session, activeSection, onSelectSection
         </div>
         <p className="mt-1.5 text-[10px] font-medium text-slate-400 text-right"
           style={{ fontFamily: 'DM Mono, monospace' }}>
-          {SECTION_ORDER.filter(k => sections[k]?.completionState !== 'empty').length}/{SECTION_ORDER.length} sections
+          {SECTION_ORDER.filter(k => sections[k]?.completionState !== 'empty').length}/{SECTION_ORDER.length} with data
         </p>
       </div>
 

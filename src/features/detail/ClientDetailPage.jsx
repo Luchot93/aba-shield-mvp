@@ -83,9 +83,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const allDone   = displayItems.length > 0 && completeCount === displayItems.length;
   const hasBlock  = displayItems.some(it => itemBlocks(it, client, staff));
   const canAdvance = !isReadOnly && allDone && !hasBlock && !!nextStage && client.stage !== 'denied';
-  const visibleDocs = isReadOnly
-    ? client.documents.filter(d => d.stage === viewStage)
-    : client.documents;
+  const visibleDocs = client.documents;
 
   /* ── mutation helpers ── */
   const patchClient = patch =>
@@ -786,14 +784,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               {/* Documents tab */}
               {activeTab === 'documents' && (
                 <>
-                  {isReadOnly && visibleDocs.length < client.documents.length && (
-                    <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700">
-                      Showing documents from <strong>{SM[viewStage]?.label}</strong> only
-                    </div>
-                  )}
                   <div className="divide-y divide-stone-50" data-testid="documents-panel">
                   {visibleDocs.length === 0
-                    ? <p className="px-4 py-5 text-xs text-center text-slate-400">{isReadOnly ? 'No documents uploaded in this stage.' : 'No documents uploaded yet.'}</p>
+                    ? <p className="px-4 py-5 text-xs text-center text-slate-400">No documents uploaded yet.</p>
                     : visibleDocs.map(d => (
                       <div key={d.id} className="px-4 py-2.5 flex items-center gap-2">
                         <div className="flex-1 min-w-0">
@@ -809,7 +802,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             <span className="text-xs font-medium text-slate-700 truncate">{d.label}</span>
                           </div>
                           <div className="text-[10px] text-slate-400" style={{ fontFamily:'DM Mono, monospace' }}>
-                            {new Date(d.uploaded_at).toLocaleDateString()} · {d.by}
+                            {new Date(d.uploaded_at).toLocaleDateString()} · {d.by}{d.stage && d.stage !== client.stage ? ` · ${SM[d.stage]?.label ?? d.stage}` : ''}
                           </div>
                         </div>
                         <button

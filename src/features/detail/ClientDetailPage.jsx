@@ -14,6 +14,8 @@ import { buildGraphsFromSession } from '../../features/assessment/graphBuilder.j
 export default function ClientDetailPage({ clientId, clients, staff, setClients, onBack, backLabel, currentUser, addNotif, onClientAdvanced, onOpenAssessment }) {
   const client = clients.find(c => c.id === clientId);
   const [confirmAdvance, setConfirmAdvance] = useState(null);
+  const [confirmDeny,    setConfirmDeny]    = useState(false);
+  const [denyReason,     setDenyReason]     = useState('');
   const [openPicker,     setOpenPicker]     = useState(null);
   const [formDrafts,     setFormDrafts]     = useState({});
   const [savedFields,    setSavedFields]    = useState(new Set());
@@ -125,6 +127,17 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     ));
     if (onClientAdvanced) onClientAdvanced(client.id);
     setConfirmAdvance(null);
+    onBack();
+  };
+
+  const doDeny = () => {
+    const reason = denyReason.trim();
+    patchClient({ stage: 'denied', stage_entered_at: new Date().toISOString(), denial_reason: reason || null });
+    pushLog(`Moved to Denied${reason ? ` — ${reason}` : ''}`);
+    addNotif(mkNotif(`${client.name} — Authorization denied by insurer`, client.name, 'urgent'));
+    if (onClientAdvanced) onClientAdvanced(client.id);
+    setConfirmDeny(false);
+    setDenyReason('');
     onBack();
   };
 
@@ -662,7 +675,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
               {/* Pinned advance / resolution footer — hidden in read-only mode or for non-editors */}
               {!isReadOnly && userCanEdit && client.stage !== 'denied' && nextStage && (
-                <div className="flex-shrink-0 border-t border-stone-100 p-4">
+                <div className="flex-shrink-0 border-t border-stone-100 p-4 space-y-2">
                   <button data-testid="advance-btn"
                     disabled={!canAdvance}
                     onClick={() => canAdvance && setConfirmAdvance(nextStage)}
@@ -671,6 +684,13 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     {canAdvance ? `Advance to ${SM[nextStage].label} →` : 'Complete all items to advance'}
                   </button>
                   {hasBlock && <p className="text-xs text-red-600 text-center mt-2">⚠ One or more items are blocking advance</p>}
+                  {(client.stage === 'submitted' || client.stage === 'auth_assessment') && (
+                    <button data-testid="deny-btn"
+                      onClick={() => setConfirmDeny(true)}
+                      className="w-full py-2.5 rounded-xl text-sm font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-all">
+                      Mark as Denied
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -885,6 +905,32 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-600 border border-stone-200 hover:bg-stone-50">Cancel</button>
               <button data-testid="confirm-advance" onClick={() => doAdvance(confirmAdvance)}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold text-white" style={{ background:'#0D9488' }}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── deny confirmation dialog ── */}
+      {confirmDeny && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background:'rgba(0,0,0,0.5)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4">
+            <h3 className="text-base font-bold text-slate-900 mb-1" style={{ fontFamily:'Syne, sans-serif' }}>Mark as Denied</h3>
+            <p className="text-sm text-slate-500 mb-4">
+              Move <strong>{client.name}</strong> to the Denied stage. This will be logged in the activity history.
+            </p>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Denial reason <span className="font-normal text-slate-400 normal-case">(optional)</span></label>
+            <textarea
+              value={denyReason}
+              onChange={e => setDenyReason(e.target.value)}
+              placeholder="e.g. Medical necessity not established, missing documentation…"
+              rows={3}
+              className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100 resize-none placeholder:text-slate-400 mb-4"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => { setConfirmDeny(false); setDenyReason(''); }}
+                className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-600 border border-stone-200 hover:bg-stone-50">Cancel</button>
+              <button data-testid="confirm-deny" onClick={doDeny}
+                className="flex-1 py-2 rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors">Confirm Denial</button>
             </div>
           </div>
         </div>

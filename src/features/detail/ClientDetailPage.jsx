@@ -25,7 +25,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
   // Plan Draft — expandable inline panels (default open when session exists)
   const isPlanDraft = client?.stage === 'plan_draft';
-  const hasPlanSession = isPlanDraft && !!client?.assessment_session;
+  // Plan tab + inline panels persist for all stages at or after plan_draft (read-only past plan_draft)
+  const PLAN_VISIBLE_STAGES = new Set(['plan_draft','submitted','denied','authorized','staffing','services']);
+  const hasPlanSession = PLAN_VISIBLE_STAGES.has(client?.stage) && !!client?.assessment_session;
 
   const ALL_PLAN_ITEMS = ['medical_necessity','skill_targets','behavior_goals','intervention_strategies','baseline_graphs'];
 
@@ -418,7 +420,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         ? <span className="text-xs font-medium px-2 py-1 rounded-lg border bg-teal-50 border-teal-200 text-teal-700 whitespace-nowrap">Generated from assessment</span>
                         : <span className="text-xs font-medium px-2 py-1 rounded-lg border bg-amber-50 border-amber-200 text-amber-700 whitespace-nowrap">Pending Smart Assessment</span>
                       }
-                      {hasSession && !readOnly && (
+                      {hasSession && (
                         <button
                           onClick={() => setExpandedPlanItems(prev => {
                             const next = new Set(prev);
@@ -434,7 +436,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                       )}
                     </div>
                   </div>
-                  {isOpen && !readOnly && client.assessment_session && (
+                  {isOpen && client.assessment_session && (
                     <PlanDraftInlinePanel
                       itemKey={item.key}
                       session={client.assessment_session}

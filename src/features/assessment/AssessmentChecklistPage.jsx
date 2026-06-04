@@ -724,11 +724,365 @@ Emma presents with two behaviors that elevate safety risk and require a document
 This crisis plan should be reviewed with all team members (RBTs, parents, school staff) prior to initiating ABA services and at each authorization renewal. Update if new behaviors emerge or intensity of existing behaviors changes significantly.`,
 };
 
+// ── Oliver Patel drafts ───────────────────────────────────────────────────────
+
+const OLIVER_DRAFTS = {
+
+  demographics: `## Client & Referral Summary
+
+**Client:** Oliver K. Patel | **DOB:** June 12, 2018 (Age 7) | **Pronouns:** He/Him
+
+**Primary Language:** English (Gujarati spoken at home by maternal grandparents)
+
+**Diagnosis:** Autism Spectrum Disorder, Level 2 (DSM-5, F84.0), confirmed by Dr. Ana Flores, M.D., Pediatric Neurology, Miami Children's Health System, on March 14, 2024. No co-occurring psychiatric diagnoses.
+
+**Insurance:** Cigna | Member ID: CIG-778823 | Group: G-55023
+
+**Referring Provider:** Dr. Ana Flores, M.D. (Pediatric Neurology, Miami Children's Health System) — referred for comprehensive ABA assessment due to daily physical aggression toward primary caregiver, acute elopement safety risk in community settings, and hygiene routine refusals.
+
+**Family & Support System:** Oliver lives with his mother (Priya Patel, primary caregiver) and father (Raj Patel, finance professional with limited weekday availability). No siblings. Maternal grandparents provide weekend childcare; English is primary language, Gujarati spoken at home.
+
+**School:** Oliver attends 2nd grade at Riverside Academy, Coconut Grove, Miami, under a current IEP (annual review February 2026). School-based SLP services 2x/week (30 minutes each) focused on expressive vocabulary expansion and AAC introduction (GoTalk, initiated 3 weeks prior to this assessment). No OT services currently enrolled.
+
+**Prior ABA Services:** None. Oliver has never received ABA services. Current school-based SLP is the only behavioral intervention in place.
+
+**Assessment Date:** April 18, 2026 | **Assessment Type:** Initial Comprehensive | **BCBA:** Dr. Ana Reyes, BCBA-D`,
+
+  presenting_concerns: `## Presenting Concerns
+
+### Primary Concerns Identified by Caregiver
+
+The Patel family identified three primary concerns prompting this referral. First, Oliver displays daily physical aggression toward his mother — occurring 3–5 times per day — consisting of open-hand hitting and scratching directed exclusively at Priya Patel during demand presentation. The behavior emerges within seconds of instruction delivery (iPad removal, hygiene task initiation, meal transition) and has been escalating since the start of the 2025–2026 school year. Scratches have produced visible marks on Priya's forearms on multiple occasions.
+
+Second and most acutely concerning from a safety standpoint, Oliver has bolted from adult supervision in community settings on five documented occasions — three times in a grocery store and twice in active parking lots. The most recent parking lot incident required Priya to run toward a roadway to retrieve Oliver before he reached traffic. The family has since suspended virtually all community outings and will only go out with two adults present.
+
+Third, Oliver refuses all hygiene routines — teeth brushing and bathing result in daily 30–45 minute standoffs involving crying, pulling away, and behavioral escalation. Successful teeth brushing currently requires a two-person effort approximately three times per week. Bathing is managed via sponge bath only.
+
+### School & Community
+
+Oliver's school behavior stands in marked contrast to home: no aggression or elopement has been documented at Riverside Academy. Teachers and the IEP team report compliance with structure and routines in the school setting. One peer hitting incident was documented on the school record; the IEP team has requested a formal behavioral evaluation in response. The discrepancy between school and home behavior is consistent with the high predictability and 1:1 structure at school reducing the escape demand that drives aggression at home.
+
+### Clinical Impression
+
+The behavioral presentation is clinically straightforward in its function: Physical Aggression is escape-maintained, occurring within seconds of demand presentation, with demand removal as the consistent consequence. The speed of escalation — Oliver moves from instruction to physical aggression in 2–3 seconds with no apparent protest or warning — suggests either a limited functional language repertoire for escape requests, or that verbal protest has not been differentially reinforced relative to physical responses in the past. Functional Communication Training targeting "help" and "break" mands is the indicated primary intervention.
+
+Elopement presents as a mixed function. Community antecedents include transition demands, open exits, and highly stimulating unfamiliar environments — consistent with both escape from demands and automatic reinforcement (movement-seeking). Safety management must be the immediate first priority: caregiver training in physical proximity management and a graduated community exposure hierarchy are required before expanding community outing attempts. The family is currently avoiding all community outings — this restriction, while understandable, eliminates the very opportunities needed to build tolerance. A structured, carefully graduated exposure plan will be critical to restoring community access.
+
+Hygiene refusal is escape-maintained with a likely sensory avoidance component. Coordination with OT for a systematic desensitization approach is recommended.`,
+
+  self_help: `## Self-Help Skills
+
+### Toileting
+
+Oliver is fully toilet trained for both bowel and bladder, daytime and nighttime. He independently initiates bathroom trips without prompting and manages all associated tasks (clothing, wiping, flushing, handwashing) without adult assistance. No enuresis or encopresis. No sensory concerns with the bathroom environment itself — the toilet and hand-washing routine are well-tolerated. Refusal is specific to teeth brushing and bathing, not the bathroom space itself.
+
+### Dressing & Grooming
+
+Oliver can manage pullover shirts and elastic-waist pants independently. Buttons, snaps, and zippers are not yet mastered and frequently result in task refusal when attempted. Shoelaces are not mastered; family uses Velcro footwear exclusively. Tactile sensitivities affect wardrobe: tagless shirts are required; Oliver refuses corduroy, stiff denim, and certain synthetic fabrics. Family has accommodated by maintaining a wardrobe of soft, tagless clothing.
+
+Oral hygiene is a significant clinical target. Teeth brushing results in active physical resistance (pulling away, crying, hitting) approximately 70% of morning and evening attempts. Successful brushing is estimated at three times per week and requires two adults — one to stabilize and one to brush. Duration is typically under 30 seconds. Flossing is not yet attempted. Hair washing is tolerated approximately monthly with distraction support.
+
+### Bathing
+
+Bathing represents the most significant hygiene deficit. Oliver refuses entry to the bathtub or shower when bathing is announced and will escalate to crying and hitting within 30 seconds of bathroom approach cues. The family has transitioned entirely to sponge baths (2–3 per week) conducted on the bathroom floor with preferred YouTube content playing on a tablet. Full immersion bathing: 0% step completion at baseline.
+
+The clinical profile suggests a sensory-based avoidance pattern (water temperature, tactile input, spray sensation) with a conditioned escape response to bathroom approach cues. OT consultation is recommended prior to initiating a systematic desensitization hierarchy. ABA will target step-by-step approach behavior using a graduated exposure protocol beginning with proximity to the bathroom during non-bathing times.
+
+### Feeding
+
+Oliver's diet consists of approximately 10 accepted foods: macaroni and cheese (specific brand), chicken nuggets, plain white rice, peeled apple slices, pouched yogurt (specific brand), Goldfish crackers, plain bread, apple juice pouches, vanilla wafers, and Cheerios. Mixed textures, sauces, and vegetables are refused. Meals are a low-escalation context when preferred foods are served; behavioral escalation occurs when a non-preferred food is introduced or when a preferred food is unavailable. OT feeding evaluation has not yet been completed; referral is recommended.`,
+
+  daily_living: `## Daily Living Skills
+
+### Morning & Home Routines
+
+Oliver does not currently have a visual schedule in place at home, despite using one successfully at school. Morning routine duration is 60–80 minutes and includes 2–3 behavioral escalations on average. The handoff between Raj (who manages the morning routine before leaving for work at 7:00 AM) and Priya is a particularly high-risk transition — Oliver's compliance drops substantially when his father leaves and his mother takes over. This pattern suggests a preference-based compliance discrepancy that will be an early parent training focus.
+
+Bedtime routine targets 9:00–9:30 PM and takes 45–60 minutes. The routine includes dinner cleanup, teeth brushing (the highest-resistance step), pajamas, and 20 minutes of preferred screen time before lights out. Screen removal at the end of the night is a consistent aggression antecedent.
+
+Screen time is currently unregulated: estimated 3–4 hours on weekdays and 5–6 hours on weekends, primarily iPad (vehicle YouTube channels, Minecraft). No screen time boundary system is in place. Screen access is the most powerful reinforcer in Oliver's repertoire and is embedded in virtually every behavioral incident as either the antecedent (removal demand) or the consequence (restored after de-escalation).
+
+### Community & Independence
+
+Community access has been largely suspended over the past several months following the most recent parking lot elopement incident. The family will only attempt outings with two adults present, which limits frequency to weekends when Raj is available. Prior to the current restrictions, Oliver could manage familiar, low-stimulation settings (a nearby park, the pediatrician's office) with one-on-one adult supervision and minimal preparation.
+
+Oliver knows his full name, home address, and his mother's phone number — a meaningful safety strength. He responds consistently to "stop" commands in home settings from both parents but does not generalize this response reliably in community settings, particularly when motivated to move toward a visual target or exit.
+
+### Leisure & Recreation
+
+Strong and sustained engagement with two primary preferred activities: vehicle and machinery YouTube content (can watch independently for 60+ minutes) and Minecraft (independent structured play 30–45 minutes). These are the highest-value reinforcers for programming. Secondary preferences include physical play (rough-housing with Raj, jumping on couch) and lining up objects. Oliver has no organized recreational activities outside school. Family reports limited peer social experience; no playdates have occurred in the past four months.`,
+
+  safety: `## Safety Concerns
+
+### Elopement & Wandering
+
+Elopement is assessed as HIGH RISK. Oliver has bolted from direct adult supervision in community settings on five documented occasions over the past six months. Incidents occurred in a grocery store (3 times) and in active parking lots (2 times). The most recent parking lot incident required Priya to run toward an active roadway to intercept Oliver before he reached traffic. This incident meets the threshold for an acute safety concern requiring immediate intervention.
+
+Oliver responds consistently to "stop" in home settings from both parents but does not generalize this response in high-stimulation community environments. There is no current physical safety barrier or proximity management protocol in place for community settings. No home elopement incidents reported. School has reported no elopement. The family has appropriately restricted community outings in response.
+
+### Aggression
+
+Physical aggression is rated as MODERATE risk. Topography includes open-hand hitting and scratching directed exclusively toward Priya Patel in the home. Aggression frequency is 3–5 incidents per day. Scratches have produced visible marks on Priya's forearms. No injuries requiring medical attention. Oliver has not aggressed toward Raj, school staff, or peers beyond one documented school incident (peer hitting, no injury). Aggression has not been observed in the school setting.
+
+No biting, kicking, or object throwing has been reported. No property destruction beyond occasional sweeping of small items during escalation.
+
+### Self-Injurious Behavior
+
+No SIB reported beyond incidental scratching of own forearms during escalation episodes (non-targeted, not sustained). No head banging, face hitting, or other self-directed injury. No medical attention required. SIB is not considered a current behavior target.
+
+### Clinical Safety Assessment
+
+Elopement risk is rated HIGH at initial presentation. This rating reflects: (1) five documented incidents in 6 months, including two in traffic-adjacent environments; (2) the absence of a reliable "stop" response generalized to community settings; (3) an escape-and-movement function that motivates rapid, directional running toward stimulating targets; and (4) the family's suspension of community outings — an appropriate immediate response that does not address the underlying deficit. Elopement prevention must be addressed as the top clinical priority before any community-based programming is attempted.
+
+Physical aggression risk is MODERATE — present daily, producing visible marks, but limited in topography and targets. No biting, no multi-target incidents, no sustained escalation requiring emergency response. Priority is FCT to provide a functional escape pathway before demand intensity increases in treatment.
+
+Mandated reporting requirements were reviewed during this clinical interview. No indicators meeting reporting threshold were identified at this time. This review is documented in session notes per agency protocol.`,
+
+  communication: `## Communication
+
+### Expressive Language
+
+Oliver communicates primarily through verbal speech with a mean length of utterance of approximately 3–5 words in familiar, low-demand settings. Under stress, demand presentation, or novel environments, MLU decreases to 1–2 words or Oliver goes non-verbal. Intelligibility is approximately 85% with familiar adults and 60% with unfamiliar listeners. Oliver uses language reliably to request preferred items and activities (e.g., "iPad please," "more nuggets," "go outside") and to protest non-preferred tasks (e.g., "No," "Stop it," "I don't want to"). He does not use language to express internal emotional states, request help proactively, or seek a break before behaviorally escalating. This is the primary communication gap relevant to treatment.
+
+Delayed echolalia is present — Oliver repeats phrases from vehicle YouTube content during unstructured time and in anxious situations. This scripting behavior appears to serve a regulatory function and is most prominent during transitions and novel settings. Immediate echolalia is not reported.
+
+### Receptive Language
+
+Oliver follows single-step instructions reliably in familiar, predictable settings (85% accuracy with both parents). Two-step instruction following is emerging but inconsistent (approximately 55% accuracy in familiar contexts, decreasing substantially in novel or high-demand situations). He responds to his name consistently with both parents and with his teacher. He reliably understands yes/no questions, identifies common objects and pictures, and follows routine-based instructions (sit down, come here, put it away). Non-literal language (jokes, sarcasm, idioms) is not reliably understood.
+
+### Pragmatics & Social Communication
+
+Oliver initiates communication primarily to access preferred items or activities. He does not yet initiate for social sharing or peer interaction. Eye contact is variable — more reliable with familiar adults than strangers, decreasing under demand pressure. Turn-taking in structured adult-directed exchanges is emerging (2–3 exchanges on preferred topics). No spontaneous peer interaction has been observed by parents or school.
+
+AAC trial (GoTalk) was initiated three weeks prior to this assessment by the school SLP — no independent symbol activation observed yet. Physical prompt required for all device activations. Family has not yet learned the system for home use.
+
+### SLP Coordination
+
+Coordination with the school SLP is a clinical priority, particularly for FCT implementation. The highest-priority functional communication target — requesting "help" and "break" — should be a shared ABA-SLP goal implemented consistently across ABA sessions, school speech, and home routines. Consistency of vocabulary (same words/symbols used across all settings) is critical for rapid acquisition. If GoTalk activation can be incorporated as an alternative to or alongside verbal requesting, a multimodal FCT approach should be explored with the SLP to ensure the modality used in ABA sessions is also available and reinforced at school.`,
+
+  self_stim: `## Self-Stimulatory Behavior
+
+### Topography & Frequency
+
+Oliver's most prominent self-stimulatory behavior is hand-flapping, which occurs with moderate frequency (estimated 10–15 episodes per day) during periods of excitement, anticipation, and transition. Episodes last 5–20 seconds. Hand-flapping is most prominent when Oliver is anticipating a preferred activity (iPad access, going to the park, seeing a family member he enjoys). A second prominent behavior is repetitive questioning — Oliver asks the same question repeatedly (e.g., "Where are we going?", "What time is it?", "Are we almost there?") particularly during transitions, novel outings, and any change from expected routine. These question sequences can persist for 5–10 minutes without resolution regardless of the caregiver's answer. This behavior is reported as distressing to Priya, particularly during community outings where the questioning increases anxiety in both.
+
+Oliver also engages in systematic object lining — arranging small objects (toy cars, blocks, household items) in rows or color-sorted groups. This activity lasts 15–25 minutes of independent engagement and appears to serve a calming, regulatory function. It is a meaningful source of independent leisure skill and a reliable indicator that Oliver is self-regulating.
+
+### Impact & Function
+
+Hand-flapping does not interfere with learning tasks or structured activities. Object lining provides functional independent leisure time. Repetitive questioning is the most functionally impairing of the three behaviors — it increases caregiver frustration and stress during high-demand contexts (transitions, community outings) and is reported as a reliable pre-escalation indicator when anxiety is elevated. Clinically, the questioning pattern functions as an anxiety-driven information-seeking behavior rather than a purely automatic behavior. Providing advance visual priming (schedule, visual countdown) before high-risk transitions reduces the frequency per parent report.
+
+### Sensory Profile
+
+No formal OT sensory evaluation has been completed. Caregiver-reported sensory profile: hyperreactivity to sudden, unexpected loud sounds (hand dryers, fire alarms, crowd noise); tactile sensitivity to oral inputs (toothbrush bristles, water spray during bathing) and fabric textures (see Self-Help). Proprioceptive seeking behaviors are prominent — crashing into furniture, jumping on couch, requesting tight bear hugs from Raj. These suggest a proprioceptive-seeking sensory profile that will need to be addressed in the treatment plan through embedded heavy-work activities and an OT referral for a formal sensory evaluation.
+
+OT referral is recommended prior to or concurrent with ABA service initiation for both the feeding restriction and the hygiene desensitization protocol.`,
+
+  medical_necessity: `## Medical Necessity
+
+### Diagnostic Support
+
+Primary diagnosis of Autism Spectrum Disorder, Level 2 (DSM-5, F84.0) confirmed by Dr. Ana Flores, M.D., Pediatric Neurology, Miami Children's Health System, on March 14, 2024. Diagnostic instruments included the ADOS-2 (Module 2), ADI-R, and Vineland-3 Adaptive Behavior Scales. Full neurological and developmental evaluation report on file. No co-occurring psychiatric diagnoses. No current medications. No seizure disorder, cardiac conditions, or other contraindications to behavioral intervention.
+
+Primary care: Dr. Kevin Patel (Pediatrics, no relation to client). Last well visit April 2026. School-based SLP services ongoing (2x/week, expressive vocabulary and AAC introduction). No OT services currently enrolled.
+
+### Functional Impact
+
+Oliver's constellation of behavioral excesses and adaptive skill deficits significantly impairs functioning across home and community settings. Daily physical aggression toward his mother — 3–5 incidents per day producing visible scratching marks — has created a home environment characterized by hypervigilance and caregiver-child conflict. More critically, Oliver has bolted from adult supervision in traffic-adjacent community settings on five occasions, including a parking lot incident requiring the caregiver to run toward an active roadway. This acute elopement safety risk has led the family to eliminate virtually all community participation, with severe consequences for Oliver's social development, family quality of life, and the caregiver's ability to meet routine household needs.
+
+Daily refusal of hygiene routines presents a direct health risk (dental and skin hygiene) and is a chronic source of conflict. Severe food selectivity limits nutritional variety. At school, a peer aggression incident has prompted IEP team request for formal behavioral evaluation. Without ABA, the family anticipates continued behavioral escalation, ongoing acute elopement risk, and progressive social isolation.
+
+### Clinical Justification
+
+Applied Behavior Analysis is clinically justified as the appropriate level of care for Oliver Patel, meeting Cigna medical necessity criteria on the following grounds: **(1)** Primary diagnosis of ASD Level 2 (F84.0) confirmed via ADOS-2 Module 2, ADI-R, and Vineland-3, requiring substantial support across multiple functional domains; **(2)** documented daily physical aggression toward primary caregiver producing visible injury, meeting clinical severity threshold; **(3)** acute community safety risk from elopement — 5 documented incidents, including 2 requiring emergency caregiver response in traffic-adjacent settings; **(4)** functional impairment across home, school, and community settings sufficient to prompt IEP behavioral evaluation and family suspension of all community participation; and **(5)** no prior ABA services received — all current SLP-only intervention insufficient to address behavioral excesses and safety concerns. Referring neurologist Dr. Ana Flores recommends ABA as the primary evidence-based treatment indicated for this presentation.
+
+Recommended service intensity: 20 hours per week, center-based with parent training component. Six-month measurable targets: Physical Aggression reduction from 4 incidents/day to ≤1 incident/day; elimination of elopement in community settings; Functional Help-Seeking at 80% independent across settings; teeth brushing compliance within 5 minutes; and re-establishment of two routine community outings per week.`,
+
+  skill_acquisitions: `## 1. **Functional Help-Seeking (Verbal Request)**
+
+**OPERATIONAL DEFINITION**
+Oliver will independently vocalize "help," "break," or "I need help" within 10 seconds of encountering a blocked preferred item or non-preferred demand, without prior adult prompting or physical aggression.
+
+**TEACHING STRATEGIES**
+Functional Communication Training (FCT) embedded in discrete trial and natural environment teaching. Begin with demand contexts where aggression is most predictable (iPad removal, hygiene task onset). Use expectant delay (3 seconds) → gestural → partial verbal → full verbal prompt hierarchy. Immediately honor the mand with brief demand removal and preferred access. Differentially reinforce unprompted responses with higher-magnitude reinforcers. Coordinate with school SLP for parallel implementation.
+
+**BASELINE & MASTERY TABLE**
+| Measure | Baseline | Mastery Criterion |
+|---|---|---|
+| % Independent Help-Requests | 5% (1 of 20 probed opportunities) | 80% across 3 consecutive sessions |
+| Contexts | Home structured | Home + school + community |
+| Prompt Level | Full verbal model required | Independent — no prompt |
+
+**GENERALIZATION**
+Generalize across both parents, RBT, and school staff. Priority probes: iPad removal and hygiene task onset. Coordinate with SLP for AAC device integration.
+
+---
+
+## 2. **Following Two-Step Directions**
+
+**OPERATIONAL DEFINITION**
+Oliver will follow a two-step spoken instruction in correct sequence within 10 seconds of delivery, without instruction repetition or physical guidance.
+
+**TEACHING STRATEGIES**
+Discrete Trial Training with varied instruction sets. Begin with high-success first steps to build responding momentum. Use least-to-most prompt hierarchy (expectant delay → gestural → partial physical). Token board for compliance streaks.
+
+**BASELINE & MASTERY TABLE**
+| Measure | Baseline | Mastery Criterion |
+|---|---|---|
+| Two-Step Sequence Accuracy | 30% across 20 probed trials | 80% across 3 consecutive sessions |
+| Prompt Level | Gestural required for second step | Independent — no gestural or vocal |
+| Settings | Home structured | Home + school + community |
+
+**GENERALIZATION**
+Generalize across instruction-givers (Priya, Raj, teacher, RBT). Embed in morning routine (get backpack AND put on shoes) and school transitions.
+
+---
+
+## 3. **Peer Interaction Initiation (School Setting)**
+
+**OPERATIONAL DEFINITION**
+Oliver will independently initiate a contextually appropriate social interaction with a same-age peer at least 2 times per 30-minute structured social opportunity, without adult prompting.
+
+**TEACHING STRATEGIES**
+Social Skills group using BST (instruction, modeling, rehearsal, feedback). Video modeling with vehicle/Minecraft context. Peer-mediated intervention with 1–2 identified school peers. In-vivo coaching by paraprofessional during structured recess.
+
+**BASELINE & MASTERY TABLE**
+| Measure | Baseline | Mastery Criterion |
+|---|---|---|
+| Unprompted Peer Initiations | 0 per 30-min session | 2+ per 30-min session |
+| Response Quality | n/a | Contextually appropriate (rated) |
+| Settings | n/a | School recess + classroom activity |
+
+**GENERALIZATION**
+Structured family playdates as natural generalization after school mastery. Community social settings (park, library) after stable peer initiation established.
+
+---
+
+## 4. **Bathing / Grooming Desensitization**
+
+**OPERATIONAL DEFINITION**
+Oliver will complete all steps of the evening hygiene routine within 20 minutes with ≤1 verbal prompt per step, without behavioral refusal (hitting, crying, leaving bathroom).
+
+**TEACHING STRATEGIES**
+Task Analysis / Chaining with systematic desensitization (graduated water exposure hierarchy). Coordinate with OT for sensory protocol. Embed high-preference reinforcement contingent on each step completion. Begin hierarchy with bathroom proximity during non-bathing times.
+
+**BASELINE & MASTERY TABLE**
+| Measure | Baseline | Mastery Criterion |
+|---|---|---|
+| Steps Completed Independently | 0 of 10 (complete refusal) | 80% across 5 consecutive sessions |
+| Behavioral Escalation During Routine | 100% of bath attempts | 0 incidents |
+| Prompt Level | 2-person assist required | ≤1 verbal prompt per step |
+
+**GENERALIZATION**
+Maintain across both parents as routine leaders. Probe for maintained tolerance after 4-week treatment gap.`,
+
+  behavior_targets: `## Behavior Targets
+
+### Target Behavior 1: Physical Aggression
+
+**Operational Definition:** Oliver makes forceful physical contact with another person using an open hand (hitting) or fingernails (scratching). Each discrete contact event is scored as one instance. Accidental physical contact is not scored.
+
+**Frequency & Intensity:** Per caregiver report, physical aggression occurs 3–5 times per day on typical weekdays. Scratching has produced visible marks on Priya Patel's forearms. No incidents have required medical attention. No biting, kicking, or object throwing. Aggression is exclusive to the home setting and directed exclusively toward Priya.
+
+**Antecedents:** Demand presentation is the consistent antecedent — specifically (1) iPad or screen removal instructions; (2) hygiene task initiation (teeth brushing or bathing announcement); (3) meal transition demands; (4) any blocked access to a preferred item. Behavior onset is rapid — physical response occurs within 2–3 seconds of instruction delivery with no observable verbal protest preceding it in the majority of incidents.
+
+**Maintaining Variables:** Negative reinforcement (escape from demand) is the primary hypothesized function. Demand removal or delay following aggression has been the consistent caregiver response across most incidents per parent report. The absence of a functional verbal alternative for escape contributes to the rapid escalation pattern.
+
+### Target Behavior 2: Elopement / Bolting
+
+**Operational Definition:** Oliver moves away from the supervising adult's direct supervision in a community setting without permission, defined as moving more than 10 feet from the adult without pausing in response to verbal cue ("Stop" or "Wait"). Each episode of separation is one instance.
+
+**Frequency & Context:** 5 documented incidents in 6 months in community settings — grocery stores (3x) and active parking lots (2x). Frequency within outings: estimated 2 incidents per community outing when attempted. Not observed at home or school.
+
+**Antecedents:** Open community spaces with exits. Transition between indoor and outdoor settings. Momentary loss of hand contact. Presence of visually interesting targets (moving vehicles, other children). Caregiver distraction.
+
+### Functional Hypothesis
+
+Physical Aggression is hypothesized to be maintained by negative reinforcement (escape from demands). This hypothesis is supported by: (1) consistent demand removal following aggression across multiple reporters (both parents, different settings); (2) exclusive antecedent of demand presentation or blocked preferred access; (3) absence of aggression in the school setting, which features high structure, predictable demands, and consistent 1:1 support — conditions that reduce escape demand; and (4) the speed of escalation (2–3 seconds from instruction to physical response), which is consistent with a history of aggression being efficiently reinforced and verbal alternatives never having been established.
+
+Elopement is hypothesized to serve a mixed function: negative reinforcement (escape from demands or aversive environments) and automatic reinforcement (proprioceptive/movement-seeking). The community-only context is consistent with escape from the unpredictability and demand-richness of community settings. The speed and directionality (running toward visual targets, exits) suggests an automatic movement-seeking component that is also functionally reinforced.
+
+**Proposed Intervention Strategy (Preliminary):**
+- FCT as primary replacement behavior for Physical Aggression: teaching "help" and "break" requests before demand removal is ever contingent on aggression
+- Antecedent modifications: visual countdown timers before iPad removal, First-Then visual cues before hygiene tasks, demand fading during FCT acquisition
+- Wrist-to-wrist proximity management as interim elopement safety protocol for community settings until behavioral treatment gains are established
+- Graduated community exposure hierarchy (low-demand, brief, predictable outings) coordinated with a community safety training protocol for both parents
+- Parent training: consistent FCT prompt hierarchy, demand follow-through protocol, proximity management, and data recording
+
+All aggressive incidents will be measured using event recording with same-day ABC notation completed by the RBT and caregiver daily log. A minimum of 10 school days of baseline data will be collected before implementing any extinction or DRA components. Elopement will be recorded per-community-outing using frequency recording with location and antecedent documentation.`,
+
+  caregiver_training: `## Caregiver Training Program
+
+### Training Rationale
+
+Caregiver training is a medically necessary component of Oliver's ABA programming. Consistent implementation of behavioral strategies — particularly FCT prompting, demand follow-through, and elopement safety procedures — across home and community settings is required to generalize treatment gains and prevent inadvertent reinforcement of aggression and elopement. Priya Patel is the primary implementer; Raj Patel is the secondary implementer with weekend and evening availability.
+
+Observed baseline data indicate that Premack contingencies and reinforcement delivery are being implemented inconsistently. Priya demonstrated correct Premack use in approximately 40% of probed opportunities and appropriate reinforcement delivery within 3 seconds of the target behavior in approximately 55% of opportunities during the intake observation session. These rates are below the threshold required for reliable home generalization and justify a structured, manualized caregiver training program as part of the ABA authorization.
+
+The most critical immediate training priority is the elopement safety protocol: both parents must demonstrate reliable physical proximity management and FCT prompting before any community-based sessions or family community outings are attempted without two adults present.
+
+### Training Objectives
+
+**Short-Term Objectives (0–3 months):**
+- Priya will demonstrate correct Premack (first-then) use with 70% accuracy across 3 consecutive direct observation probes.
+- Priya will deliver contingent reinforcement within 3 seconds with 70% accuracy across 3 consecutive sessions.
+- Both parents will correctly demonstrate the wrist-to-wrist proximity protocol and FCT prompt hierarchy for elopement prevention in community settings.
+
+**Long-Term Objective (6 months):**
+- Both parents will demonstrate 90% accuracy on FCT prompting, Premack delivery, and demand follow-through across 3 independent BCBA observation probes without verbal support.
+- Grandparents will receive written Gujarati-translated guides covering the three priority strategies and will demonstrate 80% accuracy in 2 coached practice sessions.
+
+### Training Plan
+
+Training will be conducted through in-session RBT coaching (modeling and feedback during active ABA sessions) and bi-weekly parent sessions with the supervising BCBA. Written protocol guides will be prepared for all priority strategies; Gujarati translations will be commissioned for grandparent materials. Video recording of correct strategy demonstrations during early sessions will be shared with Raj for independent review given his limited weekday availability. Progress toward competency benchmarks will be reviewed monthly and incorporated into the authorization renewal narrative.`,
+
+  crisis_plan: `## Crisis Plan
+
+### Risk History
+
+No history of psychiatric hospitalization, emergency services involvement, or acute crisis events. No suicidal ideation — Oliver does not have the expressive language to communicate such ideation; behavioral indicators will be monitored. No self-injurious behavior requiring medical attention. Law enforcement has not been involved. No formal crisis plan is in place. Family has managed behavioral crises informally.
+
+The primary acute safety concern is elopement risk in community settings. A second concern is the escalating pattern of physical aggression — while currently limited to scratching without injury, the trajectory requires proactive crisis protocol documentation before services begin.
+
+### Warning Signs & Escalation Sequence
+
+Caregiver-identified early warning signs that Oliver is approaching a behavioral escalation:
+- Increased frequency of repetitive questioning (same question 3+ times within 5 minutes)
+- Body tension — arms pulling toward midline, rigid trunk
+- Pulling away from hand-hold in community settings
+- Reduced verbal responsiveness — not answering direct questions
+- Visual scanning of exits or doors in community settings
+
+**Escalation sequence per caregiver report:** Warning signs → behavioral refusal (pulling away, saying "no") → increased vocalization (crying, repeating "stop") → physical response (hitting, scratching, or bolting) → in community settings, bolting may occur with or without prior warning signs in high-stimulation environments.
+
+**De-escalation strategies that work:** Immediate removal of all demands; proactive offer of preferred item or activity; deep pressure (firm bear hug, firm shoulder squeeze, proprioceptive heavy work); quiet, low-stimulation space with reduced verbal demands; advance visual priming for transitions (reduces repetitive questioning at onset).
+
+**Strategies that worsen escalation:** Maintaining demands during escalation; multiple verbal prompts or repetitive questions in response; physical blocking or restraint; raised voice or urgent tone; unpredictable changes after escalation has begun.
+
+**Return to baseline:** 10–20 minutes following peak escalation. Oliver typically seeks physical affection from Priya 5–15 minutes after returning to baseline. This is a reliable indicator the episode has fully resolved.
+
+### Emergency Contacts & Protocols
+
+- **Primary (Parent):** Priya Patel (mother) — (786) 555-0134
+- **Secondary (Parent):** Raj Patel (father) — (786) 555-0135
+- **Treating Neurologist:** Dr. Ana Flores (Pediatric Neurology) — (305) 555-0220
+- **Community elopement protocol:** If Oliver separates in community, follow calmly without shouting. Use neutral, low-vocal tone. Do not pursue in a way that reinforces running as a chase game. Call 911 if not recovered within 2 minutes or if in or near traffic.
+
+### Clinical Crisis Protocol
+
+RBT-to-BCBA call threshold: any community elopement incident; any physical aggression resulting in injury; any behavioral episode lasting more than 20 consecutive minutes without de-escalation. BCBA must be reachable within 30 minutes. RBT must attempt contact within 5 minutes of qualifying incident.
+
+Physical management: No restraint procedures are authorized under this plan. RBT community sessions require a two-adult proximity protocol until elopement behavior target reaches 0 incidents for 30 consecutive school days. Wrist-to-wrist strap is an authorized interim safety accommodation (caregiver and RBT only, with caregiver consent documented). Any RBT session in a community setting requires BCBA authorization of the specific setting and a written community safety plan before the first session. No community sessions without prior BCBA-led community assessment.
+
+This crisis plan must be reviewed and signed by both primary caregivers and the supervising BCBA before services begin. Review at each 6-month authorization renewal or following any crisis incident.`,
+};
+
 // ─── Draft selector ───────────────────────────────────────────────────────────
 
 function getDemoSeedDrafts(clientId) {
   if (clientId === 'c13') return MARCUS_DRAFTS;
   if (clientId === 'c4')  return EMMA_DRAFTS;
+  if (clientId === 'c5')  return OLIVER_DRAFTS;
   return null; // non-seed client → use buildLocalDraft instead
 }
 

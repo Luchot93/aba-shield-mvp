@@ -684,12 +684,297 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
   },
 };
 
+// ── Oliver Patel mock data ────────────────────────────────────────────────────
+
+const OLIVER_INTERVIEW_DATA = {
+  demographics: {
+    notes: 'Oliver Patel, DOB 06/12/2018 (age 7). Dx: ASD Level 2 F84.0 (Dr. Ana Flores, Pediatric Neurology, March 2024 — ADOS-2 Module 2, ADI-R, Vineland-3). No co-occurring diagnoses. Insurance: Cigna CIG-778823 / G-55023. Lives with parents Priya Patel (primary caregiver) + Raj Patel (father, works long hours in finance). No siblings. English is primary language; Gujarati spoken by maternal grandparents (weekend childcare). School: Riverside Academy, Coconut Grove, Miami — 2nd grade, IEP (annual review Feb 2026), SLP 2x/week school-based. No OT currently. No prior ABA. No medications.',
+    completionState: 'complete',
+  },
+  presenting_concerns: {
+    notes: 'Family top 3 concerns: (1) Physical aggression toward Priya during demand presentation — 3-5 incidents/day, hitting and scratching. Onset correlated with start of 2nd grade in September 2025. (2) Elopement and bolting in community settings — has bolted from grocery store 3x, parking lots on 2 occasions. Family has stopped most community outings. (3) Refusal of morning and bedtime hygiene routines — daily 30-45 min standoffs for teeth brushing and bathing. School: 1 documented peer hitting incident, no suspension. IEP team requesting updated behavioral evaluation.',
+    transcript: "Priya: The hitting really ramped up when school started this year. It's always when I'm asking him to do something he doesn't want to do — put down the iPad, brush his teeth, come to the table. He just hits or scratches and then runs away. Raj: The community stuff scares us the most. He bolted in the parking lot of the grocery store twice. I ran after him and I was terrified. We basically don't take him anywhere public anymore unless we have two adults. Priya: The hygiene is exhausting too. Every single morning and every night it's a battle. He'll sit at the bathroom door and just cry and we can't get him to brush his teeth without it turning into an hour-long event.",
+    completionState: 'complete',
+  },
+  self_help: {
+    notes: 'Toileting: fully independent, daytime and nighttime. No accidents. Manages clothing, wiping, and handwashing independently. Dressing: can manage pullover tops and elastic-waist pants. Refuses buttons, snaps, and zippers. Shoelaces not mastered — Velcro exclusively. Tactile sensitivity: tagless shirts required; refuses certain fabric textures (corduroy, stiff denim). Oral hygiene: significant refusal — teeth brushing results in physical resistance daily; Priya estimates successful brushing 3x/week with 2-person assist. Refuses flossing entirely. Bathing: refuses in bathroom, will accept brief sponge bath with consistent prompting but not daily. Hair washing tolerated monthly with distraction. Feeding: ~10 accepted foods — mac and cheese (specific brand), chicken nuggets, plain rice, peeled apple, yogurt (specific brand), goldfish crackers, plain bread, juice pouches. No vegetables or mixed textures. OT consult recommended but not yet scheduled.',
+    completionState: 'partial',
+  },
+  daily_living: {
+    notes: 'Morning routine: no visual schedule currently in use at home (school uses one). Routine takes 60-80 min with 2-3 escalations on average. Raj typically handles morning routine on weekdays before leaving at 7am; handoff to Priya results in elevated resistance. Bedtime: 9-9:30pm target; bedtime routine takes 45-60 min. Screen time: approximately 3-4 hours on weekdays, 5-6 on weekends, primarily iPad (YouTube videos about vehicles, Minecraft). Screen removal is the highest-frequency aggression antecedent. Leisure: strong preference for vehicle videos and Minecraft; can engage independently for up to 60 min with preferred content. Community: family has restricted outings to essential errands with 2 adults or eliminated them. Library and playground attempted twice in past 2 months — both ended early due to behavioral escalation. Knows full name, home address, Priya\'s phone number. Personal safety strength: responds consistently to "stop" in home.',
+    completionState: 'partial',
+  },
+  safety: {
+    notes: 'Elopement: HIGH RISK. Oliver has bolted from adult proximity on 5 documented occasions in community settings — grocery store (3x), parking lot (2x). Fastest incident: separated from Priya within 30 seconds of distraction. No water body access (apartment, no pool). Responds to "stop" in home setting but not reliably in high-stimulation community settings. Aggression: open-hand hitting and scratching directed primarily at Priya (90% of incidents), 3-5x/day. No biting. No aggression toward dad. 1 school incident (peer hitting, no injury). No property destruction beyond occasional item sweeping during escalation. No SIB reported. No elopement attempts at school (structured environment). No law enforcement involvement.',
+    transcript: "He bolted in the Publix parking lot and ran toward the road. I screamed and he actually stopped at the curb but my heart dropped. He knows his address and my number but in those moments he is not listening to anything. The scratching at home happens so fast — I'll ask him to turn off the iPad and before I can finish the sentence he's already hitting my arm. And then he'll run to his room. He doesn't do it at school, which I find confusing. They say he's well-behaved there.",
+    completionState: 'complete',
+    riskLevel: 'High',
+    sibPresent: false,
+    sibTopography: [],
+    sibFrequency: '0',
+    sibInjuryHistory: false,
+    sibInjuryNotes: '',
+    aggressionPresent: true,
+    aggressionTopography: ['Open-hand hitting', 'Scratching'],
+    aggressionTargets: ['Parent / Caregiver'],
+    aggressionFrequency: '4',
+    aggressionInjuryHistory: false,
+    aggressionInjuryNotes: 'Scratches have left marks on Priya\'s forearms. No medical attention required. 1 school incident (peer hitting, no injury noted). Raj has not been targeted.',
+    elopementPresent: true,
+    propertyDestructionPresent: false,
+    propertyDestructionNotes: 'Occasional sweeping of small items during escalation. No sustained destruction.',
+    envSafety: [
+      'Firearms secured or not present',
+      'Medications stored out of reach',
+      'Elopement safety plan needed — no current barriers in place',
+    ],
+    lawEnforcementInvolvement: false,
+    hospitalizationHistory: false,
+  },
+  communication: {
+    notes: 'Verbal — MLU 3-5 words in familiar, low-demand settings. Under stress or in novel settings, regresses to 1-2 word utterances or goes non-verbal. Intelligibility ~85% familiar adults. Uses language to request preferred items/activities and to protest. Does not use language to express internal states, request help, or seek a break before escalating. Strong scripted language: repeats lines from vehicle YouTube videos during unstructured time and when anxious. Receptive: single-step instructions followed reliably in familiar contexts; 2-step emerging (70% familiar adult, drops in unfamiliar settings). Consistent name response with Priya and Raj. School SLP: 2x/week (30 min each), focus on expanding expressive vocabulary and AAC introduction. AAC trial (GoTalk) initiated 3 weeks ago at school — no independent use yet. No pragmatics or peer interaction skills currently being targeted.',
+    transcript: "He'll ask for things he wants — 'iPad please,' 'more nuggets,' that kind of thing. But when he's frustrated or something is wrong, the language just disappears. He either hits or runs. He can't tell me 'I don't want to' with words in those moments. He just acts. The scripts from YouTube — he'll repeat the same phrases over and over when he's anxious and you can tell it's like a self-calming thing. The school SLP said they want to try the tablet communication device but it's very early.",
+    completionState: 'complete',
+    primaryCommunicationModes: ['Verbal', 'AAC Device'],
+    mluWords: '4',
+    intelligibilityFamiliar: '85',
+    intelligibilityUnfamiliar: '60',
+    functionalRepertoire: [
+      'Requesting preferred items/activities',
+      'Protesting / refusing',
+      'Greeting familiar people',
+      'Answering yes/no questions',
+    ],
+    receptiveSingleStep: '85',
+    receptiveTwoStep: '55',
+    receptiveMultiStep: false,
+    eyeContact: 'Variable',
+    initiatesCommunication: 'Sometimes',
+    turnTaking: 'Emerging',
+    slpServices: true,
+    slpFrequencyPerWeek: '2',
+    slpFocus: 'Expressive vocabulary expansion, AAC introduction (GoTalk)',
+  },
+  self_stim: {
+    notes: 'Hand flapping: frequent — most prominent during excitement and anticipation, estimated 10-15 episodes/day, each 5-20 sec. No interference with learning tasks. Repetitive questioning: asks the same question repeatedly (e.g., "What time is it?", "Where are we going?") particularly when anxious or during transitions — can persist 5-10 min without resolution. Lining up objects: arranges small objects (cars, blocks) in rows or color groups; 15-25 min sustained independent engagement. This appears to serve a calming regulatory function. No body rocking or mouthing. Sensory profile: hyperreactivity to sudden loud sounds (hand dryers, alarms, crowd noise), tactile sensitivity to fabric textures and oral input (see self-help). Proprioceptive seeking: crashing into furniture, jumping on couch, requests for tight hugs. No formal OT sensory evaluation completed.',
+    completionState: 'partial',
+  },
+  medical_necessity: {
+    notes: 'Dx: ASD Level 2 F84.0 (Dr. Ana Flores, Pediatric Neurology, March 2024). No co-occurring diagnoses. No medications. Pediatrician: Dr. Kevin Patel (no relation), last visit April 2026. Daily physical aggression toward primary caregiver. Documented elopement incidents posing acute community safety risk. Severe food selectivity (~10 foods) limiting nutrition and participation. Daily hygiene refusals impacting health. School: peer aggression, IEP team requesting behavioral evaluation. No prior ABA — all current non-ABA services insufficient. Recommended: 20 hrs/week center-based + parent training.',
+    transcript: "Dr. Flores did the full evaluation in March 2024 — ADOS, ADI, and the adaptive testing. She diagnosed him with autism Level 2. She specifically said ABA was the recommended treatment from day one. We tried speech therapy at school and that's been ongoing. He's improved his vocabulary a little bit but the behavior has not changed — if anything it's gotten harder this year. Dr. Flores wrote the referral herself and said this is medically necessary. He's on no medications. She wants to try behavioral intervention before anything else.",
+    completionState: 'complete',
+    approvalState: 'approved',
+    draftContent: `## Medical Necessity
+
+### Diagnostic Support
+
+Primary diagnosis of Autism Spectrum Disorder, Level 2 (DSM-5, F84.0) confirmed by Dr. Ana Flores, M.D., Pediatric Neurology, Miami Children's Health System, on March 14, 2024. Diagnostic instruments included the ADOS-2 (Module 2), ADI-R, and Vineland-3 Adaptive Behavior Scales. Full neuropsychological report on file. No co-occurring psychiatric diagnoses. No current medications. No seizure disorder, cardiac conditions, or other medical contraindications to behavioral intervention.
+
+Primary care: Dr. Kevin Patel (Pediatrics). Last well visit April 2026; next scheduled visit October 2026. School-based SLP services ongoing 2x/week (30 min each) — AAC introduction (GoTalk) initiated three weeks prior to this assessment.
+
+### Functional Impact
+
+Oliver's profile of behavioral excesses and adaptive skill deficits significantly impairs his functioning across home and community settings. Daily physical aggression toward his mother — occurring 3–5 times per day — consists of hitting and scratching that leaves visible marks and has created a household dynamic his parents describe as hypervigilant and exhausting. More critically, Oliver has bolted from adult supervision in community settings on five documented occasions, including twice in active parking lots. This elopement risk has led the family to eliminate virtually all community participation, severely limiting Oliver's social development, family quality of life, and caregiver ability to meet routine needs.
+
+Daily refusal of hygiene tasks (teeth brushing, bathing) presents a health risk and is a chronic source of caregiver-child conflict. Severe food selectivity to approximately 10 foods limits nutritional variety. At school, a peer aggression incident has prompted an IEP team request for a formal behavioral evaluation. Without ABA intervention, the family anticipates continued behavioral escalation, ongoing community safety risk from elopement, and increasing social isolation.
+
+### Clinical Justification
+
+Applied Behavior Analysis is clinically justified as the appropriate level of care for Oliver Patel, meeting Cigna medical necessity criteria on the following grounds: **(1)** Primary diagnosis of ASD Level 2 (F84.0) confirmed via ADOS-2 Module 2, ADI-R, and Vineland-3, requiring substantial support across multiple domains; **(2)** documented daily physical aggression toward primary caregiver with visible injury, meeting clinical severity threshold; **(3)** acute community safety risk from elopement — 5 documented incidents including 2 in active parking lots, the most recent requiring caregiver to run into traffic to prevent child from reaching the roadway; **(4)** functional impairment across home, school, and community settings sufficient to prompt IEP behavioral evaluation request and complete suspension of family community participation; and **(5)** current school-based SLP services, while beneficial for vocabulary, have not addressed behavioral excesses, and no prior ABA services have been received. Referring neurologist Dr. Ana Flores recommends ABA as the primary evidence-based treatment indicated for this presentation.
+
+Recommended service intensity: 20 hours per week, center-based with parent training component, consistent with the severity of behavioral presentation, elopement risk, and family's high engagement and motivation. Six-month measurable targets include: Physical Aggression reduction from baseline 4 incidents/day to ≤1 incident/day; elimination of elopement incidents in community settings; mastery of Functional Help-Seeking across home and community; tooth brushing compliance within 5 minutes at 80% of opportunities; and re-establishment of at least two routine community settings (grocery, library).`,
+    coOccurringDiagnoses: [],
+    medications: [],
+    hasPriorABA: false,
+    priorABAHistory: [],
+    recommendedHoursPerWeek: '20',
+    recommendedSetting: 'Center-based',
+  },
+  skill_acquisitions: {
+    notes: 'Family priority targets: (1) Requesting help or break with words before hitting; (2) tolerating transition from preferred iPad activity; (3) peer interaction at school recess; (4) hygiene routine compliance. Reinforcer assessment: vehicle YouTube content (high), Minecraft (high), specific food items (moderate), physical play/rough-housing (moderate). Attending: 5-10 min with high-preference reinforcers on structured tasks. Accepts reinforcers from familiar adults. No prior DTT exposure. Imitation: strong motor imitation repertoire — copies gross and fine motor actions with gestural prompt.',
+    completionState: 'complete',
+    approvalState: 'approved',
+    skillGoals: [
+      {
+        id: 'op1',
+        domain: 'Communication',
+        targetSkill: 'Functional Help-Seeking (Verbal Request)',
+        operationalDefinition: 'Oliver independently vocalizes "help," "break," or "I need help" within 10 seconds of encountering a blocked access to a preferred item or a non-preferred demand, without prior adult prompting or physical aggression.',
+        definitionIsAiGenerated: false, definitionIsLoading: false,
+        teachingStrategies: ['Discrete Trial Training (DTT)', 'Natural Environment Teaching (NET)'],
+        teachingStrategiesOther: '',
+        promptingLevel: 'Full Verbal', promptingLevelCombination: '',
+        baselinePercent: '5', baselineOpportunities: '20',
+        baselinePromptingDesc: 'Full verbal model required; 1 of 20 probed opportunities independent. Typically responds to blocked access with physical aggression or elopement rather than verbal request.',
+        masteryCriteriaPercent: '80', masteryCriteriaSessions: '3',
+        masteryCriteriaSettings: 'Home + school (minimum 2 settings)',
+        masteryCriteriaPrompting: 'Independent — no gestural or verbal prompt',
+        stoPercent: '40', stoSkillDescription: 'requesting help or break across 3 demand contexts', stoWeeks: '8',
+        generalizationNotes: 'Generalize across both parents, RBT, and school staff. Priority probe: iPad removal demand and hygiene task onset — these are the two highest-frequency aggression antecedents. Coordinate with school SLP re: AAC-based help-seeking as parallel modality.',
+      },
+      {
+        id: 'op2',
+        domain: 'Cognitive / Academic',
+        targetSkill: 'Following Two-Step Directions',
+        operationalDefinition: 'Oliver follows a two-step spoken instruction (e.g., "Put the toy away and then sit down") in correct sequence within 10 seconds of the instruction, without repetition or physical guidance.',
+        definitionIsAiGenerated: false, definitionIsLoading: false,
+        teachingStrategies: ['Discrete Trial Training (DTT)'],
+        teachingStrategiesOther: '',
+        promptingLevel: 'Gestural', promptingLevelCombination: '',
+        baselinePercent: '30', baselineOpportunities: '20',
+        baselinePromptingDesc: 'Gestural prompt required for second step in most trials; first step followed independently ~80%; combined two-step sequence at 30% accuracy.',
+        masteryCriteriaPercent: '80', masteryCriteriaSessions: '3',
+        masteryCriteriaSettings: 'Therapy table + natural environment',
+        masteryCriteriaPrompting: 'Independent — no gestural or vocal prompt',
+        stoPercent: '80', stoSkillDescription: 'following two-step directions across 5 distinct instruction sets', stoWeeks: '10',
+        generalizationNotes: 'Generalize across instruction-givers (Priya, Raj, teacher, RBT). Embed in morning routine sequencing (get backpack AND put on shoes) as natural environment context.',
+      },
+      {
+        id: 'op3',
+        domain: 'Social',
+        targetSkill: 'Peer Interaction Initiation (School Setting)',
+        operationalDefinition: 'Oliver independently initiates a contextually appropriate social interaction with a same-age peer (e.g., verbal comment on shared activity, asking to join, handing an object) at least 2 times per 30-minute structured social opportunity, without adult prompting.',
+        definitionIsAiGenerated: false, definitionIsLoading: false,
+        teachingStrategies: ['Social Stories', 'Video Modeling', 'Peer-Mediated Instruction'],
+        teachingStrategiesOther: '',
+        promptingLevel: 'Gestural', promptingLevelCombination: '',
+        baselinePercent: '0', baselineOpportunities: '30',
+        baselinePromptingDesc: '0 unprompted initiations per 30-minute session baseline. Parallel play observed near peers but no directed interaction.',
+        masteryCriteriaPercent: '80', masteryCriteriaSessions: '5',
+        masteryCriteriaSettings: 'School recess + structured classroom activity',
+        masteryCriteriaPrompting: 'Independent — no adult gestural or verbal cue',
+        stoPercent: '40', stoSkillDescription: 'initiating 1 peer interaction per 30-min session in 2 structured contexts', stoWeeks: '12',
+        generalizationNotes: 'Coordinate with paraprofessional at school for in-vivo social coaching during recess. Target 1-2 identified willing peers for structured interaction practice.',
+      },
+      {
+        id: 'op4',
+        domain: 'Adaptive / Self-Help',
+        targetSkill: 'Bathing / Grooming Desensitization',
+        operationalDefinition: 'Oliver completes all steps of the evening hygiene routine (enter bathroom, undress, enter tub/shower, wash body with cloth, wash hair with shampoo, rinse, exit, dry, dress) within 20 minutes with no more than 1 verbal prompt per step, without behavioral refusal (hitting, crying, leaving bathroom).',
+        definitionIsAiGenerated: false, definitionIsLoading: false,
+        teachingStrategies: ['Task Analysis / Chaining', 'Natural Environment Teaching (NET)'],
+        teachingStrategiesOther: 'Systematic desensitization with gradual water exposure hierarchy',
+        promptingLevel: 'Full Physical', promptingLevelCombination: '',
+        baselinePercent: '0', baselineOpportunities: '10',
+        baselinePromptingDesc: 'Complete refusal on baseline probes — will not enter bathroom when bathing is announced. Sponge bath accepted 2-3x/week with 2-person assist. Full bath: 0% step completion independent.',
+        masteryCriteriaPercent: '80', masteryCriteriaSessions: '5',
+        masteryCriteriaSettings: 'Home (bathroom)',
+        masteryCriteriaPrompting: '≤1 verbal prompt per step',
+        stoPercent: '50', stoSkillDescription: 'completing 5 of 10 hygiene steps with ≤2 prompts per step', stoWeeks: '14',
+        generalizationNotes: 'Coordinate with OT for sensory desensitization hierarchy (water temperature, tactile input progression). Family to implement nightly with RBT coaching during parent training sessions.',
+      },
+    ],
+  },
+  behavior_targets: {
+    notes: 'Target 1: Physical Aggression (hitting/scratching). Topography: open-hand hitting and scratching directed at Priya. Frequency: 3-5x/day. Duration: brief (<5 sec/episode). Ant: demand presentation (iPad removal, hygiene tasks, meal transition), blocked access to preferred items. Function: escape (primary). Target 2: Elopement/Bolting. Topography: running from adult proximity without permission. Frequency: 2x per community outing. Duration: variable. Ant: community settings (grocery, parking lot, unfamiliar environment), elopement-opportunity cues (open doors, momentary loss of hand contact). Function: escape (from demands/unfamiliar stimulation) + automatic (movement/sensory seeking). School: behaviors are not observed in school — behavior is home and community specific, consistent with high structure and predictability of school environment.',
+    transcript: "The hitting is always when I'm asking him to stop something or do something. I'll say 'Oliver, time to turn off iPad' and his hand goes up before I can even take the device. He doesn't pause or protest first — it's very fast. The running is different — it feels almost like excitement or overwhelm at the same time. He doesn't look back. He just goes. The school says he's never bolted or hit anyone there. They have a very structured environment with consistent routines.",
+    completionState: 'complete',
+    approvalState: 'approved',
+    behaviorTargets: [
+      {
+        id: 'bt-op1',
+        behaviorName: 'Physical Aggression',
+        operationalDefinition: 'Oliver makes forceful physical contact with another person using an open hand (hitting) or fingernails (scratching). Each discrete contact event is scored as one instance. Accidental physical contact (bumping, brushing past) is not scored.',
+        topography: ['Open-hand hitting', 'Scratching'],
+        frequencyPerDay: '4', frequencyUnit: 'day',
+        durationSeconds: '3', durationUnit: 'seconds',
+        intensityRating: 'Moderate',
+        antecedents: 'Demand presentation: iPad or screen removal, hygiene task initiation (teeth brushing, bathing announcement), meal transition. Blocked access to preferred item. Unpredicted schedule change.',
+        primaryTargets: ['Parent / Caregiver'],
+        hypothesizedFunction: 'Escape',
+        baselineFrequency: '4',
+        targetFrequency: '1',
+        measurementSystem: 'Event Recording',
+        priorFBACompleted: false,
+        priorBIPCompleted: false,
+        notes: 'FCT replacement: Oliver will request "help" or "break" to escape non-preferred demands before aggression occurs. The speed of escalation (pre-verbal → aggression within seconds) requires priming the FCT vocabulary immediately before high-risk demand contexts. RBT must present the demand, allow 3-second independent response window, then prompt FCT if no verbal request occurs — before the demand is repeated. Demand removal must not follow aggression; FCT response must be honored to maintain the replacement behavior.',
+      },
+      {
+        id: 'bt-op2',
+        behaviorName: 'Elopement / Bolting',
+        operationalDefinition: 'Oliver moves away from the supervising adult\'s direct supervision in a community setting without permission, defined as moving more than 10 feet from the adult without pausing in response to the adult\'s verbal cue ("Stop" or "Wait"). Each episode of separation is scored as one instance.',
+        topography: ['Running', 'Moving away without permission'],
+        frequencyPerDay: '2', frequencyUnit: 'outing',
+        durationSeconds: '30', durationUnit: 'seconds',
+        intensityRating: 'Severe',
+        antecedents: 'Community settings with open spaces (grocery stores, parking lots, parks). Transition between indoor and outdoor. Momentary loss of hand contact. Caregiver distraction (phone, conversation with another adult). Novel or stimulating environment.',
+        primaryTargets: ['Self'],
+        hypothesizedFunction: 'Escape',
+        baselineFrequency: '2',
+        targetFrequency: '0',
+        measurementSystem: 'Event Recording',
+        priorFBACompleted: false,
+        priorBIPCompleted: false,
+        notes: 'Safety priority: elopement in traffic-adjacent settings is the highest safety risk in this case. Graduated community exposure hierarchy required before unsupervised family community outings. Caregiver training in physical proximity management (hand-holding protocol, safety vest use in high-risk settings) must be completed before community sessions. Target behavior reduction to 0 incidents — any elopement in community is unacceptable given traffic proximity history. Wrist-to-wrist strap is an interim safety accommodation to be used until FCT and community tolerance are established.',
+      },
+    ],
+  },
+  caregiver_training: {
+    notes: 'Priya Patel is primary implementer — highly motivated, detail-oriented, responds well to written guides and data systems. Raj Patel available evenings and weekends — works long hours in finance. Primary barrier: inconsistency between the two parents on demand follow-through. Priya tends to remove demand after aggression; Raj more likely to insist. Maternal grandparents (Gujarati-speaking) provide weekend care — will need Gujarati translation of core strategies. Current Premack use: Priya observed correct ~40% of probed opportunities. Reinforcement delivery: ~55% within 3 seconds. High family engagement and insight — both parents accurately describe the behavioral functions after minimal explanation.',
+    completionState: 'complete',
+    approvalState: 'approved',
+    caregiverBaselines: { premack_baseline: '40', reinforcement_baseline: '55' },
+    trainingFormat: ['In-session coaching', 'Parent sessions', 'Written guides'],
+    trainingFrequency: '2x/week',
+    trainingBarriers: 'Raj\'s work schedule limits weekday availability. Grandparents are Gujarati-speaking — English guides will need translation. Priya reports high stress and fatigue from daily behavioral challenges.',
+    caregiverStrengths: 'Both parents demonstrate strong insight into behavioral functions. Priya is highly organized and comfortable with data collection. Family is highly motivated — primary driver for referral was parent safety concern, not just school recommendation.',
+  },
+  crisis_plan: {
+    notes: 'No prior crisis events, hospitalizations, or law enforcement. No suicidal ideation or SIB requiring medical attention. Elopement is the primary acute safety concern. Warning signs: increased repetitive questioning, body tension, pulling away from hand-hold. De-escalation: remove demands, offer preferred item proactively, proprioceptive input (bear hug or firm shoulder squeeze). Caregiver signed crisis plan at assessment completion.',
+    transcript: "When he's about to bolt or have a meltdown I can tell by his body — he starts pulling away from me and doing these repetitive questions, like asking the same thing over and over even after I've answered. And then he's gone before I can react. To calm him down: I take everything off the table, offer something he likes, and sometimes a tight hug helps. Talking to him when he's in that state makes it worse — he stops hearing words. It usually takes about 15 minutes to come down fully.",
+    completionState: 'complete',
+    approvalState: 'approved',
+    emergencyContacts: [
+      { id:'ec-op1', name:'Priya Patel', relationship:'Mother', phone:'(786) 555-0134', role:'Primary' },
+      { id:'ec-op2', name:'Raj Patel', relationship:'Father', phone:'(786) 555-0135', role:'Backup' },
+      { id:'ec-op3', name:'Dr. Ana Flores', relationship:'Neurologist', phone:'(305) 555-0220', role:'Medical' },
+    ],
+    warningSignsSelected: [
+      'Repetitive questioning (same question 3+ times)',
+      'Body pulling away from hand-hold',
+      'Increased pace of movement',
+      'Reduced verbal responsiveness',
+    ],
+    warningSignsCustom: 'Rigid body posture when transitioning from preferred activity. Visual scanning of exits in community settings.',
+    deEscalationWorks: [
+      'Remove all demands immediately',
+      'Offer a preferred item or activity proactively',
+      'Deep pressure / firm bear hug (if accepted)',
+      'Proprioceptive input — heavy work activity',
+      'Quiet space with reduced stimulation',
+    ],
+    deEscalationWorsens: [
+      'Maintaining demands during escalation',
+      'Multiple verbal prompts or questions',
+      'Physical restraint or blocking',
+      'Raised voice or urgent tone',
+    ],
+    deEscalationNotes: 'Wrist-to-wrist physical contact (parent holding child\'s wrist) used as interim elopement prevention in community — must be distinguished from restraint. Acceptable only as proactive prevention, not reactive response. Priya to signal Raj or second adult before releasing hand in any open space.',
+    bcbaCallMinutes: '5',
+    bcbaCallIncidents: '2',
+    bcbaCallWindow: '20',
+    call911Threshold: false,
+    call911Notes: 'Call 911 if Oliver elopes and is not recovered within 2 minutes, or if he is in immediate danger of physical injury.',
+    sessionSuspendThreshold: false,
+    baselineReturnMin: '10',
+    baselineReturnMax: '20',
+    postCrisisDebrief: true,
+    remorsePresentPostCrisis: true,
+    remorseNotes: 'Oliver typically seeks affection from Priya 5-15 minutes after returning to baseline. This is a reliable sign the episode has fully resolved. Do not process verbally during this window.',
+    medicalContraindications: ['No physical restraint'],
+    medicalNotes: 'No medications. No allergies. No seizure history. No medical contraindications to any behavioral intervention modality.',
+    caregiverSignedCrisisPlan: true,
+    rbtTrainedOnPlan: false,
+    crisisPlanInBsp: true,
+  },
+};
+
 export const SEED_CLIENTS = () => [
   { id:'c1',  name:'Liam Rodriguez',  dob:'2018-03-15', phone:'(786) 555-0121', address:'1432 SW 8th St, Miami, FL 33135',          insurer_name:'Aetna',        member_id:'AET-884421', group_number:'G-44210', referring_provider:'Dr. Maria Santos',  source:'imported',    referral_date:'2026-04-10', stage_entered_at:'2026-04-10T09:00:00.000Z', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
   { id:'c2',  name:'Sophia Kim',      dob:'2019-07-22', phone:'(305) 555-0198', address:'7821 N Kendall Dr, Miami, FL 33156',        insurer_name:'UnitedHealth', member_id:'UHC-229934', group_number:'G-77811', referring_provider:'Dr. John Park',      source:'crm_created', referral_date:'2026-04-15', stage_entered_at:'2026-04-15T10:30:00.000Z', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
   { id:'c3',  name:'Noah Carter',     dob:'2017-11-08', phone:'(954) 555-0143', address:'3201 Coral Way, Coral Gables, FL 33134',   insurer_name:'Florida Blue', member_id:'FLB-558871', group_number:'G-12390', referring_provider:'Dr. Elaine Torres',  source:'imported',    referral_date:'2026-03-28', stage_entered_at:'2026-04-01T08:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
   { id:'c4',  name:'Emma Thompson',   dob:'2020-01-30', phone:'(561) 555-0167', address:'9400 Glades Rd, Boca Raton, FL 33434',     insurer_name:'Humana',       member_id:'HUM-334490', group_number:'G-98712', referring_provider:'Dr. Robert Chen',    source:'crm_created', referral_date:'2026-04-02', stage_entered_at:'2026-04-22T09:15:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c5',  name:'Oliver Patel',    dob:'2018-06-12', phone:'(786) 555-0134', address:'2100 Biscayne Blvd, Miami, FL 33137',      insurer_name:'Cigna',        member_id:'CIG-778823', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     source:'imported',    referral_date:'2026-03-15', stage_entered_at:'2026-05-12T11:00:00.000Z', stage:'plan_draft',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c5',  name:'Oliver Patel',    dob:'2018-06-12', phone:'(786) 555-0134', address:'2100 Biscayne Blvd, Miami, FL 33137',      insurer_name:'Cigna',        member_id:'CIG-778823', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     source:'imported',    referral_date:'2026-03-15', stage_entered_at:'2026-06-04T09:00:00.000Z', stage:'submitted',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
   { id:'c6',  name:'Ava Nguyen',      dob:'2019-09-05', phone:'(305) 555-0189', address:'5540 NW 7th Ave, Miami, FL 33127',         insurer_name:'Aetna',        member_id:'AET-991102', group_number:'G-44210', referring_provider:'Dr. Luis Mendez',    source:'crm_created', referral_date:'2026-02-28', stage_entered_at:'2026-05-19T14:00:00.000Z', stage:'submitted',       denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
   { id:'c7',  name:'Ethan Williams',  dob:'2017-04-18', phone:'(954) 555-0156', address:'800 E Broward Blvd, Ft. Lauderdale, FL',   insurer_name:'Florida Blue', member_id:'FLB-447721', group_number:'G-12390', referring_provider:'Dr. Sarah Johnson',  source:'imported',    referral_date:'2026-02-10', stage_entered_at:'2026-04-05T10:00:00.000Z', stage:'denied',          denial_reason:'Medical necessity not established', bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
   { id:'c8',  name:'Isabella Moore',  dob:'2018-12-25', phone:'(786) 555-0177', address:'6100 SW 57th Ave, South Miami, FL 33143',  insurer_name:'UnitedHealth', member_id:'UHC-883312', group_number:'G-77811', referring_provider:'Dr. Mark Davis',     source:'crm_created', referral_date:'2026-01-20', stage_entered_at:'2026-03-10T09:00:00.000Z', stage:'authorized',      denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-31', reauth_active:false },
@@ -709,6 +994,11 @@ export const SEED_CLIENTS = () => [
   }
 
   const SEED_NOTES = {
+    c5: [
+      { id:'on1', stage:'assessment',  text:'Initial caregiver interview completed with Priya Patel (~90 min). Escape function hypothesis strongly supported by intake data. Elopement safety plan discussed — wrist-to-wrist protocol recommended for community settings until treatment gains are established.', author:'Dr. Ana Reyes', timestamp:'2026-04-08T14:00:00Z' },
+      { id:'on2', stage:'assessment',  text:'Direct observation (30 min, home): clear behavioral escalation on iPad removal demand — hitting within 2-3 seconds of instruction. No FCT repertoire observed. Oliver responded positively to First-Then visual cue when presented proactively before demand. Strong motor imitation confirmed. Vineland-3 and BASC-3 administered.', author:'Dr. Ana Reyes', timestamp:'2026-04-10T16:00:00Z' },
+      { id:'on3', stage:'plan_draft',  text:'Treatment plan reviewed with Priya and Raj Patel (phone call, 45 min). Both parents supportive of FCT as primary approach. Raj expressed elopement safety as highest priority — confirmed wrist-strap interim protocol for community. Parent training schedule set for 2x/week alongside RBT sessions.', author:'Dr. Ana Reyes', timestamp:'2026-05-14T11:30:00Z' },
+    ],
     c9: [
       { id:'n9b', stage:'staffing',  text:'RBT confirmed availability for 3x/week sessions starting next Monday. Parent agreed to morning slot.', author:'Tanya Reyes', timestamp:'2026-05-18T09:15:00Z' },
       { id:'n9a', stage:'authorized', text:'Called caregiver, left voicemail re: schedule change for upcoming assessment week.', author:'Dr. Priya Sharma', timestamp:'2026-05-15T14:32:00Z' },
@@ -763,26 +1053,31 @@ export const SEED_CLIENTS = () => [
       relationship:       'Parents',
       reasonForReferral:  'ABA evaluation for behavioral escalation, ADL regression, and community avoidance',
     }) :
-    c.id === 'c5' ? makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes', MARCUS_INTERVIEW_DATA, {
-      dob:                c.dob,
-      phone:              c.phone,
-      address:            c.address,
-      insurerName:        c.insurer_name,
-      memberId:           c.member_id,
-      groupNumber:        c.group_number,
-      referringProvider:  c.referring_provider,
-      referralDate:       c.referral_date,
-      gender:             'Male',
-      diagnosis:          'Autism Spectrum Disorder, Level 2',
-      icd10:              'F84.0',
-      medicaidId:         '',
-      assessmentDate:     '2026-04-18',
-      assessmentType:     'Initial',
-      preferredLanguage:  'English',
-      parentGuardianNames:'Priya & Raj Patel',
-      relationship:       'Parents',
-      reasonForReferral:  'ABA evaluation for behavioral challenges and developmental delays',
-    }) :
+    c.id === 'c5' ? (() => {
+      const s = makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes', OLIVER_INTERVIEW_DATA, {
+        dob:                c.dob,
+        phone:              c.phone,
+        address:            c.address,
+        insurerName:        c.insurer_name,
+        memberId:           c.member_id,
+        groupNumber:        c.group_number,
+        referringProvider:  c.referring_provider,
+        referralDate:       c.referral_date,
+        gender:             'Male',
+        diagnosis:          'Autism Spectrum Disorder, Level 2',
+        icd10:              'F84.0',
+        medicaidId:         '',
+        assessmentDate:     '2026-04-18',
+        assessmentType:     'Initial',
+        preferredLanguage:  'English',
+        parentGuardianNames:'Priya & Raj Patel',
+        relationship:       'Parents',
+        reasonForReferral:  'ABA evaluation for physical aggression, elopement safety risk, and hygiene refusal',
+      });
+      // Mark session as fully complete — BCBA exported the assessment report
+      const sectionCount = Object.values(s.sections).filter(sec => sec.key !== 'demographics').length;
+      return { ...s, status: 'complete', sectionsApproved: sectionCount };
+    })() :
     c.stage === 'assessment' ? makeAssessmentSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes') :
     null;
 
@@ -793,6 +1088,39 @@ export const SEED_CLIENTS = () => [
   const smart_session_id = c.id === 'c5' && assessment_session
     ? assessment_session.id
     : null;
+
+  // Oliver Patel: patch completed checklists, documents, and activity log
+  if (c.id === 'c5') {
+    cl.intake = { referral_form:true, insurance_card:true, cde:true, aba_prescription:true, demographics_confirmed:true, insurance_verified:true, benefits_verified:true };
+    cl.auth_assessment = { cde_confirmed:true, prescription_confirmed:true, referral_confirmed:true, prior_assessments:true, auth_submitted:true, reference_number:'CIG-AUTH-2026-0318-4821', cpt_97151_received:true, bcba_assigned:true };
+    cl.assessment = { bcba_confirmed:true, caregiver_interview:true, direct_observation:true, vineland3:true, vineland3_date:'2026-04-10', basc3:true, basc3_date:'2026-04-10', additional_assessments:true, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
+    cl.plan_draft = { medical_necessity:true, skill_targets:true, behavior_goals:true, intervention_strategies:true, supervision_hours:'2', data_methodology:'Trial-by-trial data collection with same-day ABC notation', baseline_graphs:true, ai_draft_approved:true, treatment_plan_finalized:true };
+    const OLIVER_DOCS = [
+      { id:'odoc1', type:'referral_form',      label:'Oliver_Patel_ABA_Referral_Dr_Flores.pdf',              uploaded_at:'2026-03-15T10:00:00.000Z', by:'Admin User',     stage:'intake'          },
+      { id:'odoc2', type:'insurance_card',     label:'Cigna_Insurance_Card_Oliver_Patel.pdf',                 uploaded_at:'2026-03-15T10:05:00.000Z', by:'Admin User',     stage:'intake'          },
+      { id:'odoc3', type:'cde',                label:'Oliver_Patel_CDE_Dr_Flores_2024.pdf',                   uploaded_at:'2026-03-15T10:10:00.000Z', by:'Admin User',     stage:'intake'          },
+      { id:'odoc4', type:'aba_prescription',   label:'Oliver_Patel_ABA_Script_2026.pdf',                      uploaded_at:'2026-03-15T10:15:00.000Z', by:'Admin User',     stage:'intake'          },
+      { id:'odoc5', type:'prior_assessments',  label:'Oliver_Patel_Neuropsych_Eval_Dr_Flores_2024.pdf',       uploaded_at:'2026-03-28T09:00:00.000Z', by:'Dr. Ana Reyes',  stage:'auth_assessment' },
+      { id:'odoc6', type:'assessment_draft',   label:'Oliver_Patel_ABA_Assessment_Draft_2026-04-18.docx',     uploaded_at:'2026-04-18T16:30:00.000Z', by:'Dr. Ana Reyes',  stage:'assessment'      },
+      { id:'odoc7', type:'final_assessment',   label:'Oliver_Patel_ABA_Assessment_FINAL_2026-05-10.pdf',      uploaded_at:'2026-05-10T11:00:00.000Z', by:'Dr. Ana Reyes',  stage:'assessment'      },
+      { id:'odoc8', type:'treatment_plan',     label:'Oliver_Patel_Treatment_Plan_v1_2026-05-19.docx',        uploaded_at:'2026-05-19T14:00:00.000Z', by:'Dr. Ana Reyes',  stage:'plan_draft'      },
+    ];
+    const OLIVER_LOG = [
+      { id:'olog1',  stage:'intake',          text:'Client file created from imported referral — Dr. Ana Flores (Pediatric Neurology).', author:'Admin User', timestamp:'2026-03-15T09:00:00Z' },
+      { id:'olog2',  stage:'intake',          text:'Insurance benefits verified with Cigna. CPT 97151 pre-authorized. $45 copay, $0 deductible remaining. Benefits verification complete.', author:'Admin User', timestamp:'2026-03-16T14:00:00Z' },
+      { id:'olog3',  stage:'auth_assessment', text:'Authorization request submitted to Cigna for CPT 97151. Reference number: CIG-AUTH-2026-0318-4821.', author:'Dr. Ana Reyes', timestamp:'2026-03-18T10:30:00Z' },
+      { id:'olog4',  stage:'auth_assessment', text:'CPT 97151 authorization received from Cigna. Dr. Ana Reyes confirmed as supervising BCBA on authorization.', author:'Admin User', timestamp:'2026-03-25T11:00:00Z' },
+      { id:'olog5',  stage:'assessment',      text:'Initial caregiver interview completed with Priya Patel. Session ~90 minutes. Elopement safety plan discussed with family.', author:'Dr. Ana Reyes', timestamp:'2026-04-08T13:00:00Z' },
+      { id:'olog6',  stage:'assessment',      text:'Vineland-3 and BASC-3 administered. Direct observation (30 min, home) completed. Strong escape hypothesis confirmed.', author:'Dr. Ana Reyes', timestamp:'2026-04-10T15:30:00Z' },
+      { id:'olog7',  stage:'assessment',      text:'Smart Assessment Form completed and exported. All 11 sections reviewed and approved. Assessment draft generated.', author:'Dr. Ana Reyes', timestamp:'2026-04-18T16:00:00Z' },
+      { id:'olog8',  stage:'assessment',      text:'Additional assessments completed (FAST — caregiver-completed). Baseline behavioral data recorded.', author:'Dr. Ana Reyes', timestamp:'2026-04-25T10:00:00Z' },
+      { id:'olog9',  stage:'assessment',      text:'Final assessment report signed and uploaded. Assessment stage complete.', author:'Dr. Ana Reyes', timestamp:'2026-05-10T11:15:00Z' },
+      { id:'olog10', stage:'plan_draft',      text:'Treatment plan drafted from assessment data. AI draft reviewed and approved by Dr. Ana Reyes. Caregiver training goals finalized.', author:'Dr. Ana Reyes', timestamp:'2026-05-13T10:00:00Z' },
+      { id:'olog11', stage:'plan_draft',      text:'Treatment plan finalized with Priya and Raj Patel (phone review). All plan draft items complete. Advancing to submission.', author:'Dr. Ana Reyes', timestamp:'2026-05-19T14:00:00Z' },
+      { id:'olog12', stage:'submitted',       text:'Treatment plan submitted to Cigna for authorization review. CPT codes 97153, 97155, 97156 requested. Awaiting determination.', author:'Dr. Ana Reyes', timestamp:'2026-06-04T09:00:00Z' },
+    ];
+    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:OLIVER_DOCS, activity_log:OLIVER_LOG, case_notes: SEED_NOTES['c5'], assessment_session };
+  }
 
   return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session };
 });

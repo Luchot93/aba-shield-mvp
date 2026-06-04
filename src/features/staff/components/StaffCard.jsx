@@ -26,10 +26,30 @@ function certStatus(cert_expiry) {
   return 'ok';
 }
 
+function fmtDate(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toLocaleDateString('en-US', { month:'short', year:'numeric' });
+}
+
+function fmtDateFull(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
 export default function StaffCard({ member, clients, onEdit, currentUser, onSelectClient }) {
   const [expanded, setExpanded] = useState(false);
   const [editing,  setEditing]  = useState(false);
-  const [editForm, setEditForm] = useState({ cert_number: member.cert_number||'', cert_expiry: member.cert_expiry||'', status: member.status });
+  const [editForm, setEditForm] = useState({
+    cert_number: member.cert_number || '',
+    cert_expiry: member.cert_expiry || '',
+    cert_effective_date: member.cert_effective_date || '',
+    status: member.status,
+    npi: member.npi || '',
+    caqh_id: member.caqh_id || '',
+    hire_date: member.hire_date || '',
+    supervisor: member.supervisor || '',
+    title: member.title || '',
+  });
   const isAdmin = currentUser?.role === 'admin';
   const cs = certStatus(member.cert_expiry);
 
@@ -45,6 +65,8 @@ export default function StaffCard({ member, clients, onEdit, currentUser, onSele
     onEdit(member.id, editForm);
     setEditing(false);
   };
+
+  const hasCreds = member.cert_number || member.npi;
 
   return (
     <div className={`bg-white border rounded-xl transition-all duration-200 overflow-hidden ${expanded ? 'border-teal-200 shadow-md' : 'border-stone-200 hover:border-stone-300 hover:shadow-sm'}`}
@@ -94,6 +116,12 @@ export default function StaffCard({ member, clients, onEdit, currentUser, onSele
 
           {!editing ? (
             <>
+              {/* Title */}
+              {member.title && (
+                <p className="text-[11px] text-slate-500 font-medium -mt-0.5">{member.title}</p>
+              )}
+
+              {/* Email */}
               <div className="flex items-center gap-2">
                 <svg className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
@@ -101,6 +129,7 @@ export default function StaffCard({ member, clients, onEdit, currentUser, onSele
                 <span className="text-xs text-slate-600" style={{ fontFamily:'DM Mono, monospace' }}>{member.email}</span>
               </div>
 
+              {/* Phone */}
               {member.phone && (
                 <div className="flex items-center gap-2">
                   <svg className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -110,21 +139,66 @@ export default function StaffCard({ member, clients, onEdit, currentUser, onSele
                 </div>
               )}
 
-              {member.cert_number && (
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div className="bg-stone-50 rounded-lg px-3 py-2">
-                    <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Cert #</div>
-                    <div className="font-medium text-slate-700" style={{ fontFamily:'DM Mono, monospace' }}>{member.cert_number}</div>
-                  </div>
-                  <div className="bg-stone-50 rounded-lg px-3 py-2">
-                    <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Expires</div>
-                    <div className={`font-medium ${cs==='expired'?'text-red-600':cs==='expiring'?'text-amber-600':'text-slate-700'}`} style={{ fontFamily:'DM Mono, monospace' }}>
-                      {member.cert_expiry || '—'}
-                    </div>
-                  </div>
+              {/* Hire date */}
+              {member.hire_date && (
+                <div className="flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                  <span className="text-xs text-slate-600">Joined {fmtDate(member.hire_date)}</span>
                 </div>
               )}
 
+              {/* Supervisor */}
+              {member.supervisor && (
+                <div className="flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                  </svg>
+                  <span className="text-[11px] text-slate-400 uppercase tracking-wide font-semibold mr-0.5">Supervisor</span>
+                  <span className="text-xs text-slate-700 font-medium">{member.supervisor}</span>
+                </div>
+              )}
+
+              {/* Credentials block */}
+              {hasCreds && (
+                <div>
+                  <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Credentials</div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {/* Cert # */}
+                    <div className="bg-stone-50 rounded-lg px-3 py-2">
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Cert #</div>
+                      <div className="font-medium text-slate-700" style={{ fontFamily:'DM Mono, monospace' }}>{member.cert_number || '—'}</div>
+                    </div>
+                    {/* Effective */}
+                    <div className="bg-stone-50 rounded-lg px-3 py-2">
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Effective</div>
+                      <div className="font-medium text-slate-700" style={{ fontFamily:'DM Mono, monospace' }}>{fmtDateFull(member.cert_effective_date)}</div>
+                    </div>
+                    {/* Expires */}
+                    <div className="bg-stone-50 rounded-lg px-3 py-2">
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Expires</div>
+                      <div className={`font-medium ${cs==='expired'?'text-red-600':cs==='expiring'?'text-amber-600':'text-slate-700'}`} style={{ fontFamily:'DM Mono, monospace' }}>
+                        {fmtDateFull(member.cert_expiry) || '—'}
+                      </div>
+                    </div>
+                    {/* NPI */}
+                    <div className="bg-stone-50 rounded-lg px-3 py-2">
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">NPI</div>
+                      <div className="font-medium text-slate-700" style={{ fontFamily:'DM Mono, monospace' }}>{member.npi || '—'}</div>
+                    </div>
+                  </div>
+                  {/* CAQH — full width if present */}
+                  {member.caqh_id && (
+                    <div className="mt-2 bg-stone-50 rounded-lg px-3 py-2">
+                      <div className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">CAQH</div>
+                      <div className="font-medium text-slate-700 text-xs" style={{ fontFamily:'DM Mono, monospace' }}>{member.caqh_id}</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Assigned Clients */}
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">Assigned Clients</div>
                 {assigned.length === 0
@@ -154,6 +228,13 @@ export default function StaffCard({ member, clients, onEdit, currentUser, onSele
             </>
           ) : (
             <div className="space-y-3" data-testid={`edit-form-${member.id}`} onClick={e => e.stopPropagation()}>
+              {/* Title */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-600 mb-1 uppercase tracking-wide">Title</label>
+                <input value={editForm.title} onChange={e => setEditForm(f=>({...f, title:e.target.value}))}
+                  placeholder="e.g. Clinical Director"
+                  className="w-full px-2.5 py-1.5 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-[10px] font-semibold text-slate-600 mb-1 uppercase tracking-wide">Cert number</label>
@@ -162,12 +243,17 @@ export default function StaffCard({ member, clients, onEdit, currentUser, onSele
                     className="w-full px-2.5 py-1.5 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100" style={{ fontFamily:'DM Mono, monospace' }}/>
                 </div>
                 <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 mb-1 uppercase tracking-wide">Cert effective</label>
+                  <input type="date" value={editForm.cert_effective_date} onChange={e => setEditForm(f=>({...f, cert_effective_date:e.target.value}))}
+                    className="w-full px-2.5 py-1.5 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
+                </div>
+                <div>
                   <label className="block text-[10px] font-semibold text-slate-600 mb-1 uppercase tracking-wide">Cert expiry</label>
                   <input type="date" value={editForm.cert_expiry} onChange={e => setEditForm(f=>({...f, cert_expiry:e.target.value}))}
                     data-testid={`edit-cert-expiry-${member.id}`}
                     className="w-full px-2.5 py-1.5 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
                 </div>
-                <div className="col-span-2">
+                <div>
                   <label className="block text-[10px] font-semibold text-slate-600 mb-1 uppercase tracking-wide">Status</label>
                   <select value={editForm.status} onChange={e => setEditForm(f=>({...f, status:e.target.value}))}
                     data-testid={`edit-status-${member.id}`}
@@ -176,12 +262,31 @@ export default function StaffCard({ member, clients, onEdit, currentUser, onSele
                     <option value="pending">Pending</option>
                   </select>
                 </div>
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-semibold text-slate-600 mb-1 uppercase tracking-wide">NPI</label>
+                  <input value={editForm.npi} onChange={e => setEditForm(f=>({...f, npi:e.target.value}))}
+                    placeholder="10-digit NPI"
+                    className="w-full px-2.5 py-1.5 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100" style={{ fontFamily:'DM Mono, monospace' }}/>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-600 mb-1 uppercase tracking-wide">Hire date</label>
+                  <input type="date" value={editForm.hire_date} onChange={e => setEditForm(f=>({...f, hire_date:e.target.value}))}
+                    className="w-full px-2.5 py-1.5 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
+                </div>
+                {member.role !== 'bcba' && member.role !== 'admin' && (
+                  <div>
+                    <label className="block text-[10px] font-semibold text-slate-600 mb-1 uppercase tracking-wide">Supervisor</label>
+                    <input value={editForm.supervisor} onChange={e => setEditForm(f=>({...f, supervisor:e.target.value}))}
+                      placeholder="Supervisor name"
+                      className="w-full px-2.5 py-1.5 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={handleEditSave} data-testid={`save-staff-${member.id}`}
                   className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg hover:opacity-90"
                   style={{ background:'#0D9488' }}>Save</button>
-                <button onClick={() => { setEditing(false); setEditForm({ cert_number:member.cert_number||'', cert_expiry:member.cert_expiry||'', status:member.status }); }}
+                <button onClick={() => { setEditing(false); setEditForm({ cert_number:member.cert_number||'', cert_expiry:member.cert_expiry||'', cert_effective_date:member.cert_effective_date||'', status:member.status, npi:member.npi||'', caqh_id:member.caqh_id||'', hire_date:member.hire_date||'', supervisor:member.supervisor||'', title:member.title||'' }); }}
                   className="px-3 py-1.5 text-xs font-semibold text-slate-600 border border-stone-200 bg-stone-50 rounded-lg hover:bg-stone-100">Cancel</button>
               </div>
             </div>

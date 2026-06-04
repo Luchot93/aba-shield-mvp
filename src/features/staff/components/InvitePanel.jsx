@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Ico } from '../../../components/icons.jsx';
 
 export default function InvitePanel({ onClose, onInvite, pendingInvites, onRevoke }) {
-  const EMPTY = { name:'', email:'', phone:'', role:'', cert_number:'', cert_expiry:'' };
+  const EMPTY = { name:'', email:'', phone:'', role:'', cert_number:'', cert_expiry:'', npi:'', hire_date:'' };
   const [form,     setForm]     = useState(EMPTY);
   const [revokeId, setRevokeId] = useState(null);
 
@@ -98,6 +98,24 @@ export default function InvitePanel({ onClose, onInvite, pendingInvites, onRevok
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Cert expiry</label>
                     <input value={form.cert_expiry} onChange={e => setF('cert_expiry', e.target.value)}
                       data-testid="invite-cert-expiry" type="date"
+                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      NPI number <span className="text-slate-400 font-normal">(optional)</span>
+                    </label>
+                    <input value={form.npi} onChange={e => setF('npi', e.target.value)}
+                      data-testid="invite-npi"
+                      placeholder="10-digit NPI"
+                      className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"
+                      style={{ fontFamily:'DM Mono, monospace' }}/>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Hire date <span className="text-slate-400 font-normal">(optional)</span>
+                    </label>
+                    <input value={form.hire_date} onChange={e => setF('hire_date', e.target.value)}
+                      data-testid="invite-hire-date" type="date"
                       className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
                   </div>
                 </>

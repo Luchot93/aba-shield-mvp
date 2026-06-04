@@ -1103,7 +1103,6 @@ export const SEED_CLIENTS = () => [
       { id:'odoc5', type:'prior_assessments',  label:'Oliver_Patel_Neuropsych_Eval_Dr_Flores_2024.pdf',       uploaded_at:'2026-03-28T09:00:00.000Z', by:'Dr. Ana Reyes',  stage:'auth_assessment' },
       { id:'odoc6', type:'assessment_draft',   label:'Oliver_Patel_ABA_Assessment_Draft_2026-04-18.docx',     uploaded_at:'2026-04-18T16:30:00.000Z', by:'Dr. Ana Reyes',  stage:'assessment'      },
       { id:'odoc7', type:'final_assessment',   label:'Oliver_Patel_ABA_Assessment_FINAL_2026-05-10.pdf',      uploaded_at:'2026-05-10T11:00:00.000Z', by:'Dr. Ana Reyes',  stage:'assessment'      },
-      { id:'odoc8', type:'treatment_plan',     label:'Oliver_Patel_Treatment_Plan_v1_2026-05-19.docx',        uploaded_at:'2026-05-19T14:00:00.000Z', by:'Dr. Ana Reyes',  stage:'plan_draft'      },
     ];
     const OLIVER_LOG = [
       // newest first — matches app prepend behavior

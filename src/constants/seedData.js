@@ -1106,18 +1106,18 @@ export const SEED_CLIENTS = () => [
       { id:'odoc8', type:'treatment_plan',     label:'Oliver_Patel_Treatment_Plan_v1_2026-05-19.docx',        uploaded_at:'2026-05-19T14:00:00.000Z', by:'Dr. Ana Reyes',  stage:'plan_draft'      },
     ];
     const OLIVER_LOG = [
-      { id:'olog1',  stage:'intake',          text:'Client file created from imported referral — Dr. Ana Flores (Pediatric Neurology).', author:'Admin User', timestamp:'2026-03-15T09:00:00Z' },
-      { id:'olog2',  stage:'intake',          text:'Insurance benefits verified with Cigna. CPT 97151 pre-authorized. $45 copay, $0 deductible remaining. Benefits verification complete.', author:'Admin User', timestamp:'2026-03-16T14:00:00Z' },
-      { id:'olog3',  stage:'auth_assessment', text:'Authorization request submitted to Cigna for CPT 97151. Reference number: CIG-AUTH-2026-0318-4821.', author:'Dr. Ana Reyes', timestamp:'2026-03-18T10:30:00Z' },
-      { id:'olog4',  stage:'auth_assessment', text:'CPT 97151 authorization received from Cigna. Dr. Ana Reyes confirmed as supervising BCBA on authorization.', author:'Admin User', timestamp:'2026-03-25T11:00:00Z' },
-      { id:'olog5',  stage:'assessment',      text:'Initial caregiver interview completed with Priya Patel. Session ~90 minutes. Elopement safety plan discussed with family.', author:'Dr. Ana Reyes', timestamp:'2026-04-08T13:00:00Z' },
-      { id:'olog6',  stage:'assessment',      text:'Vineland-3 and BASC-3 administered. Direct observation (30 min, home) completed. Strong escape hypothesis confirmed.', author:'Dr. Ana Reyes', timestamp:'2026-04-10T15:30:00Z' },
-      { id:'olog7',  stage:'assessment',      text:'Smart Assessment Form completed and exported. All 11 sections reviewed and approved. Assessment draft generated.', author:'Dr. Ana Reyes', timestamp:'2026-04-18T16:00:00Z' },
-      { id:'olog8',  stage:'assessment',      text:'Additional assessments completed (FAST — caregiver-completed). Baseline behavioral data recorded.', author:'Dr. Ana Reyes', timestamp:'2026-04-25T10:00:00Z' },
-      { id:'olog9',  stage:'assessment',      text:'Final assessment report signed and uploaded. Assessment stage complete.', author:'Dr. Ana Reyes', timestamp:'2026-05-10T11:15:00Z' },
-      { id:'olog10', stage:'plan_draft',      text:'Treatment plan drafted from assessment data. AI draft reviewed and approved by Dr. Ana Reyes. Caregiver training goals finalized.', author:'Dr. Ana Reyes', timestamp:'2026-05-13T10:00:00Z' },
-      { id:'olog11', stage:'plan_draft',      text:'Treatment plan finalized with Priya and Raj Patel (phone review). All plan draft items complete. Advancing to submission.', author:'Dr. Ana Reyes', timestamp:'2026-05-19T14:00:00Z' },
-      { id:'olog12', stage:'submitted',       text:'Treatment plan submitted to Cigna for authorization review. CPT codes 97153, 97155, 97156 requested. Awaiting determination.', author:'Dr. Ana Reyes', timestamp:'2026-06-04T09:00:00Z' },
+      { id:'olog1',  stage:'intake',          action:'Client file created from imported referral — Dr. Ana Flores (Pediatric Neurology).', by:'Admin User', ts:'2026-03-15T09:00:00Z' },
+      { id:'olog2',  stage:'intake',          action:'Insurance benefits verified with Cigna. CPT 97151 pre-authorized. $45 copay, $0 deductible remaining. Benefits verification complete.', by:'Admin User', ts:'2026-03-16T14:00:00Z' },
+      { id:'olog3',  stage:'auth_assessment', action:'Authorization request submitted to Cigna for CPT 97151. Reference number: CIG-AUTH-2026-0318-4821.', by:'Dr. Ana Reyes', ts:'2026-03-18T10:30:00Z' },
+      { id:'olog4',  stage:'auth_assessment', action:'CPT 97151 authorization received from Cigna. Dr. Ana Reyes confirmed as supervising BCBA on authorization.', by:'Admin User', ts:'2026-03-25T11:00:00Z' },
+      { id:'olog5',  stage:'assessment',      action:'Initial caregiver interview completed with Priya Patel. Session ~90 minutes. Elopement safety plan discussed with family.', by:'Dr. Ana Reyes', ts:'2026-04-08T13:00:00Z' },
+      { id:'olog6',  stage:'assessment',      action:'Vineland-3 and BASC-3 administered. Direct observation (30 min, home) completed. Strong escape hypothesis confirmed.', by:'Dr. Ana Reyes', ts:'2026-04-10T15:30:00Z' },
+      { id:'olog7',  stage:'assessment',      action:'Smart Assessment Form completed and exported. All 11 sections reviewed and approved. Assessment draft generated.', by:'Dr. Ana Reyes', ts:'2026-04-18T16:00:00Z' },
+      { id:'olog8',  stage:'assessment',      action:'Additional assessments completed (FAST — caregiver-completed). Baseline behavioral data recorded.', by:'Dr. Ana Reyes', ts:'2026-04-25T10:00:00Z' },
+      { id:'olog9',  stage:'assessment',      action:'Final assessment report signed and uploaded. Assessment stage complete.', by:'Dr. Ana Reyes', ts:'2026-05-10T11:15:00Z' },
+      { id:'olog10', stage:'plan_draft',      action:'Treatment plan drafted from assessment data. AI draft reviewed and approved by Dr. Ana Reyes. Caregiver training goals finalized.', by:'Dr. Ana Reyes', ts:'2026-05-13T10:00:00Z' },
+      { id:'olog11', stage:'plan_draft',      action:'Treatment plan finalized with Priya and Raj Patel (phone review). All plan draft items complete. Advancing to submission.', by:'Dr. Ana Reyes', ts:'2026-05-19T14:00:00Z' },
+      { id:'olog12', stage:'submitted',       action:'Treatment plan submitted to Cigna for authorization review. CPT codes 97153, 97155, 97156 requested. Awaiting determination.', by:'Dr. Ana Reyes', ts:'2026-06-04T09:00:00Z' },
     ];
     return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:OLIVER_DOCS, activity_log:OLIVER_LOG, case_notes: SEED_NOTES['c5'], assessment_session };
   }

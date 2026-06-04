@@ -983,6 +983,7 @@ export const SEED_CLIENTS = () => [
   { id:'c11', name:'James Martinez',  dob:'2017-05-30', phone:'(786) 555-0190', address:'1800 Coral Way, Miami, FL 33145',          insurer_name:'Aetna',        member_id:'AET-664433', group_number:'G-44210', referring_provider:'Dr. Angela Rivera',  source:'imported',    referral_date:'2025-10-08', stage_entered_at:'2025-12-15T09:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'s1', rbt_id:'s5', auth_expiry_date:'2026-05-20', reauth_active:true  },
   { id:'c12', name:'Amelia Wilson',   dob:'2020-02-14', phone:'(954) 555-0133', address:'2800 Hollywood Blvd, Hollywood, FL 33020', insurer_name:'Florida Blue', member_id:'FLB-112298', group_number:'G-12390', referring_provider:'Dr. Kevin Brown',    source:'crm_created', referral_date:'2026-03-01', stage_entered_at:'2026-03-05T11:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'s2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
   { id:'c13', name:'Marcus Rivera',  dob:'2017-03-04', phone:'(305) 555-0302', address:'4820 SW 137th Ave, Miami, FL 33175',         insurer_name:'Florida Blue', member_id:'FLB-774421', group_number:'G-12390', referring_provider:'Dr. Adriana Costa',  source:'imported',    referral_date:'2026-05-01', stage_entered_at:'2026-05-02T08:00:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c14', name:'Diego Reyes',    dob:'2018-06-12', phone:'(786) 555-0211', address:'3450 NW 5th Ave, Miami, FL 33127',              insurer_name:'Cigna',        member_id:'CIG-884432', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     source:'imported',    referral_date:'2026-03-20', stage_entered_at:'2026-05-28T10:00:00.000Z', stage:'plan_draft',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
 ].map(c => {
   const cl = mkChecklist();
   // Pre-complete c7 (Ethan Williams) denied checklist so resolve button is enabled
@@ -1129,6 +1130,52 @@ export const SEED_CLIENTS = () => [
       { id:'olog21', action:'Uploaded: Referral request form',                                             by:'Admin User',    ts:'2026-03-15T09:00:00Z' },
     ];
     return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:OLIVER_DOCS, activity_log:OLIVER_LOG, case_notes: SEED_NOTES['c5'], assessment_session };
+  }
+
+  // ── c14 Diego Reyes — plan_draft (same clinical profile as Oliver) ──────────────
+  if (c.id === 'c14') {
+    cl.intake        = { referral_form:true, insurance_card:true, cde:true, aba_prescription:true, demographics_confirmed:true, insurance_verified:true, benefits_verified:true };
+    cl.auth_assessment = { cde_confirmed:true, prescription_confirmed:true, referral_confirmed:true, prior_assessments:true, auth_submitted:true, reference_number:'CIG-AUTH-2026-0322-7714', cpt_97151_received:true, bcba_assigned:true };
+    cl.assessment    = { bcba_confirmed:true, caregiver_interview:true, direct_observation:true, vineland3:true, vineland3_date:'2026-04-15', basc3:true, basc3_date:'2026-04-15', additional_assessments:true, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
+    cl.plan_draft    = { medical_necessity:true, skill_targets:true, behavior_goals:true, intervention_strategies:true, supervision_hours:'2', data_methodology:'', baseline_graphs:true, ai_draft_approved:false, treatment_plan_finalized:false };
+    const DIEGO_DOCS = [
+      { id:'ddoc1', type:'referral_form',    label:'Diego_Reyes_ABA_Referral_Dr_Flores.pdf',              uploaded_at:'2026-03-20T10:00:00.000Z', by:'Admin User',    stage:'intake'          },
+      { id:'ddoc2', type:'insurance_card',   label:'Cigna_Insurance_Card_Diego_Reyes.pdf',                 uploaded_at:'2026-03-20T10:05:00.000Z', by:'Admin User',    stage:'intake'          },
+      { id:'ddoc3', type:'cde',              label:'Diego_Reyes_CDE_Dr_Flores_2024.pdf',                   uploaded_at:'2026-03-20T10:10:00.000Z', by:'Admin User',    stage:'intake'          },
+      { id:'ddoc4', type:'aba_prescription', label:'Diego_Reyes_ABA_Script_2026.pdf',                      uploaded_at:'2026-03-20T10:15:00.000Z', by:'Admin User',    stage:'intake'          },
+      { id:'ddoc5', type:'prior_assessments',label:'Diego_Reyes_Neuropsych_Eval_Dr_Flores_2024.pdf',       uploaded_at:'2026-04-02T09:00:00.000Z', by:'Dr. Ana Reyes', stage:'auth_assessment' },
+      { id:'ddoc6', type:'assessment_draft', label:'Diego_Reyes_ABA_Assessment_Draft_2026-04-25.docx',     uploaded_at:'2026-04-25T16:30:00.000Z', by:'Dr. Ana Reyes', stage:'assessment'      },
+      { id:'ddoc7', type:'final_assessment', label:'Diego_Reyes_ABA_Assessment_FINAL_2026-05-15.pdf',       uploaded_at:'2026-05-15T11:00:00.000Z', by:'Dr. Ana Reyes', stage:'assessment'      },
+    ];
+    const DIEGO_LOG = [
+      { id:'dlog1',  action:'Moved to Plan Draft',                                                         by:'Dr. Ana Reyes', ts:'2026-05-28T10:00:00Z' },
+      { id:'dlog2',  action:'Uploaded: Final assessment report uploaded — Diego_Reyes_ABA_Assessment_FINAL.docx', by:'Dr. Ana Reyes', ts:'2026-05-15T11:15:00Z' },
+      { id:'dlog3',  action:'Smart Assessment continued',                                                  by:'Dr. Ana Reyes', ts:'2026-04-25T16:00:00Z' },
+      { id:'dlog4',  action:'Checked: Caregiver interview completed',                                      by:'Dr. Ana Reyes', ts:'2026-04-12T13:00:00Z' },
+      { id:'dlog5',  action:'Moved to Assessment',                                                         by:'Admin User',    ts:'2026-04-02T11:00:00Z' },
+      { id:'dlog6',  action:'BCBA assigned: Dr. Ana Reyes',                                                by:'Admin User',    ts:'2026-03-30T11:00:00Z' },
+      { id:'dlog7',  action:'Checked: CPT 97151 authorization received',                                   by:'Admin User',    ts:'2026-03-30T10:45:00Z' },
+      { id:'dlog8',  action:'Updated: Submission reference number',                                        by:'Dr. Ana Reyes', ts:'2026-03-22T10:30:00Z' },
+      { id:'dlog9',  action:'Checked: Authorization submitted to insurer',                                 by:'Dr. Ana Reyes', ts:'2026-03-22T10:15:00Z' },
+      { id:'dlog10', action:'Moved to Auth Assessment',                                                    by:'Admin User',    ts:'2026-03-21T14:00:00Z' },
+      { id:'dlog11', action:'Checked: Benefits verification completed',                                    by:'Admin User',    ts:'2026-03-21T13:45:00Z' },
+      { id:'dlog12', action:'Uploaded: Referral request form',                                             by:'Admin User',    ts:'2026-03-20T09:00:00Z' },
+    ];
+    const assessment_session_diego = (() => {
+      const s = makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes', OLIVER_INTERVIEW_DATA, {
+        gender:'Male', diagnosis:'Autism Spectrum Disorder, Level 2', icd10:'F84.0',
+        assessmentDate:'2026-04-25', assessmentType:'Initial',
+        parentGuardianNames:'Carmen & Rafael Reyes', relationship:'Parents',
+        reasonForReferral:'ABA evaluation for physical aggression, elopement safety risk, and hygiene refusal',
+        dob:'2018-06-12', phone:'(786) 555-0211', address:'3450 NW 5th Ave, Miami, FL 33127',
+        insurerName:'Cigna', memberId:'CIG-884432', groupNumber:'G-55023',
+        referringProvider:'Dr. Ana Flores', referralDate:'2026-03-20',
+      });
+      const sectionCount = Object.values(s.sections).filter(sec => sec.key !== 'demographics').length;
+      return { ...s, status:'complete', sectionsApproved: sectionCount };
+    })();
+    const smart_session_id_diego = `sas_${c.id}_${Date.now()}`;
+    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_diego, checklist:cl, documents:DIEGO_DOCS, activity_log:DIEGO_LOG, case_notes:[], assessment_session: assessment_session_diego };
   }
 
   return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session };

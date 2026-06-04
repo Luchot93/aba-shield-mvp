@@ -199,19 +199,8 @@ export default function InlineEditor({ clientId, sectionKey, section, session, s
     );
   }
 
-  if (!content && !editing) {
-    return (
-      <div
-        onClick={() => setEditing(true)}
-        className="flex items-center justify-center py-8 border-2 border-dashed border-stone-200 rounded-xl cursor-pointer hover:border-teal-300 hover:bg-teal-50/30 transition-all group">
-        <span className="text-sm text-slate-400 group-hover:text-teal-600 transition-colors">
-          Click to add content
-        </span>
-      </div>
-    );
-  }
-
   // Skill acquisitions: custom view + editor (not markdown-based)
+  // Must be checked BEFORE the !content guard — structured data exists even without a draft.
   if (isSkillAcquisitions) {
     if (editing) {
       return (
@@ -269,6 +258,19 @@ export default function InlineEditor({ clientId, sectionKey, section, session, s
           </svg>
         </button>
         <MaladaptiveBehaviorsReviewView session={session} draftContent={content} />
+      </div>
+    );
+  }
+
+  // For all other sections: show empty-state prompt if there's no content yet
+  if (!content && !editing) {
+    return (
+      <div
+        onClick={() => setEditing(true)}
+        className="flex items-center justify-center py-8 border-2 border-dashed border-stone-200 rounded-xl cursor-pointer hover:border-teal-300 hover:bg-teal-50/30 transition-all group">
+        <span className="text-sm text-slate-400 group-hover:text-teal-600 transition-colors">
+          Click to add content
+        </span>
       </div>
     );
   }

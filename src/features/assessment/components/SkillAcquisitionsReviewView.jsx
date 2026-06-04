@@ -25,6 +25,14 @@ function computeMastery(goal) {
 }
 
 function computeSTO(goal) {
+  // Prefer BCBA-entered structured STO fields, then legacy free-text, then auto-formula
+  if (goal.stoPercent || goal.stoSkillDescription || goal.stoWeeks) {
+    const pct   = goal.stoPercent      || Math.round(Number(goal.masteryCriteriaPercent || 80) * 0.5);
+    const desc  = goal.stoSkillDescription || (goal.targetSkill || 'the target skill');
+    const weeks = goal.stoWeeks        || '12';
+    const sessions = goal.masteryCriteriaSessions || '3';
+    return `Client will demonstrate ${desc} with ${pct}% accuracy across ${sessions} consecutive sessions within ${weeks} weeks.`;
+  }
   if (goal.sto) return goal.sto;
   const pct      = goal.masteryCriteriaPercent  || '80';
   const sessions = goal.masteryCriteriaSessions || '3';
@@ -73,9 +81,10 @@ const TD = ({ children }) => (
 // ─── GoalBlock ────────────────────────────────────────────────────────────────
 
 function GoalBlock({ goal, index }) {
-  const strategies = Array.isArray(goal.teachingStrategies)
-    ? goal.teachingStrategies.join(', ')
-    : (goal.teachingStrategies || '');
+  const strategiesArr = Array.isArray(goal.teachingStrategies) ? goal.teachingStrategies : [];
+  const strategiesParts = [...strategiesArr];
+  if (goal.teachingStrategiesOther?.trim()) strategiesParts.push(goal.teachingStrategiesOther.trim());
+  const strategies = strategiesParts.join(', ');
 
   return (
     <div className="mb-8">

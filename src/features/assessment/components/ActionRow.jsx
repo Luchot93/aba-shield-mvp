@@ -21,9 +21,11 @@ export default function ActionRow({ clientId, sectionKey, section, setClients })
   const hasBehaviorTargets= sectionKey === 'behavior_targets'   && (section?.behaviorTargets?.length > 0);
 
   const hasContent = !!(section?.draftContent?.trim()) || hasCaregiverContent || hasSkillGoals || hasBehaviorTargets;
-  const isEdited      = approvalState === 'edited';
   const isApproved    = approvalState === 'approved';
   const isSkipped     = approvalState === 'skipped';
+
+  // Show Revert whenever an AI original exists and the current content differs from it
+  const canRevert = hasAiOriginal && section?.draftContent !== section?.aiOriginalContent;
 
   const approve  = () => setApprovalState(setClients, clientId, sectionKey, 'approved');
   const unapprove= () => setApprovalState(setClients, clientId, sectionKey, 'pending');
@@ -45,8 +47,8 @@ export default function ActionRow({ clientId, sectionKey, section, setClients })
       )}
 
       <div className="flex items-center gap-2 flex-wrap">
-        {/* Revert to AI — only when edited and AI original exists */}
-        {isEdited && hasAiOriginal && !showRevertConfirm && (
+        {/* Revert to AI — whenever current content differs from the AI original */}
+        {canRevert && !showRevertConfirm && (
           <button
             onClick={() => setShowRevertConfirm(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-200 text-slate-500 bg-white hover:border-amber-300 hover:text-amber-700 hover:bg-amber-50 transition-all">

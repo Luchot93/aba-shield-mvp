@@ -24,8 +24,15 @@ export default function AssessmentInterviewPage({
   const [activeSection,     setActiveSection]     = useState('demographics');
   const [consentPending,    setConsentPending]    = useState(false);
   const [consentSectionKey, setConsentSectionKey] = useState(null);
+  const [isMobile,          setIsMobile]          = useState(
+    typeof window !== 'undefined' && window.innerWidth < 1024
+  );
 
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Jump to a specific section when arriving from the checklist
   useEffect(() => {
@@ -137,7 +144,7 @@ export default function AssessmentInterviewPage({
           )}
           <span className="text-[11px] font-semibold text-slate-400"
             style={{ fontFamily: 'DM Mono, monospace' }}>
-            {session.sectionsApproved ?? 0}/{session.totalInterviewSections ?? 10} approved
+            {session.sectionsApproved ?? 0}/{SECTION_ORDER.filter(k => k !== 'demographics').length} approved
           </span>
         </div>
       </div>

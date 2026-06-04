@@ -1,28 +1,30 @@
-import { STAGE_CL_KEY } from '../constants/stages.js';
+import { getStageItems } from '../constants/checklist.js';
 
-export function getChecklistStatus(client) {
-  const key = STAGE_CL_KEY[client.stage];
-  const cl  = key ? client.checklist[key] : null;
-  if (!cl) return null;
+export function getChecklistStatus(client, staff = []) {
+  const items = getStageItems(client.stage);
+  if (!items.length) return null;
 
-  const bools   = Object.entries(cl).filter(([, v]) => typeof v === 'boolean');
-  const missing = bools.filter(([, v]) => !v).length;
-  if (bools.length === 0) return null;
+  const missing = items.filter(item => !itemComplete(item, client, staff)).length;
 
-  // Day-X waiting for auth_assessment and submitted (>7 days since referral)
-  if (['auth_assessment','submitted'].includes(client.stage) && missing > 0) {
-    const days = Math.floor((Date.now() - new Date(client.referral_date)) / 86400000);
-    if (days > 7) return { type:'waiting', days };
-  }
+  // Days in current stage — use stage_entered_at (stamped on each advance),
+  // fall back to referral_date for legacy / seed clients that pre-date this field.
+  const enteredAt = client.stage_entered_at ?? client.referral_date;
+  const days = enteredAt
+    ? Math.floor((Date.now() - new Date(enteredAt).getTime()) / 86_400_000)
+    : 0;
 
-  if (missing === 0) return { type:'ready' };
-  return { type:'missing', count:missing };
+  if (missing === 0) return { type: 'ready', days };
+
+  // Promote to "waiting" when blocked for a full week or longer in any stage
+  if (days >= 7) return { type: 'waiting', days, count: missing };
+
+  return { type: 'missing', count: missing, days };
 }
 
 export function itemComplete(item, client, staff) {
   const val = client.checklist[item.clSec]?.[item.key];
   switch (item.type) {
-    case 'checkbox': case 'upload': return val === true;
+    case 'checkbox': case 'upload': case 'file_upload': return val === true;
     case 'form_field': return typeof val === 'string' ? val.trim() !== '' : (val !== '' && val != null);
     case 'assign':     return item.role === 'bcba' ? !!client.bcba_id : !!client.rbt_id;
     case 'bridge':     return !!client.smart_assessment_session_id;

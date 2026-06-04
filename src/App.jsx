@@ -10,6 +10,7 @@ import ClientDetailPage from './features/detail/ClientDetailPage.jsx';
 import MetricsPage from './features/metrics/MetricsPage.jsx';
 import AssessmentsPage from './features/assessment/AssessmentsPage.jsx';
 import AssessmentFeature from './features/assessment/AssessmentFeature.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import LoginPage from './auth/LoginPage.jsx';
 import SetPasswordPage from './auth/SetPasswordPage.jsx';
 
@@ -132,21 +133,34 @@ export default function App() {
             )}
             {page==='assessments' && (
               <AssessmentsPage clients={clients} staff={enrichedStaff} currentUser={currentUser}
-                onOpenAssessment={(clientId) => { setAssessmentClientId(clientId); setPage('assessment'); }} />
+                onOpenAssessment={(clientId) => {
+                  // Create session on-the-fly if client has none
+                  setClients(prev => prev.map(c => {
+                    if (c.id === clientId && c.assessment_session == null) {
+                      const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
+                      return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned') };
+                    }
+                    return c;
+                  }));
+                  setAssessmentClientId(clientId);
+                  setPage('assessment');
+                }} />
             )}
           </main>
       }
 
       {page === 'assessment' && assessmentClientId && (
-        <AssessmentFeature
-          clientId={assessmentClientId}
-          clients={clients}
-          staff={enrichedStaff}
-          setClients={setClients}
-          currentUser={currentUser}
-          addNotif={addNotif}
-          onBack={() => { setPage('assessments'); setAssessmentClientId(null); }}
-        />
+        <ErrorBoundary label="Assessment">
+          <AssessmentFeature
+            clientId={assessmentClientId}
+            clients={clients}
+            staff={enrichedStaff}
+            setClients={setClients}
+            currentUser={currentUser}
+            addNotif={addNotif}
+            onBack={() => { setPage('assessments'); setAssessmentClientId(null); }}
+          />
+        </ErrorBoundary>
       )}
 
       {selectedClient && (
@@ -161,6 +175,14 @@ export default function App() {
           addNotif={addNotif}
           onClientAdvanced={handleClientAdvanced}
           onOpenAssessment={(clientId) => {
+            // Create session on-the-fly if client has none (e.g. just moved to assessment stage)
+            setClients(prev => prev.map(c => {
+              if (c.id === clientId && c.assessment_session == null) {
+                const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
+                return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned') };
+              }
+              return c;
+            }));
             setSelectedClient(null);
             setAssessmentClientId(clientId);
             setPage('assessment');

@@ -111,6 +111,17 @@ function computeSkillCurrentLevel(g) {
 }
 
 function computeSkillSTO(g) {
+  // Prefer BCBA-entered structured STO fields, then legacy free-text, then auto-formula
+  if (g.stoPercent || g.stoSkillDescription || g.stoWeeks) {
+    const pct      = g.stoPercent         || Math.round(Number(g.masteryCriteriaPercent || 80) * 0.5);
+    const desc     = g.stoSkillDescription || (g.targetSkill || 'the target skill');
+    const weeks    = g.stoWeeks           || '12';
+    const sessions = g.masteryCriteriaSessions || '3';
+    return (
+      `Client will demonstrate ${desc} with ${pct}% accuracy across ` +
+      `${sessions} consecutive sessions within ${weeks} weeks.`
+    );
+  }
   if (g.sto) return g.sto;
   const pct      = g.masteryCriteriaPercent  || '80';
   const sessions = g.masteryCriteriaSessions || '3';
@@ -493,7 +504,7 @@ function clientInfoTable(session, clientName) {
     ]}),
   ];
 
-  // Only add Medicaid row if client has Medicaid
+  // Guardian / Medicaid row
   if (p.medicaidId) {
     rows.push(new TableRow({ children: [
       mkCell('Medicaid ID',      p.medicaidId,            true),
@@ -505,6 +516,16 @@ function clientInfoTable(session, clientName) {
       mkCell('Parent / Guardian', p.parentGuardianNames),
       mkCell('Relationship',     p.relationship ?? '—'),
       mkCell('Preferred Language', p.preferredLanguage ?? 'English'),
+    ]}));
+  }
+
+  // Contact / referral row — only when at least one field is filled
+  const hasContact = p.phone || p.address || p.referralDate;
+  if (hasContact) {
+    rows.push(new TableRow({ children: [
+      mkCell('Phone',         p.phone       ?? '—'),
+      mkCell('Address',       p.address     ?? '—'),
+      mkCell('Referral Date', p.referralDate ? fmtDate(p.referralDate) : '—'),
     ]}));
   }
 
@@ -1081,10 +1102,11 @@ function skillAcquisitionsSection(session, graphs = {}) {
       }));
     }
 
-    // Teaching strategies
-    const strategies = Array.isArray(g.teachingStrategies)
-      ? g.teachingStrategies.join(', ')
-      : (g.teachingStrategies || '');
+    // Teaching strategies (include free-text "Other" if filled)
+    const strategiesArr = Array.isArray(g.teachingStrategies) ? g.teachingStrategies : [];
+    const strategiesParts = [...strategiesArr];
+    if (g.teachingStrategiesOther?.trim()) strategiesParts.push(g.teachingStrategiesOther.trim());
+    const strategies = strategiesParts.join(', ');
     if (strategies) {
       children.push(new Paragraph({
         children: [
@@ -1226,11 +1248,11 @@ function caregiverTrainingSection(session, graphs = {}) {
             tableHeader: true,
             children: [
               new TableCell({
-                shading: { fill: TEAL_LIGHT },
+                shading: { type: ShadingType.SOLID, color: TEAL_LIGHT },
                 children: [new Paragraph({ children: [new TextRun({ text: 'Strategy', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })],
               }),
               new TableCell({
-                shading: { fill: TEAL_LIGHT },
+                shading: { type: ShadingType.SOLID, color: TEAL_LIGHT },
                 children: [new Paragraph({ children: [new TextRun({ text: 'Observed Baseline', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })],
               }),
             ],
@@ -1335,33 +1357,52 @@ function crisisPlanSection(session) {
     children.push(empty(80));
   }
 
-  // ── Threshold reference block ───────────────────────────────────────────────
-  // Only render if draft didn't already cover these (i.e., no draft exists).
-  if (!draft) {
-    const signs = [
-      ...(sec.warningSignsSelected ?? []),
-      ...(sec.warningSignsCustom?.trim() ? [sec.warningSignsCustom.trim()] : []),
-    ];
-    if (signs.length) {
-      children.push(subHeading('Early Warning Signs'));
-      for (const s of signs) children.push(bullet(s));
-      children.push(empty(80));
-    }
+  // ── Structured reference data — always rendered regardless of AI draft ────────
+  // These are precise clinical values the AI may paraphrase; showing them verbatim
+  // ensures insurance reviewers and RBTs have the exact data on file.
 
-    if (sec.deEscalationWorks?.length) {
-      children.push(subHeading('De-Escalation Strategies — Effective'));
-      for (const s of sec.deEscalationWorks) children.push(bullet(s));
-      children.push(empty(80));
-    }
-
-    if (sec.deEscalationWorsens?.length) {
-      children.push(subHeading('Strategies That Worsen Escalation — Avoid'));
-      for (const s of sec.deEscalationWorsens) children.push(bullet(s));
-      children.push(empty(80));
-    }
+  const signs = [
+    ...(sec.warningSignsSelected ?? []),
+    ...(sec.warningSignsCustom?.trim() ? [sec.warningSignsCustom.trim()] : []),
+  ];
+  if (signs.length) {
+    children.push(subHeading('Early Warning Signs'));
+    for (const s of signs) children.push(bullet(s));
+    children.push(empty(80));
   }
 
-  // BCBA / 911 / session suspension thresholds — always show (precise values)
+  const deWorks = [
+    ...(sec.deEscalationWorks ?? []),
+    ...(sec.deEscalationWorksOther?.trim() ? [sec.deEscalationWorksOther.trim()] : []),
+  ];
+  if (deWorks.length) {
+    children.push(subHeading('De-Escalation Strategies — Effective'));
+    for (const s of deWorks) children.push(bullet(s));
+    children.push(empty(80));
+  }
+
+  const deWorsens = [
+    ...(sec.deEscalationWorsens ?? []),
+    ...(sec.deEscalationWorsensOther?.trim() ? [sec.deEscalationWorsensOther.trim()] : []),
+  ];
+  if (deWorsens.length) {
+    children.push(subHeading('Strategies That Worsen Escalation — Avoid'));
+    for (const s of deWorsens) children.push(bullet(s));
+    children.push(empty(80));
+  }
+
+  if (sec.deEscalationNotes?.trim()) {
+    children.push(labelVal('De-escalation Notes', sec.deEscalationNotes));
+  }
+
+  if (sec.baselineReturnMin || sec.baselineReturnMax) {
+    const range = sec.baselineReturnMax
+      ? `${sec.baselineReturnMin || '?'}–${sec.baselineReturnMax} minutes`
+      : `${sec.baselineReturnMin} minutes`;
+    children.push(labelVal('Expected Return to Baseline', range));
+  }
+
+  // BCBA / 911 / session suspension thresholds
   if (sec.bcbaCallMinutes) {
     children.push(labelVal(
       'BCBA Call Threshold',
@@ -1374,8 +1415,27 @@ function crisisPlanSection(session) {
   if (sec.sessionSuspendThreshold && sec.sessionSuspendNotes?.trim()) {
     children.push(labelVal('Session Suspension Threshold', sec.sessionSuspendNotes));
   }
+
   if (sec.medicalNotes?.trim()) {
     children.push(labelVal('Medical Considerations', sec.medicalNotes));
+  }
+
+  const contraindications = sec.medicalContraindications ?? [];
+  if (contraindications.length) {
+    children.push(labelVal('Medical Contraindications', contraindications.join(', ')));
+  }
+
+  // ── Compliance acknowledgments — legally significant ───────────────────────
+  const ackLines = [
+    sec.caregiverSignedCrisisPlan  && 'Caregiver has signed the crisis plan',
+    sec.rbtTrainedOnPlan           && 'RBT has been trained on this crisis plan',
+    sec.crisisPlanInBsp            && 'Crisis plan is included in the BSP',
+  ].filter(Boolean);
+
+  if (ackLines.length) {
+    children.push(empty(80));
+    children.push(subHeading('Compliance Acknowledgments'));
+    for (const line of ackLines) children.push(bullet(line));
   }
 
   children.push(empty(80));
@@ -1395,11 +1455,137 @@ function manualCompletionNote() {
       alignment: AlignmentType.CENTER,
       spacing: { after: 80 },
     }),
-    bullet('Standardized assessment scores — attach QABF, BASC-3, and/or Vineland-3 reports'),
-    bullet('Data graphs and visual analysis (baseline and treatment phase)'),
-    bullet('Signature block — BCBA, primary caregiver, and clinical director sign-off'),
+    bullet('Standardized assessment scores — see placeholder sections below (QABF, BASC-3, Vineland-3). Paste graphs into each section and delete the prompt text before submitting.'),
+    bullet('Data graphs and visual analysis — auto-generated charts are included in this document. Please review them thoroughly for accuracy before submission.'),
     bullet('Insurance-specific prior authorization attachments'),
     bullet('Any assessment results not yet available at time of this report'),
+    empty(240),
+  ];
+}
+
+// ─── Standardized assessment score placeholders ────────────────────────────────
+
+function standardizedAssessmentPlaceholders() {
+  return [
+    ...placeholderSection(
+      'QABF — Questions About Behavioral Function',
+      'QABF (Questions About Behavioral Function)',
+      'Include total scores for each subscale (Attention, Escape, Non-Social/Automatic, Physical, Tangible), the profile graph, and a brief interpretive note linking the highest-scoring function to the treatment targets documented in this report.',
+    ),
+    ...placeholderSection(
+      'BASC-3 — Behavior Assessment System for Children',
+      'BASC-3 (Behavior Assessment System for Children, 3rd Edition)',
+      'Include the composite scores and clinical subscale T-scores from the applicable rating form (Parent, Teacher, or Self-Report). Note any scores in the At-Risk or Clinically Significant range and their relevance to the presenting concerns.',
+    ),
+    ...placeholderSection(
+      'Vineland-3 — Adaptive Behavior Scales',
+      'Vineland-3 (Vineland Adaptive Behavior Scales, 3rd Edition)',
+      'Include the Adaptive Behavior Composite (ABC) score, domain standard scores (Communication, Daily Living Skills, Socialization, Motor Skills), and the adaptive level classification. Note any subdomain v-scale scores that directly inform treatment goals.',
+    ),
+  ];
+}
+
+function placeholderSection(heading, fullName, instructions) {
+  return [
+    sectionHeading(heading),
+    new Paragraph({
+      children: [new TextRun({
+        text: '[ BCBA ACTION REQUIRED — DELETE THIS PROMPT BEFORE SUBMITTING ]',
+        bold: true, size: SZ_SM, font: FONT, color: 'DC2626',
+      })],
+      spacing: { after: 80 },
+      shading: { type: ShadingType.SOLID, color: 'FEF2F2' },
+    }),
+    bodyPara(`${fullName} — Paste the score summary, profile graph, or report excerpt from this assessment into this section. Include the administration date, respondent name, and the clinician who administered the tool. Delete this prompt once the content has been added.`),
+    bodyPara(instructions),
+    empty(400),
+  ];
+}
+
+// ─── Signature block ──────────────────────────────────────────────────────────
+
+function signatureSection() {
+  const divider = () =>
+    new Paragraph({
+      children: [new TextRun({ text: '_'.repeat(42), size: SZ, font: FONT, color: '94A3B8' })],
+      spacing: { after: 40 },
+    });
+
+  const sigLabel = (text) =>
+    new Paragraph({
+      children: [new TextRun({ text, size: SZ_SM, font: FONT, color: SLATE })],
+      spacing: { after: 160 },
+    });
+
+  const printLabel = (text) =>
+    new Paragraph({
+      children: [
+        new TextRun({ text: 'Print Name: ', bold: true, size: SZ_SM, font: FONT }),
+        new TextRun({ text: '_'.repeat(32), size: SZ_SM, font: FONT, color: '94A3B8' }),
+        new TextRun({ text: `     ${text}`, bold: true, size: SZ_SM, font: FONT }),
+      ],
+      spacing: { after: 120 },
+    });
+
+  return [
+    sectionHeading('Signatures & Authorization'),
+
+    bodyPara(
+      'By signing below, the parent/guardian acknowledges receipt of this report and consents to the implementation of the treatment plan. The supervising BCBA certifies that this assessment was conducted in accordance with the BACB Ethics Code and the applicable state licensure standards.'
+    ),
+    empty(80),
+
+    // Parent / Guardian
+    new Paragraph({
+      children: [new TextRun({ text: 'Parent / Guardian', bold: true, size: SZ, font: FONT, color: TEAL })],
+      spacing: { before: 120, after: 80 },
+    }),
+    printLabel('(please print)'),
+    divider(),
+    new Paragraph({
+      children: [
+        new TextRun({ text: 'Signature', size: SZ_SM, font: FONT, color: SLATE }),
+        new TextRun({ text: '                                                   ', size: SZ_SM, font: FONT }),
+        new TextRun({ text: 'Date: ', bold: true, size: SZ_SM, font: FONT }),
+        new TextRun({ text: '_'.repeat(18), size: SZ_SM, font: FONT, color: '94A3B8' }),
+      ],
+      spacing: { after: 200 },
+    }),
+
+    // Lead BCBA
+    new Paragraph({
+      children: [new TextRun({ text: 'Lead Behavior Analyst (BCBA)', bold: true, size: SZ, font: FONT, color: TEAL })],
+      spacing: { before: 120, after: 80 },
+    }),
+    printLabel('(BCBA credential number)'),
+    divider(),
+    new Paragraph({
+      children: [
+        new TextRun({ text: 'Behavior Analyst Signature', size: SZ_SM, font: FONT, color: SLATE }),
+        new TextRun({ text: '                                    ', size: SZ_SM, font: FONT }),
+        new TextRun({ text: 'Date: ', bold: true, size: SZ_SM, font: FONT }),
+        new TextRun({ text: '_'.repeat(18), size: SZ_SM, font: FONT, color: '94A3B8' }),
+      ],
+      spacing: { after: 200 },
+    }),
+
+    // Clinical Director
+    new Paragraph({
+      children: [new TextRun({ text: 'Clinical Director', bold: true, size: SZ, font: FONT, color: TEAL })],
+      spacing: { before: 120, after: 80 },
+    }),
+    printLabel('(credential / title)'),
+    divider(),
+    new Paragraph({
+      children: [
+        new TextRun({ text: 'Clinical Director Signature', size: SZ_SM, font: FONT, color: SLATE }),
+        new TextRun({ text: '                                   ', size: SZ_SM, font: FONT }),
+        new TextRun({ text: 'Date: ', bold: true, size: SZ_SM, font: FONT }),
+        new TextRun({ text: '_'.repeat(18), size: SZ_SM, font: FONT, color: '94A3B8' }),
+      ],
+      spacing: { after: 160 },
+    }),
+
     empty(240),
   ];
 }
@@ -1470,6 +1656,12 @@ export async function generateAssessmentDoc(session, clientName = 'Client') {
 
     // 20. Crisis Plan (structured fields)
     ...crisisPlanSection(session),
+
+    // 21–23. Standardized assessment score placeholders (QABF, BASC-3, Vineland-3)
+    ...standardizedAssessmentPlaceholders(),
+
+    // 24. Signature block
+    ...signatureSection(),
   ].filter(Boolean);
 
   const doc = new Document({

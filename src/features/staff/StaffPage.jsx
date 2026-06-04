@@ -31,7 +31,8 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
   const searched = search.trim()
     ? byTab.filter(s =>
         s.name.toLowerCase().includes(search.toLowerCase()) ||
-        (s.cert_number||'').toLowerCase().includes(search.toLowerCase())
+        (s.cert_number||'').toLowerCase().includes(search.toLowerCase()) ||
+        (s.npi||'').includes(search.trim())
       )
     : byTab;
 
@@ -52,8 +53,10 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
     const initials = form.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
     const newStaff = {
       id: `s_${Date.now()}`,
-      name: form.name, initials, email: form.email, role: form.role,
+      name: form.name, initials, email: form.email, phone: form.phone || '', role: form.role,
       cert_number: form.cert_number || '', cert_expiry: form.cert_expiry || '',
+      cert_effective_date: '', npi: form.npi || '', caqh_id: '',
+      hire_date: form.hire_date || '', supervisor: '', title: '',
       status: 'pending',
     };
     setStaff(prev => [...prev, newStaff]);
@@ -129,7 +132,7 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
         <div className="relative flex-1" style={{ minWidth:'200px', maxWidth:'280px' }}>
           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"><Ico.Search/></div>
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Name or cert number…"
+            placeholder="Name, cert #, or NPI…"
             data-testid="staff-search"
             className="w-full pl-9 pr-3 py-2 text-sm border border-stone-200 rounded-xl bg-white outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 placeholder:text-slate-400"/>
         </div>

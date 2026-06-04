@@ -86,7 +86,7 @@ export async function buildGraphsFromSession(session) {
     if (baselineCount > 0) {
       const stoKey = `sto_${normalize(name)}`;
       try {
-        result[stoKey] = renderSTOTrajectoryChart(name, baselineCount, masteryDates);
+        result[stoKey] = renderSTOTrajectoryChart(name, baselineCount, masteryDates, targetCount);
       } catch (err) {
         console.warn(`Chart failed: ${stoKey}`, err);
       }

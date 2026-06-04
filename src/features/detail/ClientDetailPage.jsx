@@ -7,16 +7,50 @@ import { isAdmin, canEdit } from '../../utils/permissions.js';
 import { Ico } from '../../components/icons.jsx';
 import StagePill from '../../components/StagePill.jsx';
 import Avatar from '../../components/Avatar.jsx';
+import PlanDraftInlinePanel from './PlanDraftInlinePanel.jsx';
+import PlanDraftPreview from './PlanDraftPreview.jsx';
+import { buildGraphsFromSession } from '../../features/assessment/graphBuilder.js';
 
 export default function ClientDetailPage({ clientId, clients, staff, setClients, onBack, backLabel, currentUser, addNotif, onClientAdvanced, onOpenAssessment }) {
   const client = clients.find(c => c.id === clientId);
   const [confirmAdvance, setConfirmAdvance] = useState(null);
+  const [confirmDeny,    setConfirmDeny]    = useState(false);
+  const [denyReason,     setDenyReason]     = useState('');
   const [openPicker,     setOpenPicker]     = useState(null);
   const [formDrafts,     setFormDrafts]     = useState({});
+  const [savedFields,    setSavedFields]    = useState(new Set());
   const [viewStage,      setViewStage]      = useState(null);
   const [noteText,       setNoteText]       = useState('');
   const [activeTab,      setActiveTab]      = useState('notes');
   const pickerRef = useRef(null);
+  const saveTimers = useRef({});
+
+  // Plan Draft — expandable inline panels (default open when session exists)
+  const isPlanDraft = client?.stage === 'plan_draft';
+  // Plan tab + inline panels persist for all stages at or after plan_draft (read-only past plan_draft)
+  const PLAN_VISIBLE_STAGES = new Set(['plan_draft','submitted','denied','authorized','staffing','services']);
+  const hasPlanSession = PLAN_VISIBLE_STAGES.has(client?.stage) && !!client?.assessment_session;
+
+  const ALL_PLAN_ITEMS = ['medical_necessity','skill_targets','behavior_goals','intervention_strategies','baseline_graphs'];
+
+  // Lazy init: open all panels if we're already in plan_draft on mount.
+  // The useEffect below handles the transition case (stage advances in the same session).
+  const [expandedPlanItems, setExpandedPlanItems] = useState(() =>
+    hasPlanSession ? new Set(ALL_PLAN_ITEMS) : new Set()
+  );
+  const [planGraphs, setPlanGraphs] = useState(null);
+
+  // When the stage advances to plan_draft within the same mounted session,
+  // expand all panels and start graph generation.
+  useEffect(() => {
+    if (!hasPlanSession) return;
+    setExpandedPlanItems(prev => prev.size === ALL_PLAN_ITEMS.length ? prev : new Set(ALL_PLAN_ITEMS));
+    let cancelled = false;
+    buildGraphsFromSession(client.assessment_session)
+      .then(g => { if (!cancelled) setPlanGraphs(g); })
+      .catch(err => { console.error('Graph generation failed:', err); if (!cancelled) setPlanGraphs({}); });
+    return () => { cancelled = true; };
+  }, [hasPlanSession, client.assessment_session?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!openPicker) return;
@@ -25,11 +59,14 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     return () => document.removeEventListener('mousedown', h);
   }, [openPicker]);
 
-  // Auto-switch tab when entering/leaving read-only (past-stage) mode.
-  // Uses viewStage (state) not isReadOnly (derived after early return) to stay above early-return boundary.
+  // Auto-switch tab when entering/leaving read-only mode.
   useEffect(() => {
-    setActiveTab(viewStage !== null ? 'documents' : 'notes');
-  }, [viewStage]);
+    if (viewStage !== null) {
+      setActiveTab('documents');
+    } else {
+      setActiveTab('notes');
+    }
+  }, [viewStage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!client) return null;
 
@@ -48,9 +85,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const allDone   = displayItems.length > 0 && completeCount === displayItems.length;
   const hasBlock  = displayItems.some(it => itemBlocks(it, client, staff));
   const canAdvance = !isReadOnly && allDone && !hasBlock && !!nextStage && client.stage !== 'denied';
-  const visibleDocs = isReadOnly
-    ? client.documents.filter(d => d.stage === viewStage)
-    : client.documents;
+  const visibleDocs = client.documents;
 
   /* ── mutation helpers ── */
   const patchClient = patch =>
@@ -62,8 +97,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
       return { ...c, checklist: { ...c.checklist, [sec]: { ...c.checklist[sec], [key]: val } } };
     }));
 
-  const pushDoc = (type, label) => {
-    const doc = { id:`doc_${Date.now()}`, type, label, uploaded_at:new Date().toISOString(), by:currentUser.name, stage:client.stage };
+  const pushDoc = (type, label, dataUrl) => {
+    const doc = { id:`doc_${Date.now()}`, type, label, uploaded_at:new Date().toISOString(), by:currentUser.name, stage:client.stage, ...(dataUrl ? { dataUrl } : {}) };
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, documents:[...c.documents, doc] } : c));
   };
 
@@ -80,7 +115,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   };
 
   const doAdvance = toStage => {
-    patchClient({ stage: toStage });
+    patchClient({ stage: toStage, stage_entered_at: new Date().toISOString() });
     pushLog(`Moved to ${SM[toStage].label}`);
     const isAuth = toStage === 'authorized';
     addNotif(mkNotif(
@@ -92,6 +127,18 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     ));
     if (onClientAdvanced) onClientAdvanced(client.id);
     setConfirmAdvance(null);
+    onBack();
+  };
+
+  const doDeny = () => {
+    const reason = denyReason.trim();
+    patchClient({ stage: 'denied', stage_entered_at: new Date().toISOString(), denial_reason: reason || null });
+    const entry = { id:`log_${Date.now()}`, action:'Moved to Denied', ...(reason ? { reason } : {}), ts:new Date().toISOString(), by:currentUser.name };
+    setClients(prev => prev.map(c => c.id === client.id ? { ...c, activity_log:[entry, ...c.activity_log] } : c));
+    addNotif(mkNotif(`${client.name} — Authorization denied by insurer`, client.name, 'urgent'));
+    if (onClientAdvanced) onClientAdvanced(client.id);
+    setConfirmDeny(false);
+    setDenyReason('');
     onBack();
   };
 
@@ -224,10 +271,63 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               </div>
             )}
 
+            {item.type === 'file_upload' && (
+              <div className="flex items-center justify-between gap-3">
+                <span className={`text-sm ${clVal === true ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{item.label}</span>
+                {clVal === true
+                  ? <span className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg flex-shrink-0"
+                      style={{ background:'rgba(20,184,166,0.1)', color:'#0D9488', border:'1px solid rgba(20,184,166,0.25)' }}>
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                      </svg>
+                      Uploaded
+                    </span>
+                  : readOnly
+                    ? <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-400 bg-stone-50 border border-stone-200 rounded-lg flex-shrink-0">Not uploaded</span>
+                    : <label className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-stone-200 text-slate-600 bg-white hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50/40 cursor-pointer transition-all flex-shrink-0">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 10l-4-4-4 4M12 6v10"/>
+                        </svg>
+                        Upload
+                        <input
+                          type="file"
+                          accept={item.accept ?? '.docx,.pdf'}
+                          className="hidden"
+                          onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              patchCL(item.clSec, item.key, true);
+                              pushDoc(item.docType ?? item.key, file.name, reader.result);
+                              pushLog(`Uploaded: ${item.label} — ${file.name}`);
+                            };
+                            reader.readAsDataURL(file);
+                          }}
+                        />
+                      </label>
+                }
+              </div>
+            )}
+
             {item.type === 'form_field' && (() => {
-              const draft = formDrafts[item.key] !== undefined ? formDrafts[item.key] : (clVal ?? '');
-              const isDirty = formDrafts[item.key] !== undefined && formDrafts[item.key] !== (clVal ?? '');
+              const draft    = formDrafts[item.key] !== undefined ? formDrafts[item.key] : (clVal ?? '');
+              const isDirty  = formDrafts[item.key] !== undefined && formDrafts[item.key] !== (clVal ?? '');
               const savedVal = clVal ?? '';
+              const justSaved = savedFields.has(item.key);
+
+              const handleSave = () => {
+                patchCL(item.clSec, item.key, draft);
+                setFormDrafts(d => { const n = { ...d }; delete n[item.key]; return n; });
+                if (draft !== savedVal) pushLog(`Updated: ${item.label}`);
+                // Flash "Saved" for 2 seconds
+                setSavedFields(prev => new Set(prev).add(item.key));
+                clearTimeout(saveTimers.current[item.key]);
+                saveTimers.current[item.key] = setTimeout(() => {
+                  setSavedFields(prev => { const n = new Set(prev); n.delete(item.key); return n; });
+                }, 2000);
+              };
+
               return (
                 <div>
                   <label className="text-sm text-slate-800 block mb-1.5">{item.label}</label>
@@ -235,23 +335,45 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     ? <span className="text-sm text-slate-600 px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg block max-w-xs" style={{ fontFamily:'DM Mono, monospace' }}>
                         {savedVal || <span className="text-slate-400 italic">—</span>}
                       </span>
-                    : <div className="flex items-center gap-2">
-                        <input type={item.fieldType || 'text'} value={draft}
-                          onChange={e => setFormDrafts(d => ({ ...d, [item.key]: e.target.value }))}
-                          data-testid={`detail-field-${item.key}`}
-                          placeholder={item.fieldType === 'number' ? '0' : 'Enter…'}
-                          className="flex-1 max-w-xs px-3 py-1.5 text-sm border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
-                        <button
-                          onClick={() => {
-                            patchCL(item.clSec, item.key, draft);
-                            setFormDrafts(d => { const n = { ...d }; delete n[item.key]; return n; });
-                            if (draft !== savedVal) pushLog(`Updated: ${item.label}`);
-                          }}
-                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors flex-shrink-0 ${isDirty ? 'text-white border-teal-600 hover:opacity-90' : 'text-slate-500 border-stone-200 hover:bg-stone-50'}`}
-                          style={isDirty ? { background:'#0D9488' } : {}}>
-                          Save
-                        </button>
-                      </div>
+                    : <>
+                        <div className="flex items-center gap-2">
+                          <input type={item.fieldType || 'text'} value={draft}
+                            onChange={e => setFormDrafts(d => ({ ...d, [item.key]: e.target.value }))}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
+                            data-testid={`detail-field-${item.key}`}
+                            placeholder={item.fieldType === 'number' ? '0' : 'Enter…'}
+                            className="flex-1 max-w-xs px-3 py-1.5 text-sm border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
+                          <button
+                            onClick={handleSave}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all flex-shrink-0 ${
+                              justSaved
+                                ? 'text-white border-emerald-500'
+                                : isDirty
+                                  ? 'text-white border-teal-600 hover:opacity-90'
+                                  : 'text-slate-500 border-stone-200 hover:bg-stone-50'
+                            }`}
+                            style={justSaved ? { background:'#10B981' } : isDirty ? { background:'#0D9488' } : {}}>
+                            {justSaved ? '✓ Saved' : 'Save'}
+                          </button>
+                        </div>
+                        {/* Saved confirmation line */}
+                        {justSaved && savedVal && (
+                          <p className="mt-1.5 text-[11px] font-medium text-emerald-600 flex items-center gap-1">
+                            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Saved: <span style={{ fontFamily:'DM Mono, monospace' }}>{savedVal}</span>
+                          </p>
+                        )}
+                        {!justSaved && savedVal && !isDirty && (
+                          <p className="mt-1 text-[11px] text-slate-400 flex items-center gap-1">
+                            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            Current value: <span style={{ fontFamily:'DM Mono, monospace' }}>{savedVal}</span>
+                          </p>
+                        )}
+                      </>
                   }
                 </div>
               );
@@ -298,37 +420,83 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               );
             })()}
 
-            {item.type === 'smart_auto' && (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-sm text-slate-800">{item.label}</span>
-                {client.smart_assessment_session_id
-                  ? <span className="text-xs font-medium px-2 py-1 rounded-lg border bg-teal-50 border-teal-200 text-teal-700 flex-shrink-0">Generated from assessment</span>
-                  : <span className="text-xs font-medium px-2 py-1 rounded-lg border bg-amber-50 border-amber-200 text-amber-700 flex-shrink-0">Pending Smart Assessment</span>}
-              </div>
-            )}
-
-            {item.type === 'bridge' && (
-              <div>
-                <div className="text-sm text-slate-800 mb-2">{item.label}</div>
-                {client.smart_assessment_session_id
-                  ? <div className="flex items-center gap-2 px-3 py-2 bg-teal-50 border border-teal-200 rounded-lg" data-testid="session-linked-badge">
-                      <Ico.Link/>
-                      <span className="text-sm font-semibold text-teal-700">Session linked</span>
-                      <span className="text-[10px] text-teal-500 ml-auto" style={{ fontFamily:'DM Mono, monospace' }}>{client.smart_assessment_session_id}</span>
+            {item.type === 'smart_auto' && (() => {
+              const hasSession = !!client.assessment_session;
+              const isOpen = expandedPlanItems.has(item.key);
+              return (
+                <div className="min-w-0 overflow-hidden">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-slate-800 flex-1 min-w-0">{item.label}</span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {hasSession
+                        ? <span className="text-xs font-medium px-2 py-1 rounded-lg border bg-teal-50 border-teal-200 text-teal-700 whitespace-nowrap">Generated from assessment</span>
+                        : <span className="text-xs font-medium px-2 py-1 rounded-lg border bg-amber-50 border-amber-200 text-amber-700 whitespace-nowrap">Pending Smart Assessment</span>
+                      }
+                      {hasSession && (
+                        <button
+                          onClick={() => setExpandedPlanItems(prev => {
+                            const next = new Set(prev);
+                            isOpen ? next.delete(item.key) : next.add(item.key);
+                            return next;
+                          })}
+                          className="p-1 rounded-md text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors">
+                          <svg className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                            fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                          </svg>
+                        </button>
+                      )}
                     </div>
-                  : readOnly
-                    ? <span className="text-sm text-slate-400 italic">No session linked</span>
-                    : <button data-testid="open-smart-assessment"
-                        onClick={() => {
-                          pushLog('Smart Assessment opened');
-                          onOpenAssessment?.(client.id);
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90"
-                        style={{ background:'linear-gradient(135deg,#7C3AED,#5B21B6)' }}>
-                        Open Smart Assessment →
-                      </button>}
-              </div>
-            )}
+                  </div>
+                  {isOpen && client.assessment_session && (
+                    <PlanDraftInlinePanel
+                      itemKey={item.key}
+                      session={client.assessment_session}
+                      graphs={planGraphs}
+                    />
+                  )}
+                </div>
+              );
+            })()}
+
+            {item.type === 'bridge' && (() => {
+              const session = client.assessment_session;
+              const hasContent = session && (session.sectionsWithData > 0 || session.status === 'in_progress');
+              const isComplete = !!client.smart_assessment_session_id;
+              return (
+                <div>
+                  <div className="text-sm text-slate-800 mb-2">{item.label}</div>
+                  {isComplete
+                    ? <div className="flex items-center gap-2 px-3 py-2 bg-teal-50 border border-teal-200 rounded-lg" data-testid="session-linked-badge">
+                        <Ico.Link/>
+                        <span className="text-sm font-semibold text-teal-700">Session linked</span>
+                        <span className="text-[10px] text-teal-500 ml-auto" style={{ fontFamily:'DM Mono, monospace' }}>{client.smart_assessment_session_id}</span>
+                      </div>
+                    : readOnly
+                      ? <span className="text-sm text-slate-400 italic">No session linked</span>
+                      : hasContent
+                        ? <button data-testid="continue-smart-assessment"
+                            onClick={() => {
+                              pushLog('Smart Assessment continued');
+                              onOpenAssessment?.(client.id);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                            style={{ background:'linear-gradient(135deg,#0D9488,#0F766E)' }}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            Continue Smart Assessment →
+                          </button>
+                        : <button data-testid="open-smart-assessment"
+                            onClick={() => {
+                              pushLog('Smart Assessment opened');
+                              onOpenAssessment?.(client.id);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                            style={{ background:'linear-gradient(135deg,#7C3AED,#5B21B6)' }}>
+                            Open Smart Assessment →
+                          </button>}
+                </div>
+              );
+            })()}
 
             {item.type === 'dated' && (() => {
               const dateVal = client.checklist[item.clSec]?.[item.dateKey] ?? '';
@@ -450,7 +618,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
         <div className="grid gap-6 overflow-hidden" style={{ gridTemplateColumns:'1fr 380px' }}>
 
           {/* left: checklist */}
-          <div className="space-y-4">
+          <div className="space-y-4 min-w-0 overflow-hidden">
             {isReadOnly && (
               <div className="flex items-center gap-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
                 <span className="text-amber-600 text-sm">🔍</span>
@@ -508,7 +676,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
               {/* Pinned advance / resolution footer — hidden in read-only mode or for non-editors */}
               {!isReadOnly && userCanEdit && client.stage !== 'denied' && nextStage && (
-                <div className="flex-shrink-0 border-t border-stone-100 p-4">
+                <div className="flex-shrink-0 border-t border-stone-100 p-4 space-y-2">
                   <button data-testid="advance-btn"
                     disabled={!canAdvance}
                     onClick={() => canAdvance && setConfirmAdvance(nextStage)}
@@ -517,6 +685,13 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     {canAdvance ? `Advance to ${SM[nextStage].label} →` : 'Complete all items to advance'}
                   </button>
                   {hasBlock && <p className="text-xs text-red-600 text-center mt-2">⚠ One or more items are blocking advance</p>}
+                  {(client.stage === 'submitted' || client.stage === 'auth_assessment') && (
+                    <button data-testid="deny-btn"
+                      onClick={() => setConfirmDeny(true)}
+                      className="w-full py-2.5 rounded-xl text-sm font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition-all">
+                      Mark as Denied
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -555,6 +730,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 { key:'notes',     label:'Notes',     count:(client.case_notes||[]).length },
                 { key:'documents', label:'Documents',  count:visibleDocs.length },
                 { key:'activity',  label:'Activity',   count:client.activity_log.length },
+                ...(hasPlanSession
+                  ? [{ key:'plan', label:'Plan', count:0 }]
+                  : []),
               ].map(tab => (
                 <button key={tab.key}
                   data-testid={`detail-tab-${tab.key}`}
@@ -627,20 +805,25 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               {/* Documents tab */}
               {activeTab === 'documents' && (
                 <>
-                  {isReadOnly && visibleDocs.length < client.documents.length && (
-                    <div className="px-4 py-2 bg-amber-50 border-b border-amber-100 text-xs text-amber-700">
-                      Showing documents from <strong>{SM[viewStage]?.label}</strong> only
-                    </div>
-                  )}
                   <div className="divide-y divide-stone-50" data-testid="documents-panel">
                   {visibleDocs.length === 0
-                    ? <p className="px-4 py-5 text-xs text-center text-slate-400">{isReadOnly ? 'No documents uploaded in this stage.' : 'No documents uploaded yet.'}</p>
+                    ? <p className="px-4 py-5 text-xs text-center text-slate-400">No documents uploaded yet.</p>
                     : visibleDocs.map(d => (
                       <div key={d.id} className="px-4 py-2.5 flex items-center gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="text-xs font-medium text-slate-700 truncate">{d.label}</div>
-                          <div className="text-[10px] text-slate-400 mt-0.5" style={{ fontFamily:'DM Mono, monospace' }}>
-                            {new Date(d.uploaded_at).toLocaleDateString()} · {d.by}
+                          <div className="flex items-center gap-1.5 mb-0.5">
+                            {d.type === 'assessment_draft' && (
+                              <span className="flex-shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                                style={{ background:'#FEF3C7', color:'#92400E', border:'1px solid #FDE68A' }}>Draft</span>
+                            )}
+                            {d.type === 'final_assessment' && (
+                              <span className="flex-shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
+                                style={{ background:'rgba(20,184,166,0.1)', color:'#0D9488', border:'1px solid rgba(20,184,166,0.3)' }}>Final</span>
+                            )}
+                            <span className="text-xs font-medium text-slate-700 truncate">{d.label}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400" style={{ fontFamily:'DM Mono, monospace' }}>
+                            {new Date(d.uploaded_at).toLocaleDateString()} · {d.by}{d.stage && d.stage !== client.stage ? ` · ${SM[d.stage]?.label ?? d.stage}` : ''}
                           </div>
                         </div>
                         <button
@@ -674,17 +857,24 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     ? <p className="px-4 py-5 text-xs text-center text-slate-400">No activity yet.</p>
                     : client.activity_log.map(e => {
                         const isStageMove = e.action.startsWith('Moved to');
-                        return isStageMove ? (
+                        if (isStageMove) return (
                           <div key={e.id} className="px-4 py-3 bg-teal-50 flex items-start gap-2.5">
                             <span className="mt-0.5 flex-shrink-0 text-teal-500 text-sm leading-none">→</span>
-                            <div>
+                            <div className="min-w-0 flex-1">
                               <div className="text-xs font-semibold text-teal-800">{e.action}</div>
-                              <div className="text-[10px] text-teal-600/70 mt-0.5" style={{ fontFamily:'DM Mono, monospace' }}>
+                              {e.reason && (
+                                <div className="flex items-start gap-1 mt-1.5 text-xs text-red-600">
+                                  <span className="flex-shrink-0 leading-tight">✕</span>
+                                  <span>{e.reason}</span>
+                                </div>
+                              )}
+                              <div className="text-[10px] text-teal-600/70 mt-1" style={{ fontFamily:'DM Mono, monospace' }}>
                                 {new Date(e.ts).toLocaleDateString()} · {e.by}
                               </div>
                             </div>
                           </div>
-                        ) : (
+                        );
+                        return (
                           <div key={e.id} className="px-4 py-2.5">
                             <div className="text-xs text-slate-700">{e.action}</div>
                             <div className="text-[10px] text-slate-400 mt-0.5" style={{ fontFamily:'DM Mono, monospace' }}>
@@ -694,6 +884,15 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         );
                       })}
                 </div>
+              )}
+
+              {/* Plan tab — Plan Draft summary with assessment data */}
+              {activeTab === 'plan' && hasPlanSession && (
+                <PlanDraftPreview
+                  session={client.assessment_session}
+                  graphs={planGraphs}
+                  documents={client.documents}
+                />
               )}
 
             </div>
@@ -714,6 +913,32 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-600 border border-stone-200 hover:bg-stone-50">Cancel</button>
               <button data-testid="confirm-advance" onClick={() => doAdvance(confirmAdvance)}
                 className="flex-1 py-2 rounded-lg text-sm font-semibold text-white" style={{ background:'#0D9488' }}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── deny confirmation dialog ── */}
+      {confirmDeny && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background:'rgba(0,0,0,0.5)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full mx-4">
+            <h3 className="text-base font-bold text-slate-900 mb-1" style={{ fontFamily:'Syne, sans-serif' }}>Mark as Denied</h3>
+            <p className="text-sm text-slate-500 mb-4">
+              Move <strong>{client.name}</strong> to the Denied stage. This will be logged in the activity history.
+            </p>
+            <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wide">Denial reason <span className="font-normal text-slate-400 normal-case">(optional)</span></label>
+            <textarea
+              value={denyReason}
+              onChange={e => setDenyReason(e.target.value)}
+              placeholder="e.g. Medical necessity not established, missing documentation…"
+              rows={3}
+              className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100 resize-none placeholder:text-slate-400 mb-4"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => { setConfirmDeny(false); setDenyReason(''); }}
+                className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-600 border border-stone-200 hover:bg-stone-50">Cancel</button>
+              <button data-testid="confirm-deny" onClick={doDeny}
+                className="flex-1 py-2 rounded-lg text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors">Confirm Denial</button>
             </div>
           </div>
         </div>

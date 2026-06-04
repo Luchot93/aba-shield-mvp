@@ -23,7 +23,7 @@ export const mkChecklist = () => ({
   },
   submitted: {
     plan_submitted:false, cpt_units_requested:false, approval_uploaded:false,
-    authorized_hours:'', no_denial_pending:false,
+    authorized_hours:'',
   },
   denied: {
     denial_reason:'', peer_to_peer_scheduled:false,
@@ -100,7 +100,6 @@ export function getStageItems(stage) {
       { type:'checkbox',   key:'cpt_units_requested', label:'CPT units requested 97153/97155/97156', clSec:'submitted' },
       { type:'upload',     key:'approval_uploaded',   label:'Authorization approval document',       clSec:'submitted' },
       { type:'form_field', key:'authorized_hours',    label:'Authorized hours loaded',               clSec:'submitted', fieldType:'number' },
-      { type:'checkbox',   key:'no_denial_pending',   label:'No active denial pending',              clSec:'submitted' },
     ];
     case 'denied': return [
       { type:'form_field', key:'denial_reason',           label:'Denial reason logged',                         clSec:'denied', fieldType:'text' },

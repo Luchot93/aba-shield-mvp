@@ -133,9 +133,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const doDeny = () => {
     const reason = denyReason.trim();
     patchClient({ stage: 'denied', stage_entered_at: new Date().toISOString(), denial_reason: reason || null });
-    // Push reason first so it appears directly below the stage-move marker (log is newest-first)
-    if (reason) pushLog(`Denial reason: ${reason}`);
-    pushLog('Moved to Denied');
+    const entry = { id:`log_${Date.now()}`, action:'Moved to Denied', ...(reason ? { reason } : {}), ts:new Date().toISOString(), by:currentUser.name };
+    setClients(prev => prev.map(c => c.id === client.id ? { ...c, activity_log:[entry, ...c.activity_log] } : c));
     addNotif(mkNotif(`${client.name} — Authorization denied by insurer`, client.name, 'urgent'));
     if (onClientAdvanced) onClientAdvanced(client.id);
     setConfirmDeny(false);
@@ -857,25 +856,19 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   {client.activity_log.length === 0
                     ? <p className="px-4 py-5 text-xs text-center text-slate-400">No activity yet.</p>
                     : client.activity_log.map(e => {
-                        const isStageMove    = e.action.startsWith('Moved to');
-                        const isDenialReason = e.action.startsWith('Denial reason:');
+                        const isStageMove = e.action.startsWith('Moved to');
                         if (isStageMove) return (
                           <div key={e.id} className="px-4 py-3 bg-teal-50 flex items-start gap-2.5">
                             <span className="mt-0.5 flex-shrink-0 text-teal-500 text-sm leading-none">→</span>
-                            <div>
+                            <div className="min-w-0 flex-1">
                               <div className="text-xs font-semibold text-teal-800">{e.action}</div>
-                              <div className="text-[10px] text-teal-600/70 mt-0.5" style={{ fontFamily:'DM Mono, monospace' }}>
-                                {new Date(e.ts).toLocaleDateString()} · {e.by}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                        if (isDenialReason) return (
-                          <div key={e.id} className="px-4 py-2.5 bg-red-50 border-l-2 border-red-200 flex items-start gap-2">
-                            <span className="mt-0.5 flex-shrink-0 text-red-400 text-xs leading-none">✕</span>
-                            <div>
-                              <div className="text-xs font-medium text-red-700">{e.action.replace('Denial reason: ', '')}</div>
-                              <div className="text-[10px] text-red-400/80 mt-0.5" style={{ fontFamily:'DM Mono, monospace' }}>
+                              {e.reason && (
+                                <div className="flex items-start gap-1 mt-1.5 text-xs text-red-600">
+                                  <span className="flex-shrink-0 leading-tight">✕</span>
+                                  <span>{e.reason}</span>
+                                </div>
+                              )}
+                              <div className="text-[10px] text-teal-600/70 mt-1" style={{ fontFamily:'DM Mono, monospace' }}>
                                 {new Date(e.ts).toLocaleDateString()} · {e.by}
                               </div>
                             </div>

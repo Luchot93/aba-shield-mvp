@@ -456,6 +456,28 @@ const MARCUS_INTERVIEW_DATA = {
     notes: 'Dx: ASD Level 2 F84.0, ADOS-2 Module 3 + ADI-R + Vineland-3 (Dr. Vargas, Jan 2024). Co-occurring: ADHD Combined F90.2 + GAD F41.1 (Dr. Costa, March 2025). Meds: Guanfacine ER 1mg QD — no acute behavioral effects. No seizures, cardiac conditions, or treatment contraindications. Daily aggression threatening caregiver and sibling safety. ADL regression (bathing) is clinically significant — previously mastered skill lost. Severe food restriction limiting nutritional variety and community participation. Morning routine failures causing school tardiness. School aggression — potential restrictive placement change. Prior ABA: beneficial per caregiver, regression followed discontinuation — supports reauthorization rationale. Without ABA: worsening trajectory, school placement at risk, community participation eliminated. Recommend: 20-25 hrs/week given severity, functioning, prior partial response, and family engagement.',
     transcript: "Mom: He was diagnosed in January 2024 by Dr. Vargas — she did the full psychological evaluation. Then about a year later, Dr. Costa added the ADHD and anxiety diagnoses. He's been on Guanfacine since March for the ADHD and attention — it takes the edge off a little but we haven't seen a big change in the aggression. He did ABA before, from late 2022 to mid-2023 at Sunshine Behavioral. It was working. He was calmer, the behaviors were less frequent, we had strategies. And then we relocated and had to stop. Within a few months he regressed back to where he was before and then kept getting worse. That regression is the thing that makes us feel like ABA is absolutely necessary. Dr. Costa and Dr. Vargas both wrote letters of support for this referral. Dad: Without this we are genuinely worried about whether we can keep our family safe.",
     completionState: 'complete',
+    approvalState: 'approved',
+    draftContent: `## Medical Necessity
+
+### Diagnostic Support
+
+Primary diagnosis of Autism Spectrum Disorder, Level 2 (DSM-5, F84.0) confirmed by Dr. Elena Vargas, Psy.D., at Children's Neuropsychology Associates on January 12, 2024. Diagnostic instruments included the ADOS-2 (Module 3), ADI-R, and Vineland-3 Adaptive Behavior Scales. Full neuropsychological report on file. Co-occurring diagnoses: ADHD, Combined Presentation (F90.2) and Generalized Anxiety Disorder (F41.1), both confirmed by Dr. Adriana Costa, M.D., on March 10, 2025.
+
+Current medications: Guanfacine ER 1mg QD (Dr. Adriana Costa, for attention and impulse control). No psychotropic medications for anxiety currently prescribed. No seizure disorder, cardiac conditions, or other medical contraindications to behavioral intervention.
+
+### Functional Impact
+
+The constellation of behavioral excesses and adaptive skill deficits significantly impairs functioning across home, school, and community settings. At home, daily physical aggression — occurring 3–7 times per day including biting with documented bruising — threatens caregiver and sibling safety and has created a household environment the family describes as untenable without structured support. The near-complete regression in independent bathing (a skill mastered at age 7) represents clinically significant adaptive skill loss requiring direct ABA programming. Morning routine breakdowns average 55–70 minutes and have resulted in repeated school tardiness. Severe food selectivity (12–14 accepted foods) limits nutritional variety and community participation.
+
+At school, documented peer aggression has resulted in disciplinary action, 1:1 paraprofessional support, and IEP team review of placement appropriateness. Without ABA intervention, the trajectory indicates continued behavioral escalation, risk of more restrictive school placement, and elimination of community participation.
+
+### Clinical Justification
+
+Applied Behavior Analysis is clinically justified as the appropriate level of care, meeting Florida Blue and Florida Medicaid medical necessity criteria on the following grounds: **(1)** Primary diagnosis of ASD Level 2 (F84.0) confirmed via ADOS-2, ADI-R, and Vineland-3, requiring substantial support across multiple domains; **(2)** co-occurring ADHD Combined (F90.2) and GAD (F41.1) contributing to a complex behavioral profile; **(3)** daily physical aggression including biting with documented bruising, meeting clinical severity threshold; **(4)** clinically significant regression in a previously mastered adaptive skill (independent bathing); **(5)** functional impairment across home, school, and community sufficient to require full-day 1:1 paraprofessional support and has led the family to eliminate all community participation.
+
+Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week) demonstrated measurable benefit per caregiver report; regression following discontinuation directly supports medical necessity. Letters of support from both Dr. Adriana Costa and Dr. Elena Vargas are on file.
+
+**Recommended intensity:** 20–25 hours/week, center-based with home component, consistent with severity, current functioning, prior partial response, and family engagement. Expected outcomes for the 6-month authorization period include reduction of Physical Aggression from 5/day to ≤1/day; Bathing Refusal duration reduction from 45–60 min to ≤5 min; mastery of Functional Help-Seeking at 80% independent across home and school; and re-establishment of community participation in at least two familiar settings.`,
     coOccurringDiagnoses: [
       { id: 'dx-m1', diagnosis: 'ADHD Combined Type', icd10: 'F90.2', provider: 'Dr. Elena Vargas, Psy.D.', date: 'Jan 2024' },
       { id: 'dx-m2', diagnosis: 'Generalized Anxiety Disorder', icd10: 'F41.1', provider: 'Dr. Adriana Costa', date: 'Mar 2025' },
@@ -473,6 +495,7 @@ const MARCUS_INTERVIEW_DATA = {
   skill_acquisitions: {
     notes: 'Family priority targets: (1) Functional help-seeking and break-requesting verbally before escalating — critical safety target; (2) morning routine independence, full 8-step within 30 min; (3) peer interaction initiation at school. Academic: 3rd grade content, difficulty with multi-step word problems and written expression. Attention 15-20 min with 1:1 support. Social: no peer friendships. Parallel play in structured settings. No spontaneous peer initiation. Joint attention present but limited. Theory of mind emerging, inconsistent. No social skills group history. Imitation: action imitation strong, vocal imitation moderate. Reinforcers identified: LEGO sets (specific), YouTube access (trains/science), chips/crunchy snacks, trampoline time, computer time.',
     completionState: 'complete',
+    approvalState: 'approved',
     skillGoals: [
       {
         id: 'mg1',
@@ -548,6 +571,7 @@ const MARCUS_INTERVIEW_DATA = {
     notes: 'Target 1: Physical Aggression. Topography: open-hand hitting 70%, object throwing ~1-2x/week, biting 2 incidents/60 days. Frequency: 3-7x/day. Targets: mom 60%, sister 30%, school peers 2 documented. Ant: ending preferred activity (tablet/LEGO), grooming demands, sibling disruption of preferred activity, schedule change. Highest occurrence: weekday post-school decompression period. Function: escape (primary) — demand consistently removed post-aggression. Attention secondary for sibling incidents. Target 2: Bathing refusal. Topography: verbal refusal, physical resistance at bathroom doorway, dropping/going limp, crying/screaming. Duration: 45-60 min. Daily. Ant: verbal cue that bath time is starting. Function: escape sensory-aversive grooming task. No prior FBA. No BIP in place.',
     transcript: "Post-school is the highest risk time. He gets off the bus, he's done, and if anyone asks anything of him or his sister interrupts his LEGO it escalates fast. I've learned to give transition warnings but it doesn't always work. The biting — that was only me, only during really severe meltdowns when I tried to physically intervene. Both times I was left with bruises that lasted almost a week. I feel like I've started to be afraid of my own child and that feeling is really hard to sit with. The bath is every single night. He stands outside the bathroom door and we go back and forth sometimes for an hour.",
     completionState: 'complete',
+    approvalState: 'approved',
     behaviorTargets: [
       {
         id: 'bt-marcus-1',
@@ -589,6 +613,7 @@ const MARCUS_INTERVIEW_DATA = {
   },
   caregiver_training: {
     completionState: 'complete',
+    approvalState: 'approved',
     caregiverBaselines: {
       premack_baseline: '35',
       reinforcement_baseline: '50',
@@ -660,19 +685,19 @@ const MARCUS_INTERVIEW_DATA = {
 };
 
 export const SEED_CLIENTS = () => [
-  { id:'c1',  name:'Liam Rodriguez',  dob:'2018-03-15', phone:'(786) 555-0121', address:'1432 SW 8th St, Miami, FL 33135',          insurer_name:'Aetna',        member_id:'AET-884421', group_number:'G-44210', referring_provider:'Dr. Maria Santos',  source:'imported',    referral_date:'2026-04-10', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c2',  name:'Sophia Kim',      dob:'2019-07-22', phone:'(305) 555-0198', address:'7821 N Kendall Dr, Miami, FL 33156',        insurer_name:'UnitedHealth', member_id:'UHC-229934', group_number:'G-77811', referring_provider:'Dr. John Park',      source:'crm_created', referral_date:'2026-04-15', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c3',  name:'Noah Carter',     dob:'2017-11-08', phone:'(954) 555-0143', address:'3201 Coral Way, Coral Gables, FL 33134',   insurer_name:'Florida Blue', member_id:'FLB-558871', group_number:'G-12390', referring_provider:'Dr. Elaine Torres',  source:'imported',    referral_date:'2026-03-28', stage:'auth_assessment', denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c4',  name:'Emma Thompson',   dob:'2020-01-30', phone:'(561) 555-0167', address:'9400 Glades Rd, Boca Raton, FL 33434',     insurer_name:'Humana',       member_id:'HUM-334490', group_number:'G-98712', referring_provider:'Dr. Robert Chen',    source:'crm_created', referral_date:'2026-04-02', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c5',  name:'Oliver Patel',    dob:'2018-06-12', phone:'(786) 555-0134', address:'2100 Biscayne Blvd, Miami, FL 33137',      insurer_name:'Cigna',        member_id:'CIG-778823', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     source:'imported',    referral_date:'2026-03-15', stage:'plan_draft',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c6',  name:'Ava Nguyen',      dob:'2019-09-05', phone:'(305) 555-0189', address:'5540 NW 7th Ave, Miami, FL 33127',         insurer_name:'Aetna',        member_id:'AET-991102', group_number:'G-44210', referring_provider:'Dr. Luis Mendez',    source:'crm_created', referral_date:'2026-02-28', stage:'submitted',       denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c7',  name:'Ethan Williams',  dob:'2017-04-18', phone:'(954) 555-0156', address:'800 E Broward Blvd, Ft. Lauderdale, FL',   insurer_name:'Florida Blue', member_id:'FLB-447721', group_number:'G-12390', referring_provider:'Dr. Sarah Johnson',  source:'imported',    referral_date:'2026-02-10', stage:'denied',          denial_reason:'Medical necessity not established', bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c8',  name:'Isabella Moore',  dob:'2018-12-25', phone:'(786) 555-0177', address:'6100 SW 57th Ave, South Miami, FL 33143',  insurer_name:'UnitedHealth', member_id:'UHC-883312', group_number:'G-77811', referring_provider:'Dr. Mark Davis',     source:'crm_created', referral_date:'2026-01-20', stage:'authorized',      denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-31', reauth_active:false },
-  { id:'c9',  name:'Mason Garcia',    dob:'2019-03-14', phone:'(305) 555-0145', address:'11200 SW 8th St, Miami, FL 33174',         insurer_name:'Humana',       member_id:'HUM-229908', group_number:'G-98712', referring_provider:'Dr. Patricia Lee',   source:'imported',    referral_date:'2026-01-05', stage:'staffing',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-15', reauth_active:false },
-  { id:'c10', name:'Charlotte Davis', dob:'2018-08-22', phone:'(561) 555-0122', address:'3400 PGA Blvd, Palm Beach Gardens, FL',    insurer_name:'Cigna',        member_id:'CIG-556634', group_number:'G-55023', referring_provider:'Dr. James Wilson',   source:'crm_created', referral_date:'2025-11-12', stage:'services',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-05-27', reauth_active:true  },
-  { id:'c11', name:'James Martinez',  dob:'2017-05-30', phone:'(786) 555-0190', address:'1800 Coral Way, Miami, FL 33145',          insurer_name:'Aetna',        member_id:'AET-664433', group_number:'G-44210', referring_provider:'Dr. Angela Rivera',  source:'imported',    referral_date:'2025-10-08', stage:'services',        denial_reason:null,                         bcba_id:'s1', rbt_id:'s5', auth_expiry_date:'2026-05-20', reauth_active:true  },
-  { id:'c12', name:'Amelia Wilson',   dob:'2020-02-14', phone:'(954) 555-0133', address:'2800 Hollywood Blvd, Hollywood, FL 33020', insurer_name:'Florida Blue', member_id:'FLB-112298', group_number:'G-12390', referring_provider:'Dr. Kevin Brown',    source:'crm_created', referral_date:'2026-03-01', stage:'auth_assessment', denial_reason:null,                         bcba_id:'s2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c13', name:'Marcus Rivera',  dob:'2017-03-04', phone:'(305) 555-0302', address:'4820 SW 137th Ave, Miami, FL 33175',         insurer_name:'Florida Blue', member_id:'FLB-774421', group_number:'G-12390', referring_provider:'Dr. Adriana Costa',  source:'imported',    referral_date:'2026-05-01', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c1',  name:'Liam Rodriguez',  dob:'2018-03-15', phone:'(786) 555-0121', address:'1432 SW 8th St, Miami, FL 33135',          insurer_name:'Aetna',        member_id:'AET-884421', group_number:'G-44210', referring_provider:'Dr. Maria Santos',  source:'imported',    referral_date:'2026-04-10', stage_entered_at:'2026-04-10T09:00:00.000Z', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c2',  name:'Sophia Kim',      dob:'2019-07-22', phone:'(305) 555-0198', address:'7821 N Kendall Dr, Miami, FL 33156',        insurer_name:'UnitedHealth', member_id:'UHC-229934', group_number:'G-77811', referring_provider:'Dr. John Park',      source:'crm_created', referral_date:'2026-04-15', stage_entered_at:'2026-04-15T10:30:00.000Z', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c3',  name:'Noah Carter',     dob:'2017-11-08', phone:'(954) 555-0143', address:'3201 Coral Way, Coral Gables, FL 33134',   insurer_name:'Florida Blue', member_id:'FLB-558871', group_number:'G-12390', referring_provider:'Dr. Elaine Torres',  source:'imported',    referral_date:'2026-03-28', stage_entered_at:'2026-04-01T08:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c4',  name:'Emma Thompson',   dob:'2020-01-30', phone:'(561) 555-0167', address:'9400 Glades Rd, Boca Raton, FL 33434',     insurer_name:'Humana',       member_id:'HUM-334490', group_number:'G-98712', referring_provider:'Dr. Robert Chen',    source:'crm_created', referral_date:'2026-04-02', stage_entered_at:'2026-04-22T09:15:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c5',  name:'Oliver Patel',    dob:'2018-06-12', phone:'(786) 555-0134', address:'2100 Biscayne Blvd, Miami, FL 33137',      insurer_name:'Cigna',        member_id:'CIG-778823', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     source:'imported',    referral_date:'2026-03-15', stage_entered_at:'2026-05-12T11:00:00.000Z', stage:'plan_draft',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c6',  name:'Ava Nguyen',      dob:'2019-09-05', phone:'(305) 555-0189', address:'5540 NW 7th Ave, Miami, FL 33127',         insurer_name:'Aetna',        member_id:'AET-991102', group_number:'G-44210', referring_provider:'Dr. Luis Mendez',    source:'crm_created', referral_date:'2026-02-28', stage_entered_at:'2026-05-19T14:00:00.000Z', stage:'submitted',       denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c7',  name:'Ethan Williams',  dob:'2017-04-18', phone:'(954) 555-0156', address:'800 E Broward Blvd, Ft. Lauderdale, FL',   insurer_name:'Florida Blue', member_id:'FLB-447721', group_number:'G-12390', referring_provider:'Dr. Sarah Johnson',  source:'imported',    referral_date:'2026-02-10', stage_entered_at:'2026-04-05T10:00:00.000Z', stage:'denied',          denial_reason:'Medical necessity not established', bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c8',  name:'Isabella Moore',  dob:'2018-12-25', phone:'(786) 555-0177', address:'6100 SW 57th Ave, South Miami, FL 33143',  insurer_name:'UnitedHealth', member_id:'UHC-883312', group_number:'G-77811', referring_provider:'Dr. Mark Davis',     source:'crm_created', referral_date:'2026-01-20', stage_entered_at:'2026-03-10T09:00:00.000Z', stage:'authorized',      denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-31', reauth_active:false },
+  { id:'c9',  name:'Mason Garcia',    dob:'2019-03-14', phone:'(305) 555-0145', address:'11200 SW 8th St, Miami, FL 33174',         insurer_name:'Humana',       member_id:'HUM-229908', group_number:'G-98712', referring_provider:'Dr. Patricia Lee',   source:'imported',    referral_date:'2026-01-05', stage_entered_at:'2026-03-25T08:30:00.000Z', stage:'staffing',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-15', reauth_active:false },
+  { id:'c10', name:'Charlotte Davis', dob:'2018-08-22', phone:'(561) 555-0122', address:'3400 PGA Blvd, Palm Beach Gardens, FL',    insurer_name:'Cigna',        member_id:'CIG-556634', group_number:'G-55023', referring_provider:'Dr. James Wilson',   source:'crm_created', referral_date:'2025-11-12', stage_entered_at:'2026-01-20T10:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-05-27', reauth_active:true  },
+  { id:'c11', name:'James Martinez',  dob:'2017-05-30', phone:'(786) 555-0190', address:'1800 Coral Way, Miami, FL 33145',          insurer_name:'Aetna',        member_id:'AET-664433', group_number:'G-44210', referring_provider:'Dr. Angela Rivera',  source:'imported',    referral_date:'2025-10-08', stage_entered_at:'2025-12-15T09:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'s1', rbt_id:'s5', auth_expiry_date:'2026-05-20', reauth_active:true  },
+  { id:'c12', name:'Amelia Wilson',   dob:'2020-02-14', phone:'(954) 555-0133', address:'2800 Hollywood Blvd, Hollywood, FL 33020', insurer_name:'Florida Blue', member_id:'FLB-112298', group_number:'G-12390', referring_provider:'Dr. Kevin Brown',    source:'crm_created', referral_date:'2026-03-01', stage_entered_at:'2026-03-05T11:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'s2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c13', name:'Marcus Rivera',  dob:'2017-03-04', phone:'(305) 555-0302', address:'4820 SW 137th Ave, Miami, FL 33175',         insurer_name:'Florida Blue', member_id:'FLB-774421', group_number:'G-12390', referring_provider:'Dr. Adriana Costa',  source:'imported',    referral_date:'2026-05-01', stage_entered_at:'2026-05-02T08:00:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
 ].map(c => {
   const cl = mkChecklist();
   // Pre-complete c7 (Ethan Williams) denied checklist so resolve button is enabled
@@ -738,10 +763,38 @@ export const SEED_CLIENTS = () => [
       relationship:       'Parents',
       reasonForReferral:  'ABA evaluation for behavioral escalation, ADL regression, and community avoidance',
     }) :
+    c.id === 'c5' ? makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes', MARCUS_INTERVIEW_DATA, {
+      dob:                c.dob,
+      phone:              c.phone,
+      address:            c.address,
+      insurerName:        c.insurer_name,
+      memberId:           c.member_id,
+      groupNumber:        c.group_number,
+      referringProvider:  c.referring_provider,
+      referralDate:       c.referral_date,
+      gender:             'Male',
+      diagnosis:          'Autism Spectrum Disorder, Level 2',
+      icd10:              'F84.0',
+      medicaidId:         '',
+      assessmentDate:     '2026-04-18',
+      assessmentType:     'Initial',
+      preferredLanguage:  'English',
+      parentGuardianNames:'Priya & Raj Patel',
+      relationship:       'Parents',
+      reasonForReferral:  'ABA evaluation for behavioral challenges and developmental delays',
+    }) :
     c.stage === 'assessment' ? makeAssessmentSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes') :
     null;
 
-  return { ...c, pipeline_entry:true, smart_assessment_session_id:null, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session };
+  // smart_assessment_session_id is only set after the BCBA exports the assessment (completes the session).
+  // Clients still at 'assessment' stage have not exported yet — their session is in_progress,
+  // so smart_assessment_session_id stays null; the bridge shows "Continue Smart Assessment →".
+  // c5 (Oliver Patel) is at plan_draft — already exported, so his id is stamped.
+  const smart_session_id = c.id === 'c5' && assessment_session
+    ? assessment_session.id
+    : null;
+
+  return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session };
 });
 
 export const SEED_STAFF = () => [

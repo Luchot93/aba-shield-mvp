@@ -20,15 +20,15 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
   const today30 = Date.now() + 30 * 24 * 60 * 60 * 1000;
   const summaryTotal   = pipelineClients.length;
   const summaryBlocked = pipelineClients.filter(c => {
-    const st = getChecklistStatus(c);
-    return st && st.type === 'missing' && c.pipeline_entry;
+    const st = getChecklistStatus(c, staff);
+    return st && (st.type === 'missing' || st.type === 'waiting') && c.pipeline_entry;
   }).length;
   const summaryDenied  = pipelineClients.filter(c => c.stage === 'denied').length;
   const summaryReauth  = pipelineClients.filter(c => c.auth_expiry_date && new Date(c.auth_expiry_date).getTime() <= today30 && new Date(c.auth_expiry_date).getTime() > Date.now()).length;
 
   const afterSummary = pipelineClients.filter(c => {
     if (summaryFilter === 'all')     return true;
-    if (summaryFilter === 'blocked') { const st = getChecklistStatus(c); return st && st.type === 'missing'; }
+    if (summaryFilter === 'blocked') { const st = getChecklistStatus(c, staff); return st && (st.type === 'missing' || st.type === 'waiting'); }
     if (summaryFilter === 'denied')  return c.stage === 'denied';
     if (summaryFilter === 'reauth')  return c.auth_expiry_date && new Date(c.auth_expiry_date).getTime() <= today30 && new Date(c.auth_expiry_date).getTime() > Date.now();
     return true;
@@ -37,7 +37,7 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
   const displayClients = afterSummary
     .filter(c => {
       if (pipelineFilter === 'all')      return true;
-      if (pipelineFilter === 'blockers') { const st = getChecklistStatus(c); return st && st.type === 'missing'; }
+      if (pipelineFilter === 'blockers') { const st = getChecklistStatus(c, staff); return st && (st.type === 'missing' || st.type === 'waiting'); }
       if (pipelineFilter === 'mycases')  return c.bcba_id === currentUser.id || c.rbt_id === currentUser.id;
       return true;
     })
@@ -48,9 +48,11 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
 
   const handleSaveClient = form => {
     const id = `c${Date.now()}`;
+    const now = new Date().toISOString();
     setClients(prev => [...prev, {
       ...form,
       id, stage:'intake', source:'crm_created',
+      stage_entered_at: now,
       pipeline_entry: true,
       denial_reason:null, bcba_id:null, rbt_id:null,
       auth_expiry_date:null, reauth_active:false,
@@ -64,7 +66,9 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
 
   const handleAddToPipeline = client => {
     setClients(prev => prev.map(c =>
-      c.id === client.id ? { ...c, pipeline_entry:true, stage:'intake' } : c
+      c.id === client.id
+        ? { ...c, pipeline_entry:true, stage:'intake', stage_entered_at: new Date().toISOString() }
+        : c
     ));
     setNewClientId(client.id);
     setTimeout(() => setNewClientId(null), 3000);

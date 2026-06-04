@@ -14,6 +14,7 @@ export const mkChecklist = () => ({
     vineland3:false, vineland3_date:'', basc3:false, basc3_date:'',
     additional_assessments:false, smart_assessment_submitted:false,
     baseline_data:false, behaviors_identified:false,
+    final_assessment_report:false,
   },
   plan_draft: {
     medical_necessity:false, skill_targets:false, behavior_goals:false,
@@ -79,8 +80,9 @@ export function getStageItems(stage) {
       { type:'dated',    key:'basc3',                   label:'BASC-3 administered within 12 months',    clSec:'assessment', dateKey:'basc3_date' },
       { type:'checkbox', key:'additional_assessments',  label:'Additional assessments completed',         clSec:'assessment' },
       { type:'bridge',   key:'smart_assessment_submitted', label:'Smart Assessment Form submitted',       clSec:'assessment' },
-      { type:'checkbox', key:'baseline_data',           label:'Baseline behavioral data recorded',       clSec:'assessment' },
-      { type:'checkbox', key:'behaviors_identified',    label:'Behaviors identified',                    clSec:'assessment' },
+      { type:'checkbox',     key:'baseline_data',              label:'Baseline behavioral data recorded',       clSec:'assessment' },
+      { type:'checkbox',     key:'behaviors_identified',       label:'Behaviors identified',                    clSec:'assessment' },
+      { type:'file_upload',  key:'final_assessment_report',    label:'Final assessment report uploaded',         clSec:'assessment', accept:'.docx,.pdf', docType:'final_assessment' },
     ];
     case 'plan_draft': return [
       { type:'smart_auto', key:'medical_necessity',       label:'Medical necessity statement',            clSec:'plan_draft' },

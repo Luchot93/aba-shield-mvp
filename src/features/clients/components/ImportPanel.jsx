@@ -104,6 +104,9 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
       insurer_name:r.insurer_name, member_id:r.member_id,
       group_number:r.group_number||'', referring_provider:r.referring_provider||'',
       referral_date:r.referral_date, stage:'intake', source:'imported',
+      stage_entered_at: r.referral_date
+        ? new Date(r.referral_date).toISOString()
+        : new Date().toISOString(),
       pipeline_entry: false,
       denial_reason:null, bcba_id:null, rbt_id:null,
       auth_expiry_date:null, reauth_active:false,

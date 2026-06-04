@@ -1248,11 +1248,11 @@ function caregiverTrainingSection(session, graphs = {}) {
             tableHeader: true,
             children: [
               new TableCell({
-                shading: { fill: TEAL_LIGHT },
+                shading: { type: ShadingType.SOLID, color: TEAL_LIGHT },
                 children: [new Paragraph({ children: [new TextRun({ text: 'Strategy', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })],
               }),
               new TableCell({
-                shading: { fill: TEAL_LIGHT },
+                shading: { type: ShadingType.SOLID, color: TEAL_LIGHT },
                 children: [new Paragraph({ children: [new TextRun({ text: 'Observed Baseline', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })],
               }),
             ],

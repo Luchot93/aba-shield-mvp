@@ -133,7 +133,18 @@ export default function App() {
             )}
             {page==='assessments' && (
               <AssessmentsPage clients={clients} staff={enrichedStaff} currentUser={currentUser}
-                onOpenAssessment={(clientId) => { setAssessmentClientId(clientId); setPage('assessment'); }} />
+                onOpenAssessment={(clientId) => {
+                  // Create session on-the-fly if client has none
+                  setClients(prev => prev.map(c => {
+                    if (c.id === clientId && c.assessment_session == null) {
+                      const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
+                      return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned') };
+                    }
+                    return c;
+                  }));
+                  setAssessmentClientId(clientId);
+                  setPage('assessment');
+                }} />
             )}
           </main>
       }
@@ -164,6 +175,14 @@ export default function App() {
           addNotif={addNotif}
           onClientAdvanced={handleClientAdvanced}
           onOpenAssessment={(clientId) => {
+            // Create session on-the-fly if client has none (e.g. just moved to assessment stage)
+            setClients(prev => prev.map(c => {
+              if (c.id === clientId && c.assessment_session == null) {
+                const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
+                return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned') };
+              }
+              return c;
+            }));
             setSelectedClient(null);
             setAssessmentClientId(clientId);
             setPage('assessment');

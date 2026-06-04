@@ -111,8 +111,8 @@ export default function AssessmentFeature({
       // Push into client.documents so it appears automatically in the CRM
       const doc = {
         id:          `doc_${Date.now()}`,
-        type:        'assessment',
-        label:       fileName,
+        type:        'assessment_draft',
+        label:       `DRAFT_${fileName}`,
         uploaded_at: new Date().toISOString(),
         by:          currentUser?.name ?? 'BCBA',
         stage:       client?.stage ?? 'assessment',

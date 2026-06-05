@@ -10,8 +10,10 @@ import Avatar from '../../components/Avatar.jsx';
 import PlanDraftInlinePanel from './PlanDraftInlinePanel.jsx';
 import PlanDraftPreview from './PlanDraftPreview.jsx';
 import { buildGraphsFromSession } from '../../features/assessment/graphBuilder.js';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock.js';
 
 export default function ClientDetailPage({ clientId, clients, staff, setClients, onBack, backLabel, currentUser, addNotif, onClientAdvanced, onOpenAssessment }) {
+  useBodyScrollLock();
   const client = clients.find(c => c.id === clientId);
   const [confirmAdvance, setConfirmAdvance] = useState(null);
   const [confirmDeny,    setConfirmDeny]    = useState(false);
@@ -125,6 +127,14 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
       client.name,
       'normal'
     ));
+    // Simulate parent email notification when parent_email is set
+    if (client.parent_email) {
+      addNotif(mkNotif(
+        `Email sent to ${client.parent_email} — ${client.name} stage update`,
+        client.name,
+        'normal'
+      ));
+    }
     if (onClientAdvanced) onClientAdvanced(client.id);
     setConfirmAdvance(null);
     onBack();
@@ -856,7 +866,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   {client.activity_log.length === 0
                     ? <p className="px-4 py-5 text-xs text-center text-slate-400">No activity yet.</p>
                     : client.activity_log.map(e => {
-                        const isStageMove = e.action.startsWith('Moved to');
+                        const isStageMove = e.action?.startsWith('Moved to');
                         if (isStageMove) return (
                           <div key={e.id} className="px-4 py-3 bg-teal-50 flex items-start gap-2.5">
                             <span className="mt-0.5 flex-shrink-0 text-teal-500 text-sm leading-none">→</span>

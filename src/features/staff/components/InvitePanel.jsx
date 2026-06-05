@@ -1,20 +1,36 @@
 import React, { useState } from 'react';
 import { Ico } from '../../../components/icons.jsx';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock.js';
 
-export default function InvitePanel({ onClose, onInvite, pendingInvites, onRevoke }) {
+// S1: existingEmails prop is a Set<string> of lowercase emails already in the system
+export default function InvitePanel({ onClose, onInvite, pendingInvites, onRevoke, existingEmails = new Set() }) {
+  useBodyScrollLock();
   const EMPTY = { name:'', email:'', phone:'', role:'', cert_number:'', cert_expiry:'', npi:'', hire_date:'' };
-  const [form,     setForm]     = useState(EMPTY);
-  const [revokeId, setRevokeId] = useState(null);
+  const [form,       setForm]       = useState(EMPTY);
+  const [emailError, setEmailError] = useState('');   // S1: inline duplicate error
+  const [revokeId,   setRevokeId]   = useState(null);
 
   const roleReady = !!form.role;
   const canSubmit = form.name.trim() && form.email.trim() && form.role;
 
   const setF = (k, v) => setForm(f => ({ ...f, [k]:v }));
 
+  const handleEmailChange = v => {
+    setF('email', v);
+    if (emailError) setEmailError('');   // clear error as user types
+  };
+
   const handleSubmit = () => {
     if (!canSubmit) return;
+    // S1: duplicate email check
+    const emailLc = form.email.trim().toLowerCase();
+    if (existingEmails.has(emailLc)) {
+      setEmailError('A staff member with this email already exists.');
+      return;
+    }
     onInvite({ ...form });
     setForm(EMPTY);
+    setEmailError('');
   };
 
   const ROLE_COLORS = {
@@ -71,13 +87,26 @@ export default function InvitePanel({ onClose, onInvite, pendingInvites, onRevok
                   placeholder="Dr. Jane Smith"
                   className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
               </div>
+
+              {/* S1: Email with inline duplicate error */}
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Email <span className="text-red-500">*</span></label>
-                <input value={form.email} onChange={e => setF('email', e.target.value)}
+                <input value={form.email} onChange={e => handleEmailChange(e.target.value)}
                   data-testid="invite-email" type="email"
                   placeholder="jane@clinic.com"
-                  className="w-full px-3 py-2 text-sm border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
+                  className={`w-full px-3 py-2 text-sm border rounded-lg outline-none focus:ring-2 focus:ring-teal-100 ${
+                    emailError ? 'border-red-400 focus:border-red-400 focus:ring-red-100' : 'border-stone-200 focus:border-teal-400'
+                  }`}/>
+                {emailError && (
+                  <p className="mt-1 text-[11px] text-red-600 font-medium flex items-center gap-1">
+                    <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                    </svg>
+                    {emailError}
+                  </p>
+                )}
               </div>
+
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-slate-700 mb-1">Phone number <span className="text-slate-400 font-normal">(optional)</span></label>
                 <input value={form.phone} onChange={e => setF('phone', e.target.value)}
@@ -145,7 +174,7 @@ export default function InvitePanel({ onClose, onInvite, pendingInvites, onRevok
                   {pendingInvites.map(inv => (
                     <div key={inv.id} className="flex items-center gap-3 px-3 py-2.5 bg-stone-50 rounded-xl border border-stone-100">
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 border ${
-                        inv.role==='bcba' ? 'bg-teal-50 text-teal-700 border-teal-200'
+                        inv.role==='bcba'||inv.role==='bcaba' ? 'bg-teal-50 text-teal-700 border-teal-200'
                         : inv.role==='rbt' ? 'bg-blue-50 text-blue-700 border-blue-200'
                         : 'bg-purple-50 text-purple-700 border-purple-200'
                       }`}>

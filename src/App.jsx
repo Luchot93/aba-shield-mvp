@@ -13,6 +13,7 @@ import AssessmentFeature from './features/assessment/AssessmentFeature.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import LoginPage from './auth/LoginPage.jsx';
 import SetPasswordPage from './auth/SetPasswordPage.jsx';
+import ClientProfilePanel from './features/clients/components/ClientProfilePanel.jsx';
 
 export default function App() {
   const [page,            setPage]           = useState('pipeline');
@@ -20,9 +21,9 @@ export default function App() {
   const [staff,           setStaff]          = useState(SEED_STAFF);
   const [notifications,   setNotifications]  = useState([]);
   const [selectedClient,  setSelectedClient] = useState(null);
-  const [detailFromPage,  setDetailFromPage] = useState('pipeline');
   const [recentlyMovedId, setRecentlyMovedId]= useState(null);
   const [assessmentClientId, setAssessmentClientId] = useState(null);
+  const [profileClient,      setProfileClient]     = useState(null);
 
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -75,7 +76,7 @@ export default function App() {
     setClients(prev => prev.map(c => {
       if (c.stage === 'assessment' && c.assessment_session == null) {
         const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
-        return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned') };
+        return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned', c) };
       }
       return c;
     }));
@@ -116,16 +117,16 @@ export default function App() {
             clients={clients}
             staff={enrichedStaff}
             setClients={setClients}
-            setSelectedClient={c => { setDetailFromPage('pipeline'); setSelectedClient(c); }}
+            setSelectedClient={c => setSelectedClient(c)}
             currentUser={currentUser}
             addNotif={addNotif}
             onClientAdvanced={handleClientAdvanced}
             recentlyMovedId={recentlyMovedId}
           />
         : <main className="max-w-7xl mx-auto px-6 py-8">
-            {page==='clients'     && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={c => { setDetailFromPage('clients'); setSelectedClient(c); }} currentUser={currentUser}/>}
+            {page==='clients'     && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={c => setProfileClient(c)} currentUser={currentUser}/>}
             {page==='staff'       && <StaffPage staff={staff} setStaff={setStaff} clients={clients} currentUser={currentUser}
-                                      onSelectClient={c => { setDetailFromPage('staff'); setSelectedClient(c); }}/>}
+                                      onSelectClient={c => setProfileClient(c)}/>}
             {page==='metrics'     && (
               currentUser.role === 'admin'
                 ? <MetricsPage clients={clients} staff={staff}/>
@@ -138,7 +139,7 @@ export default function App() {
                   setClients(prev => prev.map(c => {
                     if (c.id === clientId && c.assessment_session == null) {
                       const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
-                      return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned') };
+                      return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned', c) };
                     }
                     return c;
                   }));
@@ -163,14 +164,34 @@ export default function App() {
         </ErrorBoundary>
       )}
 
+      {profileClient && (
+        <ClientProfilePanel
+          client={clients.find(c => c.id === profileClient.id) ?? profileClient}
+          staff={enrichedStaff}
+          onClose={() => setProfileClient(null)}
+          onOpenPipeline={profileClient.pipeline_entry ? () => {
+            setProfileClient(null);
+            setSelectedClient(profileClient);
+          } : null}
+          onAddToPipeline={!profileClient.pipeline_entry ? () => {
+            setClients(prev => prev.map(c =>
+              c.id === profileClient.id
+                ? { ...c, pipeline_entry: true, stage: 'intake', stage_entered_at: new Date().toISOString() }
+                : c
+            ));
+            setProfileClient(null);
+          } : null}
+        />
+      )}
+
       {selectedClient && (
         <ClientDetailPage
           clientId={selectedClient.id}
           clients={clients}
           staff={enrichedStaff}
           setClients={setClients}
-          onBack={() => { setSelectedClient(null); if (detailFromPage === 'staff') setPage('staff'); }}
-          backLabel={detailFromPage === 'staff' ? 'Back to staff' : detailFromPage === 'clients' ? 'Back to clients' : 'Back to pipeline'}
+          onBack={() => setSelectedClient(null)}
+          backLabel="Back to pipeline"
           currentUser={currentUser}
           addNotif={addNotif}
           onClientAdvanced={handleClientAdvanced}
@@ -179,7 +200,7 @@ export default function App() {
             setClients(prev => prev.map(c => {
               if (c.id === clientId && c.assessment_session == null) {
                 const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
-                return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned') };
+                return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned', c) };
               }
               return c;
             }));

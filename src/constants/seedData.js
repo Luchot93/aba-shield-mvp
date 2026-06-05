@@ -55,28 +55,60 @@ const makeSections = () => Object.fromEntries(
   }])
 );
 
-export const makeAssessmentSession = (clientId, clientName, bcbaId, bcbaName) => ({
-  id: `session_${clientId}_${Date.now()}`,
-  clientId, clientName, bcbaId, bcbaName,
-  status: 'not_started',
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  consentGranted: false,
-  consentGrantedAt: null,
-  sectionsWithData: 0,
-  totalInterviewSections: 11,
-  sectionsApproved: 0,
-  clientProfile: {
-    dob: '', phone: '', address: '', referralDate: '',
-    insurerName: '', memberId: '', groupNumber: '', referringProvider: '',
-    diagnosis: '', gender: '', icd10: '', medicaidId: '',
-    assessmentType: 'Initial', assessmentDate: '',
-    parentGuardianNames: '', relationship: '', preferredLanguage: 'English',
-    reasonForReferral: '', interventionSettings: [],
-  },
-  sections: makeSections(),
-  result: null,
-});
+// Fields that map from the client record into clientProfile.
+// Any that are empty at intake time get flagged in _intakeMissingFields
+// so DemographicsForm can show a yellow "needs manual entry" border.
+const INTAKE_PROFILE_MAP = [
+  { profileKey: 'dob',               clientKey: 'dob'               },
+  { profileKey: 'phone',             clientKey: 'phone'             },
+  { profileKey: 'address',           clientKey: 'address'           },
+  { profileKey: 'insurerName',       clientKey: 'insurer_name'      },
+  { profileKey: 'memberId',          clientKey: 'member_id'         },
+  { profileKey: 'groupNumber',       clientKey: 'group_number'      },
+  { profileKey: 'referringProvider', clientKey: 'referring_provider'},
+  { profileKey: 'referralDate',      clientKey: 'referral_date'     },
+  { profileKey: 'gender',            clientKey: 'gender'            },
+  { profileKey: 'icd10',             clientKey: 'icd10'             },
+  { profileKey: 'diagnosis',         clientKey: 'diagnosis'         },
+];
+
+export const makeAssessmentSession = (clientId, clientName, bcbaId, bcbaName, client = null) => {
+  // Build autofill patch from the client record when provided
+  const autofill = {};
+  const _intakeMissingFields = [];
+  if (client) {
+    for (const { profileKey, clientKey } of INTAKE_PROFILE_MAP) {
+      const val = client[clientKey] || '';
+      autofill[profileKey] = val;
+      if (!val) _intakeMissingFields.push(profileKey);
+    }
+  }
+
+  return {
+    id: `session_${clientId}_${Date.now()}`,
+    clientId, clientName, bcbaId, bcbaName,
+    status: 'not_started',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    consentGranted: false,
+    consentGrantedAt: null,
+    sectionsWithData: 0,
+    totalInterviewSections: 11,
+    sectionsApproved: 0,
+    clientProfile: {
+      dob: '', phone: '', address: '', referralDate: '',
+      insurerName: '', memberId: '', groupNumber: '', referringProvider: '',
+      diagnosis: '', gender: '', icd10: '', medicaidId: '',
+      assessmentType: 'Initial', assessmentDate: '',
+      parentGuardianNames: '', relationship: '', preferredLanguage: 'English',
+      reasonForReferral: '', interventionSettings: [],
+      ...autofill,             // overwrite blanks with client record values
+      _intakeMissingFields,    // tracked for yellow-border indicators in DemographicsForm
+    },
+    sections: makeSections(),
+    result: null,
+  };
+};
 
 // ─── Mock interview data — pre-filled demo sessions ──────────────────────────
 
@@ -970,20 +1002,20 @@ Recommended service intensity: 20 hours per week, center-based with parent train
 };
 
 export const SEED_CLIENTS = () => [
-  { id:'c1',  name:'Liam Rodriguez',  dob:'2018-03-15', phone:'(786) 555-0121', address:'1432 SW 8th St, Miami, FL 33135',          insurer_name:'Aetna',        member_id:'AET-884421', group_number:'G-44210', referring_provider:'Dr. Maria Santos',  source:'imported',    referral_date:'2026-04-10', stage_entered_at:'2026-04-10T09:00:00.000Z', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c2',  name:'Sophia Kim',      dob:'2019-07-22', phone:'(305) 555-0198', address:'7821 N Kendall Dr, Miami, FL 33156',        insurer_name:'UnitedHealth', member_id:'UHC-229934', group_number:'G-77811', referring_provider:'Dr. John Park',      source:'crm_created', referral_date:'2026-04-15', stage_entered_at:'2026-04-15T10:30:00.000Z', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c3',  name:'Noah Carter',     dob:'2017-11-08', phone:'(954) 555-0143', address:'3201 Coral Way, Coral Gables, FL 33134',   insurer_name:'Florida Blue', member_id:'FLB-558871', group_number:'G-12390', referring_provider:'Dr. Elaine Torres',  source:'imported',    referral_date:'2026-03-28', stage_entered_at:'2026-04-01T08:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c4',  name:'Emma Thompson',   dob:'2020-01-30', phone:'(561) 555-0167', address:'9400 Glades Rd, Boca Raton, FL 33434',     insurer_name:'Humana',       member_id:'HUM-334490', group_number:'G-98712', referring_provider:'Dr. Robert Chen',    source:'crm_created', referral_date:'2026-04-02', stage_entered_at:'2026-04-22T09:15:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c5',  name:'Oliver Patel',    dob:'2018-06-12', phone:'(786) 555-0134', address:'2100 Biscayne Blvd, Miami, FL 33137',      insurer_name:'Cigna',        member_id:'CIG-778823', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     source:'imported',    referral_date:'2026-03-15', stage_entered_at:'2026-06-04T09:00:00.000Z', stage:'submitted',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c6',  name:'Ava Nguyen',      dob:'2019-09-05', phone:'(305) 555-0189', address:'5540 NW 7th Ave, Miami, FL 33127',         insurer_name:'Aetna',        member_id:'AET-991102', group_number:'G-44210', referring_provider:'Dr. Luis Mendez',    source:'crm_created', referral_date:'2026-02-28', stage_entered_at:'2026-05-19T14:00:00.000Z', stage:'submitted',       denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c7',  name:'Ethan Williams',  dob:'2017-04-18', phone:'(954) 555-0156', address:'800 E Broward Blvd, Ft. Lauderdale, FL',   insurer_name:'Florida Blue', member_id:'FLB-447721', group_number:'G-12390', referring_provider:'Dr. Sarah Johnson',  source:'imported',    referral_date:'2026-02-10', stage_entered_at:'2026-04-05T10:00:00.000Z', stage:'denied',          denial_reason:'Medical necessity not established', bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c8',  name:'Isabella Moore',  dob:'2018-12-25', phone:'(786) 555-0177', address:'6100 SW 57th Ave, South Miami, FL 33143',  insurer_name:'UnitedHealth', member_id:'UHC-883312', group_number:'G-77811', referring_provider:'Dr. Mark Davis',     source:'crm_created', referral_date:'2026-01-20', stage_entered_at:'2026-03-10T09:00:00.000Z', stage:'authorized',      denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-31', reauth_active:false },
-  { id:'c9',  name:'Mason Garcia',    dob:'2019-03-14', phone:'(305) 555-0145', address:'11200 SW 8th St, Miami, FL 33174',         insurer_name:'Humana',       member_id:'HUM-229908', group_number:'G-98712', referring_provider:'Dr. Patricia Lee',   source:'imported',    referral_date:'2026-01-05', stage_entered_at:'2026-03-25T08:30:00.000Z', stage:'staffing',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-15', reauth_active:false },
-  { id:'c10', name:'Charlotte Davis', dob:'2018-08-22', phone:'(561) 555-0122', address:'3400 PGA Blvd, Palm Beach Gardens, FL',    insurer_name:'Cigna',        member_id:'CIG-556634', group_number:'G-55023', referring_provider:'Dr. James Wilson',   source:'crm_created', referral_date:'2025-11-12', stage_entered_at:'2026-01-20T10:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-05-27', reauth_active:true  },
-  { id:'c11', name:'James Martinez',  dob:'2017-05-30', phone:'(786) 555-0190', address:'1800 Coral Way, Miami, FL 33145',          insurer_name:'Aetna',        member_id:'AET-664433', group_number:'G-44210', referring_provider:'Dr. Angela Rivera',  source:'imported',    referral_date:'2025-10-08', stage_entered_at:'2025-12-15T09:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'s1', rbt_id:'s5', auth_expiry_date:'2026-05-20', reauth_active:true  },
-  { id:'c12', name:'Amelia Wilson',   dob:'2020-02-14', phone:'(954) 555-0133', address:'2800 Hollywood Blvd, Hollywood, FL 33020', insurer_name:'Florida Blue', member_id:'FLB-112298', group_number:'G-12390', referring_provider:'Dr. Kevin Brown',    source:'crm_created', referral_date:'2026-03-01', stage_entered_at:'2026-03-05T11:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'s2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c13', name:'Marcus Rivera',  dob:'2017-03-04', phone:'(305) 555-0302', address:'4820 SW 137th Ave, Miami, FL 33175',         insurer_name:'Florida Blue', member_id:'FLB-774421', group_number:'G-12390', referring_provider:'Dr. Adriana Costa',  source:'imported',    referral_date:'2026-05-01', stage_entered_at:'2026-05-02T08:00:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c14', name:'Diego Reyes',    dob:'2018-06-12', phone:'(786) 555-0211', address:'3450 NW 5th Ave, Miami, FL 33127',              insurer_name:'Cigna',        member_id:'CIG-884432', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     source:'imported',    referral_date:'2026-03-20', stage_entered_at:'2026-05-28T10:00:00.000Z', stage:'plan_draft',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c1',  name:'Liam Rodriguez',  dob:'2018-03-15', phone:'(786) 555-0121', address:'1432 SW 8th St, Miami, FL 33135',          insurer_name:'Aetna',        health_plan_name:'Aetna Better Health of Florida',              member_id:'AET-884421', group_number:'G-44210', referring_provider:'Dr. Maria Santos',  referring_provider_npi:'1245319599', referring_provider_phone:'(786) 555-0300', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Maria Rodriguez', parent_relationship:'Mother', parent_email:'m.rodriguez@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-04-10', stage_entered_at:'2026-04-10T09:00:00.000Z', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c2',  name:'Sophia Kim',      dob:'2019-07-22', phone:'(305) 555-0198', address:'7821 N Kendall Dr, Miami, FL 33156',        insurer_name:'UnitedHealth', health_plan_name:'UnitedHealthcare Community Plan of Florida',   member_id:'UHC-229934', group_number:'G-77811', referring_provider:'Dr. John Park',      referring_provider_npi:'1497758544', referring_provider_phone:'(305) 555-0410', gender:'Female', diagnosis:'ASD Level 1', icd10:'F84.0', parent_name:'James Kim', parent_relationship:'Father', parent_email:'j.kim@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-04-15', stage_entered_at:'2026-04-15T10:30:00.000Z', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c3',  name:'Noah Carter',     dob:'2017-11-08', phone:'(954) 555-0143', address:'3201 Coral Way, Coral Gables, FL 33134',   insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-558871', group_number:'G-12390', referring_provider:'Dr. Elaine Torres',  referring_provider_npi:'1083712934', referring_provider_phone:'(954) 555-0520', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Rachel Carter', parent_relationship:'Mother', parent_email:'r.carter@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-03-28', stage_entered_at:'2026-04-01T08:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c4',  name:'Emma Thompson',   dob:'2020-01-30', phone:'(561) 555-0167', address:'9400 Glades Rd, Boca Raton, FL 33434',     insurer_name:'Humana',       health_plan_name:'Humana Healthy Horizons in Florida',          member_id:'HUM-334490', group_number:'G-98712', referring_provider:'Dr. Robert Chen',    referring_provider_npi:'1336198450', referring_provider_phone:'(561) 555-0200', gender:'Female', diagnosis:'ASD Level 3', icd10:'F84.0', parent_name:'Linda Thompson', parent_relationship:'Mother', parent_email:'linda.thompson@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-04-02', stage_entered_at:'2026-04-22T09:15:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c5',  name:'Oliver Patel',    dob:'2018-06-12', phone:'(786) 555-0134', address:'2100 Biscayne Blvd, Miami, FL 33137',      insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-778823', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     referring_provider_npi:'1619028374', referring_provider_phone:'(305) 555-0220', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Priya Patel', parent_relationship:'Mother', parent_email:'priya.patel@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-03-15', stage_entered_at:'2026-06-04T09:00:00.000Z', stage:'submitted',       denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c6',  name:'Ava Nguyen',      dob:'2019-09-05', phone:'(305) 555-0189', address:'5540 NW 7th Ave, Miami, FL 33127',         insurer_name:'Aetna',        health_plan_name:'Aetna Better Health of Florida',              member_id:'AET-991102', group_number:'G-44210', referring_provider:'Dr. Luis Mendez',    referring_provider_npi:'1750892013', referring_provider_phone:'(305) 555-0630', gender:'Female', diagnosis:'ASD Level 1', icd10:'F84.0', parent_name:'Trang Nguyen', parent_relationship:'Mother', parent_email:'trang.nguyen@gmail.com', preferred_language:'Vietnamese', source:'crm_created', referral_date:'2026-02-28', stage_entered_at:'2026-05-19T14:00:00.000Z', stage:'submitted',       denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c7',  name:'Ethan Williams',  dob:'2017-04-18', phone:'(954) 555-0156', address:'800 E Broward Blvd, Ft. Lauderdale, FL',   insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-447721', group_number:'G-12390', referring_provider:'Dr. Sarah Johnson',  referring_provider_npi:'1821934056', referring_provider_phone:'(954) 555-0740', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Michael Williams', parent_relationship:'Father', parent_email:'m.williams@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-02-10', stage_entered_at:'2026-04-05T10:00:00.000Z', stage:'denied',          denial_reason:'Medical necessity not established', bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c8',  name:'Isabella Moore',  dob:'2018-12-25', phone:'(786) 555-0177', address:'6100 SW 57th Ave, South Miami, FL 33143',  insurer_name:'UnitedHealth', health_plan_name:'UnitedHealthcare Community Plan of Florida',   member_id:'UHC-883312', group_number:'G-77811', referring_provider:'Dr. Mark Davis',     referring_provider_npi:'1902847123', referring_provider_phone:'(786) 555-0850', gender:'Female', diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Sarah Moore', parent_relationship:'Mother', parent_email:'s.moore@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-01-20', stage_entered_at:'2026-03-10T09:00:00.000Z', stage:'authorized',      denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-31', reauth_active:false },
+  { id:'c9',  name:'Mason Garcia',    dob:'2019-03-14', phone:'(305) 555-0145', address:'11200 SW 8th St, Miami, FL 33174',         insurer_name:'Humana',       health_plan_name:'Humana Healthy Horizons in Florida',          member_id:'HUM-229908', group_number:'G-98712', referring_provider:'Dr. Patricia Lee',   referring_provider_npi:'1073619284', referring_provider_phone:'(305) 555-0960', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Carmen Garcia', parent_relationship:'Mother', parent_email:'carmen.garcia@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-01-05', stage_entered_at:'2026-03-25T08:30:00.000Z', stage:'staffing',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-15', reauth_active:false },
+  { id:'c10', name:'Charlotte Davis', dob:'2018-08-22', phone:'(561) 555-0122', address:'3400 PGA Blvd, Palm Beach Gardens, FL',    insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-556634', group_number:'G-55023', referring_provider:'Dr. James Wilson',   referring_provider_npi:'1154728390', referring_provider_phone:'(561) 555-0170', gender:'Female', diagnosis:'ASD Level 1', icd10:'F84.0', parent_name:'Jennifer Davis', parent_relationship:'Mother', parent_email:'j.davis@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2025-11-12', stage_entered_at:'2026-01-20T10:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-05-27', reauth_active:true  },
+  { id:'c11', name:'James Martinez',  dob:'2017-05-30', phone:'(786) 555-0190', address:'1800 Coral Way, Miami, FL 33145',          insurer_name:'Aetna',        health_plan_name:'Aetna Better Health of Florida',              member_id:'AET-664433', group_number:'G-44210', referring_provider:'Dr. Angela Rivera',  referring_provider_npi:'1235816047', referring_provider_phone:'(786) 555-0280', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Rosa Martinez', parent_relationship:'Mother', parent_email:'r.martinez@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2025-10-08', stage_entered_at:'2025-12-15T09:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'s1', rbt_id:'s5', auth_expiry_date:'2026-05-20', reauth_active:true  },
+  { id:'c12', name:'Amelia Wilson',   dob:'2020-02-14', phone:'(954) 555-0133', address:'2800 Hollywood Blvd, Hollywood, FL 33020', insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-112298', group_number:'G-12390', referring_provider:'Dr. Kevin Brown',    referring_provider_npi:'1316924875', referring_provider_phone:'(954) 555-0390', gender:'Female', diagnosis:'ASD Level 3', icd10:'F84.0', parent_name:'Thomas Wilson', parent_relationship:'Father', parent_email:'t.wilson@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-03-01', stage_entered_at:'2026-03-05T11:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'s2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c13', name:'Marcus Rivera',   dob:'2017-03-04', phone:'(305) 555-0302', address:'4820 SW 137th Ave, Miami, FL 33175',       insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-774421', group_number:'G-12390', referring_provider:'Dr. Adriana Costa',  referring_provider_npi:'1407536982', referring_provider_phone:'(305) 555-0410', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Daniela Rivera', parent_relationship:'Mother', parent_email:'d.rivera@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-05-01', stage_entered_at:'2026-05-02T08:00:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c14', name:'Diego Reyes',     dob:'2018-06-12', phone:'(786) 555-0211', address:'3450 NW 5th Ave, Miami, FL 33127',         insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-884432', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     referring_provider_npi:'1619028374', referring_provider_phone:'(305) 555-0220', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Ana Reyes', parent_relationship:'Mother', parent_email:'ana.reyes@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-03-20', stage_entered_at:'2026-05-28T10:00:00.000Z', stage:'plan_draft',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
 ].map(c => {
   const cl = mkChecklist();
   // Pre-complete c7 (Ethan Williams) denied checklist so resolve button is enabled
@@ -1033,6 +1065,7 @@ export const SEED_CLIENTS = () => [
       parentGuardianNames:'Linda & David Thompson',
       relationship:       'Parents',
       reasonForReferral:  'ABA evaluation for significant behavioral challenges and communication delays',
+      _intakeMissingFields: [],
     }) :
     c.id === 'c13' ? makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes', MARCUS_INTERVIEW_DATA, {
       dob:                c.dob,
@@ -1053,6 +1086,7 @@ export const SEED_CLIENTS = () => [
       parentGuardianNames:'Daniela & Javier Rivera',
       relationship:       'Parents',
       reasonForReferral:  'ABA evaluation for behavioral escalation, ADL regression, and community avoidance',
+      _intakeMissingFields: [],
     }) :
     c.id === 'c5' ? (() => {
       const s = makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes', OLIVER_INTERVIEW_DATA, {
@@ -1074,12 +1108,13 @@ export const SEED_CLIENTS = () => [
         parentGuardianNames:'Priya & Raj Patel',
         relationship:       'Parents',
         reasonForReferral:  'ABA evaluation for physical aggression, elopement safety risk, and hygiene refusal',
+        _intakeMissingFields: [],
       });
       // Mark session as fully complete — BCBA exported the assessment report
       const sectionCount = Object.values(s.sections).filter(sec => sec.key !== 'demographics').length;
       return { ...s, status: 'complete', sectionsApproved: sectionCount };
     })() :
-    c.stage === 'assessment' ? makeAssessmentSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes') :
+    c.stage === 'assessment' ? makeAssessmentSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes', c) :
     null;
 
   // smart_assessment_session_id is only set after the BCBA exports the assessment (completes the session).
@@ -1192,8 +1227,8 @@ export const SEED_STAFF = () => [
   { id:'s6',  name:'Devon Clark',      initials:'DC', email:'d.clark@abashield.com',   phone:'(555) 720-0165', role:'rbt',  cert_number:'RBT-334455',  cert_expiry:'2026-10-15', cert_effective_date:'2024-10-15', status:'active',  title:'Registered Behavior Technician', npi:'',           caqh_id:'',            hire_date:'2024-04-08', supervisor:'Dr. Ana Reyes' },
   { id:'s7',  name:'Aaliyah Foster',   initials:'AF', email:'a.foster@abashield.com',  phone:'(555) 823-0471', role:'rbt',  cert_number:'RBT-667788',  cert_expiry:'2027-01-28', cert_effective_date:'2025-01-28', status:'active',  title:'Registered Behavior Technician', npi:'',           caqh_id:'',            hire_date:'2024-07-14', supervisor:'Dr. Priya Sharma' },
   { id:'s8',  name:'Carlos Mendez',    initials:'CM', email:'c.mendez@abashield.com',  phone:'(555) 916-0088', role:'rbt',  cert_number:'RBT-990011',  cert_expiry:'2026-08-10', cert_effective_date:'2024-08-10', status:'active',  title:'Registered Behavior Technician', npi:'',           caqh_id:'',            hire_date:'2023-06-01', supervisor:'Marcus Webb'  },
-  { id:'s9',  name:'Yuki Tanaka',      initials:'YT', email:'y.tanaka@abashield.com',  phone:'(555) 103-0529', role:'rbt',  cert_number:'RBT-223344',  cert_expiry:'2027-04-22', cert_effective_date:'2025-04-22', status:'pending', title:'Registered Behavior Technician', npi:'',           caqh_id:'',            hire_date:'2025-11-03', supervisor:'Jordan Ellis' },
-  { id:'s10', name:'Brianna Stone',    initials:'BS', email:'b.stone@abashield.com',   phone:'(555) 205-0617', role:'rbt',  cert_number:'RBT-556677',  cert_expiry:'2026-07-05', cert_effective_date:'2024-07-05', status:'pending', title:'Registered Behavior Technician', npi:'',           caqh_id:'',            hire_date:'2025-12-10', supervisor:'Dr. Priya Sharma' },
+  { id:'s9',  name:'Yuki Tanaka',      initials:'YT', email:'y.tanaka@abashield.com',  phone:'(555) 103-0529', role:'rbt',  cert_number:'RBT-223344',  cert_expiry:'2027-04-22', cert_effective_date:'2025-04-22', status:'active',  title:'Registered Behavior Technician', npi:'',           caqh_id:'',            hire_date:'2025-11-03', supervisor:'Jordan Ellis' },
+  { id:'s10', name:'Brianna Stone',    initials:'BS', email:'b.stone@abashield.com',   phone:'(555) 205-0617', role:'rbt',  cert_number:'RBT-556677',  cert_expiry:'2026-07-05', cert_effective_date:'2024-07-05', status:'active',  title:'Registered Behavior Technician', npi:'',           caqh_id:'',            hire_date:'2025-12-10', supervisor:'Dr. Priya Sharma' },
 ];
 
 export const SEED_USERS = [

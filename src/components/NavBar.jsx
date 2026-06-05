@@ -68,7 +68,7 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
           <nav className="flex items-center gap-0.5 flex-1">
             {[
               ...(isAdmin(currentUser?.role) ? [['metrics','Metrics']] : []),
-              ['pipeline','Pipeline'],['clients','Clients'],['assessments','Assessments'],['staff','Staff'],
+              ['pipeline','Pipeline'],['assessments','Assessments'],['clients','Clients'],['staff','Staff'],
             ].map(([id,label]) => (
               <button key={id} onClick={() => setPage(id)}
                 className={`relative px-3.5 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${page===id ? 'text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}

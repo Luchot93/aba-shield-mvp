@@ -1,14 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Ico } from '../../../components/icons.jsx';
 import StagePill from '../../../components/StagePill.jsx';
+import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock.js';
 
 const EMPTY_FORM = {
   name:'', dob:'', phone:'', address:'',
-  insurer_name:'', member_id:'', group_number:'',
-  referring_provider:'', referral_date: new Date().toISOString().split('T')[0],
+  insurer_name:'', member_id:'', group_number:'', health_plan_name:'',
+  referring_provider:'', referring_provider_npi:'', referring_provider_phone:'',
+  referral_date: new Date().toISOString().split('T')[0],
+  gender:'', icd10:'', diagnosis:'',
+  parent_name:'', parent_relationship:'', parent_email:'', preferred_language:'English',
+  createPipelineEntry: true,
 };
 
 export default function NewClientModal({ clients, onSave, onClose, onOpenClient, onAddToPipeline }) {
+  useBodyScrollLock();
   const [search,         setSearch]         = useState('');
   const [showSearchDrop, setShowSearchDrop] = useState(false);
   const [autoFilled,     setAutoFilled]     = useState(false);
@@ -38,12 +44,19 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
 
     setDirClient(null);
     setAutoFilled(true);
-    setForm({
+    setForm(f => ({
+      ...f,
       name: c.name, dob: c.dob, phone: c.phone||'', address: c.address||'',
       insurer_name: c.insurer_name, member_id: c.member_id,
-      group_number: c.group_number||'', referring_provider: c.referring_provider||'',
+      group_number: c.group_number||'', health_plan_name: c.health_plan_name||'',
+      referring_provider: c.referring_provider||'',
+      referring_provider_npi: c.referring_provider_npi||'',
+      referring_provider_phone: c.referring_provider_phone||'',
       referral_date: new Date().toISOString().split('T')[0],
-    });
+      gender: c.gender||'', icd10: c.icd10||'', diagnosis: c.diagnosis||'',
+      parent_name: c.parent_name||'', parent_relationship: c.parent_relationship||'',
+      parent_email: c.parent_email||'', preferred_language: c.preferred_language||'English',
+    }));
   };
 
   const setField = (k, v) => {
@@ -81,26 +94,33 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
   };
 
   const handleSave = () => {
-    const freshDup = (() => {
-      if (form.name && form.dob) {
-        const m = clients.find(c => c.pipeline_entry && c.name.toLowerCase() === form.name.toLowerCase() && c.dob === form.dob);
-        if (m) return { client: m, reason: 'name_dob' };
-      }
-      if (form.member_id) {
-        const m = clients.find(c => c.pipeline_entry && c.member_id.toLowerCase() === form.member_id.toLowerCase());
-        if (m) return { client: m, reason: 'member_id' };
-      }
-      return null;
-    })();
-    if (freshDup) { setDuplicate(freshDup); setAutoFilled(false); return; }
+    if (form.createPipelineEntry) {
+      const freshDup = (() => {
+        if (form.name && form.dob) {
+          const m = clients.find(c => c.pipeline_entry && c.name.toLowerCase() === form.name.toLowerCase() && c.dob === form.dob);
+          if (m) return { client: m, reason: 'name_dob' };
+        }
+        if (form.member_id) {
+          const m = clients.find(c => c.pipeline_entry && c.member_id.toLowerCase() === form.member_id.toLowerCase());
+          if (m) return { client: m, reason: 'member_id' };
+        }
+        return null;
+      })();
+      if (freshDup) { setDuplicate(freshDup); setAutoFilled(false); return; }
+    }
     if (validate()) onSave({ ...form });
   };
 
   const handleOpenExisting = () => { onOpenClient(duplicate.client); onClose(); };
 
+  const INP = `w-full px-3 py-2 text-sm border border-stone-200 rounded-lg outline-none transition-all
+    placeholder:text-slate-300 focus:border-teal-400 focus:ring-2 focus:ring-teal-100`;
+  const INP_ERR = `w-full px-3 py-2 text-sm border border-red-300 bg-red-50 rounded-lg outline-none
+    focus:ring-2 focus:ring-red-100 placeholder:text-slate-300`;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background:'rgba(0,0,0,0.45)' }}>
-      <div data-testid="new-client-modal" className="bg-white rounded-2xl shadow-2xl w-full mx-4 flex flex-col overflow-hidden" style={{ maxWidth:'520px', maxHeight:'90vh' }}>
+      <div data-testid="new-client-modal" className="bg-white rounded-2xl shadow-2xl w-full mx-4 flex flex-col overflow-hidden" style={{ maxWidth:'560px', maxHeight:'92vh' }}>
 
         {/* Modal header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
@@ -110,7 +130,7 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
           {/* Search bar */}
           <div className="relative">
             <div className="flex items-center gap-2 px-3 py-2.5 border border-stone-200 rounded-xl bg-stone-50 focus-within:border-teal-400 focus-within:ring-2 focus-within:ring-teal-100 transition-all">
@@ -201,37 +221,132 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
             </div>
           )}
 
-          {/* Form fields */}
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { key:'name',               label:'Client Name',       type:'text',   required:true,  col:'col-span-2' },
-              { key:'dob',                label:'Date of Birth',     type:'date',   required:true,  col:'' },
-              { key:'phone',              label:'Phone',             type:'tel',    required:false, col:'' },
-              { key:'insurer_name',       label:'Insurer Name',      type:'text',   required:true,  col:'' },
-              { key:'member_id',          label:'Member ID',         type:'text',   required:true,  col:'' },
-              { key:'group_number',       label:'Group Number',      type:'text',   required:false, col:'' },
-              { key:'referring_provider', label:'Referring Provider',type:'text',   required:false, col:'' },
-              { key:'address',            label:'Address',           type:'text',   required:false, col:'col-span-2' },
-              { key:'referral_date',      label:'Referral Date',     type:'date',   required:false, col:'' },
-            ].map(({ key, label, type, required, col }) => (
-              <div key={key} className={col}>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  {label}{required && <span className="text-red-500 ml-0.5">*</span>}
-                </label>
-                <input
-                  type={type}
-                  value={form[key]}
-                  onChange={e => setField(key, e.target.value)}
-                  data-testid={`field-${key}`}
-                  className={`w-full px-3 py-2 text-sm border rounded-lg outline-none transition-all
-                    ${errors[key]
-                      ? 'border-red-300 bg-red-50 focus:ring-2 focus:ring-red-100'
-                      : 'border-stone-200 focus:border-teal-400 focus:ring-2 focus:ring-teal-100'}`}
-                />
-                {errors[key] && <p className="text-[10px] text-red-500 mt-0.5">{errors[key]}</p>}
-              </div>
-            ))}
+          {/* ── Client demographics ── */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2.5">Client</p>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { key:'name',               label:'Client Name',        type:'text',  required:true,  col:'col-span-2' },
+                { key:'dob',                label:'Date of Birth',      type:'date',  required:true,  col:'' },
+                { key:'phone',              label:'Client Phone',       type:'tel',   required:false, col:'' },
+                { key:'insurer_name',       label:'Insurer Name',       type:'text',  required:true,  col:'' },
+                { key:'member_id',          label:'Member ID',          type:'text',  required:true,  col:'' },
+                { key:'group_number',       label:'Group Number',       type:'text',  required:false, col:'' },
+                { key:'referring_provider', label:'Referring Provider', type:'text',  required:false, col:'' },
+                { key:'address',            label:'Address',            type:'text',  required:false, col:'col-span-2' },
+                { key:'referral_date',           label:'Referral Date',            type:'date',  required:false, col:'' },
+                { key:'gender',                  label:'Gender',                   type:'text',  required:false, col:'',  placeholder:'e.g. Male / Female' },
+                { key:'icd10',                   label:'ICD-10 Code',              type:'text',  required:false, col:'',  placeholder:'e.g. F84.0' },
+                { key:'diagnosis',               label:'Diagnosis',                type:'text',  required:false, col:'col-span-2', placeholder:'e.g. ASD Level 2' },
+                { key:'health_plan_name',        label:'Health Plan Name',         type:'text',  required:false, col:'col-span-2', placeholder:'e.g. Aetna Better Health' },
+                { key:'referring_provider_npi',  label:'Referring Provider NPI',   type:'text',  required:false, col:'',  placeholder:'10-digit NPI' },
+                { key:'referring_provider_phone',label:'Referring Provider Phone', type:'tel',   required:false, col:'',  placeholder:'(555) 000-0000' },
+              ].map(({ key, label, type, required, col, placeholder }) => (
+                <div key={key} className={col}>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    {label}{required && <span className="text-red-500 ml-0.5">*</span>}
+                  </label>
+                  <input
+                    type={type}
+                    value={form[key]}
+                    onChange={e => setField(key, e.target.value)}
+                    data-testid={`field-${key}`}
+                    placeholder={placeholder}
+                    className={errors[key] ? INP_ERR : INP}
+                  />
+                  {errors[key] && <p className="text-[10px] text-red-500 mt-0.5">{errors[key]}</p>}
+                </div>
+              ))}
+            </div>
           </div>
+
+          {/* ── Parent / Guardian ── */}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2.5">Parent / Guardian</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
+                <input type="text" value={form.parent_name} onChange={e => setField('parent_name', e.target.value)}
+                  placeholder="Parent or guardian full name" className={INP} data-testid="field-parent_name"/>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Relationship</label>
+                <select value={form.parent_relationship} onChange={e => setField('parent_relationship', e.target.value)}
+                  className={INP} data-testid="field-parent_relationship">
+                  <option value="">Select…</option>
+                  <option>Mother</option>
+                  <option>Father</option>
+                  <option>Legal Guardian</option>
+                  <option>Grandparent</option>
+                  <option>Foster Parent</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Preferred Language</label>
+                <select value={form.preferred_language} onChange={e => setField('preferred_language', e.target.value)}
+                  className={INP} data-testid="field-preferred_language">
+                  <option value="English">English</option>
+                  <option value="Spanish">Spanish</option>
+                  <option value="Portuguese">Portuguese</option>
+                  <option value="French">French</option>
+                  <option value="Haitian Creole">Haitian Creole</option>
+                  <option value="Vietnamese">Vietnamese</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  Email
+                  <span className="ml-1 font-normal text-slate-400">(stage-change notifications)</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                  </span>
+                  <input type="email" value={form.parent_email} onChange={e => setField('parent_email', e.target.value)}
+                    placeholder="parent@email.com" className={`${INP} pl-9`} data-testid="field-parent_email"/>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Pipeline entry checkbox ── */}
+          <label className="flex items-start gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-colors select-none"
+            style={{
+              background: form.createPipelineEntry ? 'rgba(13,148,136,0.06)' : '#FAFAF8',
+              borderColor: form.createPipelineEntry ? 'rgba(13,148,136,0.3)' : '#E7E5E0',
+            }}>
+            <div className="flex-shrink-0 mt-0.5">
+              <input
+                type="checkbox"
+                checked={form.createPipelineEntry}
+                onChange={e => setField('createPipelineEntry', e.target.checked)}
+                className="sr-only"
+              />
+              <div className="w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
+                style={{
+                  background: form.createPipelineEntry ? '#0D9488' : 'white',
+                  borderColor: form.createPipelineEntry ? '#0D9488' : '#CBD5E1',
+                }}>
+                {form.createPipelineEntry && (
+                  <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                  </svg>
+                )}
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-800">Add to pipeline</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {form.createPipelineEntry
+                  ? 'Client will be created and placed in the Intake stage of the pipeline.'
+                  : 'Client will be saved to the directory only — no pipeline entry created.'}
+              </p>
+            </div>
+          </label>
         </div>
 
         {/* Footer */}
@@ -243,7 +358,7 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
           <button onClick={handleSave} data-testid="save-client"
             className="px-5 py-2 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90 active:scale-95"
             style={{ background:'#0D9488' }}>
-            Save Client
+            {form.createPipelineEntry ? 'Save & Add to Pipeline' : 'Save to Directory'}
           </button>
         </div>
       </div>

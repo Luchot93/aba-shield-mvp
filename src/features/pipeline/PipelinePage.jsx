@@ -47,21 +47,26 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
     });
 
   const handleSaveClient = form => {
+    const { createPipelineEntry, ...clientData } = form;
     const id = `c${Date.now()}`;
     const now = new Date().toISOString();
     setClients(prev => [...prev, {
-      ...form,
-      id, stage:'intake', source:'crm_created',
-      stage_entered_at: now,
-      pipeline_entry: true,
+      ...clientData,
+      id,
+      stage: createPipelineEntry ? 'intake' : null,
+      source: 'crm_created',
+      stage_entered_at: createPipelineEntry ? now : null,
+      pipeline_entry: createPipelineEntry,
       denial_reason:null, bcba_id:null, rbt_id:null,
       auth_expiry_date:null, reauth_active:false,
       smart_assessment_session_id:null,
       checklist:mkChecklist(), documents:[], activity_log:[],
     }]);
     setShowModal(false);
-    setNewClientId(id);
-    setTimeout(() => setNewClientId(null), 3000);
+    if (createPipelineEntry) {
+      setNewClientId(id);
+      setTimeout(() => setNewClientId(null), 3000);
+    }
   };
 
   const handleAddToPipeline = client => {

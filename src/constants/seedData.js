@@ -1127,10 +1127,10 @@ export const SEED_CLIENTS = () => [
 
   // Oliver Patel: patch completed checklists, documents, and activity log
   if (c.id === 'c5') {
-    cl.intake = { referral_form:true, insurance_card:true, cde:true, aba_prescription:true, demographics_confirmed:true, insurance_verified:true, benefits_verified:true };
-    cl.auth_assessment = { cde_confirmed:true, prescription_confirmed:true, referral_confirmed:true, prior_assessments:true, auth_submitted:true, reference_number:'CIG-AUTH-2026-0318-4821', cpt_97151_received:true, bcba_assigned:true };
+    cl.intake = { referral_form:true, insurance_card:true, cde:true, aba_prescription:true, consent_signed:true, demographics_confirmed:true, referral_source:'Dr. Ana Flores · (305) 555-0220', insurance_plan:'Cigna Health', member_id_verified:'CIG-884432 / G-55023', copay_deductible:'$0 copay, $0 deductible remaining', preferred_language:'English', insurance_verified:true, benefits_verified:true };
+    cl.auth_assessment = { cde_confirmed:true, prescription_confirmed:true, referral_confirmed:true, prior_assessments:true, auth_submitted:true, submission_date:'2026-03-28', units_requested:'16', expected_response_date:'2026-04-11', auth_portal:'Availity', reference_number:'CIG-AUTH-2026-0318-4821', cpt_97151_received:true, bcba_assigned:true };
     cl.assessment = { bcba_confirmed:true, caregiver_interview:true, direct_observation:true, vineland3:true, vineland3_date:'2026-04-10', basc3:true, basc3_date:'2026-04-10', additional_assessments:true, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
-    cl.plan_draft = { medical_necessity:true, skill_targets:true, behavior_goals:true, intervention_strategies:true, supervision_hours:'2', data_methodology:'Trial-by-trial data collection with same-day ABC notation', baseline_graphs:true, ai_draft_approved:true, treatment_plan_finalized:true };
+    cl.plan_draft = { medical_necessity:true, skill_targets:true, behavior_goals:true, intervention_strategies:true, hours_97153:'80', hours_97155:'12', hours_97156:'8', data_methodology:'Trial-by-trial data collection with same-day ABC notation', plan_start_date:'2026-06-01', plan_end_date:'2026-11-30', sessions_per_week:'10', session_duration_min:'120', baseline_graphs:true, ai_draft_approved:true, treatment_plan_finalized:true };
     const OLIVER_DOCS = [
       { id:'odoc1', type:'referral_form',      label:'Oliver_Patel_ABA_Referral_Dr_Flores.pdf',              uploaded_at:'2026-03-15T10:00:00.000Z', by:'Admin User',     stage:'intake'          },
       { id:'odoc2', type:'insurance_card',     label:'Cigna_Insurance_Card_Oliver_Patel.pdf',                 uploaded_at:'2026-03-15T10:05:00.000Z', by:'Admin User',     stage:'intake'          },
@@ -1169,10 +1169,10 @@ export const SEED_CLIENTS = () => [
 
   // ── c14 Diego Reyes — plan_draft (same clinical profile as Oliver) ──────────────
   if (c.id === 'c14') {
-    cl.intake        = { referral_form:true, insurance_card:true, cde:true, aba_prescription:true, demographics_confirmed:true, insurance_verified:true, benefits_verified:true };
-    cl.auth_assessment = { cde_confirmed:true, prescription_confirmed:true, referral_confirmed:true, prior_assessments:true, auth_submitted:true, reference_number:'CIG-AUTH-2026-0322-7714', cpt_97151_received:true, bcba_assigned:true };
+    cl.intake        = { referral_form:true, insurance_card:true, cde:true, aba_prescription:true, consent_signed:true, demographics_confirmed:true, referral_source:'Primary care physician — Dr. Ana Flores', insurance_plan:'Cigna Health', member_id_verified:'CIG-884432', copay_deductible:'$0 copay, $0 deductible remaining', insurance_verified:true, benefits_verified:true };
+    cl.auth_assessment = { cde_confirmed:true, prescription_confirmed:true, referral_confirmed:true, prior_assessments:true, auth_submitted:true, submission_date:'2026-04-01', units_requested:'16', expected_response_date:'2026-04-15', auth_portal:'Availity', reference_number:'CIG-AUTH-2026-0322-7714', cpt_97151_received:true, bcba_assigned:true };
     cl.assessment    = { bcba_confirmed:true, caregiver_interview:true, direct_observation:true, vineland3:true, vineland3_date:'2026-04-15', basc3:true, basc3_date:'2026-04-15', additional_assessments:true, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
-    cl.plan_draft    = { medical_necessity:true, skill_targets:true, behavior_goals:true, intervention_strategies:true, supervision_hours:'2', data_methodology:'', baseline_graphs:true, ai_draft_approved:false, treatment_plan_finalized:false };
+    cl.plan_draft    = { medical_necessity:true, skill_targets:true, behavior_goals:true, intervention_strategies:true, hours_97153:'80', hours_97155:'12', hours_97156:'8', data_methodology:'', plan_start_date:'2026-06-01', plan_end_date:'2026-11-30', sessions_per_week:'10', session_duration_min:'120', baseline_graphs:true, ai_draft_approved:false, treatment_plan_finalized:false };
     const DIEGO_DOCS = [
       { id:'ddoc1', type:'referral_form',    label:'Diego_Reyes_ABA_Referral_Dr_Flores.pdf',              uploaded_at:'2026-03-20T10:00:00.000Z', by:'Admin User',    stage:'intake'          },
       { id:'ddoc2', type:'insurance_card',   label:'Cigna_Insurance_Card_Diego_Reyes.pdf',                 uploaded_at:'2026-03-20T10:05:00.000Z', by:'Admin User',    stage:'intake'          },

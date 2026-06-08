@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { STAGES, SM, NEXT_STAGE } from '../../constants/stages.js';
 import { REAUTH_ITEMS, getStageItems } from '../../constants/checklist.js';
 import { itemComplete, itemBlocks } from '../../utils/checklist.js';
@@ -19,6 +20,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [confirmDeny,    setConfirmDeny]    = useState(false);
   const [denyReason,     setDenyReason]     = useState('');
   const [openPicker,     setOpenPicker]     = useState(null);
+  const [pickerAnchor,   setPickerAnchor]   = useState(null); // { top, left, role, pid, pool, item }
   const [formDrafts,     setFormDrafts]     = useState({});
   const [savedFields,    setSavedFields]    = useState(new Set());
   const [viewStage,      setViewStage]      = useState(null);
@@ -56,7 +58,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
   useEffect(() => {
     if (!openPicker) return;
-    const h = e => { if (pickerRef.current && !pickerRef.current.contains(e.target)) setOpenPicker(null); };
+    const h = e => { if (pickerRef.current && !pickerRef.current.contains(e.target)) { setOpenPicker(null); setPickerAnchor(null); } };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, [openPicker]);
@@ -99,8 +101,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
       return { ...c, checklist: { ...c.checklist, [sec]: { ...c.checklist[sec], [key]: val } } };
     }));
 
-  const pushDoc = (type, label, dataUrl) => {
-    const doc = { id:`doc_${Date.now()}`, type, label, uploaded_at:new Date().toISOString(), by:currentUser.name, stage:client.stage, ...(dataUrl ? { dataUrl } : {}) };
+  const pushDoc = (type, label, dataUrl, fieldLabel) => {
+    const doc = { id:`doc_${Date.now()}`, type, label, uploaded_at:new Date().toISOString(), by:currentUser.name, stage:client.stage, ...(dataUrl ? { dataUrl } : {}), ...(fieldLabel ? { field: fieldLabel } : {}) };
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, documents:[...c.documents, doc] } : c));
   };
 
@@ -142,7 +144,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
   const doDeny = () => {
     const reason = denyReason.trim();
-    patchClient({ stage: 'denied', stage_entered_at: new Date().toISOString(), denial_reason: reason || null });
+    patchClient({ stage: 'denied', stage_entered_at: new Date().toISOString(), denial_reason: reason || null, denial_from_stage: client.stage, denial_count: (client.denial_count ?? 0) + 1 });
     const entry = { id:`log_${Date.now()}`, action:'Moved to Denied', ...(reason ? { reason } : {}), ts:new Date().toISOString(), by:currentUser.name };
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, activity_log:[entry, ...c.activity_log] } : c));
     addNotif(mkNotif(`${client.name} — Authorization denied by insurer`, client.name, 'urgent'));
@@ -152,11 +154,45 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     onBack();
   };
 
+  // Return from denied → submitted: snapshot prior values, clear auth fields for new submission
+  const SUBMITTED_AUTH_FIELDS = ['plan_submission_date','approval_uploaded','auth_reference_number','authorized_97153','authorized_97155','authorized_97156','auth_start_date','auth_end_date'];
+  const doReturnFromDenied = (returnStage) => {
+    if (returnStage === 'submitted') {
+      // Snapshot the rejected submitted values before clearing
+      const priorSnap = {};
+      SUBMITTED_AUTH_FIELDS.forEach(k => {
+        const v = client.checklist?.submitted?.[k];
+        if (v !== undefined && v !== '' && v !== false) priorSnap[k] = v;
+      });
+      // Clear auth fields for fresh submission
+      const cleared = {};
+      SUBMITTED_AUTH_FIELDS.forEach(k => { cleared[k] = k === 'approval_uploaded' ? false : ''; });
+      setClients(prev => prev.map(c => {
+        if (c.id !== client.id) return c;
+        return {
+          ...c,
+          stage: returnStage,
+          stage_entered_at: new Date().toISOString(),
+          submitted_prior: Object.keys(priorSnap).length ? priorSnap : c.submitted_prior,
+          checklist: { ...c.checklist, submitted: { ...c.checklist.submitted, ...cleared } },
+          activity_log: [{ id:`log_${Date.now()}`, action:'Returned to Submitted after denial — auth fields reset', ts:new Date().toISOString(), by:currentUser.name }, ...c.activity_log],
+        };
+      }));
+      addNotif(mkNotif(`${client.name} — returned to Submitted for resubmission`, client.name, 'normal'));
+    } else {
+      doAdvance(returnStage);
+      return;
+    }
+    if (onClientAdvanced) onClientAdvanced(client.id);
+    setConfirmAdvance(null);
+    onBack();
+  };
+
   /* ── inline staff picker dropdown ── */
   const PickerDrop = ({ id, pool }) => openPicker !== id ? null : (
     <div ref={pickerRef}
-      className="absolute z-30 top-full left-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-xl overflow-hidden"
-      style={{ width:'220px' }}>
+      className="absolute z-30 top-full left-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-xl overflow-y-auto"
+      style={{ width:'220px', maxHeight:'260px' }}>
       {pool.map(s => (
         <button key={s.id}
           onClick={() => {
@@ -176,59 +212,32 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     </div>
   );
 
-  /* ── assign picker inside checklist item ── */
+  /* ── assign picker inside checklist item — portal-based to escape overflow clipping ── */
+  const openPortalPicker = (e, role, pid, item) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pool = role === 'bcba' ? bcbas : rbts;
+    setPickerAnchor({ top: rect.bottom + 4, left: rect.left, role, pid, pool, item });
+    setOpenPicker(p => p === pid ? null : pid);
+  };
+
   const AssignPicker = ({ item }) => {
     const assignedId = item.role === 'bcba' ? client.bcba_id : client.rbt_id;
     const assigned   = staff.find(s => s.id === assignedId);
-    const pool       = item.role === 'bcba' ? bcbas : rbts;
     const pid        = `cl_${item.role}`;
     return assigned ? (
       <div className="flex items-center gap-2">
         <Avatar initials={assigned.initials} role={item.role} size="sm"/>
         <span className="text-sm text-slate-700">{assigned.name}</span>
         {isAdmin(currentUser.role) && (
-          <div className="relative">
-            <button onClick={() => setOpenPicker(p => p === pid ? null : pid)}
-              className="text-xs text-teal-600 hover:text-teal-800 underline">Change</button>
-            <PickerDrop id={pid} pool={pool}/>
-          </div>
+          <button onClick={e => openPortalPicker(e, item.role, pid, item)}
+            className="text-xs text-teal-600 hover:text-teal-800 underline">Change</button>
         )}
       </div>
     ) : (
-      <div className="relative inline-block">
-        <button onClick={() => setOpenPicker(p => p === pid ? null : pid)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-teal-700 border border-teal-200 bg-teal-50 rounded-lg hover:bg-teal-100">
-          <Ico.Plus/> Assign {item.role.toUpperCase()}
-        </button>
-        {openPicker === pid && (
-          <div ref={pickerRef}
-            className="absolute z-30 top-full left-0 mt-1 bg-white border border-stone-200 rounded-xl shadow-xl overflow-hidden"
-            style={{ width:'220px' }}>
-            {pool.map(s => (
-              <button key={s.id}
-                onClick={() => {
-                  if (item.role === 'bcba') {
-                    patchClient({ bcba_id: s.id });
-                    addNotif(mkNotif(`${s.name} assigned as BCBA to ${client.name}`, client.name, 'normal'));
-                  } else {
-                    patchClient({ rbt_id: s.id });
-                    addNotif(mkNotif(`${s.name} assigned as RBT to ${client.name}`, client.name, 'normal'));
-                  }
-                  patchCL(item.clSec, item.key, true);
-                  pushLog(`${item.role.toUpperCase()} assigned: ${s.name}`);
-                  setOpenPicker(null);
-                }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-stone-50 text-left border-b border-stone-50 last:border-0">
-                <Avatar initials={s.initials} role={s.role} size="sm"/>
-                <div>
-                  <div className="text-sm font-medium text-slate-800">{s.name}</div>
-                  <div className="text-xs text-slate-400">{s.active_case_count} active cases</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <button onClick={e => openPortalPicker(e, item.role, pid, item)}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-teal-700 border border-teal-200 bg-teal-50 rounded-lg hover:bg-teal-100">
+        <Ico.Plus/> Assign {item.role.toUpperCase()}
+      </button>
     );
   };
 
@@ -237,6 +246,13 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     const complete = itemComplete(item, client, staff);
     const blocks   = !readOnly && itemBlocks(item, client, staff);
     const clVal    = client.checklist[item.clSec]?.[item.key];
+
+    if (item.type === 'section_label') return (
+      <div className="flex items-center gap-2 -mx-5 px-5 pt-4 pb-1">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">{item.label}</span>
+        <div className="flex-1 h-px bg-stone-150" style={{ background:'#e7e5e4' }}/>
+      </div>
+    );
 
     return (
       <div className={`py-3.5 border-b border-stone-100 last:border-0 ${blocks ? 'bg-red-50/40 -mx-5 px-5 rounded' : ''}`}>
@@ -252,8 +268,10 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         onChange={e => { patchCL(item.clSec, item.key, e.target.checked); if (e.target.checked) pushLog(`Checked: ${item.label}`); }}
                         className="w-4 h-4 rounded accent-teal-600 cursor-pointer flex-shrink-0"/>
                   }
-                  <span className={`text-sm leading-snug ${complete ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{item.label}</span>
-                  {!readOnly && item.mandatory && !complete && <span className="text-[10px] font-bold text-red-600 px-1.5 py-0.5 bg-red-50 border border-red-200 rounded ml-1 flex-shrink-0">MANDATORY</span>}
+                  <div className="min-w-0">
+                    <span className={`text-sm leading-snug ${complete ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{item.label}</span>
+                    {!readOnly && item.mandatory && !complete && <span className="text-[10px] font-bold text-red-600 px-1.5 py-0.5 bg-red-50 border border-red-200 rounded ml-1 flex-shrink-0">MANDATORY</span>}
+                  </div>
                 </div>
                 {complete && (
                   <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background:'#14B8A6' }}>
@@ -262,6 +280,23 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 )}
               </div>
             )}
+
+            {/* BCBA verification helper — shows assigned BCBA name + NPI under the bcba_matches_auth checkbox */}
+            {item.type === 'checkbox' && item.key === 'bcba_matches_auth' && (() => {
+              const assignedBcba = staff.find(s => s.id === client.bcba_id);
+              if (!assignedBcba) return (
+                <p className="mt-1.5 text-[11px] text-amber-600 pl-6">No BCBA assigned — assign one first</p>
+              );
+              return (
+                <p className="mt-1.5 text-[11px] text-slate-400 pl-6">
+                  Assigned: <span className="font-semibold text-slate-600">{assignedBcba.name}</span>
+                  {assignedBcba.npi
+                    ? <> · NPI <span style={{ fontFamily:'DM Mono, monospace' }} className="text-slate-500">{assignedBcba.npi}</span> — verify both match the authorization letter</>
+                    : <> — verify name matches the authorization letter</>
+                  }
+                </p>
+              );
+            })()}
 
             {item.type === 'upload' && (
               <div className="flex items-center justify-between gap-3">
@@ -309,7 +344,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             const reader = new FileReader();
                             reader.onload = () => {
                               patchCL(item.clSec, item.key, true);
-                              pushDoc(item.docType ?? item.key, file.name, reader.result);
+                              pushDoc(item.docType ?? item.key, file.name, reader.result, item.label);
                               pushLog(`Uploaded: ${item.label} — ${file.name}`);
                             };
                             reader.readAsDataURL(file);
@@ -321,15 +356,50 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
             )}
 
             {item.type === 'form_field' && (() => {
-              const draft    = formDrafts[item.key] !== undefined ? formDrafts[item.key] : (clVal ?? '');
-              const isDirty  = formDrafts[item.key] !== undefined && formDrafts[item.key] !== (clVal ?? '');
+              // Auto-seed from plan_draft, assessment session, or client record
+              let autoDefault = '';
+              let autoDefaultSource = ''; // 'plan' | 'assessment' | 'client'
+
+              if (item.planDraftKey) {
+                const val = client.checklist?.plan_draft?.[item.planDraftKey];
+                if (val) { autoDefault = String(val); autoDefaultSource = 'plan'; }
+              }
+              if (!autoDefault && item.sessionField && client.assessment_session) {
+                const sec = client.assessment_session.sections?.[item.sessionField];
+                if (item.sessionTransform === 'trainingFreqToHours') {
+                  const freq = (sec?.trainingFrequency ?? '').toLowerCase();
+                  if (freq.includes('2x') || freq.includes('twice'))     autoDefault = '8';
+                  else if (freq.includes('1x') || freq.includes('once')) autoDefault = '4';
+                  else if (freq.includes('month'))                        autoDefault = '2';
+                }
+                if (autoDefault) autoDefaultSource = 'assessment';
+              }
+              if (!autoDefault && item.authorizedKey) {
+                const val = client.checklist?.authorized?.[item.authorizedKey];
+                if (val) { autoDefault = String(val); autoDefaultSource = 'authorized'; }
+              }
+              if (!autoDefault) {
+                const clientDefault = item.clientFields
+                  ? item.clientFields.map(f => client[f] || '').filter(Boolean).join(item.clientFieldSep ?? ' ')
+                  : item.clientField ? (client[item.clientField] ?? '') : '';
+                if (clientDefault) { autoDefault = clientDefault; autoDefaultSource = 'client'; }
+              }
+              const sessionDefaultSource = autoDefaultSource; // keep hint label alias
+              const draft    = formDrafts[item.key] !== undefined ? formDrafts[item.key] : (clVal || autoDefault);
               const savedVal = clVal ?? '';
+              // Dirty when user has typed something different, OR when an auto default
+              // is pre-filled but hasn't been confirmed/saved to the checklist yet.
+              const isDirty  = formDrafts[item.key] !== undefined
+                ? formDrafts[item.key] !== savedVal
+                : !!(autoDefault && !savedVal);
               const justSaved = savedFields.has(item.key);
+              // Whether this field can auto-seed but the client record has no data for it
+              const missingClientData = !!(item.clientFields?.length && !clientDefault && !savedVal);
 
               const handleSave = () => {
                 patchCL(item.clSec, item.key, draft);
                 setFormDrafts(d => { const n = { ...d }; delete n[item.key]; return n; });
-                if (draft !== savedVal) pushLog(`Updated: ${item.label}`);
+                if (draft !== savedVal) pushLog(`Updated: ${item.label} — ${draft}`);
                 // Flash "Saved" for 2 seconds
                 setSavedFields(prev => new Set(prev).add(item.key));
                 clearTimeout(saveTimers.current[item.key]);
@@ -351,7 +421,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             onChange={e => setFormDrafts(d => ({ ...d, [item.key]: e.target.value }))}
                             onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
                             data-testid={`detail-field-${item.key}`}
-                            placeholder={item.fieldType === 'number' ? '0' : 'Enter…'}
+                            placeholder={item.placeholder ?? (item.fieldType === 'number' ? '0' : 'Enter…')}
                             className="flex-1 max-w-xs px-3 py-1.5 text-sm border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
                           <button
                             onClick={handleSave}
@@ -366,7 +436,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             {justSaved ? '✓ Saved' : 'Save'}
                           </button>
                         </div>
-                        {/* Saved confirmation line */}
+                        {/* Saved confirmation */}
                         {justSaved && savedVal && (
                           <p className="mt-1.5 text-[11px] font-medium text-emerald-600 flex items-center gap-1">
                             <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -375,14 +445,124 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             Saved: <span style={{ fontFamily:'DM Mono, monospace' }}>{savedVal}</span>
                           </p>
                         )}
+                        {/* Existing saved value (not dirty, not just saved) */}
                         {!justSaved && savedVal && !isDirty && (
                           <p className="mt-1 text-[11px] text-slate-400 flex items-center gap-1">
                             <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
                             </svg>
-                            Current value: <span style={{ fontFamily:'DM Mono, monospace' }}>{savedVal}</span>
+                            Current: <span style={{ fontFamily:'DM Mono, monospace' }}>{savedVal}</span>
                           </p>
                         )}
+                        {/* Pre-filled from assessment or client record but not yet saved */}
+                        {!justSaved && autoDefault && !savedVal && (
+                          <p className="mt-1 text-[11px] text-teal-600 font-medium flex items-center gap-1">
+                            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Pre-filled from {autoDefaultSource === 'plan' ? 'Plan Draft' : autoDefaultSource === 'assessment' ? 'assessment' : autoDefaultSource === 'authorized' ? 'Authorized stage' : 'client record'} — confirm and save
+                          </p>
+                        )}
+                        {/* Client record has no data for this field — manual entry needed */}
+                        {!justSaved && missingClientData && (
+                          <p className="mt-1 text-[11px] text-amber-600 font-medium flex items-center gap-1">
+                            <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                            </svg>
+                            Not on file — collect and enter manually
+                          </p>
+                        )}
+                        {/* Previously rejected value — shown when returning to Submitted after denial */}
+                        {item.clSec === 'submitted' && (() => {
+                          const prior = client.submitted_prior?.[item.key];
+                          if (!prior) return null;
+                          return (
+                            <p className="mt-1.5 text-[11px] text-red-500 flex items-center gap-1">
+                              <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                              </svg>
+                              Previously rejected: <span style={{ fontFamily:'DM Mono, monospace' }}>{String(prior)}</span>
+                            </p>
+                          );
+                        })()}
+                        {/* Suggest date offset from another saved field (e.g. appeal_deadline from denial_date + 30) */}
+                        {item.suggestFromField && !savedVal && !formDrafts[item.key] && (() => {
+                          const sourceVal = client.checklist?.[item.clSec]?.[item.suggestFromField];
+                          if (!sourceVal) return null;
+                          const base = new Date(sourceVal + 'T00:00:00');
+                          base.setDate(base.getDate() + (item.suggestOffsetDays ?? 30));
+                          const suggested = base.toISOString().split('T')[0];
+                          const fmtSuggested = base.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+                          return (
+                            <button
+                              onClick={() => {
+                                patchCL(item.clSec, item.key, suggested);
+                                pushLog(`Updated: ${item.label} — ${suggested}`);
+                                setSavedFields(prev => new Set(prev).add(item.key));
+                                clearTimeout(saveTimers.current[item.key]);
+                                saveTimers.current[item.key] = setTimeout(() => {
+                                  setSavedFields(prev => { const n = new Set(prev); n.delete(item.key); return n; });
+                                }, 2000);
+                              }}
+                              className="mt-1.5 text-[11px] text-teal-600 hover:text-teal-800 font-medium underline flex items-center gap-1">
+                              <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                              </svg>
+                              Suggest: {fmtSuggested} ({item.suggestOffsetDays} days from denial date)
+                            </button>
+                          );
+                        })()}
+
+                        {/* Suggest 6-month plan period — shown on plan_start_date when both dates are empty */}
+                        {item.suggestPeriod && !savedVal && !formDrafts[item.key] && (() => {
+                          const today = new Date();
+                          const end   = new Date(today); end.setMonth(end.getMonth() + 6);
+                          const fmt   = d => d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+                          const startIso = today.toISOString().split('T')[0];
+                          const endIso   = end.toISOString().split('T')[0];
+                          return (
+                            <button
+                              onClick={() => {
+                                const endKey = item.suggestEndKey ?? 'plan_end_date';
+                                patchCL(item.clSec, item.key, startIso);
+                                patchCL(item.clSec, endKey, endIso);
+                                pushLog(`Updated: ${item.label} — ${startIso} → ${endIso}`);
+                                setSavedFields(prev => new Set(prev).add(item.key).add(endKey));
+                                clearTimeout(saveTimers.current[`suggest_${item.key}`]);
+                                saveTimers.current[`suggest_${item.key}`] = setTimeout(() => {
+                                  setSavedFields(prev => { const n = new Set(prev); n.delete(item.key); n.delete(endKey); return n; });
+                                }, 2000);
+                              }}
+                              className="mt-1.5 text-[11px] text-teal-600 hover:text-teal-800 font-medium underline flex items-center gap-1">
+                              <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                              </svg>
+                              Suggest 6-month period: {fmt(today)} → {fmt(end)}
+                            </button>
+                          );
+                        })()}
+
+                        {/* Hour budget hint for schedule_template in authorized stage */}
+                        {item.scheduleHint && (() => {
+                          const sub = client.checklist?.submitted ?? {};
+                          const h97153 = parseFloat(sub.authorized_97153) || 0;
+                          const h97155 = parseFloat(sub.authorized_97155) || 0;
+                          const h97156 = parseFloat(sub.authorized_97156) || 0;
+                          if (!h97153 && !h97155 && !h97156) return null;
+                          const parts = [
+                            h97153 && `97153: ${h97153}h/mo → ~${Math.round(h97153 / 4.3)}h/wk`,
+                            h97155 && `97155: ${h97155}h/mo`,
+                            h97156 && `97156: ${h97156}h/mo`,
+                          ].filter(Boolean);
+                          return (
+                            <p className="mt-2 text-[11px] text-slate-400 flex items-start gap-1">
+                              <svg className="w-3 h-3 flex-shrink-0 mt-0.5 text-teal-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                              </svg>
+                              <span>Authorized hours: <span className="text-slate-600 font-medium">{parts.join(' · ')}</span> — schedule direct therapy hours across session days</span>
+                            </p>
+                          );
+                        })()}
                       </>
                   }
                 </div>
@@ -393,20 +573,68 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               if (readOnly) {
                 const assignedId = item.role === 'bcba' ? client.bcba_id : client.rbt_id;
                 const assigned   = staff.find(s => s.id === assignedId);
-                return assigned
-                  ? <div className="flex items-center gap-2">
-                      <Avatar initials={assigned.initials} role={item.role} size="sm"/>
-                      <span className="text-sm text-slate-700">{assigned.name}</span>
-                    </div>
-                  : <span className="text-sm text-slate-400">Not assigned</span>;
+                return (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm text-slate-800">{item.label}</span>
+                    {assigned
+                      ? <div className="flex items-center gap-2">
+                          <Avatar initials={assigned.initials} role={item.role} size="sm"/>
+                          <span className="text-sm text-slate-700">{assigned.name}</span>
+                        </div>
+                      : <span className="text-sm text-slate-400">Not assigned</span>
+                    }
+                  </div>
+                );
               }
-              return <AssignPicker item={item}/>;
+              return (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-slate-800">{item.label}</span>
+                  <AssignPicker item={item}/>
+                </div>
+              );
             })()}
 
             {item.type === 'auto' && (() => {
               let display = ''; let cc = 'bg-teal-50 border-teal-200 text-teal-700';
               if (item.always) {
-                display = `${client.name} · ${client.dob}`;
+                const diagPart = client.icd10 ? `${client.diagnosis || 'ASD'} (${client.icd10})` : client.diagnosis || '';
+                const parts = [client.dob, client.insurer_name, client.member_id, diagPart].filter(Boolean);
+                display = parts.join(' · ') || client.name;
+              } else if (item.planDraftHours) {
+                const pd = client.checklist?.plan_draft ?? {};
+                const parts = [
+                  pd.hours_97153 && `97153: ${pd.hours_97153}h`,
+                  pd.hours_97155 && `97155: ${pd.hours_97155}h`,
+                  pd.hours_97156 && `97156: ${pd.hours_97156}h`,
+                ].filter(Boolean);
+                if (parts.length) {
+                  display = parts.join(' · ');
+                } else {
+                  display = 'No hours set in Plan Draft';
+                  cc = 'bg-amber-50 border-amber-200 text-amber-700';
+                }
+              } else if (item.intakeKey) {
+                const done = !!client.checklist?.intake?.[item.intakeKey];
+                display = done ? 'Uploaded in Intake' : 'Not uploaded yet';
+                cc = done ? 'bg-teal-50 border-teal-200 text-teal-700' : 'bg-amber-50 border-amber-200 text-amber-700';
+              } else if (item.sessionKey) {
+                const session = client.assessment_session;
+                if (!session) {
+                  display = 'Complete Smart Assessment first';
+                  cc = 'bg-slate-100 border-slate-200 text-slate-500';
+                } else {
+                  const done = itemComplete(item, client, staff);
+                  if (item.sessionKey === 'behaviors_any' && done) {
+                    const count = session.sections?.behavior_targets?.behaviorTargets?.length ?? 0;
+                    display = `${count} behavior${count !== 1 ? 's' : ''} identified`;
+                  } else if (item.sessionKey === 'behaviors_baseline' && done) {
+                    const count = session.sections?.behavior_targets?.behaviorTargets?.filter(b => b.baselineFrequency).length ?? 0;
+                    display = `${count} with baseline data`;
+                  } else {
+                    display = done ? 'Captured in assessment' : 'Not yet recorded';
+                    if (!done) cc = 'bg-amber-50 border-amber-200 text-amber-700';
+                  }
+                }
               } else if (item.bcbaAuto) {
                 display = bcba ? bcba.name : 'Not assigned';
                 if (!bcba) cc = 'bg-amber-50 border-amber-200 text-amber-700';
@@ -414,13 +642,30 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 const rm = staff.find(s => s.id === client.rbt_id);
                 if (!rm) { display = 'No RBT assigned'; cc = 'bg-slate-100 border-slate-200 text-slate-500'; }
                 else {
-                  const exp = new Date(rm.cert_expiry) <= new Date();
-                  display = `Expires ${rm.cert_expiry}`;
-                  if (exp) cc = 'bg-red-50 border-red-200 text-red-700';
+                  const daysLeft = Math.ceil((new Date(rm.cert_expiry) - new Date()) / 86_400_000);
+                  if (daysLeft <= 0) {
+                    display = `Expired ${rm.cert_expiry}`;
+                    cc = 'bg-red-50 border-red-200 text-red-700';
+                  } else if (daysLeft <= 30) {
+                    display = `⚠ Expires in ${daysLeft}d`;
+                    cc = 'bg-amber-50 border-amber-300 text-amber-700';
+                  } else {
+                    display = `Expires ${rm.cert_expiry}`;
+                  }
                 }
               } else if (item.rbtCreds) {
-                display = client.rbt_id ? 'On file' : '—';
-                if (!client.rbt_id) cc = 'bg-slate-100 border-slate-200 text-slate-400';
+                if (!client.rbt_id) {
+                  display = 'No RBT assigned';
+                  cc = 'bg-slate-100 border-slate-200 text-slate-500';
+                } else {
+                  const rm = staff.find(s => s.id === client.rbt_id);
+                  if (!rm?.cert_number) {
+                    display = 'Missing — add cert # on Staff page';
+                    cc = 'bg-amber-50 border-amber-200 text-amber-700';
+                  } else {
+                    display = `On file · ${rm.cert_number}`;
+                  }
+                }
               }
               return (
                 <div className="flex items-center justify-between gap-3">
@@ -542,6 +787,47 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
       </div>
     );
   };
+
+  /* ── portal picker dropdown — renders at document.body level to escape overflow clipping ── */
+  const AssignPickerPortal = (pickerAnchor && openPicker === pickerAnchor.pid) ? ReactDOM.createPortal(
+    <div ref={pickerRef}
+      className="fixed bg-white border border-stone-200 rounded-xl shadow-xl overflow-y-auto"
+      style={{ zIndex: 9999, top: pickerAnchor.top, left: pickerAnchor.left, width: '220px', maxHeight: '260px' }}>
+      {pickerAnchor.pool.map(s => (
+        <button key={s.id}
+          onClick={() => {
+            const { role, item } = pickerAnchor;
+            if (role === 'bcba') {
+              patchClient({ bcba_id: s.id });
+              addNotif(mkNotif(`${s.name} assigned as BCBA to ${client.name}`, client.name, 'normal'));
+            } else {
+              patchClient({ rbt_id: s.id });
+              addNotif(mkNotif(`${s.name} assigned as RBT to ${client.name}`, client.name, 'normal'));
+            }
+            if (item) patchCL(item.clSec, item.key, true);
+            pushLog(`${role.toUpperCase()} assigned: ${s.name}`);
+            setOpenPicker(null);
+            setPickerAnchor(null);
+          }}
+          className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-stone-50 text-left border-b border-stone-50 last:border-0">
+          <Avatar initials={s.initials} role={s.role} size="sm"/>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-sm font-medium text-slate-800">{s.name}</span>
+              {pickerAnchor?.role === 'rbt' && s.cert_expiry && (() => {
+                const dLeft = Math.ceil((new Date(s.cert_expiry) - new Date()) / 86_400_000);
+                if (dLeft <= 0) return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700">Cert expired</span>;
+                if (dLeft <= 30) return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">Exp. in {dLeft}d</span>;
+                return null;
+              })()}
+            </div>
+            <div className="text-xs text-slate-400">{s.active_case_count} active cases</div>
+          </div>
+        </button>
+      ))}
+    </div>,
+    document.body
+  ) : null;
 
   /* ── render ── */
   return (
@@ -677,6 +963,97 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 )}
               </div>
 
+              {/* Auth summary banner — shown in Authorized stage */}
+              {client.stage === 'authorized' && (() => {
+                const sub = client.checklist?.submitted ?? {};
+                const hasAny = sub.auth_reference_number || sub.auth_start_date || sub.auth_end_date || sub.authorized_97153 || sub.authorized_97155 || sub.authorized_97156;
+                if (!hasAny) return null;
+                const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
+                const approvalDoc = client.documents?.findLast?.(d => d.type === 'auth_approval') ?? client.documents?.slice().reverse().find(d => d.type === 'auth_approval');
+                return (
+                  <div className="mx-5 mb-3 rounded-xl border border-teal-200 bg-teal-50/60 p-3.5 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-teal-600">Authorization Summary</p>
+                      {client.insurer_name && <span className="text-[11px] font-medium text-teal-700">{client.insurer_name}</span>}
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                      {sub.auth_reference_number && (
+                        <span className="text-xs text-slate-700">Auth # <span className="font-semibold" style={{ fontFamily:'DM Mono, monospace' }}>{sub.auth_reference_number}</span></span>
+                      )}
+                      {(sub.auth_start_date || sub.auth_end_date) && (
+                        <span className="text-xs text-slate-700">Period <span className="font-semibold">{fmtDate(sub.auth_start_date)} → {fmtDate(sub.auth_end_date)}</span></span>
+                      )}
+                    </div>
+                    {(sub.authorized_97153 || sub.authorized_97155 || sub.authorized_97156) && (
+                      <div className="flex flex-wrap gap-x-4 gap-y-1">
+                        {sub.authorized_97153 && <span className="text-xs text-slate-600">97153 <span className="font-semibold text-teal-700">{sub.authorized_97153}h</span></span>}
+                        {sub.authorized_97155 && <span className="text-xs text-slate-600">97155 <span className="font-semibold text-teal-700">{sub.authorized_97155}h</span></span>}
+                        {sub.authorized_97156 && <span className="text-xs text-slate-600">97156 <span className="font-semibold text-teal-700">{sub.authorized_97156}h</span></span>}
+                      </div>
+                    )}
+                    {approvalDoc && (
+                      <div className="pt-1 border-t border-teal-200/60 flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-slate-500 truncate">📄 {approvalDoc.label}</span>
+                        {approvalDoc.dataUrl
+                          ? <a href={approvalDoc.dataUrl} download={approvalDoc.label}
+                              className="text-[11px] font-semibold text-teal-700 hover:text-teal-900 flex-shrink-0">↓ Download</a>
+                          : <span className="text-[11px] text-slate-400 flex-shrink-0">Uploaded</span>
+                        }
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Reauth countdown banner — shown in Services stage when auth end date is known */}
+              {client.stage === 'services' && (() => {
+                const authEnd = client.checklist?.submitted?.auth_end_date;
+                if (!authEnd) return null;
+                const daysLeft = Math.ceil((new Date(authEnd + 'T00:00:00').getTime() - Date.now()) / 86_400_000);
+                const color = daysLeft < 30 ? { bg:'#FEF2F2', border:'#FECACA', text:'#B91C1C', icon:'🔴' }
+                            : daysLeft < 60 ? { bg:'#FFFBEB', border:'#FDE68A', text:'#B45309', icon:'⚠' }
+                            : { bg:'#F8FAFC', border:'#E2E8F0', text:'#475569', icon:'📅' };
+                const fmtEnd = new Date(authEnd + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+                return (
+                  <div className="mx-5 mb-3 rounded-xl border px-3.5 py-2.5 flex items-center gap-2.5"
+                    style={{ background: color.bg, borderColor: color.border }}>
+                    <span>{color.icon}</span>
+                    <p className="text-xs font-semibold" style={{ color: color.text }}>
+                      Authorization expires in {daysLeft > 0 ? `${daysLeft} days` : 'today'} ({fmtEnd}) — start reauth now
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {/* Staffing — schedule reference banner from Authorized stage */}
+              {client.stage === 'staffing' && (() => {
+                const sched    = client.checklist?.authorized?.schedule_template;
+                const location = client.checklist?.authorized?.session_location;
+                if (!sched && !location) return null;
+                return (
+                  <div className="mx-5 mb-3 rounded-xl border border-slate-200 bg-stone-50 p-3 space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Planned from Authorized</p>
+                    {sched && (
+                      <div className="flex items-start gap-2">
+                        <svg className="w-3.5 h-3.5 text-teal-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span className="text-xs text-slate-700 font-medium">{sched}</span>
+                      </div>
+                    )}
+                    {location && (
+                      <div className="flex items-center gap-2">
+                        <svg className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <span className="text-xs text-slate-600">{location}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Scrollable checklist items */}
               <div className="flex-1 overflow-y-auto px-5">
                 {displayItems.length === 0
@@ -706,25 +1083,19 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               )}
 
               {!isReadOnly && userCanEdit && client.stage === 'denied' && (() => {
-                const deniedItems = getStageItems('denied');
-                const deniedAllDone = deniedItems.every(it => itemComplete(it, client, staff));
+                const returnStage = client.denial_from_stage ?? 'submitted';
+                const returnLabel = returnStage === 'auth_assessment' ? 'Auth Assessment' : 'Submitted';
+                const isResubmit  = returnStage === 'submitted';
                 return (
                   <div className="flex-shrink-0 border-t border-stone-100 p-4">
-                    <div className="flex gap-3">
-                      <button data-testid="resolve-authorized"
-                        disabled={!deniedAllDone}
-                        onClick={() => deniedAllDone && setConfirmAdvance('authorized')}
-                        className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${deniedAllDone ? 'text-white hover:opacity-90' : 'bg-stone-100 text-stone-400 cursor-not-allowed'}`}
-                        style={deniedAllDone ? { background:'#059669' } : {}}>
-                        Move to Authorized →
-                      </button>
-                      <button data-testid="resolve-submitted" onClick={() => setConfirmAdvance('submitted')}
-                        className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background:'#D97706' }}>
-                        Return to Submitted →
-                      </button>
-                    </div>
-                    {!deniedAllDone && (
-                      <p className="text-xs text-slate-400 text-center mt-2">Complete all items above to resolve</p>
+                    <button data-testid="resolve-return"
+                      onClick={() => doReturnFromDenied(returnStage)}
+                      className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
+                      style={{ background:'#D97706' }}>
+                      Return to {returnLabel} →
+                    </button>
+                    {isResubmit && (
+                      <p className="text-[11px] text-slate-400 text-center mt-2">Auth fields will be cleared for the new submission. Previous values will be saved as reference.</p>
                     )}
                   </div>
                 );
@@ -818,10 +1189,16 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   <div className="divide-y divide-stone-50" data-testid="documents-panel">
                   {visibleDocs.length === 0
                     ? <p className="px-4 py-5 text-xs text-center text-slate-400">No documents uploaded yet.</p>
-                    : visibleDocs.map(d => (
+                    : visibleDocs.map(d => {
+                      // Human-readable field label: prefer stored field prop, fall back to formatting d.type
+                      const fmtType = (t = '') => t.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                      const fieldLabel = d.type === 'assessment_draft' ? null
+                        : d.type === 'final_assessment' ? null
+                        : (d.field || fmtType(d.type));
+                      return (
                       <div key={d.id} className="px-4 py-2.5 flex items-center gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 mb-0.5">
+                          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
                             {d.type === 'assessment_draft' && (
                               <span className="flex-shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
                                 style={{ background:'#FEF3C7', color:'#92400E', border:'1px solid #FDE68A' }}>Draft</span>
@@ -829,6 +1206,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             {d.type === 'final_assessment' && (
                               <span className="flex-shrink-0 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded"
                                 style={{ background:'rgba(20,184,166,0.1)', color:'#0D9488', border:'1px solid rgba(20,184,166,0.3)' }}>Final</span>
+                            )}
+                            {fieldLabel && (
+                              <span className="flex-shrink-0 text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-stone-100 text-slate-500 border border-stone-200">{fieldLabel}</span>
                             )}
                             <span className="text-xs font-medium text-slate-700 truncate">{d.label}</span>
                           </div>
@@ -855,7 +1235,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                           <span>Download</span>
                         </button>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               )}
@@ -953,6 +1334,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
           </div>
         </div>
       )}
+
+      {/* Portal-based assign picker — always rendered at body level to escape overflow clipping */}
+      {AssignPickerPortal}
     </div>
   );
 }

@@ -25,16 +25,37 @@ export function itemComplete(item, client, staff) {
   const val = client.checklist[item.clSec]?.[item.key];
   switch (item.type) {
     case 'checkbox': case 'upload': case 'file_upload': return val === true;
-    case 'form_field': return typeof val === 'string' ? val.trim() !== '' : (val !== '' && val != null);
+    case 'form_field': if (item.optional) return true; return typeof val === 'string' ? val.trim() !== '' : (val !== '' && val != null);
     case 'assign':     return item.role === 'bcba' ? !!client.bcba_id : !!client.rbt_id;
     case 'bridge':     return !!client.smart_assessment_session_id;
     case 'smart_auto': return !!client.smart_assessment_session_id;
     case 'dated':      return val === true;
+    case 'section_label': return true;
     case 'auto': {
-      if (item.always)   return true;
-      if (item.bcbaAuto) return !!client.bcba_id;
-      if (item.rbtCreds) return !!client.rbt_id;
-      if (item.rbtCert)  {
+      if (item.always)       return true;
+      if (item.planDraftHours) {
+        const pd = client.checklist?.plan_draft;
+        return !!(pd?.hours_97153 || pd?.hours_97155 || pd?.hours_97156);
+      }
+      if (item.intakeKey) return !!client.checklist?.intake?.[item.intakeKey];
+      if (item.sessionKey) {
+        const session = client.assessment_session;
+        if (!session) return false;
+        const bt = session.sections?.behavior_targets;
+        switch (item.sessionKey) {
+          case 'caregiver_section':   return session.sections?.caregiver_training?.completionState !== 'empty';
+          case 'behaviors_section':   return bt?.completionState !== 'empty';
+          case 'behaviors_any':       return (bt?.behaviorTargets?.length ?? 0) > 0;
+          case 'behaviors_baseline':  return bt?.behaviorTargets?.some(b => b.baselineFrequency) ?? false;
+          default: return false;
+        }
+      }
+      if (item.bcbaAuto)  return !!client.bcba_id;
+      if (item.rbtCreds)  {
+        const r = staff.find(s => s.id === client.rbt_id);
+        return !!r && !!(r.cert_number);
+      }
+      if (item.rbtCert)   {
         const r = staff.find(s => s.id === client.rbt_id);
         return !!r && new Date(r.cert_expiry) > new Date();
       }

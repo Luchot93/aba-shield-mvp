@@ -1144,6 +1144,64 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 );
               })()}
 
+              {/* Staffing — caregiver contact card */}
+              {client.stage === 'staffing' && (() => {
+                // Primary contact from client record
+                const primary = client.parent_name ? {
+                  name:         client.parent_name,
+                  relationship: client.parent_relationship ?? 'Guardian',
+                  phone:        client.phone ?? null,
+                  email:        client.parent_email ?? null,
+                  role:         'Primary',
+                } : null;
+                // Additional contacts from assessment emergency contacts (exclude medical roles)
+                const extraContacts = (client.assessment_session?.emergencyContacts ?? [])
+                  .filter(c => c.role !== 'Medical')
+                  .filter(c => !primary || c.name !== primary.name);
+                if (!primary && !extraContacts.length) return null;
+                const allContacts = [primary, ...extraContacts].filter(Boolean);
+                return (
+                  <div className="mx-5 mb-3 rounded-xl border border-slate-200 bg-stone-50 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Caregiver contacts</p>
+                    <div className="space-y-2.5">
+                      {allContacts.map((c, i) => (
+                        <div key={i} className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-semibold text-slate-700">{c.name}</span>
+                              <span className="text-[10px] text-slate-400 font-medium">{c.relationship}</span>
+                              {c.role === 'Primary' && (
+                                <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-700">Primary</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                              {c.phone && (
+                                <a href={`tel:${c.phone}`}
+                                  className="flex items-center gap-1 text-[11px] text-teal-600 hover:text-teal-800 font-medium transition-colors">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                  </svg>
+                                  {c.phone}
+                                </a>
+                              )}
+                              {c.email && (
+                                <a href={`mailto:${c.email}`}
+                                  className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-teal-600 font-medium transition-colors">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                  </svg>
+                                  {c.email}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Scrollable checklist items */}
               <div className="flex-1 overflow-y-auto px-5">
                 {displayItems.length === 0

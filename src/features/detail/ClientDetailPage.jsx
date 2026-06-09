@@ -405,10 +405,23 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               // Whether this field can auto-seed but the client record has no data for it
               const missingClientData = !!(item.clientFields?.length && !clientDefault && !savedVal);
 
+              // Format HH:MM (24h) → "9:00 AM" for time fields
+              const fmtTime = val => {
+                if (!val || item.fieldType !== 'time') return val;
+                const [h, m] = val.split(':').map(Number);
+                if (isNaN(h) || isNaN(m)) return val;
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
+              };
+
               const handleSave = () => {
                 patchCL(item.clSec, item.key, draft);
                 setFormDrafts(d => { const n = { ...d }; delete n[item.key]; return n; });
-                if (draft !== savedVal) pushLog(`Updated: ${item.label} — ${draft}`);
+                if (draft !== savedVal) pushLog(`Updated: ${item.label} — ${fmtTime(draft) || draft}`);
+                // When a first session date is saved, auto-check "First session scheduled"
+                if (item.key === 'first_session_date' && draft) {
+                  patchCL('staffing', 'first_session_scheduled', true);
+                }
                 // Flash "Saved" for 2 seconds
                 setSavedFields(prev => new Set(prev).add(item.key));
                 clearTimeout(saveTimers.current[item.key]);
@@ -422,7 +435,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   <label className="text-sm text-slate-800 block mb-1.5">{item.label}</label>
                   {readOnly
                     ? <span className="text-sm text-slate-600 px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg block max-w-xs" style={{ fontFamily:'DM Mono, monospace' }}>
-                        {savedVal || <span className="text-slate-400 italic">—</span>}
+                        {fmtTime(savedVal) || savedVal || <span className="text-slate-400 italic">—</span>}
                       </span>
                     : <>
                         <div className="flex items-center gap-2">
@@ -451,7 +464,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
                             </svg>
-                            Saved: <span style={{ fontFamily:'DM Mono, monospace' }}>{savedVal}</span>
+                            Saved: <span style={{ fontFamily:'DM Mono, monospace' }}>{fmtTime(savedVal) || savedVal}</span>
                           </p>
                         )}
                         {/* Existing saved value (not dirty, not just saved) */}

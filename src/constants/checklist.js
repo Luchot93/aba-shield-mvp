@@ -50,6 +50,7 @@ export const mkChecklist = () => ({
     caregiver_availability:false, schedule_coordinated:false,
     first_session_scheduled:false, first_session_completed:false,
     first_session_date:'', first_session_time:'', session_location:'',
+    schedule_template:'',
   },
   services_reauth: {
     progress_report:false, updated_graphs:false, vineland3_updated:false,

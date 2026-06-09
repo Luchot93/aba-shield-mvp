@@ -418,10 +418,6 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 patchCL(item.clSec, item.key, draft);
                 setFormDrafts(d => { const n = { ...d }; delete n[item.key]; return n; });
                 if (draft !== savedVal) pushLog(`Updated: ${item.label} — ${fmtTime(draft) || draft}`);
-                // When a first session date is saved, auto-check "First session scheduled"
-                if (item.key === 'first_session_date' && draft) {
-                  patchCL('staffing', 'first_session_scheduled', true);
-                }
                 // Flash "Saved" for 2 seconds
                 setSavedFields(prev => new Set(prev).add(item.key));
                 clearTimeout(saveTimers.current[item.key]);

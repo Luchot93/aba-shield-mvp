@@ -173,8 +173,7 @@ export function getStageItems(stage) {
     case 'staffing': return [
       { type:'checkbox',   key:'caregiver_availability',  label:'Caregiver availability confirmed', clSec:'staffing' },
       { type:'checkbox',   key:'schedule_coordinated',    label:'Staff schedule coordinated',       clSec:'staffing' },
-      { type:'checkbox',   key:'first_session_scheduled', label:'First session scheduled',          clSec:'staffing' },
-      { type:'form_field', key:'first_session_date',      label:'First session date',               clSec:'staffing', fieldType:'date',   optional:true },
+      { type:'form_field', key:'first_session_date',      label:'First session date',               clSec:'staffing', fieldType:'date' },
       { type:'form_field', key:'first_session_time',      label:'First session time',               clSec:'staffing', fieldType:'time',   optional:true },
       { type:'form_field', key:'session_location',        label:'Session location',                 clSec:'staffing', fieldType:'text',   optional:true, placeholder:"Client's home / Clinic / School", authorizedKey:'session_location' },
       { type:'checkbox',   key:'first_session_completed', label:'First session completed',          clSec:'staffing' },

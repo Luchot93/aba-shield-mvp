@@ -374,6 +374,13 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 }
                 if (autoDefault) autoDefaultSource = 'assessment';
               }
+              if (!autoDefault && item.authorizedHoursWeek) {
+                const cptKey = item.authorizedHoursWeek === '97155' ? 'authorized_97155'
+                             : item.authorizedHoursWeek === '97156' ? 'authorized_97156'
+                             : 'authorized_97153';
+                const h = parseFloat(client.checklist?.submitted?.[cptKey]) || 0;
+                if (h > 0) { autoDefault = String(Math.round(h / 4.3)); autoDefaultSource = 'authorized'; }
+              }
               if (!autoDefault && item.authorizedKey) {
                 const val = client.checklist?.authorized?.[item.authorizedKey];
                 if (val) { autoDefault = String(val); autoDefaultSource = 'authorized'; }
@@ -485,6 +492,28 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             </p>
                           );
                         })()}
+                        {/* Per-CPT authorized hours hint — shown on each weekly scheduling field */}
+                        {item.authorizedHoursWeek && (() => {
+                          const sub = client.checklist?.submitted ?? {};
+                          const cptKey = item.authorizedHoursWeek === '97155' ? 'authorized_97155'
+                                       : item.authorizedHoursWeek === '97156' ? 'authorized_97156'
+                                       : 'authorized_97153';
+                          const monthly = parseFloat(sub[cptKey]) || 0;
+                          if (!monthly) return null;
+                          const weekly = Math.round(monthly / 4.3);
+                          const cptLabel = item.authorizedHoursWeek === '97155' ? 'BCBA supervision'
+                                         : item.authorizedHoursWeek === '97156' ? 'caregiver training'
+                                         : 'direct therapy';
+                          return (
+                            <p className="mt-1.5 text-[11px] text-slate-400 flex items-center gap-1">
+                              <svg className="w-3 h-3 flex-shrink-0 text-teal-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                              </svg>
+                              Authorized: <span className="text-slate-600 font-medium">{monthly}h/mo → ~{weekly}h/wk</span>
+                              <span className="text-slate-400">({cptLabel})</span>
+                            </p>
+                          );
+                        })()}
                         {/* Suggest date offset from another saved field (e.g. appeal_deadline from denial_date + 30) */}
                         {item.suggestFromField && !savedVal && !formDrafts[item.key] && (() => {
                           const sourceVal = client.checklist?.[item.clSec]?.[item.suggestFromField];
@@ -542,27 +571,6 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                           );
                         })()}
 
-                        {/* Hour budget hint for schedule_template in authorized stage */}
-                        {item.scheduleHint && (() => {
-                          const sub = client.checklist?.submitted ?? {};
-                          const h97153 = parseFloat(sub.authorized_97153) || 0;
-                          const h97155 = parseFloat(sub.authorized_97155) || 0;
-                          const h97156 = parseFloat(sub.authorized_97156) || 0;
-                          if (!h97153 && !h97155 && !h97156) return null;
-                          const parts = [
-                            h97153 && `97153: ${h97153}h/mo → ~${Math.round(h97153 / 4.3)}h/wk`,
-                            h97155 && `97155: ${h97155}h/mo`,
-                            h97156 && `97156: ${h97156}h/mo`,
-                          ].filter(Boolean);
-                          return (
-                            <p className="mt-2 text-[11px] text-slate-400 flex items-start gap-1">
-                              <svg className="w-3 h-3 flex-shrink-0 mt-0.5 text-teal-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                              </svg>
-                              <span>Authorized hours: <span className="text-slate-600 font-medium">{parts.join(' · ')}</span> — schedule direct therapy hours across session days</span>
-                            </p>
-                          );
-                        })()}
                       </>
                   }
                 </div>

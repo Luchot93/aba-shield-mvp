@@ -378,12 +378,10 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 const val = client.checklist?.authorized?.[item.authorizedKey];
                 if (val) { autoDefault = String(val); autoDefaultSource = 'authorized'; }
               }
-              if (!autoDefault) {
-                const clientDefault = item.clientFields
-                  ? item.clientFields.map(f => client[f] || '').filter(Boolean).join(item.clientFieldSep ?? ' ')
-                  : item.clientField ? (client[item.clientField] ?? '') : '';
-                if (clientDefault) { autoDefault = clientDefault; autoDefaultSource = 'client'; }
-              }
+              const clientDefault = item.clientFields
+                ? item.clientFields.map(f => client[f] || '').filter(Boolean).join(item.clientFieldSep ?? ' ')
+                : item.clientField ? (client[item.clientField] ?? '') : '';
+              if (!autoDefault && clientDefault) { autoDefault = clientDefault; autoDefaultSource = 'client'; }
               const sessionDefaultSource = autoDefaultSource; // keep hint label alias
               const draft    = formDrafts[item.key] !== undefined ? formDrafts[item.key] : (clVal || autoDefault);
               const savedVal = clVal ?? '';

@@ -44,11 +44,13 @@ export const mkChecklist = () => ({
     bcba_matches_auth:false, bcba_credentials_verified:false,
     rbt_assigned:false, rbt_cert_valid:false, rbt_credentials_attached:false,
     schedule_template:'', session_location:'',
+    scheduled_hours_week:'', scheduled_97155_week:'', scheduled_97156_week:'',
   },
   staffing: {
     caregiver_availability:false, schedule_coordinated:false,
     first_session_scheduled:false, first_session_completed:false,
     first_session_date:'', first_session_time:'', session_location:'',
+    schedule_template:'',
   },
   services_reauth: {
     progress_report:false, updated_graphs:false, vineland3_updated:false,
@@ -161,15 +163,18 @@ export function getStageItems(stage) {
       { type:'assign',     key:'rbt_assigned',             label:'RBT assigned',                         clSec:'authorized', role:'rbt' },
       { type:'auto',       key:'rbt_cert_valid',           label:'RBT certification valid',              clSec:'authorized', rbtCert:true },
       { type:'auto',       key:'rbt_credentials_attached', label:'RBT credentials attached',             clSec:'authorized', rbtCreds:true },
-      { type:'form_field', key:'schedule_template',        label:'Weekly session schedule',              clSec:'authorized', fieldType:'text', optional:true, placeholder:'e.g. Mon/Wed/Fri 9–1pm, Tue/Thu 10–12pm', scheduleHint:true },
-      { type:'form_field', key:'session_location',        label:'Session location',                     clSec:'authorized', fieldType:'text', optional:true, placeholder:"Client's home / Clinic / School" },
+      { type:'form_field', key:'schedule_template',        label:'Weekly session schedule',              clSec:'authorized', fieldType:'text',   optional:true, placeholder:'e.g. Mon/Wed/Fri 9–1pm, Tue/Thu 10–12pm', scheduleHint:true },
+      { type:'section_label', key:'_sched_hours_header', label:'Scheduled hours per week' },
+      { type:'form_field', key:'scheduled_hours_week',  label:'97153 — Direct therapy h/wk',      clSec:'authorized', fieldType:'number', optional:true, placeholder:'e.g. 19', authorizedHoursWeek:'97153' },
+      { type:'form_field', key:'scheduled_97155_week',  label:'97155 — BCBA supervision h/wk',    clSec:'authorized', fieldType:'number', optional:true, placeholder:'e.g. 3',  authorizedHoursWeek:'97155' },
+      { type:'form_field', key:'scheduled_97156_week',  label:'97156 — Caregiver training h/wk',  clSec:'authorized', fieldType:'number', optional:true, placeholder:'e.g. 2',  authorizedHoursWeek:'97156' },
+      { type:'form_field', key:'session_location',        label:'Session location',                     clSec:'authorized', fieldType:'text',   optional:true, placeholder:"Client's home / Clinic / School" },
     ];
     case 'staffing': return [
       { type:'checkbox',   key:'caregiver_availability',  label:'Caregiver availability confirmed', clSec:'staffing' },
       { type:'checkbox',   key:'schedule_coordinated',    label:'Staff schedule coordinated',       clSec:'staffing' },
-      { type:'checkbox',   key:'first_session_scheduled', label:'First session scheduled',          clSec:'staffing' },
-      { type:'form_field', key:'first_session_date',      label:'First session date',               clSec:'staffing', fieldType:'date',   optional:true },
-      { type:'form_field', key:'first_session_time',      label:'First session time',               clSec:'staffing', fieldType:'text',   optional:true, placeholder:'e.g. 9:00 AM' },
+      { type:'form_field', key:'first_session_date',      label:'First session date',               clSec:'staffing', fieldType:'date' },
+      { type:'form_field', key:'first_session_time',      label:'First session time',               clSec:'staffing', fieldType:'time',   optional:true },
       { type:'form_field', key:'session_location',        label:'Session location',                 clSec:'staffing', fieldType:'text',   optional:true, placeholder:"Client's home / Clinic / School", authorizedKey:'session_location' },
       { type:'checkbox',   key:'first_session_completed', label:'First session completed',          clSec:'staffing' },
     ];

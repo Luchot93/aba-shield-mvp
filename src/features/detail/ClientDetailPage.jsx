@@ -23,6 +23,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [pickerAnchor,   setPickerAnchor]   = useState(null); // { top, left, role, pid, pool, item }
   const [formDrafts,     setFormDrafts]     = useState({});
   const [savedFields,    setSavedFields]    = useState(new Set());
+  const [schedEdit,      setSchedEdit]      = useState(false);
+  const [schedDraft,     setSchedDraft]     = useState('');
   const [viewStage,      setViewStage]      = useState(null);
   const [noteText,       setNoteText]       = useState('');
   const [activeTab,      setActiveTab]      = useState('notes');
@@ -374,6 +376,13 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 }
                 if (autoDefault) autoDefaultSource = 'assessment';
               }
+              if (!autoDefault && item.authorizedHoursWeek) {
+                const cptKey = item.authorizedHoursWeek === '97155' ? 'authorized_97155'
+                             : item.authorizedHoursWeek === '97156' ? 'authorized_97156'
+                             : 'authorized_97153';
+                const h = parseFloat(client.checklist?.submitted?.[cptKey]) || 0;
+                if (h > 0) { autoDefault = String(Math.round(h / 4.3)); autoDefaultSource = 'authorized'; }
+              }
               if (!autoDefault && item.authorizedKey) {
                 const val = client.checklist?.authorized?.[item.authorizedKey];
                 if (val) { autoDefault = String(val); autoDefaultSource = 'authorized'; }
@@ -396,10 +405,19 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               // Whether this field can auto-seed but the client record has no data for it
               const missingClientData = !!(item.clientFields?.length && !clientDefault && !savedVal);
 
+              // Format HH:MM (24h) → "9:00 AM" for time fields
+              const fmtTime = val => {
+                if (!val || item.fieldType !== 'time') return val;
+                const [h, m] = val.split(':').map(Number);
+                if (isNaN(h) || isNaN(m)) return val;
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${ampm}`;
+              };
+
               const handleSave = () => {
                 patchCL(item.clSec, item.key, draft);
                 setFormDrafts(d => { const n = { ...d }; delete n[item.key]; return n; });
-                if (draft !== savedVal) pushLog(`Updated: ${item.label} — ${draft}`);
+                if (draft !== savedVal) pushLog(`Updated: ${item.label} — ${fmtTime(draft) || draft}`);
                 // Flash "Saved" for 2 seconds
                 setSavedFields(prev => new Set(prev).add(item.key));
                 clearTimeout(saveTimers.current[item.key]);
@@ -413,7 +431,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   <label className="text-sm text-slate-800 block mb-1.5">{item.label}</label>
                   {readOnly
                     ? <span className="text-sm text-slate-600 px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg block max-w-xs" style={{ fontFamily:'DM Mono, monospace' }}>
-                        {savedVal || <span className="text-slate-400 italic">—</span>}
+                        {fmtTime(savedVal) || savedVal || <span className="text-slate-400 italic">—</span>}
                       </span>
                     : <>
                         <div className="flex items-center gap-2">
@@ -442,7 +460,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
                             </svg>
-                            Saved: <span style={{ fontFamily:'DM Mono, monospace' }}>{savedVal}</span>
+                            Saved: <span style={{ fontFamily:'DM Mono, monospace' }}>{fmtTime(savedVal) || savedVal}</span>
                           </p>
                         )}
                         {/* Existing saved value (not dirty, not just saved) */}
@@ -482,6 +500,28 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
                               </svg>
                               Previously rejected: <span style={{ fontFamily:'DM Mono, monospace' }}>{String(prior)}</span>
+                            </p>
+                          );
+                        })()}
+                        {/* Per-CPT authorized hours hint — shown on each weekly scheduling field */}
+                        {item.authorizedHoursWeek && (() => {
+                          const sub = client.checklist?.submitted ?? {};
+                          const cptKey = item.authorizedHoursWeek === '97155' ? 'authorized_97155'
+                                       : item.authorizedHoursWeek === '97156' ? 'authorized_97156'
+                                       : 'authorized_97153';
+                          const monthly = parseFloat(sub[cptKey]) || 0;
+                          if (!monthly) return null;
+                          const weekly = Math.round(monthly / 4.3);
+                          const cptLabel = item.authorizedHoursWeek === '97155' ? 'BCBA supervision'
+                                         : item.authorizedHoursWeek === '97156' ? 'caregiver training'
+                                         : 'direct therapy';
+                          return (
+                            <p className="mt-1.5 text-[11px] text-slate-400 flex items-center gap-1">
+                              <svg className="w-3 h-3 flex-shrink-0 text-teal-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                              </svg>
+                              Authorized: <span className="text-slate-600 font-medium">{monthly}h/mo → ~{weekly}h/wk</span>
+                              <span className="text-slate-400">({cptLabel})</span>
                             </p>
                           );
                         })()}
@@ -542,27 +582,6 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                           );
                         })()}
 
-                        {/* Hour budget hint for schedule_template in authorized stage */}
-                        {item.scheduleHint && (() => {
-                          const sub = client.checklist?.submitted ?? {};
-                          const h97153 = parseFloat(sub.authorized_97153) || 0;
-                          const h97155 = parseFloat(sub.authorized_97155) || 0;
-                          const h97156 = parseFloat(sub.authorized_97156) || 0;
-                          if (!h97153 && !h97155 && !h97156) return null;
-                          const parts = [
-                            h97153 && `97153: ${h97153}h/mo → ~${Math.round(h97153 / 4.3)}h/wk`,
-                            h97155 && `97155: ${h97155}h/mo`,
-                            h97156 && `97156: ${h97156}h/mo`,
-                          ].filter(Boolean);
-                          return (
-                            <p className="mt-2 text-[11px] text-slate-400 flex items-start gap-1">
-                              <svg className="w-3 h-3 flex-shrink-0 mt-0.5 text-teal-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                              </svg>
-                              <span>Authorized hours: <span className="text-slate-600 font-medium">{parts.join(' · ')}</span> — schedule direct therapy hours across session days</span>
-                            </p>
-                          );
-                        })()}
                       </>
                   }
                 </div>
@@ -1025,31 +1044,169 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 );
               })()}
 
-              {/* Staffing — schedule reference banner from Authorized stage */}
+              {/* Staffing — editable session schedule (seeded from Authorized, overridable by coordinator) */}
               {client.stage === 'staffing' && (() => {
-                const sched    = client.checklist?.authorized?.schedule_template;
-                const location = client.checklist?.authorized?.session_location;
-                if (!sched && !location) return null;
+                const authSched  = client.checklist?.authorized?.schedule_template ?? '';
+                const authLoc    = client.checklist?.authorized?.session_location  ?? '';
+                const staffSched = client.checklist?.staffing?.schedule_template   ?? '';
+                const staffLoc   = client.checklist?.staffing?.session_location    ?? '';
+                // Display values: use staffing override if saved, else fall back to authorized
+                const displaySched = staffSched || authSched;
+                const displayLoc   = staffLoc   || authLoc;
+                if (!authSched && !authLoc && !staffSched && !staffLoc) return null;
+
+                const isConfirmed = !!staffSched || !!staffLoc;
+
+                const handleOpenEdit = () => {
+                  setSchedDraft(displaySched);
+                  setSchedEdit(true);
+                };
+                const handleSaveSchedule = () => {
+                  patchCL('staffing', 'schedule_template', schedDraft.trim());
+                  pushLog(`Session schedule confirmed: ${schedDraft.trim()}`);
+                  setSchedEdit(false);
+                };
+
                 return (
-                  <div className="mx-5 mb-3 rounded-xl border border-slate-200 bg-stone-50 p-3 space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Planned from Authorized</p>
-                    {sched && (
-                      <div className="flex items-start gap-2">
-                        <svg className="w-3.5 h-3.5 text-teal-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                        </svg>
-                        <span className="text-xs text-slate-700 font-medium">{sched}</span>
+                  <div className="mx-5 mb-3 rounded-xl border border-slate-200 bg-stone-50 p-3">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                        {isConfirmed ? 'Confirmed schedule' : 'Planned from Authorized'}
+                      </p>
+                      {!schedEdit && (
+                        <button
+                          onClick={handleOpenEdit}
+                          className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-teal-600 transition-colors font-medium">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                          </svg>
+                          {isConfirmed ? 'Edit' : 'Adjust'}
+                        </button>
+                      )}
+                    </div>
+
+                    {schedEdit ? (
+                      /* Edit mode */
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-500 mb-1">
+                            <svg className="inline w-3 h-3 mr-1 text-teal-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            Days &amp; times
+                          </label>
+                          <input
+                            type="text"
+                            value={schedDraft}
+                            onChange={e => setSchedDraft(e.target.value)}
+                            placeholder="e.g. Mon/Wed/Fri 9–1pm, Tue/Thu 10–12pm"
+                            className="w-full px-3 py-2 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 bg-white"
+                          />
+                          {authSched && schedDraft !== authSched && (
+                            <p className="mt-1 text-[10px] text-slate-400">
+                              Authorized plan: <span className="font-medium text-slate-500">{authSched}</span>
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            onClick={handleSaveSchedule}
+                            disabled={!schedDraft.trim()}
+                            className="px-3 py-1.5 text-xs font-semibold rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                            style={{ background: '#0D9488' }}>
+                            Confirm schedule
+                          </button>
+                          <button
+                            onClick={() => setSchedEdit(false)}
+                            className="px-3 py-1.5 text-xs font-medium rounded-lg border border-stone-200 text-slate-500 hover:bg-stone-100 transition-colors">
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* View mode */
+                      <div className="space-y-1">
+                        {displaySched && (
+                          <div className="flex items-start gap-2">
+                            <svg className="w-3.5 h-3.5 text-teal-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <span className="text-xs text-slate-700 font-medium">{displaySched}</span>
+                            {!staffSched && authSched && (
+                              <span className="text-[10px] text-amber-600 font-medium ml-1">← from Authorized</span>
+                            )}
+                          </div>
+                        )}
+                        {displayLoc && (
+                          <div className="flex items-center gap-2">
+                            <svg className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            <span className="text-xs text-slate-600">{displayLoc}</span>
+                          </div>
+                        )}
                       </div>
                     )}
-                    {location && (
-                      <div className="flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                        </svg>
-                        <span className="text-xs text-slate-600">{location}</span>
-                      </div>
-                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Staffing — caregiver contact card */}
+              {client.stage === 'staffing' && (() => {
+                // Primary contact from client record
+                const primary = client.parent_name ? {
+                  name:         client.parent_name,
+                  relationship: client.parent_relationship ?? 'Guardian',
+                  phone:        client.phone ?? null,
+                  email:        client.parent_email ?? null,
+                  role:         'Primary',
+                } : null;
+                // Additional contacts from assessment emergency contacts (exclude medical roles)
+                const extraContacts = (client.assessment_session?.emergencyContacts ?? [])
+                  .filter(c => c.role !== 'Medical')
+                  .filter(c => !primary || c.name !== primary.name);
+                if (!primary && !extraContacts.length) return null;
+                const allContacts = [primary, ...extraContacts].filter(Boolean);
+                return (
+                  <div className="mx-5 mb-3 rounded-xl border border-slate-200 bg-stone-50 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Caregiver contacts</p>
+                    <div className="space-y-2.5">
+                      {allContacts.map((c, i) => (
+                        <div key={i} className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-semibold text-slate-700">{c.name}</span>
+                              <span className="text-[10px] text-slate-400 font-medium">{c.relationship}</span>
+                              {c.role === 'Primary' && (
+                                <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-700">Primary</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                              {c.phone && (
+                                <a href={`tel:${c.phone}`}
+                                  className="flex items-center gap-1 text-[11px] text-teal-600 hover:text-teal-800 font-medium transition-colors">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                  </svg>
+                                  {c.phone}
+                                </a>
+                              )}
+                              {c.email && (
+                                <a href={`mailto:${c.email}`}
+                                  className="flex items-center gap-1 text-[11px] text-slate-500 hover:text-teal-600 font-medium transition-colors">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                  </svg>
+                                  {c.email}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 );
               })()}

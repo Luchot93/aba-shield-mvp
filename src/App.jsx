@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { SEED_CLIENTS, SEED_STAFF, makeAssessmentSession } from './constants/seedData.js';
 import { mkNotif } from './utils/notifications.js';
 import FontLoader from './components/FontLoader.jsx';
@@ -27,11 +27,16 @@ export default function App() {
 
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Set landing page based on role when user logs in or switches role
+  // Set landing page only when user transitions from logged-out → logged-in.
+  // Using a ref to track the previous value prevents re-firing on re-renders
+  // where currentUser already exists (which would incorrectly reset the page
+  // after tab inactivity).
+  const prevUserRef = useRef(null);
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && !prevUserRef.current) {
       setPage(currentUser.role === 'admin' ? 'metrics' : 'pipeline');
     }
+    prevUserRef.current = currentUser;
   }, [currentUser]);
 
   const handleClientAdvanced = useCallback(clientId => {

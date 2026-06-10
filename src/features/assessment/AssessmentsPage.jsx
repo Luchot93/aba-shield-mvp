@@ -14,13 +14,6 @@ const STATUS_META = {
   ready_to_review: { label: 'In review', pill: 'bg-blue-100 text-blue-700' },
 };
 
-const LEFT_BORDER = {
-  not_started:     '#CBD5E1',
-  in_progress:     '#FBBF24',
-  in_review:       '#60A5FA',
-  ready_to_review: '#60A5FA',
-  complete:        '#34D399',
-};
 
 function relTime(iso) {
   if (!iso) return '';
@@ -210,8 +203,7 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
               <div
                 key={client.id}
                 onClick={() => onOpenAssessment(client.id)}
-                className="bg-white border border-stone-200 rounded-xl p-5 mb-3 cursor-pointer hover:shadow-md hover:-translate-y-px transition-all duration-150"
-                style={{ borderLeft: `3px solid ${LEFT_BORDER[status] ?? '#CBD5E1'}` }}>
+                className="bg-white border border-stone-200 rounded-xl p-5 mb-3 cursor-pointer hover:shadow-md hover:-translate-y-px transition-all duration-150">
 
                 {/* Row 1: name + status badge */}
                 <div className="flex items-center justify-between gap-3 mb-1.5">

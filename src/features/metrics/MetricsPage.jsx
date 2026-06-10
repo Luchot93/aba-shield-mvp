@@ -326,12 +326,8 @@ export default function MetricsPage({ clients, staff }) {
       </div>
 
       {/* Row 2 — Operational alert cards */}
-      <div className="mt-3 flex items-stretch gap-0 bg-white rounded-xl border border-stone-200 divide-x divide-stone-100 overflow-hidden">
-        <div className="flex items-center px-4 py-3 flex-shrink-0">
-          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400 rotate-[-90deg] whitespace-nowrap" style={{ writingMode: 'vertical-rl' }}>
-            Alerts
-          </span>
-        </div>
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-5 mb-2">Operational Alerts</p>
+      <div className="flex items-stretch gap-0 bg-white rounded-xl border border-stone-200 divide-x divide-stone-100 overflow-hidden">
         {CARDS_ROW2.map(card => (
           <div key={card.testId} data-testid={card.testId}
             className="flex-1 flex items-center justify-center gap-3 px-5 py-3.5">

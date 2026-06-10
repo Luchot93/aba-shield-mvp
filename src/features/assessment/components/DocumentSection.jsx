@@ -7,10 +7,10 @@ import ActionRow from './ActionRow.jsx';
 
 function effectiveBorder(approvalState) {
   switch (approvalState) {
-    case 'approved': return { left: '#34D399', card: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.25)' };
-    case 'skipped':  return { left: '#94A3B8', card: 'rgba(148,163,184,0.06)', border: 'rgba(148,163,184,0.20)' };
-    case 'edited':   return { left: '#FBBF24', card: 'rgba(251,191,36,0.06)',  border: 'rgba(251,191,36,0.20)'  };
-    default:         return { left: '#E7E5E4', card: '#fff',                    border: '#E7E5E4'                 };
+    case 'approved': return { card: 'rgba(52,211,153,0.08)', border: 'rgba(52,211,153,0.25)' };
+    case 'skipped':  return { card: 'rgba(148,163,184,0.06)', border: 'rgba(148,163,184,0.20)' };
+    case 'edited':   return { card: 'rgba(251,191,36,0.06)',  border: 'rgba(251,191,36,0.20)'  };
+    default:         return { card: '#fff',                    border: '#E7E5E4'                 };
   }
 }
 
@@ -103,11 +103,7 @@ export default function DocumentSection({ clientId, sectionKey, session, setClie
       data-section-card
       className="rounded-xl border overflow-hidden"
       style={{
-        borderLeftWidth: 3,
-        borderLeftColor: colors.left,
-        borderTopColor: colors.border,
-        borderRightColor: colors.border,
-        borderBottomColor: colors.border,
+        borderColor: colors.border,
         background: colors.card,
         fontFamily: 'DM Sans, sans-serif',
       }}>

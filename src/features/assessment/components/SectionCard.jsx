@@ -67,19 +67,17 @@ export default function SectionCard({
     <div
       className={`rounded-xl border bg-white ${
         isExpanded
-          ? 'border-teal-200 border-l-2'
+          ? 'border-teal-200'
           : 'border-stone-200 cursor-pointer'
       }`}
       style={
         isExpanded
           ? {
               background: 'rgba(20,184,166,0.04)',
-              borderLeftColor: '#14B8A6',
               fontFamily: 'DM Sans, sans-serif',
             }
           : {
-              borderLeftColor: borderColor,
-              borderLeftWidth: '3px',
+              borderColor: borderColor,
               fontFamily: 'DM Sans, sans-serif',
             }
       }

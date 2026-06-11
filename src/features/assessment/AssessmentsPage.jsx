@@ -14,6 +14,11 @@ const STATUS_META = {
   ready_to_review: { label: 'In review', pill: 'bg-blue-100 text-blue-700' },
 };
 
+const STAGE_LABELS = {
+  intake: 'Intake', auth_assessment: 'Auth 97151', assessment: 'Assessment',
+  plan_draft: 'Plan Draft', submitted: 'Submitted', denied: 'Denied',
+  authorized: 'Authorized', staffing: 'Staffing', services: 'In Services',
+};
 
 function relTime(iso) {
   if (!iso) return '';
@@ -22,6 +27,11 @@ function relTime(iso) {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function progressPct(session, status) {
@@ -94,43 +104,229 @@ function CTA({ status }) {
   );
 }
 
+// ─── Group header ─────────────────────────────────────────────────────────────
+
+function GroupHeader({ group, expanded, onToggle }) {
+  const { client, reassessments } = group;
+  const initials = client.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
+  const stageLabel = STAGE_LABELS[client.stage] ?? client.stage;
+  const totalCount = 1 + reassessments.length;
+
+  return (
+    <button
+      onClick={onToggle}
+      className="w-full flex items-center gap-3 px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl mb-2 hover:bg-stone-100 transition-colors text-left">
+      {/* Avatar */}
+      <div
+        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+        style={{ background: '#0D9488' }}>
+        {initials}
+      </div>
+      {/* Name + insurer */}
+      <div className="flex-1 min-w-0">
+        <span className="font-semibold text-slate-800 text-sm">{client.name}</span>
+        <span className="text-slate-400 text-xs ml-2">{client.insurer_name}</span>
+      </div>
+      {/* Stage badge */}
+      <span className="px-2 py-0.5 text-[11px] font-medium rounded-full bg-stone-100 text-slate-500 border border-stone-200 flex-shrink-0">
+        {stageLabel}
+      </span>
+      {/* Count */}
+      <span className="text-xs font-medium text-slate-400 flex-shrink-0">[{totalCount}]</span>
+      {/* Collapse arrow */}
+      <svg
+        className={`flex-shrink-0 text-slate-400 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+        width="14" height="14" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+      </svg>
+    </button>
+  );
+}
+
+// ─── Reassessment card ────────────────────────────────────────────────────────
+
+function ReassessmentCard({ client, reassessment, bcba, onOpen }) {
+  const { session, status, cycleNumber } = reassessment;
+  const meta  = STATUS_META[status] ?? STATUS_META.not_started;
+  const pct   = progressPct(session, status);
+  const count = sectionCount(session, status);
+  const mic   = hasMicData(session);
+  const notes = hasNotes(session);
+
+  const authFrom = fmtDate(session?.authPeriodStart);
+  const authTo   = fmtDate(session?.authPeriodEnd);
+  const authLine = authFrom || authTo ? `${authFrom} – ${authTo}` : null;
+
+  return (
+    <div className="ml-2 mb-3" style={{ borderLeft: '2px solid #14B8A6', paddingLeft: '12px' }}>
+      {/* Connector row */}
+      <div className="flex items-center gap-2 mb-1.5">
+        <span className="text-teal-400 font-bold text-sm select-none">›</span>
+        <span
+          className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold text-white"
+          style={{ background: '#0D9488' }}>
+          Reassessment
+        </span>
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-slate-500 border border-stone-200">
+          Cycle {cycleNumber}
+        </span>
+      </div>
+
+      {/* Card */}
+      <div
+        onClick={() => onOpen(client.id)}
+        className="bg-white border border-stone-200 rounded-xl p-5 cursor-pointer hover:shadow-md hover:-translate-y-px transition-all duration-150">
+
+        {/* Row 1: status badge */}
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <span className="text-sm font-semibold text-slate-700">Reassessment · Cycle {cycleNumber}</span>
+          <span className={`flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold ${meta.pill}`}>
+            {(status === 'in_progress') && (
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0"/>
+            )}
+            {(status === 'in_review') && (
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse flex-shrink-0"/>
+            )}
+            {meta.label}
+          </span>
+        </div>
+
+        {/* Row 2: auth period (secondary line) */}
+        {authLine && (
+          <div className="text-xs text-slate-400 mb-1" style={{ fontFamily: 'DM Mono, monospace' }}>
+            Auth period: {authLine}
+          </div>
+        )}
+
+        {/* Row 3: bcba + updated */}
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <span className="text-sm text-slate-500 truncate">
+            {bcba?.name ?? 'Unassigned'}
+          </span>
+          <span className="text-xs text-slate-400 flex-shrink-0" style={{ fontFamily: 'DM Mono, monospace' }}>
+            {relTime(session?.updatedAt)}
+          </span>
+        </div>
+
+        {/* Row 4: progress bar */}
+        <div className="w-full rounded-full mb-3 overflow-hidden" style={{ height: '4px', background: '#E7E5E4' }}>
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${pct}%`, background: '#14B8A6' }}
+          />
+        </div>
+
+        {/* Row 5: section count + icons + CTA */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-400" style={{ fontFamily: 'DM Mono, monospace' }}>
+            {count.done}/{count.total} {count.label}
+          </span>
+          {mic && <span className="text-teal-500"><Ico.Mic /></span>}
+          {notes && <span className="text-slate-400"><Ico.PenLine /></span>}
+          <div className="flex-1"/>
+          <CTA status={status} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AssessmentsPage({ clients, staff, currentUser, onOpenAssessment }) {
-  const [filter, setFilter] = useState('all');
-  const [search, setSearch] = useState('');
-  const [toast,  setToast]  = useState(false);
+  const [filter,     setFilter]     = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [search,     setSearch]     = useState('');
+  const [toast,      setToast]      = useState(false);
 
-  const showToast = () => {
-    setToast(true);
-    setTimeout(() => setToast(false), 3500);
+  // Auto-expand groups that have an active reassessment
+  const [expandedGroups, setExpandedGroups] = useState(() => {
+    const s = new Set();
+    for (const c of clients) {
+      const hasActive = (c.reassessment_sessions ?? []).some(
+        r => r.status === 'in_progress' || r.status === 'in_review',
+      );
+      if (hasActive) s.add(c.id);
+    }
+    return s;
+  });
+
+  const showToast = () => { setToast(true); setTimeout(() => setToast(false), 3500); };
+
+  const toggleGroup = id => setExpandedGroups(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  // ── Build groups ────────────────────────────────────────────────────────────
+  const rawGroups = clients
+    .filter(c =>
+      c.stage === 'assessment' ||
+      c.assessment_session != null ||
+      (c.reassessment_sessions ?? []).length > 0,
+    )
+    .map(c => {
+      const initialSession = c.assessment_session;
+      const initialStatus  = initialSession?.status ?? 'not_started';
+      const reassessments  = (c.reassessment_sessions ?? []).map((s, i) => ({
+        session:     s,
+        status:      s.status ?? 'not_started',
+        cycleNumber: i + 1,
+      }));
+      const bcba = staff.find(s => s.id === c.bcba_id);
+      const hasActiveReassessment = reassessments.some(
+        r => r.status === 'in_progress' || r.status === 'in_review',
+      );
+      const latestUpdated = Math.max(
+        initialSession?.updatedAt ? new Date(initialSession.updatedAt).getTime() : 0,
+        ...reassessments.map(r =>
+          r.session?.updatedAt ? new Date(r.session.updatedAt).getTime() : 0,
+        ),
+      );
+      return { clientId: c.id, client: c, bcba, initialSession, initialStatus, reassessments, hasActiveReassessment, latestUpdated };
+    });
+
+  // ── Sort ─────────────────────────────────────────────────────────────────────
+  // Tier 0: in-progress reassessment  Tier 1: in-progress initial  Tier 2: rest
+  const sortTier = g => {
+    if (g.hasActiveReassessment) return 0;
+    if (g.initialStatus === 'in_progress' || g.initialStatus === 'in_review') return 1;
+    return 2;
   };
 
-  // Derive sessions: clients at assessment stage OR with an assessment_session
-  const sessions = clients
-    .filter(c => c.stage === 'assessment' || c.assessment_session != null)
-    .map(c => {
-      const session = c.assessment_session;
-      const status  = session?.status ?? 'not_started';
-      const bcba    = staff.find(s => s.id === c.bcba_id);
-      return { client: c, session, status, bcba };
-    })
-    .sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99));
+  const sortedGroups = [...rawGroups].sort((a, b) => {
+    const td = sortTier(a) - sortTier(b);
+    return td !== 0 ? td : b.latestUpdated - a.latestUpdated;
+  });
 
-  // Filter
-  const filtered = sessions
-    .filter(({ status }) => filter === 'all' || status === filter)
-    .filter(({ client }) =>
-      !search.trim() ||
-      client.name.toLowerCase().includes(search.toLowerCase()) ||
-      (client.bcba_id && staff.find(s => s.id === client.bcba_id)?.name.toLowerCase().includes(search.toLowerCase()))
-    );
+  // ── Filter ───────────────────────────────────────────────────────────────────
+  const filteredGroups = sortedGroups.filter(g => {
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      if (!g.client.name.toLowerCase().includes(q) &&
+          !(g.bcba?.name?.toLowerCase().includes(q))) return false;
+    }
+    if (typeFilter === 'reassessment' && g.reassessments.length === 0) return false;
+    if (filter !== 'all') {
+      const initialMatch    = g.initialStatus === filter;
+      const reassessMatch   = g.reassessments.some(r => r.status === filter);
+      if (!initialMatch && !reassessMatch) return false;
+    }
+    return true;
+  });
 
   const FILTER_PILLS = [
     { key: 'all',         label: 'All'         },
     { key: 'in_progress', label: 'In progress' },
     { key: 'in_review',   label: 'In review'   },
     { key: 'complete',    label: 'Completed'   },
+  ];
+
+  const TYPE_PILLS = [
+    { key: 'all',          label: 'All'           },
+    { key: 'reassessment', label: 'Reassessment'  },
   ];
 
   return (
@@ -148,8 +344,8 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
         </button>
       </div>
 
-      {/* Filter pills + search */}
-      <div className="flex items-center gap-3 mb-5 flex-wrap">
+      {/* Status filter pills + search */}
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
         <div className="flex items-center gap-1.5">
           {FILTER_PILLS.map(p => (
             <button key={p.key} onClick={() => setFilter(p.key)}
@@ -178,8 +374,22 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
         </div>
       </div>
 
-      {/* Session cards */}
-      {filtered.length === 0 ? (
+      {/* Type filter row */}
+      <div className="flex items-center gap-1.5 mb-5">
+        {TYPE_PILLS.map(p => (
+          <button key={p.key} onClick={() => setTypeFilter(p.key)}
+            className={`px-3 py-1 text-xs font-medium rounded-lg border transition-all ${
+              typeFilter === p.key
+                ? 'border-teal-500 text-teal-700 bg-teal-50'
+                : 'text-slate-500 border-stone-200 bg-white hover:border-teal-200 hover:text-teal-600'
+            }`}>
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Session groups */}
+      {filteredGroups.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <div className="text-slate-300 mb-4">
             <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" strokeWidth={1.4} viewBox="0 0 24 24">
@@ -192,65 +402,87 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
         </div>
       ) : (
         <div>
-          {filtered.map(({ client, session, status, bcba }) => {
-            const meta  = STATUS_META[status] ?? STATUS_META.not_started;
-            const pct   = progressPct(session, status);
-            const count = sectionCount(session, status);
-            const mic   = hasMicData(session);
-            const notes = hasNotes(session);
+          {filteredGroups.map(group => {
+            const { client, bcba, initialSession, initialStatus, reassessments } = group;
+            const expanded = expandedGroups.has(client.id);
+
+            const meta  = STATUS_META[initialStatus] ?? STATUS_META.not_started;
+            const pct   = progressPct(initialSession, initialStatus);
+            const count = sectionCount(initialSession, initialStatus);
+            const mic   = hasMicData(initialSession);
+            const notes = hasNotes(initialSession);
 
             return (
-              <div
-                key={client.id}
-                onClick={() => onOpenAssessment(client.id)}
-                className="bg-white border border-stone-200 rounded-xl p-5 mb-3 cursor-pointer hover:shadow-md hover:-translate-y-px transition-all duration-150">
+              <div key={client.id} className="mb-4">
+                {/* Group header */}
+                <GroupHeader group={group} expanded={expanded} onToggle={() => toggleGroup(client.id)} />
 
-                {/* Row 1: name + status badge */}
-                <div className="flex items-center justify-between gap-3 mb-1.5">
-                  <span className="text-base font-semibold text-slate-800 truncate">{client.name}</span>
-                  <span className={`flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold ${meta.pill}`}>
-                    {status === 'in_progress' && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0"/>
+                {/* Group body */}
+                {expanded && (
+                  <div className="pl-1">
+                    {/* Initial assessment card — unchanged visually */}
+                    {typeFilter !== 'reassessment' && (
+                      <div
+                        onClick={() => onOpenAssessment(client.id)}
+                        className="bg-white border border-stone-200 rounded-xl p-5 mb-3 cursor-pointer hover:shadow-md hover:-translate-y-px transition-all duration-150">
+
+                        {/* Row 1: name + status badge */}
+                        <div className="flex items-center justify-between gap-3 mb-1.5">
+                          <span className="text-base font-semibold text-slate-800 truncate">{client.name}</span>
+                          <span className={`flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold ${meta.pill}`}>
+                            {initialStatus === 'in_progress' && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0"/>
+                            )}
+                            {initialStatus === 'in_review' && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse flex-shrink-0"/>
+                            )}
+                            {meta.label}
+                          </span>
+                        </div>
+
+                        {/* Row 2: bcba + updated */}
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <span className="text-sm text-slate-500 truncate">
+                            {bcba?.name ?? 'Unassigned'}
+                          </span>
+                          <span className="text-xs text-slate-400 flex-shrink-0" style={{ fontFamily: 'DM Mono, monospace' }}>
+                            {relTime(initialSession?.updatedAt)}
+                          </span>
+                        </div>
+
+                        {/* Row 3: progress bar */}
+                        <div className="w-full rounded-full mb-3 overflow-hidden" style={{ height: '4px', background: '#E7E5E4' }}>
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${pct}%`, background: '#14B8A6' }}
+                          />
+                        </div>
+
+                        {/* Row 4: section count + icons + CTA */}
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-slate-400" style={{ fontFamily: 'DM Mono, monospace' }}>
+                            {count.done}/{count.total} {count.label}
+                          </span>
+                          {mic && <span className="text-teal-500"><Ico.Mic /></span>}
+                          {notes && <span className="text-slate-400"><Ico.PenLine /></span>}
+                          <div className="flex-1"/>
+                          <CTA status={initialStatus} />
+                        </div>
+                      </div>
                     )}
-                    {status === 'in_review' && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse flex-shrink-0"/>
-                    )}
-                    {meta.label}
-                  </span>
-                </div>
 
-                {/* Row 2: bcba + updated */}
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <span className="text-sm text-slate-500 truncate">
-                    {bcba?.name ?? 'Unassigned'}
-                  </span>
-                  <span className="text-xs text-slate-400 flex-shrink-0" style={{ fontFamily: 'DM Mono, monospace' }}>
-                    {relTime(session?.updatedAt)}
-                  </span>
-                </div>
-
-                {/* Row 3: progress bar */}
-                <div className="w-full rounded-full mb-3 overflow-hidden" style={{ height: '4px', background: '#E7E5E4' }}>
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%`, background: '#14B8A6' }}
-                  />
-                </div>
-
-                {/* Row 4: section count + icons + CTA */}
-                <div className="flex items-center gap-3">
-                  <span className="text-xs text-slate-400" style={{ fontFamily: 'DM Mono, monospace' }}>
-                    {count.done}/{count.total} {count.label}
-                  </span>
-                  {mic && (
-                    <span className="text-teal-500"><Ico.Mic /></span>
-                  )}
-                  {notes && (
-                    <span className="text-slate-400"><Ico.PenLine /></span>
-                  )}
-                  <div className="flex-1"/>
-                  <CTA status={status} />
-                </div>
+                    {/* Reassessment cards */}
+                    {reassessments.map(r => (
+                      <ReassessmentCard
+                        key={r.session?.id ?? `r-${r.cycleNumber}`}
+                        client={client}
+                        reassessment={r}
+                        bcba={bcba}
+                        onOpen={onOpenAssessment}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}

@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { computeStoPercent } from '../assessmentStore.js';
 
 // ─── Table primitives — exact match to SkillAcquisitions / MaladaptiveBehaviors ─
 
@@ -70,19 +71,16 @@ const labelStyle = { fontFamily: 'DM Sans, sans-serif' };
 
 export default function CaregiverTrainingReviewView({ session, draftContent }) {
   const sec       = session?.sections?.caregiver_training ?? {};
-  const bl        = sec.caregiverBaselines ?? {};
   const formats   = sec.trainingFormat    ?? [];
   const freq      = sec.trainingFrequency ?? '';
   const barriers  = sec.trainingBarriers  ?? '';
   const strengths = sec.caregiverStrengths ?? '';
+  const targets   = sec.caregiverTrainingTargets ?? [];
 
-  const hasPremack       = bl.premack_baseline      !== '' && bl.premack_baseline      != null;
-  const hasReinforcement = bl.reinforcement_baseline !== '' && bl.reinforcement_baseline != null;
-  const hasBaselines     = hasPremack || hasReinforcement;
   const hasProgram       = formats.length > 0 || !!freq;
   const hasBarriers      = !!barriers.trim();
   const hasStrengths     = !!strengths.trim();
-  const hasAnything      = hasBaselines || hasProgram || hasBarriers || hasStrengths || draftContent;
+  const hasAnything      = targets.length > 0 || hasProgram || hasBarriers || hasStrengths || draftContent;
 
   if (!hasAnything) {
     return (
@@ -95,30 +93,46 @@ export default function CaregiverTrainingReviewView({ session, draftContent }) {
   return (
     <div>
 
-      {/* ── Observed Baselines table ── */}
-      {hasBaselines && (
+      {/* ── Training Targets table ── */}
+      {targets.length > 0 && (
         <div className="mb-6">
+          <p className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: '#2D7D6F' }}>
+            Training Targets
+          </p>
           <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid #B2D8D3' }}>
             <table className="w-full border-collapse text-left">
               <thead>
                 <tr>
-                  <TH>Strategy</TH>
-                  <TH>Observed Baseline</TH>
+                  <TH>Goal</TH>
+                  <TH>Baseline %</TH>
+                  <TH>STO</TH>
+                  <TH>LTO</TH>
                 </tr>
               </thead>
               <tbody>
-                {hasPremack && (
-                  <tr className="bg-white">
-                    <TD>Premack Principle (first/then)</TD>
-                    <TD>{bl.premack_baseline}%</TD>
-                  </tr>
-                )}
-                {hasReinforcement && (
-                  <tr className="bg-white">
-                    <TD>Reinforcement Delivery</TD>
-                    <TD>{bl.reinforcement_baseline}%</TD>
-                  </tr>
-                )}
+                {targets.map((t, i) => {
+                  const bpNum = t.baselinePercent !== null && t.baselinePercent !== ''
+                    ? Number(t.baselinePercent) : null;
+                  const stoPercent = t.stoPercent != null ? t.stoPercent
+                    : (bpNum !== null ? computeStoPercent(bpNum) : null);
+
+                  const stoText = t.sto?.trim()
+                    ? t.sto
+                    : `Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${stoPercent != null ? stoPercent : '?'}% consistency across ${t.stoWeeks != null ? t.stoWeeks : '?'} consecutive weeks.`;
+
+                  const ltoText = t.lto?.trim()
+                    ? t.lto
+                    : `Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${t.ltoPercent != null ? t.ltoPercent : '?'}% accuracy across ${t.ltoSessions != null ? t.ltoSessions : '?'} consecutive caregiver training sessions.`;
+
+                  return (
+                    <tr key={t.id ?? i} className="bg-white">
+                      <TD>{t.goalName || <span className="text-slate-400 italic">Untitled</span>}</TD>
+                      <TD>{bpNum !== null ? `${bpNum}%` : '–'}</TD>
+                      <TD>{stoText}</TD>
+                      <TD>{ltoText}</TD>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

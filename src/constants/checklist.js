@@ -60,7 +60,8 @@ export const mkChecklist = () => ({
 });
 
 export const REAUTH_ITEMS = [
-  { type:'file_upload', key:'progress_report',          label:'Progress report',                        clSec:'services_reauth', accept:'.pdf,.docx',      docType:'progress_report' },
+  { id:'start_reassessment', label:'Start Reassessment', type:'action', autoComplete:false, completionSource:null },
+  { type:'file_upload', key:'progress_report',          label:'Progress report',                        clSec:'services_reauth', accept:'.pdf,.docx',      docType:'progress_report', autoComplete:true, completionSource:'reassessment_doc_generated' },
   { type:'file_upload', key:'updated_graphs',           label:'Updated behavioral graphs',              clSec:'services_reauth', accept:'.pdf,.png,.jpg',  docType:'updated_graphs' },
   { type:'checkbox',    key:'vineland3_updated',        label:'Vineland-3 updated',                     clSec:'services_reauth' },
   { type:'checkbox',    key:'basc3_updated',            label:'BASC-3 updated',                         clSec:'services_reauth' },

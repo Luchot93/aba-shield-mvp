@@ -111,26 +111,41 @@ export function renderMaladaptiveBehaviorChart(behaviorName, baselineCount, targ
 // ─── renderSTOTrajectoryChart ─────────────────────────────────────────────────
 
 /**
- * Line chart showing the 9-step reduction trajectory (STO 1–9) from baseline
- * down toward the long-term target.
+ * Line chart showing the reduction trajectory from baseline down toward the LTO target.
  *
  * @param {string}   behaviorName  – e.g. "Elopement"
  * @param {number}   baselineCount – baseline frequency per session
- * @param {string[]} masteryDates  – 9 date strings, one per STO milestone
+ * @param {string[]} masteryDates  – up to 9 date strings (used for auto mode only)
  * @param {number}   [targetCount=0] – LTO target (0 = elimination)
+ * @param {object[]|null} [stoSteps=null] – BCBA-defined steps [{targetFrequency, durationWeeks}]; if null, auto-interpolates 9 steps
  * @returns {string} base64 PNG
  */
-export function renderSTOTrajectoryChart(behaviorName, baselineCount, masteryDates, targetCount = 0) {
-  // Build 9 evenly-spaced steps from baseline down to targetCount
-  const steps = 9;
-  const stoTargets = Array.from({ length: steps }, (_, i) => {
-    const t = (i + 1) / steps; // 1/9, 2/9, ... 9/9
-    return Math.round(baselineCount + (targetCount - baselineCount) * t);
-  });
-  const labels      = [
-    'Baseline',
-    ...masteryDates.map((d, i) => `STO ${i + 1} ${d}`),
-  ];
+export function renderSTOTrajectoryChart(behaviorName, baselineCount, masteryDates, targetCount = 0, stoSteps = null) {
+  let stoTargets, labels;
+
+  if (stoSteps && stoSteps.length > 0) {
+    // BCBA-defined explicit steps + LTO as final point
+    stoTargets = [
+      ...stoSteps.map(s => parseFloat(s.targetFrequency) || 0),
+      targetCount,
+    ];
+    labels = [
+      'Baseline',
+      ...stoSteps.map((_, i) => `STO ${i + 1}`),
+      'LTO',
+    ];
+  } else {
+    // Auto-interpolate 9 evenly-spaced steps from baseline down to targetCount
+    const steps = 9;
+    stoTargets = Array.from({ length: steps }, (_, i) => {
+      const t = (i + 1) / steps; // 1/9, 2/9, ... 9/9
+      return Math.round(baselineCount + (targetCount - baselineCount) * t);
+    });
+    labels = [
+      'Baseline',
+      ...masteryDates.map((d, i) => `STO ${i + 1} ${d}`),
+    ];
+  }
 
   const canvas = createOffscreenCanvas(600, 300);
   const ctx    = canvas.getContext('2d');
@@ -245,6 +260,83 @@ export function renderReplacementBehaviorChart(skillTargets) {
         },
         x: {
           ticks: { maxRotation: 45, font: { size: 10 } },
+        },
+      },
+    },
+  });
+
+  const base64 = canvas.toDataURL('image/png').split(',')[1];
+  chart.destroy();
+  return base64;
+}
+
+// ─── renderSkillSTOChart ──────────────────────────────────────────────────────
+
+/**
+ * Line chart showing the accuracy trajectory from baseline → STO steps → mastery (LTO).
+ *
+ * @param {string}   skillName             – e.g. "Mand Training"
+ * @param {number}   baselinePercent       – observed baseline %
+ * @param {object[]|null} stoSteps         – BCBA-defined steps [{targetPercent, skillDescription, durationWeeks}]; null = auto midpoint
+ * @param {number}   [masteryCriteriaPercent=80] – LTO mastery target %
+ * @returns {string} base64 PNG
+ */
+export function renderSkillSTOChart(skillName, baselinePercent, stoSteps, masteryCriteriaPercent = 80) {
+  let data, labels;
+
+  if (stoSteps && stoSteps.length > 0) {
+    // BCBA-defined steps
+    data   = [baselinePercent, ...stoSteps.map(s => parseFloat(s.targetPercent) || 0), masteryCriteriaPercent];
+    labels = ['Baseline', ...stoSteps.map((_, i) => `STO ${i + 1}`), 'LTO (Mastery)'];
+  } else {
+    // Auto: single midpoint between baseline and mastery
+    const mid = Math.round((baselinePercent + masteryCriteriaPercent) / 2);
+    data   = [baselinePercent, mid, masteryCriteriaPercent];
+    labels = ['Baseline', 'STO (auto)', 'LTO (Mastery)'];
+  }
+
+  const canvas = createOffscreenCanvas(600, 300);
+  const ctx    = canvas.getContext('2d');
+  fillBackground(ctx, 600, 300);
+
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label:              'Target Accuracy',
+          data,
+          borderColor:        'rgba(20,184,166,1)',
+          backgroundColor:    'rgba(20,184,166,0.1)',
+          borderWidth:        2,
+          pointBackgroundColor: 'rgba(20,184,166,1)',
+          pointRadius:        5,
+          fill:               true,
+          tension:            0.3,
+        },
+      ],
+    },
+    options: {
+      responsive: false,
+      animation:  false,
+      plugins: {
+        title: {
+          display: true,
+          text:    `${skillName} — Accuracy Trajectory (STO → Mastery)`,
+          font:    { size: 14, weight: 'bold' },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max:         100,
+          title: { display: true, text: '% Accuracy' },
+          ticks: { callback: v => `${v}%` },
+        },
+        x: {
+          title: { display: true, text: 'Objective' },
+          ticks: { maxRotation: 30 },
         },
       },
     },

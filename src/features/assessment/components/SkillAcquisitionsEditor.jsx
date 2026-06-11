@@ -115,14 +115,30 @@ function GoalEditorCard({ clientId, goal, index, setClients }) {
           </Field>
 
           {/* Short-Term Objective */}
-          <Field label="6-Month Target (STO)">
-            <EditTextarea
-              value={goal.sto}
-              onChange={set('sto')}
-              placeholder={`Client will demonstrate ${goal.targetSkill || 'the target skill'} with improving accuracy across consecutive sessions with decreasing prompt support.`}
-              rows={2}
-            />
-          </Field>
+          {(goal.stoSteps ?? []).length > 0 ? (
+            <div>
+              <FieldLabel>Short-Term Objectives</FieldLabel>
+              <div className="rounded-lg px-3 py-2.5 space-y-1.5"
+                style={{ background: 'rgba(20,184,166,0.05)', border: '1px solid rgba(20,184,166,0.2)' }}>
+                {goal.stoSteps.map((s, si) => (
+                  <p key={s.id} className="text-[12px] text-slate-600">
+                    <span className="font-semibold text-teal-700">STO {si + 1}: </span>
+                    Client will demonstrate {s.skillDescription || goal.targetSkill || 'the target skill'} with {s.targetPercent || '?'}% accuracy across {goal.masteryCriteriaSessions || '3'} consecutive sessions within {s.durationWeeks || '?'} weeks.
+                  </p>
+                ))}
+                <p className="text-[10px] text-teal-500 mt-1">Defined in interview — edit in Section 10</p>
+              </div>
+            </div>
+          ) : (
+            <Field label="6-Month Target (STO)">
+              <EditTextarea
+                value={goal.sto}
+                onChange={set('sto')}
+                placeholder={`Client will demonstrate ${goal.targetSkill || 'the target skill'} with improving accuracy across consecutive sessions with decreasing prompt support.`}
+                rows={2}
+              />
+            </Field>
+          )}
 
           {/* Current Level */}
           <Field label="Current Level">

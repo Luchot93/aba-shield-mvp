@@ -6,6 +6,8 @@
  * on the clients array. Components import only what they need.
  */
 
+import { makeReassessmentSession } from '../../constants/seedData.js';
+
 // ─── Internal helpers ───────────────────────────────────────────────────────
 
 /** Recompute the three derived counters on assessment_session. */
@@ -307,9 +309,10 @@ const SKILL_GOAL_DEFAULTS = {
   generalizationNotes: '',
   // ── Change #6 fields ──────────────────────────────────────────────────────
   domain: '',                        // Communication | Social | Adaptive / Self-Help | Academic | Motor | Play
-  stoPercent: '',                    // STO accuracy target (%)
-  stoSkillDescription: '',           // free-text description of the STO skill/step
-  stoWeeks: '',                      // weeks from program start to hit the STO
+  stoPercent: '',                    // STO accuracy target (%) — legacy single-step fallback
+  stoSkillDescription: '',           // free-text description of the STO skill/step — legacy fallback
+  stoWeeks: '',                      // weeks from program start to hit the STO — legacy fallback
+  stoSteps: [],                      // [{ id, targetPercent, skillDescription, durationWeeks }] — BCBA-defined STO milestones
 };
 
 export function addSkillGoal(setClients, clientId) {
@@ -411,6 +414,7 @@ const BEHAVIOR_TARGET_DEFAULTS = {
   hypothesizedFunction:  '',          // 'Escape' | 'Attention' | 'Access' | 'Automatic'
   baselineFrequency:     '',
   targetFrequency:       '',
+  stoSteps:              [],          // [{ id, targetFrequency, durationWeeks, note }] — BCBA-defined STO milestones
   measurementSystem:     '',          // 'Event Recording' | 'Duration Recording' | 'Interval Recording' | 'ABC'
   priorFBACompleted:     false,
   priorBIPCompleted:     false,
@@ -457,6 +461,110 @@ export function removeBehaviorTarget(setClients, clientId, targetId) {
     const section = session.sections['behavior_targets'];
     const updated = { ...section, behaviorTargets: (section.behaviorTargets || []).filter(t => t.id !== targetId) };
     const updatedSections = { ...session.sections, behavior_targets: updated };
+    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+  }));
+}
+
+// ─── Behavior Target STO Steps ───────────────────────────────────────────────
+
+export function addBehaviorStoStep(setClients, clientId, targetId) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== clientId) return c;
+    const session = c.assessment_session;
+    const section = session.sections['behavior_targets'];
+    const updatedTargets = (section.behaviorTargets || []).map(t => {
+      if (t.id !== targetId) return t;
+      const newStep = { id: crypto.randomUUID(), targetFrequency: '', durationWeeks: '', note: '' };
+      return { ...t, stoSteps: [...(t.stoSteps ?? []), newStep] };
+    });
+    const updated = { ...section, behaviorTargets: updatedTargets, completionState: behaviorTargetCompletionState(updatedTargets) };
+    const updatedSections = { ...session.sections, behavior_targets: updated };
+    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+  }));
+}
+
+export function updateBehaviorStoStep(setClients, clientId, targetId, stepId, field, value) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== clientId) return c;
+    const session = c.assessment_session;
+    const section = session.sections['behavior_targets'];
+    const updatedTargets = (section.behaviorTargets || []).map(t => {
+      if (t.id !== targetId) return t;
+      const updatedSteps = (t.stoSteps ?? []).map(s => s.id === stepId ? { ...s, [field]: value } : s);
+      return { ...t, stoSteps: updatedSteps };
+    });
+    const updated = { ...section, behaviorTargets: updatedTargets, completionState: behaviorTargetCompletionState(updatedTargets) };
+    const updatedSections = { ...session.sections, behavior_targets: updated };
+    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+  }));
+}
+
+export function removeBehaviorStoStep(setClients, clientId, targetId, stepId) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== clientId) return c;
+    const session = c.assessment_session;
+    const section = session.sections['behavior_targets'];
+    const updatedTargets = (section.behaviorTargets || []).map(t => {
+      if (t.id !== targetId) return t;
+      return { ...t, stoSteps: (t.stoSteps ?? []).filter(s => s.id !== stepId) };
+    });
+    const updated = { ...section, behaviorTargets: updatedTargets, completionState: behaviorTargetCompletionState(updatedTargets) };
+    const updatedSections = { ...session.sections, behavior_targets: updated };
+    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+  }));
+}
+
+// ─── Skill Goal STO Steps ─────────────────────────────────────────────────────
+
+export function addSkillStoStep(setClients, clientId, goalId) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== clientId) return c;
+    const session = c.assessment_session;
+    const section = session.sections['skill_acquisitions'];
+    const updatedGoals = (section.skillGoals || []).map(g => {
+      if (g.id !== goalId) return g;
+      const newStep = { id: crypto.randomUUID(), targetPercent: '', skillDescription: '', durationWeeks: '' };
+      return { ...g, stoSteps: [...(g.stoSteps ?? []), newStep] };
+    });
+    const updated = { ...section, skillGoals: updatedGoals, completionState: skillGoalCompletionState(updatedGoals) };
+    const updatedSections = { ...session.sections, skill_acquisitions: updated };
+    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+  }));
+}
+
+export function updateSkillStoStep(setClients, clientId, goalId, stepId, field, value) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== clientId) return c;
+    const session = c.assessment_session;
+    const section = session.sections['skill_acquisitions'];
+    const updatedGoals = (section.skillGoals || []).map(g => {
+      if (g.id !== goalId) return g;
+      const updatedSteps = (g.stoSteps ?? []).map(s => s.id === stepId ? { ...s, [field]: value } : s);
+      return { ...g, stoSteps: updatedSteps };
+    });
+    const updated = { ...section, skillGoals: updatedGoals, completionState: skillGoalCompletionState(updatedGoals) };
+    const updatedSections = { ...session.sections, skill_acquisitions: updated };
+    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+  }));
+}
+
+export function removeSkillStoStep(setClients, clientId, goalId, stepId) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== clientId) return c;
+    const session = c.assessment_session;
+    const section = session.sections['skill_acquisitions'];
+    const updatedGoals = (section.skillGoals || []).map(g => {
+      if (g.id !== goalId) return g;
+      return { ...g, stoSteps: (g.stoSteps ?? []).filter(s => s.id !== stepId) };
+    });
+    const updated = { ...section, skillGoals: updatedGoals, completionState: skillGoalCompletionState(updatedGoals) };
+    const updatedSections = { ...session.sections, skill_acquisitions: updated };
     const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
     return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
   }));
@@ -547,4 +655,143 @@ export function canExport(client) {
   return Object.entries(session.sections)
     .filter(([key]) => !EXPORT_EXCLUDED.has(key))
     .every(([, s]) => s.approvalState === 'approved' || s.approvalState === 'skipped');
+}
+
+// ─── STO helper ──────────────────────────────────────────────────────────────
+
+export function computeStoPercent(baselinePercent) {
+  const b = Number(baselinePercent);
+  if (isNaN(b)) return null;
+  let sto;
+  if (b < 50) {
+    sto = b + 30;
+  } else {
+    sto = Math.round((b + (100 - b) * 0.5) / 5) * 5;
+  }
+  return Math.min(sto, 100);
+}
+
+// ─── Caregiver Training Targets ───────────────────────────────────────────────
+
+const CAREGIVER_TRAINING_TARGET_DEFAULTS = {
+  goalName:            '',
+  operationalDefinition: '',
+  baselinePercent:     null,
+  baselineContext:     '',
+  stoPercent:          null,
+  stoWeeks:            null,
+  sto:                 '',
+  ltoPercent:          null,
+  ltoSessions:         null,
+  lto:                 '',
+  isStandard:          false,
+  standardKey:         null,
+};
+
+export function addCaregiverTrainingTarget(sessionId, clients, setClients) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== sessionId) return c;
+    const session  = c.assessment_session;
+    const section  = session.sections['caregiver_training'];
+    const newTarget = { id: crypto.randomUUID(), ...CAREGIVER_TRAINING_TARGET_DEFAULTS };
+    const updated  = {
+      ...section,
+      caregiverTrainingTargets: [...(section.caregiverTrainingTargets ?? []), newTarget],
+    };
+    const updatedSections = { ...session.sections, caregiver_training: updated };
+    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+  }));
+}
+
+export function updateCaregiverTrainingTarget(sessionId, targetId, field, value, clients, setClients) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== sessionId) return c;
+    const session  = c.assessment_session;
+    const section  = session.sections['caregiver_training'];
+    const updatedTargets = (section.caregiverTrainingTargets ?? []).map(t =>
+      t.id === targetId ? { ...t, [field]: value } : t,
+    );
+    const updated = { ...section, caregiverTrainingTargets: updatedTargets };
+    const updatedSections = { ...session.sections, caregiver_training: updated };
+    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+  }));
+}
+
+export function removeCaregiverTrainingTarget(sessionId, targetId, clients, setClients) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== sessionId) return c;
+    const session  = c.assessment_session;
+    const section  = session.sections['caregiver_training'];
+    const updatedTargets = (section.caregiverTrainingTargets ?? []).filter(t => t.isStandard || t.id !== targetId);
+    const updated = { ...section, caregiverTrainingTargets: updatedTargets };
+    const updatedSections = { ...session.sections, caregiver_training: updated };
+    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+  }));
+}
+
+// ─── Caregiver Training Session Logs ─────────────────────────────────────────
+
+export function addCaregiverTrainingSessionLog(clientId, newLog, clients, setClients) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== clientId) return c;
+    return {
+      ...c,
+      caregiver_training_session_logs: [
+        ...(c.caregiver_training_session_logs ?? []),
+        newLog,
+      ],
+    };
+  }));
+}
+
+// ─── Reassessment ─────────────────────────────────────────────────────────────
+
+export function createReassessmentSession(clientId, clients, setClients, bcbaId, bcbaName) {
+  const client = clients.find(c => c.id === clientId);
+  if (!client) return null;
+
+  const initialSession    = client.assessment_session;
+  const sessionLogs       = client.service_session_logs ?? [];
+  const authPeriodStart   = client.checklist?.submitted?.auth_start_date ?? null;
+  const authPeriodEnd     = client.checklist?.submitted?.auth_end_date
+    ?? client.auth_expiry_date
+    ?? null;
+
+  const newSession = makeReassessmentSession(
+    client, initialSession, sessionLogs, authPeriodStart, authPeriodEnd,
+  );
+
+  setClients(prev => prev.map(c => {
+    if (c.id !== clientId) return c;
+    return {
+      ...c,
+      reassessment_sessions: [...(c.reassessment_sessions ?? []), newSession],
+    };
+  }));
+
+  return newSession;
+}
+
+// ─── Session listing ──────────────────────────────────────────────────────────
+
+export function getClientSessions(client) {
+  const sessions = [];
+  if (client?.assessment_session) {
+    sessions.push({
+      ...client.assessment_session,
+      sessionType: 'initial',
+      clientId: client.id,
+    });
+  }
+  for (const s of (client?.reassessment_sessions ?? [])) {
+    sessions.push({
+      ...s,
+      sessionType: 'reassessment',
+      clientId: client.id,
+    });
+  }
+  return sessions;
 }

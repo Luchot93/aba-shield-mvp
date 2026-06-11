@@ -16,12 +16,155 @@
  *                                  ct.caregiverBaselines.reinforcement_baseline
  */
 
+import Chart from 'chart.js/auto';
 import {
+  createOffscreenCanvas,
   renderMaladaptiveBehaviorChart,
   renderSTOTrajectoryChart,
   renderReplacementBehaviorChart,
   renderCaregiverTrainingChart,
+  renderSkillSTOChart,
 } from './chartRenderer.js';
+import { computeStoPercent } from './assessmentStore.js';
+
+// ─── buildBehaviorTrendFromLogs ───────────────────────────────────────────────
+
+/**
+ * Extracts per-session frequency data for a single behavior from RBT session logs.
+ * @param {object[]} sessionLogs  Array of service_session_log objects.
+ * @param {string}   behaviorId   ID of the behavior target to extract.
+ * @returns {{ entries, baseline, average, percentReduction, trend }}
+ */
+export function buildBehaviorTrendFromLogs(sessionLogs, behaviorId) {
+  const matched = (sessionLogs ?? [])
+    .filter(log => (log.behaviorEntries ?? []).some(be => be.behaviorId === behaviorId))
+    .sort((a, b) => new Date(a.sessionDate) - new Date(b.sessionDate));
+
+  const entries = matched.map((log, i) => {
+    const be = log.behaviorEntries.find(be => be.behaviorId === behaviorId);
+    return {
+      sessionNumber: i + 1,
+      sessionDate:   log.sessionDate,
+      frequency:     be?.frequency ?? 0,
+    };
+  });
+
+  if (entries.length === 0) {
+    return { entries: [], baseline: null, average: null, percentReduction: null, trend: 'flat' };
+  }
+
+  const baseline  = entries[0].frequency;
+  const average   = entries.reduce((sum, e) => sum + e.frequency, 0) / entries.length;
+  const percentReduction = baseline > 0 ? ((baseline - average) / baseline) * 100 : 0;
+  const threshold = baseline * 0.05;
+  const trend     = average < baseline - threshold ? 'improving'
+    : average > baseline + threshold ? 'worsening'
+    : 'flat';
+
+  return { entries, baseline, average, percentReduction, trend };
+}
+
+// ─── renderCaregiverTrainingTargetChart ───────────────────────────────────────
+
+/**
+ * Single chart for one caregiver training target.
+ * Bar at baseline %, horizontal reference lines at STO and LTO.
+ * @param {object} target  A caregiverTrainingTarget object.
+ * @param {object} [options]
+ * @returns {string} base64 PNG
+ */
+export function renderCaregiverTrainingTargetChart(target, options = {}) {
+  const bp = parseFloat(target.baselinePercent) || 0;
+  const stoPercent = target.stoPercent != null
+    ? parseFloat(target.stoPercent)
+    : (computeStoPercent(bp) ?? bp);
+  const ltoPercent = target.ltoPercent != null
+    ? parseFloat(target.ltoPercent)
+    : 100;
+
+  // Y-axis ticks: [0, baseline, STO, LTO, 100] — deduplicated and sorted
+  const tickSet = new Set([0, Math.round(bp), Math.round(stoPercent), Math.round(ltoPercent), 100]);
+  const tickValues = [...tickSet].sort((a, b) => a - b);
+
+  // Use 3 phantom x-positions so line datasets span horizontally across the chart
+  const labels = ['', 'Observed Baseline', ''];
+
+  const canvas = createOffscreenCanvas(520, 300);
+  const ctx    = canvas.getContext('2d');
+  ctx.save();
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, 520, 300);
+  ctx.restore();
+
+  const chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          type:            'bar',
+          label:           'Baseline %',
+          data:            [null, bp, null],
+          backgroundColor: 'rgba(148,163,184,0.7)',
+          borderColor:     'rgba(148,163,184,1)',
+          borderWidth:     1,
+          borderRadius:    3,
+          barPercentage:   0.5,
+        },
+        {
+          type:        'line',
+          label:       'STO target',
+          data:        [stoPercent, stoPercent, stoPercent],
+          borderColor: 'rgba(20,184,166,1)',
+          borderWidth: 2,
+          borderDash:  [6, 3],
+          pointRadius: 0,
+          fill:        false,
+        },
+        {
+          type:        'line',
+          label:       'LTO target',
+          data:        [ltoPercent, ltoPercent, ltoPercent],
+          borderColor: 'rgba(52,211,153,1)',
+          borderWidth: 2,
+          borderDash:  [4, 4],
+          pointRadius: 0,
+          fill:        false,
+        },
+      ],
+    },
+    options: {
+      responsive: false,
+      animation:  false,
+      plugins: {
+        title: {
+          display: true,
+          text:    target.goalName || 'Caregiver Training Goal',
+          font:    { size: 14, weight: 'bold' },
+          padding: { bottom: 12 },
+        },
+        legend: { display: true, position: 'bottom' },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max:         100,
+          title: { display: true, text: '% Correct' },
+          ticks: {
+            callback: (val) => tickValues.includes(val) ? `${val}%` : '',
+          },
+        },
+        x: {
+          grid: { display: false },
+        },
+      },
+    },
+  });
+
+  const base64 = canvas.toDataURL('image/png').split(',')[1];
+  chart.destroy();
+  return base64;
+}
 
 // ─── Key normalizer ───────────────────────────────────────────────────────────
 
@@ -84,9 +227,10 @@ export async function buildGraphsFromSession(session) {
     // Step 2 — STO reduction trajectory line chart
     // Skip if baseline is 0 — all STO targets would also be 0, producing a flat useless line
     if (baselineCount > 0) {
-      const stoKey = `sto_${normalize(name)}`;
+      const stoKey  = `sto_${normalize(name)}`;
+      const stoSteps = (bt.stoSteps ?? []).filter(s => s.targetFrequency !== '' && s.targetFrequency != null);
       try {
-        result[stoKey] = renderSTOTrajectoryChart(name, baselineCount, masteryDates, targetCount);
+        result[stoKey] = renderSTOTrajectoryChart(name, baselineCount, masteryDates, targetCount, stoSteps.length > 0 ? stoSteps : null);
       } catch (err) {
         console.warn(`Chart failed: ${stoKey}`, err);
       }
@@ -119,20 +263,49 @@ export async function buildGraphsFromSession(session) {
     } catch (err) {
       console.warn('Chart failed: replacement_behaviors', err);
     }
+
+    // Per-skill STO trajectory charts
+    for (const g of filteredGoals) {
+      const name = (g.targetSkill || '').trim();
+      if (!name) continue;
+      const stoKey    = `skill_sto_${normalize(name)}`;
+      const stoSteps  = (g.stoSteps ?? []).filter(s => s.targetPercent !== '' && s.targetPercent != null);
+      const baseline  = parseFloat(g.baselinePercent) || 0;
+      const mastery   = parseFloat(g.masteryCriteriaPercent) || 80;
+      // Tier-1 fallback: no stoSteps but stoPercent entered → synthesize single step for chart
+      const singleSto = stoSteps.length === 0 && g.stoPercent != null && g.stoPercent !== ''
+        ? [{ targetPercent: String(g.stoPercent), skillDescription: g.stoSkillDescription || g.targetSkill, durationWeeks: g.stoWeeks || '12' }]
+        : null;
+      const stoStepsForChart = stoSteps.length > 0 ? stoSteps : singleSto;
+      try {
+        result[stoKey] = renderSkillSTOChart(name, baseline, stoStepsForChart, mastery);
+      } catch (err) {
+        console.warn(`Chart failed: ${stoKey}`, err);
+      }
+    }
   }
 
-  // ── Step 4 — Caregiver training skill baseline charts ────────────────────────
+  // ── Step 4 — Caregiver training charts ──────────────────────────────────────
   //
-  // Data source: session.sections.caregiver_training.caregiverBaselines
-  //   .premack_baseline      — % correct Premack (first/then) observed at assessment
-  //   .reinforcement_baseline — % correct reinforcement delivery observed
-  //
-  // NOTE: spec referenced ct.premackPercent / ct.reinforcementPercent — those
-  // fields do not exist. Actual paths confirmed from seedData.js and
-  // CaregiverTrainingForm.jsx.
+  // If the BCBA has defined caregiver training targets (caregiverTrainingTargets),
+  // generate one dynamic chart per target (baseline + STO/LTO reference lines).
+  // Otherwise fall back to the legacy hardcoded Premack / Reinforcement charts.
 
   const ct = session?.sections?.caregiver_training;
-  if (ct) {
+  const ctTargets = session?.caregiver_training?.caregiverTrainingTargets
+    ?? ct?.caregiverTrainingTargets;
+
+  if (ctTargets && ctTargets.length > 0) {
+    for (const t of ctTargets) {
+      const key = `caregiver_target_${normalize(t.goalName || t.id || String(ctTargets.indexOf(t)))}`;
+      try {
+        result[key] = renderCaregiverTrainingTargetChart(t);
+      } catch (err) {
+        console.warn(`Chart failed: ${key}`, err);
+      }
+    }
+  } else if (ct) {
+    // Fallback: existing hardcoded Premack + Reinforcement logic
     const bl = ct.caregiverBaselines ?? {};
 
     const premack = bl.premack_baseline;

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAutoSave } from '../../../hooks/useAutoSave.js';
-import { updateSkillGoal, removeSkillGoal } from '../assessmentStore.js';
+import { updateSkillGoal, removeSkillGoal, addSkillStoStep, updateSkillStoStep, removeSkillStoStep } from '../assessmentStore.js';
 
 const DOMAINS = [
   'Communication',
@@ -636,6 +636,63 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
             </p>
           </div>
 
+          {/* ── Short-Term Objectives (STO steps) ──────────────────────── */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <SectionLabel>Short-Term Objectives (STO)</SectionLabel>
+              <button
+                type="button"
+                onClick={() => addSkillStoStep(setClients, clientId, goal.id)}
+                className="flex items-center gap-1 text-[11px] font-semibold text-teal-600 hover:text-teal-700 transition-colors">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add STO step
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 mb-2">
+              Milestones that must be met before reaching the mastery goal
+            </p>
+            {(goal.stoSteps ?? []).length === 0 ? (
+              <p className="text-[11px] text-slate-400 italic">
+                No steps defined — auto-formula will be used in the plan
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {(goal.stoSteps ?? []).map((step, si) => (
+                  <div key={step.id} className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600 rounded-lg px-3 py-2"
+                    style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                    <span className="text-[11px] font-bold text-teal-600 mr-0.5">STO {si + 1}</span>
+                    <span>{goal.targetSkill || 'Client'} will demonstrate</span>
+                    <InlineNum
+                      value={step.targetPercent}
+                      onChange={e => updateSkillStoStep(setClients, clientId, goal.id, step.id, 'targetPercent', e.target.value)}
+                      placeholder="40"
+                      width="3.5rem"
+                    />
+                    <span>% accuracy across</span>
+                    <span className="font-semibold text-slate-700">{goal.masteryCriteriaSessions || '3'}</span>
+                    <span>sessions within</span>
+                    <InlineNum
+                      value={step.durationWeeks}
+                      onChange={e => updateSkillStoStep(setClients, clientId, goal.id, step.id, 'durationWeeks', e.target.value)}
+                      placeholder="4"
+                      width="2.5rem"
+                    />
+                    <span>consecutive weeks.</span>
+                    <button
+                      type="button"
+                      onClick={() => removeSkillStoStep(setClients, clientId, goal.id, step.id)}
+                      className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none"
+                      title="Remove step">
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* ── Mastery Criteria — inline sentence ─────────────────────── */}
           <div className="rounded-xl px-4 py-3.5" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
             <SectionLabel>Mastery Criteria</SectionLabel>
@@ -667,42 +724,6 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
                 onChange={setVal('masteryCriteriaPromptingLevel')}
               />
               <span>level of prompting.</span>
-            </p>
-          </div>
-
-          {/* ── Short-Term Objective (STO) ──────────────────────────────── */}
-          <div className="rounded-xl px-4 py-3.5 space-y-2.5" style={{ background: 'rgba(20,184,166,0.04)', border: '1px solid rgba(20,184,166,0.18)' }}>
-            <SectionLabel>Short-Term Objective (STO)</SectionLabel>
-            {/* Row 1 — percent */}
-            <p className="text-[14px] text-slate-600 flex flex-wrap items-center gap-x-1.5">
-              <span>Client will demonstrate</span>
-              <InlineNum
-                value={goal.stoPercent}
-                onChange={val => updateSkillGoal(setClients, clientId, goal.id, { stoPercent: val })}
-                placeholder="80"
-                width="3.5rem"
-              />
-              <span>% accuracy on:</span>
-            </p>
-            {/* Row 2 — full-width description */}
-            <input
-              type="text"
-              value={goal.stoSkillDescription ?? ''}
-              onChange={e => updateSkillGoal(setClients, clientId, goal.id, { stoSkillDescription: e.target.value })}
-              placeholder="skill or step description…"
-              className="w-full text-[13px] font-medium text-teal-700 bg-white/60 border border-teal-200 rounded-lg px-3 py-1.5 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100 transition-all placeholder:text-teal-300"
-              style={{ fontFamily: 'DM Sans, sans-serif' }}
-            />
-            {/* Row 3 — weeks */}
-            <p className="text-[14px] text-slate-600 flex flex-wrap items-center gap-x-1.5">
-              <span>within</span>
-              <InlineNum
-                value={goal.stoWeeks}
-                onChange={val => updateSkillGoal(setClients, clientId, goal.id, { stoWeeks: val })}
-                placeholder="12"
-                width="3rem"
-              />
-              <span>weeks of program start.</span>
             </p>
           </div>
 

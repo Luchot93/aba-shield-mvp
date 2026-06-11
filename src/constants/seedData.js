@@ -1,5 +1,45 @@
 import { mkChecklist } from './checklist.js';
 
+// ─── Standard caregiver training target definitions ───────────────────────────
+// These two targets are pre-seeded into every new Caregiver Training section.
+// isStandard: true prevents deletion; standardKey is used by downstream systems.
+
+const _CT_BASE = {
+  baselinePercent: null,
+  baselineContext: '',
+  stoPercent: null,
+  stoWeeks: null,
+  sto: '',
+  ltoPercent: null,
+  ltoSessions: null,
+  lto: '',
+};
+
+export const STANDARD_CAREGIVER_TARGET_DEFS = [
+  {
+    standardKey: 'premack',
+    isStandard: true,
+    goalName: 'Premack Principle (First-Then)',
+    operationalDefinition: 'Caregiver uses "first [non-preferred], then [preferred]" structure consistently, delivering access to the preferred item contingently and only after the requested behavior is completed.',
+  },
+  {
+    standardKey: 'reinforcement',
+    isStandard: true,
+    goalName: 'Reinforcement Delivery',
+    operationalDefinition: 'Caregiver delivers reinforcement within 3 seconds of target behavior at a magnitude matched to the effort required, contingently and only following the desired response.',
+  },
+];
+
+// Returns a fresh pair of standard targets. seedIdx makes IDs stable for seed data.
+export function makeStandardCaregiverTargets(baselines = {}, seedIdx = null) {
+  return STANDARD_CAREGIVER_TARGET_DEFS.map((def, i) => ({
+    id: seedIdx != null ? `ctgt_std_${seedIdx}_${i + 1}` : crypto.randomUUID(),
+    ..._CT_BASE,
+    ...def,
+    baselinePercent: baselines[def.standardKey] != null ? Number(baselines[def.standardKey]) : null,
+  }));
+}
+
 const SECTION_ORDER = [
   'demographics','presenting_concerns','self_help','daily_living',
   'safety','communication','self_stim','medical_necessity',
@@ -41,6 +81,7 @@ const makeSections = () => Object.fromEntries(
       trainingFrequency: '',
       trainingBarriers: '',
       caregiverStrengths: '',
+      caregiverTrainingTargets: makeStandardCaregiverTargets({}, key),
     } : {}),
     recordingState: 'idle',
     recordingDurationSeconds: 0,
@@ -244,6 +285,11 @@ const EMMA_INTERVIEW_DATA = {
         masteryCriteriaSettings: 'Home + school (minimum 2 settings)',
         masteryCriteriaPrompting: 'Independent — no physical or gestural prompt',
         stoPercent: '60', stoSkillDescription: 'PECS card exchange for 3 preferred items', stoWeeks: '12',
+        stoSteps: [
+          { id: 'eg1-s1', targetPercent: '20', skillDescription: 'PECS Phase I exchange with full physical prompt faded to partial', durationWeeks: '4' },
+          { id: 'eg1-s2', targetPercent: '40', skillDescription: 'independent PECS exchange for 3 highly preferred items', durationWeeks: '4' },
+          { id: 'eg1-s3', targetPercent: '60', skillDescription: 'PECS exchange across 5 items in 2 settings', durationWeeks: '4' },
+        ],
         generalizationNotes: 'Across 3 communication partners, 2 settings, minimum 5 different preferred items. Priority probe contexts: item removal (Head Banging antecedent) and transition onset (Tantrum/Drop antecedent) — mastery of requesting "break" and "all done" in these exact contexts is the primary behavior-reduction mechanism for both behavior targets.',
       },
       {
@@ -261,6 +307,10 @@ const EMMA_INTERVIEW_DATA = {
         masteryCriteriaSettings: 'Therapy table + natural environment',
         masteryCriteriaPrompting: 'Independent — no gestural or vocal prompt',
         stoPercent: '80', stoSkillDescription: 'labeling 10 common objects from an array of 3', stoWeeks: '16',
+        stoSteps: [
+          { id: 'eg2-s1', targetPercent: '40', skillDescription: 'selecting correct object from array of 3 for 5 target items', durationWeeks: '5' },
+          { id: 'eg2-s2', targetPercent: '60', skillDescription: 'selecting correct object from array of 3 for 10 target items', durationWeeks: '5' },
+        ],
         generalizationNotes: 'Probe with novel objects across categories (food, toys, clothing) and with 2 additional trainers',
       },
       {
@@ -278,6 +328,10 @@ const EMMA_INTERVIEW_DATA = {
         masteryCriteriaSettings: 'Clinic + home',
         masteryCriteriaPrompting: 'Independent — verbal cue only, no physical or gestural',
         stoPercent: '80', stoSkillDescription: 'imitating 5 gross motor actions with partial physical prompt only', stoWeeks: '10',
+        stoSteps: [
+          { id: 'eg3-s1', targetPercent: '30', skillDescription: 'imitating 3 gross motor actions with partial physical prompt', durationWeeks: '3' },
+          { id: 'eg3-s2', targetPercent: '60', skillDescription: 'imitating 5 gross motor actions with gestural prompt only', durationWeeks: '4' },
+        ],
         generalizationNotes: 'Generalize to novel motor actions across 2 therapists and in natural group play contexts',
       },
       {
@@ -295,6 +349,10 @@ const EMMA_INTERVIEW_DATA = {
         masteryCriteriaSettings: 'Table — varied array sizes (3 to 5 items)',
         masteryCriteriaPrompting: 'Independent',
         stoPercent: '90', stoSkillDescription: 'matching identical objects in an array of 3', stoWeeks: '8',
+        stoSteps: [
+          { id: 'eg4-s1', targetPercent: '50', skillDescription: 'matching identical objects with gestural prompt in array of 3', durationWeeks: '3' },
+          { id: 'eg4-s2', targetPercent: '75', skillDescription: 'matching identical objects independently in array of 3', durationWeeks: '3' },
+        ],
         generalizationNotes: 'Generalize to non-identical pictures, then object-to-picture matching in varied locations',
       },
       {
@@ -312,6 +370,10 @@ const EMMA_INTERVIEW_DATA = {
         masteryCriteriaSettings: 'Home + school, with familiar and unfamiliar adults',
         masteryCriteriaPrompting: 'First-Then visual cue only — no additional verbal or physical prompt',
         stoPercent: '60', stoSkillDescription: 'transitioning within 60 sec for 3 high-priority contexts', stoWeeks: '14',
+        stoSteps: [
+          { id: 'eg5-s1', targetPercent: '25', skillDescription: 'transitioning with verbal + gestural prompt for 2 high-priority contexts', durationWeeks: '4' },
+          { id: 'eg5-s2', targetPercent: '50', skillDescription: 'transitioning with First-Then visual cue for 3 contexts without SIB', durationWeeks: '5' },
+        ],
         generalizationNotes: 'Priority transition probes: iPad → meal, play → departure, preferred toy → bath. Reduction in Tantrum/Drop and Head Banging behavior targets during transition periods serves as direct generalization measure. Coordinate with OT re: proprioceptive heavy work prior to high-risk transitions to reduce sensory-automatic component of SIB.',
       },
     ],
@@ -338,6 +400,11 @@ const EMMA_INTERVIEW_DATA = {
         priorFBACompleted: false,
         priorBIPCompleted: false,
         notes: 'FCT replacement: Functional Requesting (Mand Training) — teaching Emma to exchange a PECS card or activate Proloquo2Go to request a preferred item or "break" eliminates the communicative escape function driving this SIB. See Skill Acquisitions: "Functional Requesting (Mand Training)." Automatic/sensory component will be addressed in parallel via sensory diet (OT) and competing preferred stimulation. Family must honor the mand BEFORE SIB occurs to build the replacement behavior; demand removal following SIB should be avoided.',
+        stoSteps: [
+          { id: 'bts-emma-1-1', targetFrequency: '4', durationWeeks: '4', note: 'Reduce to ≤4 incidents/day with FCT prompting in place' },
+          { id: 'bts-emma-1-2', targetFrequency: '3', durationWeeks: '4', note: 'Reduce to ≤3 incidents/day; begin fading FCT prompts' },
+          { id: 'bts-emma-1-3', targetFrequency: '1', durationWeeks: '8', note: 'Reduce to ≤1 incident/day; FCT response independent across settings' },
+        ],
       },
       {
         id: 'bt-emma-2',
@@ -356,6 +423,10 @@ const EMMA_INTERVIEW_DATA = {
         priorFBACompleted: false,
         priorBIPCompleted: false,
         notes: 'Two-pronged skills approach: (1) Functional Requesting (Mand Training) teaches Emma to request a break or "all done" via PECS/AAC before dropping — directly replaces the escape function. (2) Transition Tolerance (First-Then Compliance) skill goal builds gradual tolerance for high-frequency transitions (iPad → meal, play → departure) using visual First-Then cues and countdown timers. Family must stop offering preferred items during tantrum/drop episodes as this reinforces both escape and access functions simultaneously.',
+        stoSteps: [
+          { id: 'bts-emma-2-1', targetFrequency: '3', durationWeeks: '6', note: 'Reduce to ≤3 tantrums/day using visual First-Then board with transitions' },
+          { id: 'bts-emma-2-2', targetFrequency: '1', durationWeeks: '8', note: 'Reduce to ≤1 tantrum/day; FCT "all done" card independent across transitions' },
+        ],
       },
     ],
   },
@@ -544,6 +615,10 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
         masteryCriteriaSettings: 'Home + school + at least 1 community setting',
         masteryCriteriaPrompting: 'Independent — no verbal or gestural prompt',
         stoPercent: '80', stoSkillDescription: 'unprompted help-seeking across 3 task types at home', stoWeeks: '10',
+        stoSteps: [
+          { id: 'mg1-s1', targetPercent: '25', skillDescription: 'vocalizing "help" with verbal model faded to gestural prompt', durationWeeks: '4' },
+          { id: 'mg1-s2', targetPercent: '50', skillDescription: 'unprompted help-seeking across 2 task types at home', durationWeeks: '4' },
+        ],
         generalizationNotes: 'Generalize across caregivers, RBT, teacher, and paraprofessional. Probe across task types: academic, self-care, play, and blocked access. Priority probe antecedents match the Physical Aggression behavior target: ending preferred activity (tablet, LEGO), grooming demands, sibling disruption, post-school transitions. Reduction in Physical Aggression frequency serves as the primary real-world measure of skill generalization.',
       },
       {
@@ -561,6 +636,10 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
         masteryCriteriaSettings: 'Home — must meet criterion with both parents as routine leader',
         masteryCriteriaPrompting: 'Independent (no more than 1 total verbal prompt per routine)',
         stoPercent: '100', stoSkillDescription: '6 of 8 routine steps independently within 45 min', stoWeeks: '12',
+        stoSteps: [
+          { id: 'mg2-s1', targetPercent: '50', skillDescription: '4 of 8 routine steps independently using visual schedule', durationWeeks: '4' },
+          { id: 'mg2-s2', targetPercent: '75', skillDescription: '6 of 8 routine steps independently within 45 min', durationWeeks: '4' },
+        ],
         generalizationNotes: 'The 8 routine steps include: (1) wake up/out of bed, (2) toilet, (3) brush teeth, (4) wash face, (5) bathing — highest resistance step, addressed concurrently via Bathing/Grooming Desensitization skill goal, (6) get dressed, (7) breakfast, (8) backpack ready. Probe weekend routine. Address holiday/schedule-change disruption with advance visual priming. Fade laminated schedule to checklist, then internalized. Full routine completion with bathing included (not sponge bath accommodation) is the mastery criterion.',
       },
       {
@@ -578,6 +657,10 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
         masteryCriteriaSettings: 'School recess + classroom cooperative tasks',
         masteryCriteriaPrompting: 'Independent — no verbal or gestural prompt',
         stoPercent: '80', stoSkillDescription: '1 unprompted peer initiation per session in structured setting', stoWeeks: '16',
+        stoSteps: [
+          { id: 'mg3-s1', targetPercent: '30', skillDescription: '1 prompted peer initiation per session using video model', durationWeeks: '5' },
+          { id: 'mg3-s2', targetPercent: '55', skillDescription: '1 unprompted peer initiation per session in structured classroom activity', durationWeeks: '5' },
+        ],
         generalizationNotes: 'Community generalization (playground, library events) after school mastery achieved. Family-arranged structured playdates as natural environment probe.',
       },
       {
@@ -595,6 +678,11 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
         masteryCriteriaSettings: 'Home — both parents as routine leader across consecutive evenings',
         masteryCriteriaPrompting: 'Visual step sequence + 2-minute advance warning only; no additional verbal or physical prompt',
         stoPercent: '100', stoSkillDescription: 'tolerating water contact for 3 min without refusal or dropping', stoWeeks: '10',
+        stoSteps: [
+          { id: 'mg4-s1', targetPercent: '30', skillDescription: 'entering bathroom and tolerating water contact on hands for 1 min without refusal', durationWeeks: '4' },
+          { id: 'mg4-s2', targetPercent: '60', skillDescription: 'completing shower entry and toleration steps with ≤2 prompts', durationWeeks: '4' },
+          { id: 'mg4-s3', targetPercent: '80', skillDescription: 'completing full bathing sequence with visual schedule and ≤1 prompt', durationWeeks: '4' },
+        ],
         generalizationNotes: 'Coordinate with OT re: sensory desensitization hierarchy for water temperature (warm preferred) and hair washing (handheld showerhead, no direct overhead spray). Embed bathing as Step 5 of Morning Routine Completion goal sequence once achieved independently in evening context. Reduction in Bathing Refusal behavior target (currently 45-60 min/night) is the direct clinical outcome measure. Marcus may use Functional Help-Seeking ("I need a minute") during steps — honor immediately to build trust and prevent escalation.',
       },
     ],
@@ -622,6 +710,11 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
         priorFBACompleted: false,
         priorBIPCompleted: false,
         notes: 'FCT replacement: Functional Help-Seeking (Verbal Request) — Marcus learns to vocalize "I need help," "I need a break," or "I need a minute" BEFORE escalating to physical contact. Treatment plan pairs FCT skill acquisition (see Skill Acquisitions: "Functional Help-Seeking") with extinction of aggression + DRA reinforcing verbal requests. Attention-maintained sibling-directed incidents addressed via differential reinforcement of sibling proximity tolerance. CRITICAL caregiver guidance: do NOT remove the demand following aggression — prompt the verbal help-seeking response instead and immediately honor it. 2 biting incidents in past 60 days involved mom during physical intervention; avoid restraint during peak escalation.',
+        stoSteps: [
+          { id: 'bts-marcus-1-1', targetFrequency: '3', durationWeeks: '4', note: 'Reduce to ≤3 incidents/day; FCT verbal request prompted before demands' },
+          { id: 'bts-marcus-1-2', targetFrequency: '1', durationWeeks: '4', note: 'Reduce to ≤1 incident/day; FCT response independently initiated' },
+          { id: 'bts-marcus-1-3', targetFrequency: '0', durationWeeks: '8', note: 'Zero incidents for 3 consecutive weeks across home and community settings' },
+        ],
       },
       {
         id: 'bt-marcus-2',
@@ -640,6 +733,10 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
         priorFBACompleted: false,
         priorBIPCompleted: false,
         notes: 'Skill-based dual approach: (1) Morning Routine Completion goal (see Skill Acquisitions) includes bathing as Step 5 of the 8-step visual schedule — systematic desensitization embedded within the routine using backward chaining (enter bathroom → water-only contact → partial bath → full routine). (2) Bathing/Grooming Desensitization skill goal targets sensory tolerance for water temperature and hair washing specifically. FCT overlap: Marcus may use Functional Help-Seeking to request "a minute" during bathing steps — this is reinforced as appropriate self-advocacy. Regression correlates with schedule disruption Oct 2025; consistent schedule restoration is prerequisite intervention. Parent training critical: reinforce each sub-step entered, avoid extended negotiations at bathroom doorway.',
+        stoSteps: [
+          { id: 'bts-marcus-2-1', targetFrequency: '1', durationWeeks: '6', note: 'Continue at 1/day refusal but reduce episode duration to ≤20 min using visual schedule' },
+          { id: 'bts-marcus-2-2', targetFrequency: '0', durationWeeks: '8', note: 'Zero refusals for 3 consecutive weeks; bathing routine completed independently with visual schedule' },
+        ],
       },
     ],
   },
@@ -654,6 +751,7 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
     trainingFrequency: '2x/week',
     trainingBarriers: 'Daniela (mother) works from home 3 days/week and is the primary implementer; Javier (father) works outside the home Mon–Fri, available evenings and weekends only. Maternal grandparents provide afterschool care 3x/week but speak primarily Spanish — written materials will need Spanish translations. Sofia (age 6, NT sibling) requires supervision during training sessions.',
     caregiverStrengths: 'Daniela demonstrates strong motivation and has already implemented an informal visual schedule with ~80% success rate. She accurately identifies Marcus\'s early warning signs and uses a quiet-space intervention independently. Javier is engaged and participated in today\'s interview. Both parents show excellent data-keeping potential — they track incidents in a shared notes app.',
+    caregiverTrainingTargets: makeStandardCaregiverTargets({ premack: 35, reinforcement: 50 }, 'c13'),
     transcript: "Dr. Reyes: Tell me about what strategies you've tried at home — things you do instinctively that help Marcus. Daniela: The visual schedule — that was huge. I made it myself from pictures I printed. And the first-then thing, I do that naturally now. Like, first shoes then tablet. It works maybe 40% of the time? But sometimes I forget to say it and just ask him to do things and that goes badly. Javier: On weekends I try to do what Daniela does but I don't always know what step we're on in the routine. We need a shared system. Dr. Reyes: Have you ever had formal ABA parent training? Daniela: At Sunshine they did one parent meeting — it was mostly them telling us what they were doing, not really training us how to do it. Dr. Reyes: Would you be open to training during Marcus's sessions and separate parent coaching sessions? Daniela: Yes, absolutely. That's actually what I've been hoping for. Javier: If there's something we can read or watch on our own time that would help too.",
     notes: 'Observed Daniela\'s spontaneous use of first/then (Premack) — correct structure approximately 35% of interactions observed during home visit intake. Reinforcement delivery observed at 50% — appropriate immediacy but inconsistent praise specificity. Priority skill for caregiver: precise first/then phrasing + consistent reinforcement delivery. Javier to receive Saturday parallel training sessions 2x/month. Grandparent materials: Spanish-language visual guides to be prepared. Competency benchmark: 80% correct unprompted use of both strategies across 3 consecutive observed sessions before independent implementation sign-off.',
     approvalState: 'pending',
@@ -842,6 +940,10 @@ Recommended service intensity: 20 hours per week, center-based with parent train
         masteryCriteriaSettings: 'Home + school (minimum 2 settings)',
         masteryCriteriaPrompting: 'Independent — no gestural or verbal prompt',
         stoPercent: '40', stoSkillDescription: 'requesting help or break across 3 demand contexts', stoWeeks: '8',
+        stoSteps: [
+          { id: 'op1-s1', targetPercent: '20', skillDescription: 'vocalizing "help" or "break" with gestural prompt faded across 2 demand types', durationWeeks: '4' },
+          { id: 'op1-s2', targetPercent: '40', skillDescription: 'unprompted help-seeking across 3 demand contexts at home', durationWeeks: '4' },
+        ],
         generalizationNotes: 'Generalize across both parents, RBT, and school staff. Priority probe: iPad removal demand and hygiene task onset — these are the two highest-frequency aggression antecedents. Coordinate with school SLP re: AAC-based help-seeking as parallel modality.',
       },
       {
@@ -859,6 +961,10 @@ Recommended service intensity: 20 hours per week, center-based with parent train
         masteryCriteriaSettings: 'Therapy table + natural environment',
         masteryCriteriaPrompting: 'Independent — no gestural or vocal prompt',
         stoPercent: '80', stoSkillDescription: 'following two-step directions across 5 distinct instruction sets', stoWeeks: '10',
+        stoSteps: [
+          { id: 'op2-s1', targetPercent: '50', skillDescription: 'following two-step directions for 3 instruction sets with gestural prompt on second step', durationWeeks: '4' },
+          { id: 'op2-s2', targetPercent: '70', skillDescription: 'following two-step directions independently across 5 instruction sets', durationWeeks: '4' },
+        ],
         generalizationNotes: 'Generalize across instruction-givers (Priya, Raj, teacher, RBT). Embed in morning routine sequencing (get backpack AND put on shoes) as natural environment context.',
       },
       {
@@ -876,6 +982,11 @@ Recommended service intensity: 20 hours per week, center-based with parent train
         masteryCriteriaSettings: 'School recess + structured classroom activity',
         masteryCriteriaPrompting: 'Independent — no adult gestural or verbal cue',
         stoPercent: '40', stoSkillDescription: 'initiating 1 peer interaction per 30-min session in 2 structured contexts', stoWeeks: '12',
+        stoSteps: [
+          { id: 'op3-s1', targetPercent: '20', skillDescription: 'initiating 1 scripted peer interaction per session with video model support', durationWeeks: '4' },
+          { id: 'op3-s2', targetPercent: '40', skillDescription: 'initiating 1 unprompted peer interaction per session in structured play context', durationWeeks: '4' },
+          { id: 'op3-s3', targetPercent: '60', skillDescription: 'initiating 2 unprompted peer interactions per session across 2 school contexts', durationWeeks: '4' },
+        ],
         generalizationNotes: 'Coordinate with paraprofessional at school for in-vivo social coaching during recess. Target 1-2 identified willing peers for structured interaction practice.',
       },
       {
@@ -893,6 +1004,11 @@ Recommended service intensity: 20 hours per week, center-based with parent train
         masteryCriteriaSettings: 'Home (bathroom)',
         masteryCriteriaPrompting: '≤1 verbal prompt per step',
         stoPercent: '50', stoSkillDescription: 'completing 5 of 10 hygiene steps with ≤2 prompts per step', stoWeeks: '14',
+        stoSteps: [
+          { id: 'op4-s1', targetPercent: '20', skillDescription: 'entering bathroom and tolerating water on hands with ≤3 prompts', durationWeeks: '4' },
+          { id: 'op4-s2', targetPercent: '50', skillDescription: 'completing 5 of 10 hygiene steps with ≤2 prompts per step', durationWeeks: '5' },
+          { id: 'op4-s3', targetPercent: '70', skillDescription: 'completing 8 of 10 hygiene steps independently using visual sequence', durationWeeks: '5' },
+        ],
         generalizationNotes: 'Coordinate with OT for sensory desensitization hierarchy (water temperature, tactile input progression). Family to implement nightly with RBT coaching during parent training sessions.',
       },
     ],
@@ -920,6 +1036,10 @@ Recommended service intensity: 20 hours per week, center-based with parent train
         priorFBACompleted: false,
         priorBIPCompleted: false,
         notes: 'FCT replacement: Oliver will request "help" or "break" to escape non-preferred demands before aggression occurs. The speed of escalation (pre-verbal → aggression within seconds) requires priming the FCT vocabulary immediately before high-risk demand contexts. RBT must present the demand, allow 3-second independent response window, then prompt FCT if no verbal request occurs — before the demand is repeated. Demand removal must not follow aggression; FCT response must be honored to maintain the replacement behavior.',
+        stoSteps: [
+          { id: 'bts-op1-1', targetFrequency: '2', durationWeeks: '4', note: 'Reduce to ≤2 incidents/day with FCT priming before high-risk demands' },
+          { id: 'bts-op1-2', targetFrequency: '1', durationWeeks: '8', note: 'Reduce to ≤1 incident/day; FCT "help" or "break" request independent' },
+        ],
       },
       {
         id: 'bt-op2',
@@ -938,6 +1058,10 @@ Recommended service intensity: 20 hours per week, center-based with parent train
         priorFBACompleted: false,
         priorBIPCompleted: false,
         notes: 'Safety priority: elopement in traffic-adjacent settings is the highest safety risk in this case. Graduated community exposure hierarchy required before unsupervised family community outings. Caregiver training in physical proximity management (hand-holding protocol, safety vest use in high-risk settings) must be completed before community sessions. Target behavior reduction to 0 incidents — any elopement in community is unacceptable given traffic proximity history. Wrist-to-wrist strap is an interim safety accommodation to be used until FCT and community tolerance are established.',
+        stoSteps: [
+          { id: 'bts-op2-1', targetFrequency: '1', durationWeeks: '6', note: 'Reduce to ≤1 elopement/outing with wrist-strap protocol and hand-holding training in place' },
+          { id: 'bts-op2-2', targetFrequency: '0', durationWeeks: '8', note: 'Zero elopement incidents across 3 consecutive community outings without physical restraint aid' },
+        ],
       },
     ],
   },
@@ -946,6 +1070,7 @@ Recommended service intensity: 20 hours per week, center-based with parent train
     completionState: 'complete',
     approvalState: 'approved',
     caregiverBaselines: { premack_baseline: '40', reinforcement_baseline: '55' },
+    caregiverTrainingTargets: makeStandardCaregiverTargets({ premack: 40, reinforcement: 55 }, 'c5'),
     trainingFormat: ['In-session coaching', 'Parent sessions', 'Written guides'],
     trainingFrequency: '2x/week',
     trainingBarriers: 'Raj\'s work schedule limits weekday availability. Grandparents are Gujarati-speaking — English guides will need translation. Priya reports high stress and fatigue from daily behavioral challenges.',
@@ -998,6 +1123,190 @@ Recommended service intensity: 20 hours per week, center-based with parent train
     caregiverSignedCrisisPlan: true,
     rbtTrainedOnPlan: false,
     crisisPlanInBsp: true,
+  },
+};
+
+// ── Charlotte Davis mock data ────────────────────────────────────────────────
+
+const CHARLOTTE_INTERVIEW_DATA = {
+  behavior_targets: {
+    completionState: 'complete',
+    approvalState: 'approved',
+    notes: 'Target 1: Tantrum. Topography: crying, screaming, drop to floor. Frequency: 5x/day. Ant: denied access, transitions. Function: escape + access. Target 2: Elopement. Topography: running from caregiver without permission. Frequency: 10x/day. Ant: transitions, open doors. Function: escape + automatic. Target 3: Task Refusal. Topography: verbal refusal, turning/walking away. Frequency: 25x/day. Ant: non-preferred demands. Function: escape. Target 4: Aggression. Topography: hitting, pushing. Frequency: 5x/day. Ant: demand presentation, item removal. Function: escape + access.',
+    behaviorTargets: [
+      {
+        id: 'bt-c10-1',
+        behaviorName: 'Tantrum',
+        operationalDefinition: 'CLIENT cries, screams, and/or drops to the floor following a denied access event or transition demand. Episode begins at first vocalization or drop and ends when CLIENT is standing quietly for 10 consecutive seconds.',
+        topography: ['Crying/screaming', 'Drop/go limp'],
+        frequencyPerDay: '5', frequencyUnit: 'day',
+        durationSeconds: '5', durationUnit: 'minutes',
+        intensityRating: 'Moderate',
+        antecedents: 'Denied access to preferred items or activities; transition away from preferred activity; delayed reinforcement',
+        primaryTargets: ['Self', 'Parent / Caregiver'],
+        hypothesizedFunction: 'Escape',
+        baselineFrequency: '5',
+        targetFrequency: '1',
+        stoSteps: [
+          { id: 'sto-c10-1-1', targetFrequency: '4', durationWeeks: '4', note: '' },
+          { id: 'sto-c10-1-2', targetFrequency: '3', durationWeeks: '4', note: '' },
+          { id: 'sto-c10-1-3', targetFrequency: '2', durationWeeks: '4', note: '' },
+          { id: 'sto-c10-1-4', targetFrequency: '1', durationWeeks: '4', note: '' },
+        ],
+        measurementSystem: 'Event Recording',
+        priorFBACompleted: false, priorBIPCompleted: false,
+        notes: '',
+      },
+      {
+        id: 'bt-c10-2',
+        behaviorName: 'Elopement',
+        operationalDefinition: 'CLIENT moves more than 10 feet from the supervising adult without permission, defined as failing to stop within 3 seconds of a verbal cue ("stop" or "come back").',
+        topography: ['Running', 'Moving away without permission'],
+        frequencyPerDay: '10', frequencyUnit: 'day',
+        durationSeconds: '30', durationUnit: 'seconds',
+        intensityRating: 'Severe',
+        antecedents: 'Transitions, open doors, community settings, demand presentation',
+        primaryTargets: ['Self'],
+        hypothesizedFunction: 'Escape',
+        baselineFrequency: '10',
+        targetFrequency: '0',
+        stoSteps: [
+          { id: 'sto-c10-2-1', targetFrequency: '7', durationWeeks: '4', note: '' },
+          { id: 'sto-c10-2-2', targetFrequency: '4', durationWeeks: '4', note: '' },
+          { id: 'sto-c10-2-3', targetFrequency: '2', durationWeeks: '4', note: '' },
+          { id: 'sto-c10-2-4', targetFrequency: '0', durationWeeks: '4', note: '' },
+        ],
+        measurementSystem: 'Event Recording',
+        priorFBACompleted: false, priorBIPCompleted: false,
+        notes: '',
+      },
+      {
+        id: 'bt-c10-3',
+        behaviorName: 'Task Refusal',
+        operationalDefinition: 'CLIENT fails to comply with an instruction within 5 seconds, including turning away, saying "no," pushing materials away, or walking away from the task.',
+        topography: ['Verbal refusal', 'Turning away', 'Walking away from task'],
+        frequencyPerDay: '25', frequencyUnit: 'day',
+        durationSeconds: '2', durationUnit: 'minutes',
+        intensityRating: 'Mild',
+        antecedents: 'Non-preferred demands, academic tasks, hygiene routines',
+        primaryTargets: ['Self'],
+        hypothesizedFunction: 'Escape',
+        baselineFrequency: '25',
+        targetFrequency: '5',
+        measurementSystem: 'Event Recording',
+        priorFBACompleted: false, priorBIPCompleted: false,
+        notes: '',
+        stoSteps: [
+          { id: 'bts-c10-3-1', targetFrequency: '15', durationWeeks: '4', note: 'Reduce to ≤15 refusals/day using visual schedule and first-then supports' },
+          { id: 'bts-c10-3-2', targetFrequency: '10', durationWeeks: '4', note: 'Reduce to ≤10 refusals/day; begin fading visual prompts for preferred tasks' },
+          { id: 'bts-c10-3-3', targetFrequency: '5', durationWeeks: '8', note: 'Reduce to ≤5 refusals/day across academic, hygiene, and non-preferred tasks' },
+        ],
+      },
+      {
+        id: 'bt-c10-4',
+        behaviorName: 'Aggression',
+        operationalDefinition: 'CLIENT makes forceful physical contact with another person by hitting or pushing. Each discrete contact event is scored as one instance. Accidental bumping is not scored.',
+        topography: ['Open-hand hitting', 'Pushing'],
+        frequencyPerDay: '5', frequencyUnit: 'day',
+        durationSeconds: '2', durationUnit: 'seconds',
+        intensityRating: 'Moderate',
+        antecedents: 'Demand presentation, item removal, transition',
+        primaryTargets: ['Parent / Caregiver'],
+        hypothesizedFunction: 'Escape',
+        baselineFrequency: '5',
+        targetFrequency: '0',
+        measurementSystem: 'Event Recording',
+        priorFBACompleted: false, priorBIPCompleted: false,
+        notes: '',
+        stoSteps: [
+          { id: 'bts-c10-4-1', targetFrequency: '2', durationWeeks: '4', note: 'Reduce to ≤2 incidents/day with FCT "break" card prompted before demand escalation' },
+          { id: 'bts-c10-4-2', targetFrequency: '0', durationWeeks: '8', note: 'Zero incidents for 3 consecutive weeks; FCT request independent across demand contexts' },
+        ],
+      },
+    ],
+  },
+  skill_acquisitions: {
+    completionState: 'complete',
+    approvalState: 'approved',
+    notes: 'Family priority targets: (1) functional communication to replace tantrums and elopement; (2) transition compliance; (3) self-regulation/emotion identification.',
+    skillGoals: [
+      {
+        id: 'sg-c10-1',
+        domain: 'Communication',
+        targetSkill: 'Mand Training (Functional Requesting)',
+        operationalDefinition: 'Charlotte independently selects and exchanges a communication symbol or vocalizes a 1–2 word request for a preferred item or activity within 10 seconds of access opportunity, without physical or gestural prompting.',
+        definitionIsAiGenerated: false, definitionIsLoading: false,
+        teachingStrategies: ['Discrete Trial Training (DTT)', 'Natural Environment Teaching (NET)'],
+        teachingStrategiesOther: '',
+        promptingLevel: 'Gestural', promptingLevelCombination: '',
+        baselinePercent: '15', baselineOpportunities: '20',
+        baselinePromptingDesc: 'Gestural prompt required for 85% of request opportunities; vocalizes approximations with full prompt in 3 of 20 probes',
+        masteryCriteriaPercent: '80', masteryCriteriaSessions: '3',
+        masteryCriteriaSettings: 'Home + clinic (minimum 2 settings)',
+        masteryCriteriaPrompting: 'Independent — no gestural or verbal prompt',
+        stoSteps: [
+          { id: 'sg-c10-1-s1', targetPercent: '30', skillDescription: 'requesting preferred items using 1-word vocalizations with gestural model', durationWeeks: '4' },
+          { id: 'sg-c10-1-s2', targetPercent: '60', skillDescription: 'requesting preferred items using 1–2 word phrases without physical prompt', durationWeeks: '4' },
+        ],
+        stoPercent: '', stoSkillDescription: '', stoWeeks: '', sto: '',
+        generalizationNotes: 'Generalize across both parents, RBT, and school staff. Priority probe: denied access to iPad (primary Tantrum antecedent) — mand for "break" or "help" must precede all elopement and tantrum prevention protocols.',
+      },
+      {
+        id: 'sg-c10-2',
+        domain: 'Adaptive / Self-Help',
+        targetSkill: 'Transition Compliance (First-Then)',
+        operationalDefinition: 'Charlotte transitions from a preferred to a non-preferred activity within 60 seconds of a transition cue (verbal + First-Then visual), without engaging in elopement or tantrum behavior, when a 2-minute advance warning and First-Then visual are provided.',
+        definitionIsAiGenerated: false, definitionIsLoading: false,
+        teachingStrategies: ['Natural Environment Teaching (NET)', 'Task Analysis / Chaining'],
+        teachingStrategiesOther: '',
+        promptingLevel: 'Verbal', promptingLevelCombination: '',
+        baselinePercent: '10', baselineOpportunities: '20',
+        baselinePromptingDesc: 'Transitions result in elopement or tantrum approximately 90% of the time; successful transition requires full verbal + physical prompt chain',
+        masteryCriteriaPercent: '80', masteryCriteriaSessions: '5',
+        masteryCriteriaSettings: 'Home + community',
+        masteryCriteriaPrompting: 'Verbal cue only; no physical or gestural prompt',
+        stoSteps: [
+          { id: 'sg-c10-2-s1', targetPercent: '40', skillDescription: 'complying with transition within 60s given First-Then visual + verbal warning', durationWeeks: '6' },
+          { id: 'sg-c10-2-s2', targetPercent: '65', skillDescription: 'complying with transition across 3 transition types without elopement', durationWeeks: '6' },
+        ],
+        stoPercent: '', stoSkillDescription: '', stoWeeks: '', sto: '',
+        generalizationNotes: 'Coordinate transition protocol with school staff. Fade First-Then visual to verbal-only once 80% criterion met in 2 settings.',
+      },
+    ],
+  },
+  caregiver_training: {
+    completionState: 'complete',
+    approvalState: 'approved',
+    notes: 'Jennifer Davis is primary implementer. Highly motivated and engaged. Key targets: Premack principle delivery consistency and reinforcement timing.',
+    caregiverBaselines: { premack_baseline: '20', reinforcement_baseline: '35' },
+    trainingFormat: ['In-session coaching', 'Parent sessions'],
+    trainingFrequency: '2x/week',
+    trainingBarriers: 'Work schedule limits weekday session availability.',
+    caregiverStrengths: 'Highly motivated and receptive to feedback. Good insight into behavioral functions.',
+    caregiverTrainingTargets: [
+      {
+        id: 'ctgt_1',
+        isStandard: true,
+        standardKey: 'premack',
+        goalName: 'Consistent Premack delivery',
+        operationalDefinition: 'Caregiver delivers access to preferred activity only after target behavior is performed, not before or without it',
+        baselinePercent: 20,
+        baselineContext: 'Observed during initial intake home visit',
+        stoPercent: 50, stoWeeks: 12, sto: '',
+        ltoPercent: 90, ltoSessions: 5, lto: '',
+      },
+      {
+        id: 'ctgt_2',
+        isStandard: true,
+        standardKey: 'reinforcement',
+        goalName: 'Reinforcement timing and magnitude',
+        operationalDefinition: 'Caregiver delivers reinforcer within 3 seconds of target behavior at a level matched to the effort required',
+        baselinePercent: 35,
+        baselineContext: 'Observed during initial intake home visit',
+        stoPercent: 65, stoWeeks: 12, sto: '',
+        ltoPercent: 90, ltoSessions: 5, lto: '',
+      },
+    ],
   },
 };
 
@@ -1164,7 +1473,7 @@ export const SEED_CLIENTS = () => [
       { id:'olog20', action:'Uploaded: Insurance card',                                                    by:'Admin User',    ts:'2026-03-15T15:00:00Z' },
       { id:'olog21', action:'Uploaded: Referral request form',                                             by:'Admin User',    ts:'2026-03-15T09:00:00Z' },
     ];
-    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:OLIVER_DOCS, activity_log:OLIVER_LOG, case_notes: SEED_NOTES['c5'], assessment_session };
+    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:OLIVER_DOCS, activity_log:OLIVER_LOG, case_notes: SEED_NOTES['c5'], assessment_session, service_session_logs: [], caregiver_training_session_logs: [] };
   }
 
   // ── c14 Diego Reyes — plan_draft (same clinical profile as Oliver) ──────────────
@@ -1210,10 +1519,151 @@ export const SEED_CLIENTS = () => [
       return { ...s, status:'complete', sectionsApproved: sectionCount };
     })();
     const smart_session_id_diego = `sas_${c.id}_${Date.now()}`;
-    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_diego, checklist:cl, documents:DIEGO_DOCS, activity_log:DIEGO_LOG, case_notes:[], assessment_session: assessment_session_diego };
+    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_diego, checklist:cl, documents:DIEGO_DOCS, activity_log:DIEGO_LOG, case_notes:[], assessment_session: assessment_session_diego, service_session_logs: [], caregiver_training_session_logs: [] };
   }
 
-  return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session };
+  // ── c10 Charlotte Davis — services (Cigna, reauth active) ──────────────────
+  if (c.id === 'c10') {
+    cl.intake         = { referral_form:true, insurance_card:true, cde:true, aba_prescription:true, consent_signed:true, demographics_confirmed:true, referral_source:'Dr. James Wilson · (561) 555-0170', insurance_plan:'Cigna Healthspring Florida', member_id_verified:'CIG-556634 / G-55023', copay_deductible:'$0 copay, $0 deductible remaining', preferred_language:'English', insurance_verified:true, benefits_verified:true };
+    cl.auth_assessment = { cde_confirmed:true, prescription_confirmed:true, referral_confirmed:true, prior_assessments:true, auth_submitted:true, submission_date:'2025-11-20', units_requested:'16', expected_response_date:'2025-12-04', auth_portal:'Availity', reference_number:'CIG-AUTH-2025-1120-3301', cpt_97151_received:true, bcba_assigned:true };
+    cl.assessment     = { bcba_confirmed:true, caregiver_interview:true, direct_observation:true, vineland3:true, vineland3_date:'2025-12-01', basc3:true, basc3_date:'2025-12-01', additional_assessments:true, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
+    cl.plan_draft     = { medical_necessity:true, skill_targets:true, behavior_goals:true, intervention_strategies:true, hours_97153:'80', hours_97155:'12', hours_97156:'8', data_methodology:'Event recording with same-day ABC notation', plan_start_date:'2026-01-20', plan_end_date:'2026-07-20', sessions_per_week:'10', session_duration_min:'120', baseline_graphs:true, ai_draft_approved:true, treatment_plan_finalized:true };
+    cl.submitted      = { treatment_plan_submitted:true, plan_submission_date:'2026-01-05', auth_approval_doc:true, auth_reference_number:'CIG-AUT-2026-0105-9901', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_period_start:'2026-01-20', auth_period_end:'2026-07-20' };
+    cl.authorized     = { bcba_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, weekly_schedule:'Mon/Wed/Fri 9am–1pm, Tue/Thu 10am–12pm', session_location:'Center-based' };
+    cl.staffing       = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2026-01-20', first_session_time:'9:00 AM', session_location:'Center-based', first_session_completed:true };
+    cl.services       = { progress_report:true, behavioral_graphs:true, vineland3_updated:false, basc3_updated:false, reauth_submitted:false, reauth_submission_date:'', hours_97153_used:'', hours_97155_used:'', hours_97156_used:'' };
+
+    const assessment_session_charlotte = (() => {
+      const s = makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes', CHARLOTTE_INTERVIEW_DATA, {
+        dob: c.dob, phone: c.phone, address: c.address,
+        insurerName: c.insurer_name, memberId: c.member_id, groupNumber: c.group_number,
+        referringProvider: c.referring_provider, referralDate: c.referral_date,
+        gender: 'Female', diagnosis: 'Autism Spectrum Disorder, Level 1', icd10: 'F84.0',
+        medicaidId: '', assessmentDate: '2025-12-01', assessmentType: 'Initial',
+        preferredLanguage: 'English', parentGuardianNames: 'Jennifer Davis',
+        relationship: 'Mother', reasonForReferral: 'ABA evaluation for behavior reduction and skill development',
+        _intakeMissingFields: [],
+      });
+      const sectionCount = Object.values(s.sections).filter(sec => sec.key !== 'demographics').length;
+      return { ...s, status: 'complete', sectionsApproved: sectionCount };
+    })();
+
+    const C10_SERVICE_SESSION_LOGS = [
+      {
+        id: 'slog_c10_1', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2025-11-17', sessionNumber: 1, notes: '',
+        behaviorEntries: [
+          { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',      isNew: false, baselineFrequency: 5,  sessionFrequency: 3,  currentStoNumber: 2, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-2', behaviorName: 'Elopement',    isNew: false, baselineFrequency: 10, sessionFrequency: 8,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-3', behaviorName: 'Task Refusal', isNew: false, baselineFrequency: 25, sessionFrequency: 22, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-4', behaviorName: 'Aggression',   isNew: false, baselineFrequency: 5,  sessionFrequency: 4,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+        ],
+        skillEntries: [],
+        createdAt: '2025-11-17T12:00:00.000Z',
+      },
+      {
+        id: 'slog_c10_2', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2025-12-08', sessionNumber: 2, notes: '',
+        behaviorEntries: [
+          { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',      isNew: false, baselineFrequency: 5,  sessionFrequency: 2,  currentStoNumber: 2, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-2', behaviorName: 'Elopement',    isNew: false, baselineFrequency: 10, sessionFrequency: 7,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-3', behaviorName: 'Task Refusal', isNew: false, baselineFrequency: 25, sessionFrequency: 18, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-4', behaviorName: 'Aggression',   isNew: false, baselineFrequency: 5,  sessionFrequency: 3,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+        ],
+        skillEntries: [],
+        createdAt: '2025-12-08T12:00:00.000Z',
+      },
+      {
+        id: 'slog_c10_3', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2026-01-12', sessionNumber: 3, notes: '',
+        behaviorEntries: [
+          { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',          isNew: false, baselineFrequency: 5,  sessionFrequency: 2,  currentStoNumber: 2, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-2', behaviorName: 'Elopement',        isNew: false, baselineFrequency: 10, sessionFrequency: 6,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-3', behaviorName: 'Task Refusal',     isNew: false, baselineFrequency: 25, sessionFrequency: 16, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-4', behaviorName: 'Aggression',       isNew: false, baselineFrequency: 5,  sessionFrequency: 3,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: null,        behaviorName: 'Throwing objects', isNew: true,  baselineFrequency: null, sessionFrequency: 5, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: 'CLIENT intentionally throws objects when denied access to preferred items', newBehaviorFunction: 'tangible', newBehaviorSeverity: 'moderate', firstSeenDate: '2026-01-12' },
+        ],
+        skillEntries: [],
+        createdAt: '2026-01-12T12:00:00.000Z',
+      },
+      {
+        id: 'slog_c10_4', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2026-02-09', sessionNumber: 4, notes: '',
+        behaviorEntries: [
+          { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',          isNew: false, baselineFrequency: 5,  sessionFrequency: 2,  currentStoNumber: 3, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-2', behaviorName: 'Elopement',        isNew: false, baselineFrequency: 10, sessionFrequency: 5,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-3', behaviorName: 'Task Refusal',     isNew: false, baselineFrequency: 25, sessionFrequency: 15, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-4', behaviorName: 'Aggression',       isNew: false, baselineFrequency: 5,  sessionFrequency: 2,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: null,        behaviorName: 'Throwing objects', isNew: false, baselineFrequency: null, sessionFrequency: 4, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+        ],
+        skillEntries: [],
+        createdAt: '2026-02-09T12:00:00.000Z',
+      },
+      {
+        id: 'slog_c10_5', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2026-03-10', sessionNumber: 5, notes: '',
+        behaviorEntries: [
+          { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',          isNew: false, baselineFrequency: 5,  sessionFrequency: 1,  currentStoNumber: 3, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-2', behaviorName: 'Elopement',        isNew: false, baselineFrequency: 10, sessionFrequency: 4,  currentStoNumber: 3, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-3', behaviorName: 'Task Refusal',     isNew: false, baselineFrequency: 25, sessionFrequency: 14, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-4', behaviorName: 'Aggression',       isNew: false, baselineFrequency: 5,  sessionFrequency: 2,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: null,        behaviorName: 'Throwing objects', isNew: false, baselineFrequency: null, sessionFrequency: 3, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+        ],
+        skillEntries: [
+          { skillId: null, skillName: 'Waiting for preferred item', isNew: true, firstSeenDate: '2026-03-10', notes: '' },
+        ],
+        createdAt: '2026-03-10T12:00:00.000Z',
+      },
+      {
+        id: 'slog_c10_6', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2026-04-14', sessionNumber: 6, notes: '',
+        behaviorEntries: [
+          { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',          isNew: false, baselineFrequency: 5,  sessionFrequency: 1,  currentStoNumber: 3, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-2', behaviorName: 'Elopement',        isNew: false, baselineFrequency: 10, sessionFrequency: 3,  currentStoNumber: 3, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-3', behaviorName: 'Task Refusal',     isNew: false, baselineFrequency: 25, sessionFrequency: 12, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-4', behaviorName: 'Aggression',       isNew: false, baselineFrequency: 5,  sessionFrequency: 1,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: null,        behaviorName: 'Throwing objects', isNew: false, baselineFrequency: null, sessionFrequency: 3, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+        ],
+        skillEntries: [],
+        createdAt: '2026-04-14T12:00:00.000Z',
+      },
+    ];
+
+    const C10_CAREGIVER_TRAINING_LOGS = [
+      {
+        id: 'ctlog_c10_1', clientId: 'c10', bcbaId: 'u2', bcbaName: 'Dr. Ana Reyes',
+        sessionDate: '2025-12-01', sessionNumber: 1, notes: '',
+        trainingEntries: [
+          { targetId: 'ctgt_1', goalName: 'Consistent Premack delivery',       baselinePercent: 20, sessionPercent: 30, stoStatus: 'in_progress', currentStoNumber: 1 },
+          { targetId: 'ctgt_2', goalName: 'Reinforcement timing and magnitude', baselinePercent: 35, sessionPercent: 45, stoStatus: 'in_progress', currentStoNumber: 1 },
+        ],
+        createdAt: '2025-12-01T12:00:00.000Z',
+      },
+      {
+        id: 'ctlog_c10_2', clientId: 'c10', bcbaId: 'u2', bcbaName: 'Dr. Ana Reyes',
+        sessionDate: '2026-01-12', sessionNumber: 2, notes: '',
+        trainingEntries: [
+          { targetId: 'ctgt_1', goalName: 'Consistent Premack delivery',       baselinePercent: 20, sessionPercent: 45, stoStatus: 'in_progress', currentStoNumber: 1 },
+          { targetId: 'ctgt_2', goalName: 'Reinforcement timing and magnitude', baselinePercent: 35, sessionPercent: 58, stoStatus: 'in_progress', currentStoNumber: 1 },
+        ],
+        createdAt: '2026-01-12T14:00:00.000Z',
+      },
+      {
+        id: 'ctlog_c10_3', clientId: 'c10', bcbaId: 'u2', bcbaName: 'Dr. Ana Reyes',
+        sessionDate: '2026-03-03', sessionNumber: 3, notes: '',
+        trainingEntries: [
+          { targetId: 'ctgt_1', goalName: 'Consistent Premack delivery',       baselinePercent: 20, sessionPercent: 62, stoStatus: 'met',         currentStoNumber: 2 },
+          { targetId: 'ctgt_2', goalName: 'Reinforcement timing and magnitude', baselinePercent: 35, sessionPercent: 72, stoStatus: 'in_progress', currentStoNumber: 1 },
+        ],
+        createdAt: '2026-03-03T12:00:00.000Z',
+      },
+    ];
+
+    const smart_session_id_charlotte = assessment_session_charlotte.id;
+    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_charlotte, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session: assessment_session_charlotte, service_session_logs: C10_SERVICE_SESSION_LOGS, caregiver_training_session_logs: C10_CAREGIVER_TRAINING_LOGS };
+  }
+
+  return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session, service_session_logs: [], caregiver_training_session_logs: [] };
 });
 
 export const SEED_STAFF = () => [
@@ -1237,3 +1687,280 @@ export const SEED_USERS = [
   { id:'u3', name:'Dr. Sara Kim',  email:'sara@abashield.com',  role:'bcaba' },
   { id:'u4', name:'James Torres',  email:'james@abashield.com', role:'rbt'   },
 ];
+
+export const makeServiceSessionLog = (
+  clientId, rbtId, rbtName, sessionDate,
+  behaviorEntries = [], skillEntries = [], notes = '',
+) => ({
+  id: `slog_${clientId}_${Date.now()}`,
+  clientId,
+  rbtId,
+  rbtName,
+  sessionDate,
+  sessionNumber: 0,
+  notes,
+  behaviorEntries: behaviorEntries.map(e => ({
+    behaviorId:           e.behaviorId           ?? null,
+    behaviorName:         e.behaviorName         ?? '',
+    isNew:                e.isNew                ?? false,
+    baselineFrequency:    e.baselineFrequency     ?? null,
+    sessionFrequency:     e.sessionFrequency      ?? null,
+    currentStoNumber:     e.currentStoNumber      ?? 1,
+    stoStatus:            e.stoStatus             ?? 'in_progress',
+    newBehaviorDefinition:e.newBehaviorDefinition ?? '',
+    newBehaviorFunction:  e.newBehaviorFunction   ?? '',
+    newBehaviorSeverity:  e.newBehaviorSeverity   ?? '',
+    firstSeenDate:        e.firstSeenDate         ?? null,
+  })),
+  skillEntries: skillEntries.map(e => ({
+    skillId:    e.skillId    ?? null,
+    skillName:  e.skillName  ?? '',
+    isNew:      e.isNew      ?? false,
+    firstSeenDate: e.firstSeenDate ?? null,
+    notes:      e.notes      ?? '',
+  })),
+  createdAt: new Date().toISOString(),
+});
+
+export const makeCaregiverTrainingSessionLog = (
+  clientId, bcbaId, bcbaName, sessionDate,
+  trainingEntries = [], notes = '',
+) => ({
+  id: `ctlog_${clientId}_${Date.now()}`,
+  clientId,
+  bcbaId,
+  bcbaName,
+  sessionDate,
+  sessionNumber: 0,
+  notes,
+  trainingEntries: trainingEntries.map(e => ({
+    targetId:        e.targetId        ?? null,
+    goalName:        e.goalName        ?? '',
+    baselinePercent: e.baselinePercent ?? null,
+    sessionPercent:  e.sessionPercent  ?? null,
+    stoStatus:       e.stoStatus       ?? 'not_yet_started',
+    currentStoNumber:e.currentStoNumber ?? 1,
+  })),
+  createdAt: new Date().toISOString(),
+});
+
+export const makeReassessmentSession = (
+  client, initialSession, sessionLogs, authPeriodStart, authPeriodEnd,
+) => {
+  const base = makeAssessmentSession(
+    client.id, client.name, client.bcba_id,
+    initialSession?.bcbaName ?? '',
+    client,
+  );
+
+  // ── helpers ────────────────────────────────────────────────────────────────
+
+  const mean = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null;
+
+  const computeTrend = (avg, baseline) => {
+    if (avg === null || baseline === null || baseline === 0) return 'flat';
+    const pct = ((avg - baseline) / baseline) * 100;
+    if (pct < -5) return 'improving';
+    if (pct >  5) return 'worsening';
+    return 'flat';
+  };
+
+  const linkedSessionLogIds = (sessionLogs ?? []).map(l => l.id);
+
+  // ── (2) originalBehaviorSummary ────────────────────────────────────────────
+  // Collect all entries where isNew === false, keyed by behaviorId (or name as fallback)
+  const origMap = new Map();
+  for (const log of (sessionLogs ?? [])) {
+    for (const entry of (log.behaviorEntries ?? [])) {
+      if (entry.isNew) continue;
+      const key = entry.behaviorId ?? entry.behaviorName;
+      if (!origMap.has(key)) {
+        origMap.set(key, {
+          behaviorId:        entry.behaviorId,
+          behaviorName:      entry.behaviorName,
+          baselineFrequency: entry.baselineFrequency,
+          frequencies:       [],
+          lastEntry:         null,
+        });
+      }
+      const rec = origMap.get(key);
+      rec.frequencies.push(entry.sessionFrequency);
+      rec.lastEntry = entry;
+    }
+  }
+
+  const originalBehaviorSummary = Array.from(origMap.values()).map(rec => {
+    const avg = mean(rec.frequencies);
+    return {
+      behaviorId:          rec.behaviorId,
+      behaviorName:        rec.behaviorName,
+      baselineFrequency:   rec.baselineFrequency,
+      sessionsLogged:      rec.frequencies.length,
+      averageFrequency:    avg !== null ? Math.round(avg * 100) / 100 : null,
+      lastSessionFrequency:rec.lastEntry?.sessionFrequency ?? null,
+      percentReduction:    (avg !== null && rec.baselineFrequency)
+        ? Math.round(((rec.baselineFrequency - avg) / rec.baselineFrequency) * 10000) / 100
+        : null,
+      trend:               computeTrend(avg, rec.baselineFrequency),
+      currentStoNumber:    rec.lastEntry?.currentStoNumber ?? 1,
+      stoStatus:           rec.lastEntry?.stoStatus ?? 'in_progress',
+    };
+  });
+
+  // ── (3) newBehaviorSummary ─────────────────────────────────────────────────
+  const newMap = new Map();
+  for (const log of (sessionLogs ?? [])) {
+    for (const entry of (log.behaviorEntries ?? [])) {
+      if (!entry.isNew && !newMap.has(entry.behaviorName)) continue;
+      if (!entry.isNew) continue;
+      const key = entry.behaviorName;
+      if (!newMap.has(key)) {
+        newMap.set(key, {
+          behaviorName:       entry.behaviorName,
+          firstSeenDate:      entry.firstSeenDate,
+          rbtDefinitionDraft: entry.newBehaviorDefinition,
+          function:           entry.newBehaviorFunction,
+          severity:           entry.newBehaviorSeverity,
+          firstFrequency:     entry.sessionFrequency,
+          frequencies:        [],
+        });
+      }
+      newMap.get(key).frequencies.push(entry.sessionFrequency);
+    }
+    // also collect subsequent non-isNew entries for known new behaviors (by name only)
+  }
+  // collect follow-on frequencies for new behaviors (after first-seen log)
+  const newBehaviorNames = new Set(newMap.keys());
+  for (const log of (sessionLogs ?? [])) {
+    for (const entry of (log.behaviorEntries ?? [])) {
+      if (entry.isNew || !newBehaviorNames.has(entry.behaviorName)) continue;
+      newMap.get(entry.behaviorName).frequencies.push(entry.sessionFrequency);
+    }
+  }
+
+  const newBehaviorSummary = Array.from(newMap.values()).map(rec => {
+    const allFreqs = rec.frequencies;
+    const avg = mean(allFreqs);
+    const baseline = rec.firstFrequency;
+    return {
+      behaviorName:        rec.behaviorName,
+      firstSeenDate:       rec.firstSeenDate,
+      rbtDefinitionDraft:  rec.rbtDefinitionDraft,
+      function:            rec.function,
+      severity:            rec.severity,
+      baselineFrequency:   baseline,
+      averageFrequency:    avg !== null ? Math.round(avg * 100) / 100 : null,
+      trend:               computeTrend(avg, baseline),
+      bcbaDefinitionFinal: '',
+      includedInPlan:      null,
+      stoStructure:        [],
+    };
+  });
+
+  // ── (4) originalSkillSummary ───────────────────────────────────────────────
+  const initialSkillGoals =
+    initialSession?.sections?.skill_acquisitions?.skillGoals ?? [];
+
+  const originalSkillSummary = initialSkillGoals.map(goal => ({
+    skillId:        goal.id,
+    skillName:      goal.targetSkill ?? goal.skillName ?? '',
+    domain:         goal.domain ?? '',
+    baselinePercent:Number(goal.baselinePercent ?? 0),
+    currentPercent: null,
+    status:         'new',
+  }));
+
+  // ── (5) newSkillSummary ────────────────────────────────────────────────────
+  const seenSkills = new Map();
+  for (const log of (sessionLogs ?? [])) {
+    for (const entry of (log.skillEntries ?? [])) {
+      if (!entry.isNew) continue;
+      if (!seenSkills.has(entry.skillName)) {
+        seenSkills.set(entry.skillName, {
+          skillId:              entry.skillId,
+          skillName:            entry.skillName,
+          firstSeenDate:        entry.firstSeenDate,
+          rbtNotes:             entry.notes,
+          bcbaGoalName:         '',
+          bcbaDefinition:       '',
+          bcbaDomain:           '',
+          includedInPlan:       null,
+          stoStructure:         [],
+        });
+      }
+    }
+  }
+  const newSkillSummary = Array.from(seenSkills.values());
+
+  // ── (6) caregiverTrainingSummary ───────────────────────────────────────────
+  const ctTargets =
+    initialSession?.sections?.caregiver_training?.caregiverTrainingTargets ?? [];
+  const ctLogs = client.caregiver_training_session_logs ?? [];
+
+  const caregiverTrainingSummary = ctTargets.map(target => {
+    const entries = ctLogs.flatMap(log =>
+      (log.trainingEntries ?? []).filter(e => e.targetId === target.id),
+    );
+    if (!entries.length) {
+      return {
+        targetId:             target.id,
+        goalName:             target.goalName,
+        baselinePercent:      target.baselinePercent,
+        sessionsLogged:       0,
+        averageSessionPercent:null,
+        lastSessionPercent:   null,
+        trend:                'flat',
+        stoStatus:            'not_yet_started',
+        currentStoNumber:     1,
+        sto:                  target.stoPercent != null
+          ? `${target.stoPercent}% accuracy over ${target.stoWeeks} weeks`
+          : (target.sto ?? ''),
+        lto:                  target.ltoPercent != null
+          ? `${target.ltoPercent}% accuracy across ${target.ltoSessions} sessions`
+          : (target.lto ?? ''),
+      };
+    }
+    const percents = entries.map(e => e.sessionPercent);
+    const avg = mean(percents);
+    const last = entries[entries.length - 1];
+    const baseline = target.baselinePercent ?? null;
+    const trend = (avg === null || baseline === null)
+      ? 'flat'
+      : avg > baseline + 5 ? 'improving'
+      : avg < baseline - 5 ? 'worsening'
+      : 'flat';
+    return {
+      targetId:             target.id,
+      goalName:             target.goalName,
+      baselinePercent:      baseline,
+      sessionsLogged:       entries.length,
+      averageSessionPercent:avg !== null ? Math.round(avg * 100) / 100 : null,
+      lastSessionPercent:   last?.sessionPercent ?? null,
+      trend,
+      stoStatus:            last?.stoStatus ?? 'not_yet_started',
+      currentStoNumber:     last?.currentStoNumber ?? 1,
+      sto:                  target.stoPercent != null
+        ? `${target.stoPercent}% accuracy over ${target.stoWeeks} weeks`
+        : (target.sto ?? ''),
+      lto:                  target.ltoPercent != null
+        ? `${target.ltoPercent}% accuracy across ${target.ltoSessions} sessions`
+        : (target.lto ?? ''),
+    };
+  });
+
+  // ── assemble ───────────────────────────────────────────────────────────────
+  return {
+    ...base,
+    id: `session_${client.id}_reassessment_${Date.now()}`,
+    sessionType:            'reassessment',
+    authPeriodStart,
+    authPeriodEnd,
+    linkedSessionLogIds,
+    originalBehaviorSummary,
+    newBehaviorSummary,
+    originalSkillSummary,
+    newSkillSummary,
+    caregiverTrainingSummary,
+    progressNarrativeText:  '',
+  };
+};

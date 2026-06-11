@@ -25,7 +25,13 @@ function computeMastery(goal) {
 }
 
 function computeSTO(goal) {
-  // Prefer BCBA-entered structured STO fields, then legacy free-text, then auto-formula
+  // Tier 0 — BCBA-defined multi-step milestones
+  if ((goal.stoSteps ?? []).length > 0) {
+    return goal.stoSteps.map((s, i) =>
+      `STO ${i + 1}: Client will demonstrate ${s.skillDescription || goal.targetSkill || 'the target skill'} with ${s.targetPercent || '?'}% accuracy across ${goal.masteryCriteriaSessions || '3'} consecutive sessions within ${s.durationWeeks || '?'} weeks.`
+    ).join('\n');
+  }
+  // Tier 1 — structured single-step fields
   if (goal.stoPercent || goal.stoSkillDescription || goal.stoWeeks) {
     const pct   = goal.stoPercent      || Math.round(Number(goal.masteryCriteriaPercent || 80) * 0.5);
     const desc  = goal.stoSkillDescription || (goal.targetSkill || 'the target skill');
@@ -33,7 +39,9 @@ function computeSTO(goal) {
     const sessions = goal.masteryCriteriaSessions || '3';
     return `Client will demonstrate ${desc} with ${pct}% accuracy across ${sessions} consecutive sessions within ${weeks} weeks.`;
   }
+  // Tier 2 — legacy free-text
   if (goal.sto) return goal.sto;
+  // Tier 3 — auto-formula
   const pct      = goal.masteryCriteriaPercent  || '80';
   const sessions = goal.masteryCriteriaSessions || '3';
   return `Client will demonstrate ${goal.targetSkill || 'the target skill'} with ${Math.round(Number(pct) * 0.5) || 40}% accuracy across ${sessions} consecutive sessions with decreasing prompt support.`;
@@ -127,7 +135,12 @@ function GoalBlock({ goal, index }) {
           <tbody>
             <tr className="bg-white">
               <TD>{goal.targetSkill || '–'}</TD>
-              <TD>{computeSTO(goal)}</TD>
+              <TD>
+                {(goal.stoSteps ?? []).length > 0
+                  ? <span style={{ whiteSpace: 'pre-line' }}>{computeSTO(goal)}</span>
+                  : computeSTO(goal)
+                }
+              </TD>
               <TD>{computeBaseline(goal)}</TD>
               <TD>{computeCurrentLevel(goal)}</TD>
               <TD>{computeMastery(goal)}</TD>

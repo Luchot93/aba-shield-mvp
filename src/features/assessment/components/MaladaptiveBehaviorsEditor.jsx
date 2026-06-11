@@ -224,7 +224,21 @@ function BehaviorEditorCard({ clientId, target, index, setClients }) {
                 Computed objectives — shown in Review table &amp; document
               </span>
             </div>
-            <InfoRow label="STO" value={computeBtSTO(target)} />
+            {(target.stoSteps ?? []).length > 0 ? (
+              <div>
+                <span className="text-[11px] font-semibold text-slate-500">STO</span>
+                <div className="mt-0.5 space-y-0.5">
+                  {target.stoSteps.map((s, si) => (
+                    <p key={s.id} className="text-[12px] text-slate-600">
+                      <span className="font-semibold text-teal-700">STO {si + 1}: </span>
+                      {target.behaviorName || 'Behavior'} will reduce to {s.targetFrequency || '?'} per {target.frequencyUnit || 'day'} for {s.durationWeeks || '?'} consecutive weeks.
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <InfoRow label="STO" value={computeBtSTO(target)} />
+            )}
             <InfoRow label="LTO" value={computeBtLTO(target)} />
           </div>
 

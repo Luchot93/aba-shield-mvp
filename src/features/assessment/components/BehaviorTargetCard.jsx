@@ -1,6 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { updateBehaviorTarget, removeBehaviorTarget } from '../assessmentStore.js';
+import {
+  updateBehaviorTarget,
+  removeBehaviorTarget,
+  addBehaviorStoStep,
+  updateBehaviorStoStep,
+  removeBehaviorStoStep,
+} from '../assessmentStore.js';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -473,12 +479,69 @@ export default function BehaviorTargetCard({ clientId, target, index, setClients
             </div>
           </div>
 
+          {/* Short-Term Objectives (STO steps) */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <SL>Short-Term Objectives (STO)</SL>
+              <button
+                type="button"
+                onClick={() => addBehaviorStoStep(setClients, clientId, target.id)}
+                className="flex items-center gap-1 text-[11px] font-semibold text-teal-600 hover:text-teal-700 transition-colors">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+                </svg>
+                Add STO step
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 mb-2">
+              Milestones that must be met before reaching the reduction goal
+            </p>
+            {(target.stoSteps ?? []).length === 0 ? (
+              <p className="text-[11px] text-slate-400 italic">
+                No steps defined — auto-formula will be used in the plan
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {(target.stoSteps ?? []).map((step, si) => (
+                  <div key={step.id} className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600 rounded-lg px-3 py-2"
+                    style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                    <span className="text-[11px] font-bold text-teal-600 mr-0.5">STO {si + 1}</span>
+                    <span>{target.behaviorName || 'Behavior'} will reduce to</span>
+                    <InlineNum
+                      value={step.targetFrequency}
+                      onChange={v => updateBehaviorStoStep(setClients, clientId, target.id, step.id, 'targetFrequency', v)}
+                      placeholder="0"
+                      width="3rem"
+                    />
+                    <span>per {target.frequencyUnit || 'day'} for</span>
+                    <InlineNum
+                      value={step.durationWeeks}
+                      onChange={v => updateBehaviorStoStep(setClients, clientId, target.id, step.id, 'durationWeeks', v)}
+                      placeholder="4"
+                      width="2.5rem"
+                    />
+                    <span>consecutive weeks.</span>
+                    <button
+                      type="button"
+                      onClick={() => removeBehaviorStoStep(setClients, clientId, target.id, step.id)}
+                      className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none"
+                      title="Remove step">
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Baseline → target sentence */}
           <div className="rounded-xl px-4 py-3.5" style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
             <SL>Reduction Goal</SL>
             <p className="text-[14px] text-slate-600 flex flex-wrap items-center gap-x-1.5 min-h-[2rem]">
               <span>Current baseline:</span>
-              <InlineNum value={target.baselineFrequency} onChange={set('baselineFrequency')} placeholder="0" width="3.5rem"/>
+              <span className="font-semibold text-slate-800 tabular-nums" style={{ minWidth: '2rem', display: 'inline-block', textAlign: 'center' }}>
+                {target.baselineFrequency !== '' && target.baselineFrequency != null ? target.baselineFrequency : '?'}
+              </span>
               <span>times per {target.frequencyUnit || 'day'}. Target: reduce to</span>
               <InlineNum value={target.targetFrequency} onChange={set('targetFrequency')} placeholder="0" width="3.5rem"/>
               <span>or fewer times per {target.frequencyUnit || 'day'}.</span>

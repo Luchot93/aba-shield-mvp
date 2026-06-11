@@ -202,17 +202,17 @@ function GraphsSection({ graphs }) {
 
 function CaregiverSummary({ section }) {
   if (!section) return <p className="text-[12px] text-slate-400 italic">No caregiver training data.</p>;
-  const { caregiverBaselines, trainingFormat, trainingFrequency, trainingBarriers, caregiverStrengths, draftContent } = section;
-  const hasBl = caregiverBaselines?.premack_baseline || caregiverBaselines?.reinforcement_baseline;
+  const { caregiverTrainingTargets, trainingFormat, trainingFrequency, trainingBarriers, caregiverStrengths, draftContent } = section;
+  const ctTargets = caregiverTrainingTargets ?? [];
 
   return (
     <div className="space-y-3">
-      {hasBl && (
+      {ctTargets.length > 0 && (
         <div className="overflow-x-auto rounded-lg" style={{ border:'1px solid #B2D8D3' }}>
           <table className="w-full border-collapse text-left">
             <thead>
               <tr>
-                {['Strategy','Observed Baseline'].map(h => (
+                {['Goal','Baseline %','STO','LTO'].map(h => (
                   <th key={h} className="px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest"
                     style={{ background:'#E8F5F3', color:'#2D7D6F', borderRight:'1px solid #B2D8D3', borderBottom:'1px solid #B2D8D3' }}>
                     {h}
@@ -221,17 +221,19 @@ function CaregiverSummary({ section }) {
               </tr>
             </thead>
             <tbody>
-              {[
-                ['Premack Principle', caregiverBaselines?.premack_baseline],
-                ['Reinforcement Delivery', caregiverBaselines?.reinforcement_baseline],
-              ].map(([label, val]) => (
-                <tr key={label} className="bg-white border-b border-stone-100 last:border-0">
-                  <td className="px-3 py-1.5 text-[12px] text-slate-700" style={{ borderRight:'1px solid #B2D8D3' }}>{label}</td>
-                  <td className="px-3 py-1.5 text-[12px] font-medium text-slate-800 tabular-nums">
-                    {val ? `${val}%` : <span className="text-slate-400 italic">Not recorded</span>}
-                  </td>
-                </tr>
-              ))}
+              {ctTargets.map(t => {
+                const bp  = t.baselinePercent != null ? `${t.baselinePercent}%` : '—';
+                const sto = t.sto?.trim() || (t.stoPercent != null ? `${t.stoPercent}%${t.stoWeeks ? ` / ${t.stoWeeks}wk` : ''}` : '—');
+                const lto = t.lto?.trim() || (t.ltoPercent != null ? `${t.ltoPercent}%${t.ltoSessions ? ` / ${t.ltoSessions} sessions` : ''}` : '—');
+                return (
+                  <tr key={t.id} className="bg-white border-b border-stone-100 last:border-0">
+                    <td className="px-3 py-1.5 text-[12px] text-slate-700" style={{ borderRight:'1px solid #B2D8D3' }}>{t.goalName || '—'}</td>
+                    <td className="px-3 py-1.5 text-[12px] font-medium text-slate-800 tabular-nums" style={{ borderRight:'1px solid #B2D8D3' }}>{bp}</td>
+                    <td className="px-3 py-1.5 text-[12px] text-slate-700" style={{ borderRight:'1px solid #B2D8D3' }}>{sto}</td>
+                    <td className="px-3 py-1.5 text-[12px] text-slate-700">{lto}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

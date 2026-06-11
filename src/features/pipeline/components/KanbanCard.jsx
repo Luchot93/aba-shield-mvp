@@ -131,7 +131,8 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
           : status.type==='waiting' ? 'bg-amber-50 text-amber-700'
           : 'bg-red-50 text-red-600'}`}>
           {status.type==='ready'   && <><Ico.Check/> Ready to advance</>}
-          {status.type==='waiting' && <><Ico.Clock/> Day {status.days} · {status.count} item{status.count !== 1 ? 's' : ''} missing</>}
+          {status.type==='waiting' && client.stage === 'auth_assessment' && <><Ico.Clock/> Day {status.days} · waiting on insurer</>}
+          {status.type==='waiting' && client.stage !== 'auth_assessment' && <><Ico.Clock/> Day {status.days} · {status.count} item{status.count !== 1 ? 's' : ''} missing</>}
           {status.type==='missing' && <><Ico.Warn/> {status.count} item{status.count !== 1 ? 's' : ''} missing</>}
         </div>
       )}

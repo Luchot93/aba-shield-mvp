@@ -21,6 +21,8 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+import { computeStoPercent } from '../assessmentStore.js';
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const yn   = (v) => v === true ? 'Yes' : v === false ? 'No' : 'Not recorded';
@@ -171,13 +173,41 @@ function buildMedicalNecessity(session) {
 // ─── Caregiver Training ───────────────────────────────────────────────────────
 
 function buildCaregiverTraining(session) {
-  const sec = session.sections?.caregiver_training ?? {};
-  const bl  = sec.caregiverBaselines ?? {};
+  const sec     = session.sections?.caregiver_training ?? {};
+  const targets = sec.caregiverTrainingTargets ?? [];
+
+  const targetsBlock = targets.length
+    ? [
+        `CAREGIVER TRAINING TARGETS:`,
+        ...targets.map((t, i) => {
+          const bp = t.baselinePercent !== null && t.baselinePercent !== ''
+            ? Number(t.baselinePercent) : null;
+          const stoPercent = t.stoPercent != null
+            ? t.stoPercent
+            : (bp !== null ? computeStoPercent(bp) : null);
+
+          const stoText = t.sto?.trim()
+            ? t.sto
+            : `Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${stoPercent != null ? stoPercent : '?'}% consistency across ${t.stoWeeks != null ? t.stoWeeks : '?'} consecutive weeks.`;
+
+          const ltoText = t.lto?.trim()
+            ? t.lto
+            : `Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${t.ltoPercent != null ? t.ltoPercent : '?'}% accuracy across ${t.ltoSessions != null ? t.ltoSessions : '?'} consecutive caregiver training sessions.`;
+
+          return [
+            `  TARGET ${i + 1}:`,
+            `  - Goal: ${val(t.goalName)}`,
+            `  - Operational Definition: ${val(t.operationalDefinition)}`,
+            `  - Baseline: ${bp !== null ? `${bp}%` : 'Not recorded'}`,
+            `  - STO: ${stoText}`,
+            `  - LTO: ${ltoText}`,
+          ].join('\n');
+        }),
+      ].join('\n')
+    : null;
 
   return [
-    `OBSERVED CAREGIVER BASELINES:`,
-    `  Premack Principle (first/then): ${bl.premack_baseline || '—'}%`,
-    `  Reinforcement delivery: ${bl.reinforcement_baseline || '—'}%`,
+    targetsBlock,
     `\nTRAINING FORMAT: ${list(sec.trainingFormat)}`,
     `TRAINING FREQUENCY: ${val(sec.trainingFrequency)}`,
     `BARRIERS TO PARTICIPATION: ${val(sec.trainingBarriers, 'None reported')}`,
@@ -248,7 +278,12 @@ function buildBehaviorTargets(session) {
         `  Antecedents: ${val(bt.antecedents)}`,
         `  Primary targets (who is affected): ${list(bt.primaryTargets)}`,
         `  Hypothesized function: ${val(bt.hypothesizedFunction)}`,
-        `  Baseline frequency: ${val(bt.baselineFrequency)}/day | Target frequency: ${val(bt.targetFrequency)}/day`,
+        `  Baseline frequency: ${val(bt.baselineFrequency)}/day | Target frequency (LTO): ${val(bt.targetFrequency)}/day`,
+        (bt.stoSteps ?? []).length > 0
+          ? `  Short-Term Objectives (BCBA-defined):\n${bt.stoSteps.map((s, si) =>
+              `    STO ${si + 1}: Reduce to ${s.targetFrequency || '?'} per ${bt.frequencyUnit || 'day'} for ${s.durationWeeks || '?'} consecutive weeks`
+            ).join('\n')}`
+          : null,
         `  Measurement system: ${val(bt.measurementSystem)}`,
         `  Prior FBA: ${yn(bt.priorFBACompleted)} | Prior BIP: ${yn(bt.priorBIPCompleted)}`,
         bt.notes ? `  Clinical notes: ${bt.notes}` : null,
@@ -277,10 +312,20 @@ function buildSkillAcquisitions(session) {
         `  Baseline: ${pct(g.baselinePercent)} correct across ${val(g.baselineOpportunities)} opportunities with ${val(g.baselinePromptingLevel) || val(g.promptingLevel)} prompting`,
         g.baselinePromptingDesc ? `  Baseline detail: ${g.baselinePromptingDesc}` : null,
         `  Mastery Criteria: ${pct(g.masteryCriteriaPercent)} across ${val(g.masteryCriteriaSessions)} consecutive sessions, ${val(g.masteryCriteriaSettings)} people/settings, with ${val(g.masteryCriteriaPromptingLevel)} prompting`,
-        (g.stoPercent || g.stoSkillDescription || g.stoWeeks) ? [
-          `  Short-Term Objective (STO): Client will demonstrate ${pct(g.stoPercent)} accuracy on`,
-          `  "${val(g.stoSkillDescription)}" within ${val(g.stoWeeks)} weeks of program start`,
-        ].join(' ') : null,
+        (g.stoSteps ?? []).length > 0
+          ? `  Short-Term Objectives (BCBA-defined):\n${(g.stoSteps).map((s, si) =>
+              `    STO ${si + 1}: Client will demonstrate ${s.skillDescription || g.targetSkill} with ${s.targetPercent || '?'}% accuracy across ${g.masteryCriteriaSessions || '3'} sessions within ${s.durationWeeks || '?'} weeks`
+            ).join('\n')}`
+          : (g.stoPercent || g.stoSkillDescription || g.stoWeeks)
+            ? (() => {
+                const stoP = g.stoPercent || Math.round(Number(g.masteryCriteriaPercent || 80) * 0.5);
+                const stoDesc = g.stoSkillDescription || g.targetSkill || 'the target skill';
+                const stoWks = g.stoWeeks || '12';
+                return `  Short-Term Objective (STO): Client will demonstrate ${stoDesc} with ${stoP}% accuracy across ${g.masteryCriteriaSessions || '3'} sessions within ${stoWks} weeks`;
+              })()
+          : g.sto
+            ? `  Short-Term Objective (STO): ${g.sto}`
+          : null,
         g.generalizationNotes ? `  Generalization plan: ${g.generalizationNotes}` : null,
       ].filter(Boolean).join('\n')
     ).join('\n\n')

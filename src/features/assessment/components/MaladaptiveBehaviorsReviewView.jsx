@@ -158,7 +158,16 @@ function BehaviorBlock({ bt, index }) {
               <TD>{bt.behaviorName || '—'}</TD>
               <TD>{bt.hypothesizedFunction || '—'}</TD>
               <TD>{computeBtBaseline(bt)}</TD>
-              <TD>{computeBtSTO(bt)}</TD>
+              <TD>
+                {(bt.stoSteps ?? []).length > 0
+                  ? bt.stoSteps.map((s, si) => (
+                      <span key={s.id} style={{ display: 'block' }}>
+                        STO {si + 1}: Reduce to {s.targetFrequency || '?'} per {bt.frequencyUnit || 'day'} ({s.durationWeeks || '?'} wks)
+                      </span>
+                    ))
+                  : computeBtSTO(bt)
+                }
+              </TD>
               <TD>{computeBtLTO(bt)}</TD>
             </tr>
           </tbody>

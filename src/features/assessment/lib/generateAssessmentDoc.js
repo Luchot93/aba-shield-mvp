@@ -111,7 +111,13 @@ function computeSkillCurrentLevel(g) {
 }
 
 function computeSkillSTO(g) {
-  // Prefer BCBA-entered structured STO fields, then legacy free-text, then auto-formula
+  // Tier 0 — BCBA-defined multi-step milestones
+  if ((g.stoSteps ?? []).length > 0) {
+    return g.stoSteps.map((s, i) =>
+      `STO ${i + 1}: Client will demonstrate ${s.skillDescription || g.targetSkill || 'the target skill'} with ${s.targetPercent || '?'}% accuracy across ${g.masteryCriteriaSessions || '3'} consecutive sessions within ${s.durationWeeks || '?'} weeks.`
+    ).join('\n');
+  }
+  // Tier 1 — structured single-step fields
   if (g.stoPercent || g.stoSkillDescription || g.stoWeeks) {
     const pct      = g.stoPercent         || Math.round(Number(g.masteryCriteriaPercent || 80) * 0.5);
     const desc     = g.stoSkillDescription || (g.targetSkill || 'the target skill');
@@ -122,7 +128,9 @@ function computeSkillSTO(g) {
       `${sessions} consecutive sessions within ${weeks} weeks.`
     );
   }
+  // Tier 2 — legacy free-text
   if (g.sto) return g.sto;
+  // Tier 3 — auto-formula
   const pct      = g.masteryCriteriaPercent  || '80';
   const sessions = g.masteryCriteriaSessions || '3';
   return (
@@ -808,7 +816,11 @@ function maladaptiveBehaviorsSection(session, graphs = {}) {
       bt.behaviorName        || '—',
       bt.hypothesizedFunction || '—',
       computeBtBaseline(bt),
-      computeBtSTO(bt),
+      (bt.stoSteps ?? []).length > 0
+        ? bt.stoSteps.map((s, si) =>
+            `STO ${si + 1}: Reduce to ${s.targetFrequency || '?'} per ${bt.frequencyUnit || 'day'} for ${s.durationWeeks || '?'} consecutive weeks.`
+          ).join('\n')
+        : computeBtSTO(bt),
       computeBtLTO(bt),
     ];
 
@@ -1204,6 +1216,26 @@ function skillAcquisitionsSection(session, graphs = {}) {
     );
   }
 
+  // ── Per-skill STO trajectory charts ──────────────────────────────────────────
+  const normalize = (label) =>
+    label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+
+  for (const g of goals) {
+    const name = (g.targetSkill || '').trim();
+    if (!name) continue;
+    const stoKey   = `skill_sto_${normalize(name)}`;
+    const stoChart = chartImage(graphs[stoKey], 560, 280);
+    if (stoChart) {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: `${name} — STO Trajectory`, bold: true, size: SZ, font: FONT, color: TEAL })],
+          spacing: { before: 160, after: 60 },
+        }),
+        stoChart,
+      );
+    }
+  }
+
   return children;
 }
 
@@ -1223,23 +1255,19 @@ function caregiverTrainingSection(session, graphs = {}) {
     return children;
   }
 
-  const bl = sec.caregiverBaselines ?? {};
+  const ctTargets = sec.caregiverTrainingTargets ?? [];
 
-  // ── Observed baseline table ────────────────────────────────────────────────
-  const hasPremack      = bl.premack_baseline !== '' && bl.premack_baseline != null;
-  const hasReinforcement = bl.reinforcement_baseline !== '' && bl.reinforcement_baseline != null;
-
-  if (hasPremack || hasReinforcement) {
-    children.push(subHeading('Observed Caregiver Skill Baseline'));
+  // ── Caregiver training targets table ──────────────────────────────────────
+  if (ctTargets.length > 0) {
+    children.push(subHeading('Caregiver Training Targets'));
     children.push(
       new Table({
-
         width: { size: 100, type: WidthType.PERCENTAGE },
         borders: {
-          top:           { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
-          bottom:        { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
-          left:          { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
-          right:         { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+          top:     { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+          bottom:  { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+          left:    { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+          right:   { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
           insideH: { style: BorderStyle.SINGLE, size: 2, color: TEAL_BORDER },
           insideV: { style: BorderStyle.SINGLE, size: 2, color: TEAL_BORDER },
         },
@@ -1247,38 +1275,34 @@ function caregiverTrainingSection(session, graphs = {}) {
           new TableRow({
             tableHeader: true,
             children: [
-              new TableCell({
-                shading: { type: ShadingType.SOLID, color: TEAL_LIGHT },
-                children: [new Paragraph({ children: [new TextRun({ text: 'Strategy', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })],
-              }),
-              new TableCell({
-                shading: { type: ShadingType.SOLID, color: TEAL_LIGHT },
-                children: [new Paragraph({ children: [new TextRun({ text: 'Observed Baseline', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })],
-              }),
+              new TableCell({ shading: { type: ShadingType.SOLID, color: TEAL_LIGHT }, children: [new Paragraph({ children: [new TextRun({ text: 'Goal', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })] }),
+              new TableCell({ shading: { type: ShadingType.SOLID, color: TEAL_LIGHT }, children: [new Paragraph({ children: [new TextRun({ text: 'Baseline %', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })] }),
+              new TableCell({ shading: { type: ShadingType.SOLID, color: TEAL_LIGHT }, children: [new Paragraph({ children: [new TextRun({ text: 'STO', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })] }),
+              new TableCell({ shading: { type: ShadingType.SOLID, color: TEAL_LIGHT }, children: [new Paragraph({ children: [new TextRun({ text: 'LTO', bold: true, size: SZ_SM, font: FONT, color: TEAL })] })] }),
             ],
           }),
-          ...(hasPremack ? [new TableRow({ children: [
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Premack Principle (first/then)', size: SZ_SM, font: FONT })] })] }),
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${bl.premack_baseline}%`, size: SZ_SM, font: FONT })] })] }),
-          ]})] : []),
-          ...(hasReinforcement ? [new TableRow({ children: [
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: 'Reinforcement Delivery', size: SZ_SM, font: FONT })] })] }),
-            new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `${bl.reinforcement_baseline}%`, size: SZ_SM, font: FONT })] })] }),
-          ]})] : []),
+          ...ctTargets.map(t => {
+            const bp  = t.baselinePercent != null ? `${t.baselinePercent}%` : '—';
+            const sto = t.sto?.trim() || (t.stoPercent != null && t.stoWeeks != null ? `${t.stoPercent}% over ${t.stoWeeks} weeks` : t.stoPercent != null ? `${t.stoPercent}%` : '—');
+            const lto = t.lto?.trim() || (t.ltoPercent != null && t.ltoSessions != null ? `${t.ltoPercent}% across ${t.ltoSessions} sessions` : t.ltoPercent != null ? `${t.ltoPercent}%` : '—');
+            return new TableRow({ children: [
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: t.goalName || '—', size: SZ_SM, font: FONT })] })] }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: bp, size: SZ_SM, font: FONT })] })] }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: sto, size: SZ_SM, font: FONT })] })] }),
+              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: lto, size: SZ_SM, font: FONT })] })] }),
+            ]});
+          }),
         ],
       })
     );
     children.push(empty(100));
 
-    // Embed caregiver skill progression charts immediately below the table
-    const premackChart = hasPremack
-      ? chartImage(graphs['caregiver_premack'], 460, 230)
-      : null;
-    const reinforcementChart = hasReinforcement
-      ? chartImage(graphs['caregiver_reinforcement'], 460, 230)
-      : null;
-    if (premackChart)       children.push(premackChart);
-    if (reinforcementChart) children.push(reinforcementChart);
+    // Embed per-target charts
+    for (const t of ctTargets) {
+      const key = `caregiver_target_${normalize(t.goalName || '')}`;
+      const img = chartImage(graphs[key], 460, 230);
+      if (img) children.push(img);
+    }
     children.push(empty(80));
   }
 

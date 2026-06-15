@@ -182,13 +182,22 @@ function buildCaregiverTraining(session) {
         ...targets.map((t, i) => {
           const bp = t.baselinePercent !== null && t.baselinePercent !== ''
             ? Number(t.baselinePercent) : null;
-          const stoPercent = t.stoPercent != null
-            ? t.stoPercent
-            : (bp !== null ? computeStoPercent(bp) : null);
 
-          const stoText = t.sto?.trim()
-            ? t.sto
-            : `Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${stoPercent != null ? stoPercent : '?'}% consistency across ${t.stoWeeks != null ? t.stoWeeks : '?'} consecutive weeks.`;
+          const validSteps = (t.stoSteps ?? []).filter(
+            s => s.targetPercent !== '' && s.targetPercent != null,
+          );
+
+          const stoBlock = validSteps.length > 0
+            ? [
+                `  - STOs:`,
+                ...validSteps.map((s, si) =>
+                  `    STO ${si + 1}: Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${s.targetPercent}% accuracy within ${s.durationWeeks || '?'} consecutive weeks.${s.note ? ` (${s.note})` : ''}`,
+                ),
+              ].join('\n')
+            : (() => {
+                const stoPercent = bp !== null ? (computeStoPercent(bp) ?? bp) : '?';
+                return `  - STO: Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${stoPercent}% accuracy (auto-computed).`;
+              })();
 
           const ltoText = t.lto?.trim()
             ? t.lto
@@ -198,8 +207,8 @@ function buildCaregiverTraining(session) {
             `  TARGET ${i + 1}:`,
             `  - Goal: ${val(t.goalName)}`,
             `  - Operational Definition: ${val(t.operationalDefinition)}`,
-            `  - Baseline: ${bp !== null ? `${bp}%` : 'Not recorded'}`,
-            `  - STO: ${stoText}`,
+            `  - Baseline: ${bp !== null ? `${bp}%${t.baselineContext?.trim() ? ` — ${t.baselineContext.trim()}` : ''}` : 'Not recorded'}`,
+            stoBlock,
             `  - LTO: ${ltoText}`,
           ].join('\n');
         }),

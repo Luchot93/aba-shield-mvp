@@ -24,6 +24,7 @@ import {
   renderReplacementBehaviorChart,
   renderCaregiverTrainingChart,
   renderSkillSTOChart,
+  renderCaregiverSTOChart,
 } from './chartRenderer.js';
 import { computeStoPercent } from './assessmentStore.js';
 
@@ -75,12 +76,20 @@ export function buildBehaviorTrendFromLogs(sessionLogs, behaviorId) {
  */
 export function renderCaregiverTrainingTargetChart(target, options = {}) {
   const bp = parseFloat(target.baselinePercent) || 0;
+  const ltoPercent = target.ltoPercent != null ? parseFloat(target.ltoPercent) : 90;
+
+  // If BCBA-defined STO steps exist, delegate to the trajectory line chart
+  const validStoSteps = (target.stoSteps ?? []).filter(
+    s => s.targetPercent !== '' && s.targetPercent != null,
+  );
+  if (validStoSteps.length > 0) {
+    return renderCaregiverSTOChart(target.goalName || 'Caregiver Goal', bp, validStoSteps, ltoPercent);
+  }
+
+  // Legacy: single STO reference line chart
   const stoPercent = target.stoPercent != null
     ? parseFloat(target.stoPercent)
     : (computeStoPercent(bp) ?? bp);
-  const ltoPercent = target.ltoPercent != null
-    ? parseFloat(target.ltoPercent)
-    : 100;
 
   // Y-axis ticks: [0, baseline, STO, LTO, 100] — deduplicated and sorted
   const tickSet = new Set([0, Math.round(bp), Math.round(stoPercent), Math.round(ltoPercent), 100]);

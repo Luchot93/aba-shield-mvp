@@ -99,15 +99,10 @@ function chartImage(base64, widthPx = 500, heightPx = 250) {
 
 function computeSkillBaseline(g) {
   if (!g.baselinePercent && g.baselinePercent !== 0) return '—';
-  const opps = g.baselineOpportunities || '?';
-  return `${g.baselinePercent}% across ${opps} opportunities`;
-}
-
-function computeSkillCurrentLevel(g) {
-  if (g.currentLevel) return g.currentLevel;
-  if (!g.baselinePercent && g.baselinePercent !== 0) return 'NEW';
-  const prompt = g.baselinePromptingLevel || g.promptingLevel?.[0] || 'prompting';
-  return `${g.baselinePercent}% correct with ${prompt} prompting`;
+  const opps   = g.baselineOpportunities || '?';
+  const prompt = g.baselinePromptingLevel || g.promptingLevel?.[0] || null;
+  const promptPart = prompt ? ` with ${prompt} prompting` : '';
+  return `Client demonstrates ${g.baselinePercent}% correct${promptPart} across ${opps} opportunities.`;
 }
 
 function computeSkillSTO(g) {
@@ -177,6 +172,34 @@ function computeBtLTO(bt) {
     return `Eliminate ${name} (0 per ${unit}) for 3 consecutive months`;
   }
   return `Reduce to ${target} per ${unit}, sustained for 3 consecutive months`;
+}
+
+// ─── Caregiver training target STO helper ────────────────────────────────────
+
+function computeCaregiverSTO(t) {
+  // Tier 0 — BCBA-defined multi-step milestones
+  const validSteps = (t.stoSteps ?? []).filter(
+    s => s.targetPercent !== '' && s.targetPercent != null,
+  );
+  if (validSteps.length > 0) {
+    return validSteps.map((s, i) =>
+      `STO ${i + 1}: Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${s.targetPercent}% accuracy within ${s.durationWeeks || '?'} consecutive weeks.`,
+    ).join('\n');
+  }
+  // Tier 1 — legacy stoPercent field
+  if (t.stoPercent != null) {
+    return t.stoWeeks != null
+      ? `${t.stoPercent}% over ${t.stoWeeks} weeks`
+      : `${t.stoPercent}%`;
+  }
+  // Tier 2 — auto-formula from baseline
+  const bp = t.baselinePercent != null ? Number(t.baselinePercent) : null;
+  const lto = t.ltoPercent != null ? Number(t.ltoPercent) : 90;
+  if (bp !== null) {
+    const mid = Math.round((bp + lto) / 2);
+    return `${mid}% accuracy (auto-computed from baseline ${bp}%)`;
+  }
+  return '—';
 }
 
 // ─── Inline bold parser ───────────────────────────────────────────────────────
@@ -1130,19 +1153,17 @@ function skillAcquisitionsSection(session, graphs = {}) {
     }
 
     // 5-column data table (matching SkillAcquisitionsReviewView exactly)
-    const colWidths = [18, 22, 15, 20, 25]; // percentages, must sum to 100
+    const colWidths = [20, 25, 20, 35]; // percentages, must sum to 100
     const headers   = [
       'Target Behavior',
       '6-Month Target (STO)',
       'Baseline Data',
-      'Current Level',
       'Mastery Criteria (LTO)',
     ];
     const values = [
       g.targetSkill || '—',
       computeSkillSTO(g),
       computeSkillBaseline(g),
-      computeSkillCurrentLevel(g),
       computeSkillMastery(g),
     ];
 
@@ -1282,13 +1303,15 @@ function caregiverTrainingSection(session, graphs = {}) {
             ],
           }),
           ...ctTargets.map(t => {
-            const bp  = t.baselinePercent != null ? `${t.baselinePercent}%` : '—';
-            const sto = t.sto?.trim() || (t.stoPercent != null && t.stoWeeks != null ? `${t.stoPercent}% over ${t.stoWeeks} weeks` : t.stoPercent != null ? `${t.stoPercent}%` : '—');
+            const bp  = t.baselinePercent != null ? `${t.baselinePercent}%${t.baselineContext?.trim() ? ` (${t.baselineContext.trim()})` : ''}` : '—';
+            const sto = computeCaregiverSTO(t);
             const lto = t.lto?.trim() || (t.ltoPercent != null && t.ltoSessions != null ? `${t.ltoPercent}% across ${t.ltoSessions} sessions` : t.ltoPercent != null ? `${t.ltoPercent}%` : '—');
+            // STO cell: split multi-step string into separate paragraphs
+            const stoLines = sto.split('\n').filter(Boolean);
             return new TableRow({ children: [
               new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: t.goalName || '—', size: SZ_SM, font: FONT })] })] }),
               new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: bp, size: SZ_SM, font: FONT })] })] }),
-              new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: sto, size: SZ_SM, font: FONT })] })] }),
+              new TableCell({ children: stoLines.map(line => new Paragraph({ children: [new TextRun({ text: line, size: SZ_SM, font: FONT })] })) }),
               new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: lto, size: SZ_SM, font: FONT })] })] }),
             ]});
           }),

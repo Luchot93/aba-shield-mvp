@@ -23,7 +23,7 @@ export const mkChecklist = () => ({
   },
   plan_draft: {
     medical_necessity:false, skill_targets:false, behavior_goals:false,
-    intervention_strategies:false, data_methodology:'',
+    intervention_strategies:false, caregiver_training:false, data_methodology:'',
     baseline_graphs:false, ai_draft_approved:false, treatment_plan_finalized:false,
     hours_97153:'', hours_97155:'', hours_97156:'',
     plan_start_date:'', plan_end_date:'', sessions_per_week:'', session_duration_min:'',
@@ -55,27 +55,49 @@ export const mkChecklist = () => ({
   services_reauth: {
     progress_report:false, updated_graphs:false, vineland3_updated:false,
     basc3_updated:false, reauth_submitted:false,
-    reauth_submission_date:'', hours_consumed_97153:'', hours_consumed_97155:'', hours_consumed_97156:'',
+    reauth_submission_date:'', reauth_submission_method:'', reauth_reference_number:'',
+    hours_consumed_97153:'', hours_consumed_97155:'', hours_consumed_97156:'',
+    reauth_outcome:'',
+    new_auth_start_date:'', new_auth_end_date:'',
+    new_authorized_97153:'', new_authorized_97155:'', new_authorized_97156:'',
   },
 });
 
 export const REAUTH_ITEMS = [
-  { id:'start_reassessment', label:'Start Reassessment', type:'action', autoComplete:false, completionSource:null },
-  { type:'file_upload', key:'progress_report',          label:'Progress report',                        clSec:'services_reauth', accept:'.pdf,.docx',      docType:'progress_report', autoComplete:true, completionSource:'reassessment_doc_generated' },
-  { type:'file_upload', key:'updated_graphs',           label:'Updated behavioral graphs',              clSec:'services_reauth', accept:'.pdf,.png,.jpg',  docType:'updated_graphs' },
-  { type:'checkbox',    key:'vineland3_updated',        label:'Vineland-3 updated',                     clSec:'services_reauth' },
-  { type:'checkbox',    key:'basc3_updated',            label:'BASC-3 updated',                         clSec:'services_reauth' },
-  { type:'checkbox',    key:'reauth_submitted',         label:'Reauth submitted',                       clSec:'services_reauth' },
-  { type:'form_field',  key:'reauth_submission_date',   label:'Reauth submission date',                 clSec:'services_reauth', fieldType:'date',   optional:true },
-  { type:'form_field',  key:'hours_consumed_97153',     label:'97153 hours used this auth period',      clSec:'services_reauth', fieldType:'number', optional:true },
-  { type:'form_field',  key:'hours_consumed_97155',     label:'97155 hours used this auth period',      clSec:'services_reauth', fieldType:'number', optional:true },
-  { type:'form_field',  key:'hours_consumed_97156',     label:'97156 hours used this auth period',      clSec:'services_reauth', fieldType:'number', optional:true },
+  // ── Section A: Utilization Summary ──────────────────────────────────────────
+  { type:'section_label', key:'_util_header', label:'Utilization Summary' },
+  { type:'form_field', key:'hours_consumed_97153', label:'Direct therapy (97153) — hours this period',      clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 72' },
+  { type:'form_field', key:'hours_consumed_97155', label:'BCBA supervision (97155) — hours this period',    clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 10' },
+  { type:'form_field', key:'hours_consumed_97156', label:'Caregiver training (97156) — hours this period',  clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 6'  },
+
+  // ── Section B: Clinical Documentation ───────────────────────────────────────
+  { type:'section_label', key:'_docs_header', label:'Clinical Documentation' },
+  { type:'file_upload', key:'progress_report',    label:'Progress report',            clSec:'services_reauth', accept:'.pdf,.docx',     docType:'progress_report', autoComplete:true, completionSource:'reassessment_doc_generated' },
+  { type:'file_upload', key:'updated_graphs',     label:'Updated behavioral graphs',  clSec:'services_reauth', accept:'.pdf,.png,.jpg', docType:'updated_graphs' },
+  { type:'checkbox',    key:'vineland3_updated',  label:'Vineland-3 updated',         clSec:'services_reauth' },
+  { type:'checkbox',    key:'basc3_updated',      label:'BASC-3 updated',             clSec:'services_reauth' },
+
+  // ── Section C: Submission ────────────────────────────────────────────────────
+  { type:'section_label', key:'_submit_header', label:'Submission' },
+  { type:'checkbox',   key:'reauth_submitted',          label:'Reauth submitted to insurer',          clSec:'services_reauth' },
+  { type:'form_field', key:'reauth_submission_date',    label:'Submission date',                      clSec:'services_reauth', fieldType:'date',   optional:true },
+  { type:'form_field', key:'reauth_submission_method',  label:'Submission method / portal',           clSec:'services_reauth', fieldType:'text',   optional:true, placeholder:'e.g. Availity, fax, phone' },
+  { type:'form_field', key:'reauth_reference_number',   label:'Submission reference number',          clSec:'services_reauth', fieldType:'text',   optional:true },
+
+  // ── Section D: Authorization Outcome ────────────────────────────────────────
+  { type:'section_label', key:'_outcome_header', label:'Authorization Outcome' },
+  { type:'form_field', key:'reauth_outcome',         label:'Outcome',                       clSec:'services_reauth', fieldType:'text',   optional:true, placeholder:'Approved / Denied / Pending' },
+  { type:'form_field', key:'new_auth_start_date',    label:'New auth period start',         clSec:'services_reauth', fieldType:'date',   optional:true },
+  { type:'form_field', key:'new_auth_end_date',      label:'New auth period end',           clSec:'services_reauth', fieldType:'date',   optional:true },
+  { type:'form_field', key:'new_authorized_97153',   label:'New 97153 authorized hours',    clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 80' },
+  { type:'form_field', key:'new_authorized_97155',   label:'New 97155 authorized hours',    clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 12' },
+  { type:'form_field', key:'new_authorized_97156',   label:'New 97156 authorized hours',    clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 8'  },
 ];
 
 export function getStageItems(stage) {
   switch (stage) {
     case 'intake': return [
-      { type:'file_upload', key:'referral_form',    label:'Referral request form',                     clSec:'intake', accept:'.pdf,.docx,.jpg,.png', docType:'referral_form'    },
+      { type:'upload',       key:'referral_form',    label:'Referral request form',                     clSec:'intake', docType:'referral_form'    },
       { type:'file_upload', key:'insurance_card',   label:'Insurance card',                            clSec:'intake', accept:'.pdf,.docx,.jpg,.png', docType:'insurance_card'   },
       { type:'file_upload', key:'cde',              label:'Comprehensive Diagnostic Evaluation (CDE)', clSec:'intake', accept:'.pdf,.docx,.jpg,.png', docType:'cde'              },
       { type:'file_upload', key:'aba_prescription', label:'ABA prescription / script',                clSec:'intake', accept:'.pdf,.docx,.jpg,.png', docType:'aba_prescription' },
@@ -123,6 +145,7 @@ export function getStageItems(stage) {
       { type:'smart_auto', key:'skill_targets',           label:'Skill-acquisition targets',              clSec:'plan_draft' },
       { type:'smart_auto', key:'behavior_goals',          label:'Behavior-reduction goals',               clSec:'plan_draft' },
       { type:'smart_auto', key:'intervention_strategies', label:'Intervention strategies',                clSec:'plan_draft' },
+      { type:'smart_auto', key:'caregiver_training',      label:'Caregiver training targets',             clSec:'plan_draft' },
       { type:'form_field', key:'hours_97153',          label:'CPT 97153 — Direct therapy hours/mo',     clSec:'plan_draft', fieldType:'number', optional:true, placeholder:'e.g. 80' },
       { type:'form_field', key:'hours_97155',          label:'CPT 97155 — BCBA supervision hours/mo',   clSec:'plan_draft', fieldType:'number', optional:true, placeholder:'e.g. 12' },
       { type:'form_field', key:'hours_97156',          label:'CPT 97156 — Caregiver training hours/mo', clSec:'plan_draft', fieldType:'number', optional:true, placeholder:'e.g. 8', sessionField:'caregiver_training', sessionTransform:'trainingFreqToHours' },

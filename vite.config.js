@@ -304,4 +304,5 @@ const anthropicPlugin = () => ({
 export default defineConfig({
   plugins: [react(), assemblyTranscribePlugin(), anthropicPlugin()],
   base: '/ABA_Shield_V0/',
+  server: { port: 5175 },
 });

@@ -176,7 +176,7 @@ function ReassessmentCard({ client, reassessment, bcba, onOpen }) {
 
       {/* Card */}
       <div
-        onClick={() => onOpen(client.id)}
+        onClick={() => onOpen({ type: 'reassessment', clientId: client.id })}
         className="bg-white border border-stone-200 rounded-xl p-5 cursor-pointer hover:shadow-md hover:-translate-y-px transition-all duration-150">
 
         {/* Row 1: status badge */}

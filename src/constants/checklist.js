@@ -48,7 +48,7 @@ export const mkChecklist = () => ({
   },
   staffing: {
     caregiver_availability:false, schedule_coordinated:false,
-    first_session_scheduled:false, first_session_completed:false,
+    first_session_scheduled:false,
     first_session_date:'', first_session_time:'', session_location:'',
     schedule_template:'',
   },
@@ -200,7 +200,6 @@ export function getStageItems(stage) {
       { type:'form_field', key:'first_session_date',      label:'First session date',               clSec:'staffing', fieldType:'date' },
       { type:'form_field', key:'first_session_time',      label:'First session time',               clSec:'staffing', fieldType:'time',   optional:true },
       { type:'form_field', key:'session_location',        label:'Session location',                 clSec:'staffing', fieldType:'text',   optional:true, placeholder:"Client's home / Clinic / School", authorizedKey:'session_location' },
-      { type:'checkbox',   key:'first_session_completed', label:'First session completed',          clSec:'staffing' },
     ];
     default: return [];
   }

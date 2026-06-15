@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { SEED_CLIENTS, SEED_STAFF, makeAssessmentSession } from './constants/seedData.js';
+import { SEED_CLIENTS, SEED_STAFF, makeAssessmentSession, makeReassessmentSession } from './constants/seedData.js';
 import { mkNotif } from './utils/notifications.js';
 import FontLoader from './components/FontLoader.jsx';
 import NavBar from './components/NavBar.jsx';
@@ -24,6 +24,87 @@ export default function App() {
   const [recentlyMovedId, setRecentlyMovedId]= useState(null);
   const [assessmentClientId, setAssessmentClientId] = useState(null);
   const [profileClient,      setProfileClient]     = useState(null);
+
+  // ── Assessment navigation ──────────────────────────────────────────────────
+  //
+  // handleOpenAssessment({ type, clientId })
+  //
+  // type === 'initial'      — existing path: create session if needed, open AssessmentFeature
+  // type === 'reassessment' — swap the active reassessment session into client.assessment_session
+  //                           so all existing patchSession calls work without changes.
+  //                           On close/complete, AssessmentFeature un-swaps it back.
+  //
+  // Reassessment session priority:
+  //   1. client.assessment_session already has sessionType==='reassessment' → just navigate
+  //   2. client.reassessment_sessions has a non-complete entry → swap it in
+  //   3. None found → call makeReassessmentSession, swap it in
+
+  const handleOpenAssessment = useCallback((arg) => {
+    const type = (arg && typeof arg === 'object') ? (arg.type ?? 'initial') : 'initial';
+    const cId  = (arg && typeof arg === 'object') ? arg.clientId : arg;
+    const client = clients.find(c => c.id === cId);
+    if (!client) return;
+
+    if (type === 'reassessment') {
+      // 1. Already swapped in from a previous open
+      if (client.assessment_session?.sessionType === 'reassessment' &&
+          client.assessment_session?.status !== 'complete') {
+        setAssessmentClientId(cId);
+        setPage('assessment');
+        return;
+      }
+
+      // 2. Check archived sessions for an in-progress entry
+      const inProgress = (client.reassessment_sessions ?? []).find(s => s.status !== 'complete');
+
+      if (inProgress) {
+        setClients(prev => prev.map(c => {
+          if (c.id !== cId) return c;
+          return {
+            ...c,
+            _initialAssessment: c.assessment_session,
+            assessment_session: inProgress,
+          };
+        }));
+      } else {
+        // 3. Create a new reassessment session from the initial assessment + session logs
+        const authEnd   = client.auth_expiry_date ?? null;
+        const authStart = authEnd
+          ? new Date(new Date(authEnd).setMonth(new Date(authEnd).getMonth() - 6))
+              .toISOString().slice(0, 10)
+          : null;
+        const newSession = makeReassessmentSession(
+          client,
+          client.assessment_session,
+          client.service_session_logs ?? [],
+          authStart,
+          authEnd,
+        );
+        setClients(prev => prev.map(c => {
+          if (c.id !== cId) return c;
+          return {
+            ...c,
+            _initialAssessment: c.assessment_session,
+            assessment_session: newSession,
+            reassessment_sessions: [...(c.reassessment_sessions ?? []), newSession],
+          };
+        }));
+      }
+
+      setAssessmentClientId(cId);
+      setPage('assessment');
+      return;
+    }
+
+    // Initial assessment — existing behavior
+    setClients(prev => prev.map(c => {
+      if (c.id !== cId || c.assessment_session != null) return c;
+      const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
+      return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned', c) };
+    }));
+    setAssessmentClientId(cId);
+    setPage('assessment');
+  }, [clients, setClients]);
 
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -148,18 +229,7 @@ export default function App() {
             )}
             {page==='assessments' && (
               <AssessmentsPage clients={clients} staff={enrichedStaff} currentUser={currentUser}
-                onOpenAssessment={(clientId) => {
-                  // Create session on-the-fly if client has none
-                  setClients(prev => prev.map(c => {
-                    if (c.id === clientId && c.assessment_session == null) {
-                      const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
-                      return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned', c) };
-                    }
-                    return c;
-                  }));
-                  setAssessmentClientId(clientId);
-                  setPage('assessment');
-                }} />
+                onOpenAssessment={handleOpenAssessment} />
             )}
           </main>
       }
@@ -174,6 +244,12 @@ export default function App() {
             currentUser={currentUser}
             addNotif={addNotif}
             onBack={() => { setPage('assessments'); setAssessmentClientId(null); }}
+            onReassessmentComplete={(clientId) => {
+              // After reassessment doc is generated: go back to client detail page
+              setAssessmentClientId(null);
+              setPage('pipeline');
+              setSelectedClient(clients.find(c => c.id === clientId) ?? null);
+            }}
           />
         </ErrorBoundary>
       )}
@@ -209,18 +285,9 @@ export default function App() {
           currentUser={currentUser}
           addNotif={addNotif}
           onClientAdvanced={handleClientAdvanced}
-          onOpenAssessment={(clientId) => {
-            // Create session on-the-fly if client has none (e.g. just moved to assessment stage)
-            setClients(prev => prev.map(c => {
-              if (c.id === clientId && c.assessment_session == null) {
-                const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
-                return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned', c) };
-              }
-              return c;
-            }));
+          onOpenAssessment={(arg) => {
             setSelectedClient(null);
-            setAssessmentClientId(clientId);
-            setPage('assessment');
+            handleOpenAssessment(arg); // handleOpenAssessment normalises string or object
           }}
         />
       )}

@@ -36,7 +36,8 @@ function fmtDate(d) {
 
 function progressPct(session, status) {
   if (!session) return 0;
-  const total = session.totalInterviewSections || 10;
+  const total = session.sections ? Object.keys(session.sections).length : 0;
+  if (!total) return 0;
   // Review + complete phases: show approval progress. Interview phase: show captured sections.
   const done = (status === 'in_review' || status === 'ready_to_review' || status === 'complete')
     ? (session.sectionsApproved ?? 0)
@@ -56,7 +57,7 @@ function hasNotes(session) {
 
 function sectionCount(session, status) {
   if (!session) return { done: 0, total: 0, label: 'sections' };
-  const total = session.totalInterviewSections ?? 10;
+  const total = session.sections ? Object.keys(session.sections).length : 0;
   const isReviewPhase = status === 'in_review' || status === 'ready_to_review' || status === 'complete';
   return {
     done:  isReviewPhase ? (session.sectionsApproved ?? 0) : (session.sectionsWithData ?? 0),

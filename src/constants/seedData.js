@@ -7,12 +7,10 @@ import { mkChecklist } from './checklist.js';
 const _CT_BASE = {
   baselinePercent: null,
   baselineContext: '',
-  stoPercent: null,
-  stoWeeks: null,
-  sto: '',
-  ltoPercent: null,
-  ltoSessions: null,
-  lto: '',
+  stoSteps:        [],
+  ltoPercent:      null,
+  ltoSessions:     null,
+  lto:             '',
 };
 
 export const STANDARD_CAREGIVER_TARGET_DEFS = [
@@ -31,12 +29,16 @@ export const STANDARD_CAREGIVER_TARGET_DEFS = [
 ];
 
 // Returns a fresh pair of standard targets. seedIdx makes IDs stable for seed data.
-export function makeStandardCaregiverTargets(baselines = {}, seedIdx = null) {
+// stepsMap: { premack: [...stoSteps], reinforcement: [...stoSteps] } — optional per-target steps.
+// ltoMap:   { premack: { ltoPercent, ltoSessions }, reinforcement: { ... } } — optional LTO overrides.
+export function makeStandardCaregiverTargets(baselines = {}, seedIdx = null, stepsMap = {}, ltoMap = {}) {
   return STANDARD_CAREGIVER_TARGET_DEFS.map((def, i) => ({
     id: seedIdx != null ? `ctgt_std_${seedIdx}_${i + 1}` : crypto.randomUUID(),
     ..._CT_BASE,
     ...def,
     baselinePercent: baselines[def.standardKey] != null ? Number(baselines[def.standardKey]) : null,
+    stoSteps: stepsMap[def.standardKey] ?? [],
+    ...(ltoMap[def.standardKey] ?? {}),
   }));
 }
 
@@ -134,7 +136,6 @@ export const makeAssessmentSession = (clientId, clientName, bcbaId, bcbaName, cl
     consentGranted: false,
     consentGrantedAt: null,
     sectionsWithData: 0,
-    totalInterviewSections: 11,
     sectionsApproved: 0,
     clientProfile: {
       dob: '', phone: '', address: '', referralDate: '',
@@ -280,9 +281,11 @@ const EMMA_INTERVIEW_DATA = {
         teachingStrategiesOther: '',
         promptingLevel: 'Partial Physical', promptingLevelCombination: '',
         baselinePercent: '5', baselineOpportunities: '20',
+        baselinePromptingLevel: 'Full Physical',
         baselinePromptingDesc: 'Full physical / hand-over-hand required for all exchanges; 1 of 20 opportunities independent',
         masteryCriteriaPercent: '80', masteryCriteriaSessions: '3',
         masteryCriteriaSettings: 'Home + school (minimum 2 settings)',
+        masteryCriteriaPromptingLevel: 'Independent',
         masteryCriteriaPrompting: 'Independent — no physical or gestural prompt',
         stoPercent: '60', stoSkillDescription: 'PECS card exchange for 3 preferred items', stoWeeks: '12',
         stoSteps: [
@@ -302,9 +305,11 @@ const EMMA_INTERVIEW_DATA = {
         teachingStrategiesOther: '',
         promptingLevel: 'Gestural', promptingLevelCombination: '',
         baselinePercent: '20', baselineOpportunities: '30',
+        baselinePromptingLevel: 'Gestural',
         baselinePromptingDesc: 'Gestural prompt to correct item required for ~80% of trials; selects correctly 20% independently',
         masteryCriteriaPercent: '80', masteryCriteriaSessions: '3',
         masteryCriteriaSettings: 'Therapy table + natural environment',
+        masteryCriteriaPromptingLevel: 'Independent',
         masteryCriteriaPrompting: 'Independent — no gestural or vocal prompt',
         stoPercent: '80', stoSkillDescription: 'labeling 10 common objects from an array of 3', stoWeeks: '16',
         stoSteps: [
@@ -323,9 +328,11 @@ const EMMA_INTERVIEW_DATA = {
         teachingStrategiesOther: '',
         promptingLevel: 'Full Physical', promptingLevelCombination: '',
         baselinePercent: '15', baselineOpportunities: '20',
+        baselinePromptingLevel: 'Full Physical',
         baselinePromptingDesc: 'Full physical prompt required for most actions; 2-3 actions emerging with partial physical only',
         masteryCriteriaPercent: '80', masteryCriteriaSessions: '3',
         masteryCriteriaSettings: 'Clinic + home',
+        masteryCriteriaPromptingLevel: 'Independent',
         masteryCriteriaPrompting: 'Independent — verbal cue only, no physical or gestural',
         stoPercent: '80', stoSkillDescription: 'imitating 5 gross motor actions with partial physical prompt only', stoWeeks: '10',
         stoSteps: [
@@ -344,9 +351,11 @@ const EMMA_INTERVIEW_DATA = {
         teachingStrategiesOther: '',
         promptingLevel: 'Gestural', promptingLevelCombination: '',
         baselinePercent: '30', baselineOpportunities: '20',
+        baselinePromptingLevel: 'Gestural',
         baselinePromptingDesc: 'Gestural prompt to correct position required; selects correctly ~30% independently',
         masteryCriteriaPercent: '90', masteryCriteriaSessions: '3',
         masteryCriteriaSettings: 'Table — varied array sizes (3 to 5 items)',
+        masteryCriteriaPromptingLevel: 'Independent',
         masteryCriteriaPrompting: 'Independent',
         stoPercent: '90', stoSkillDescription: 'matching identical objects in an array of 3', stoWeeks: '8',
         stoSteps: [
@@ -365,9 +374,11 @@ const EMMA_INTERVIEW_DATA = {
         teachingStrategiesOther: '',
         promptingLevel: 'Gestural', promptingLevelCombination: '',
         baselinePercent: '10', baselineOpportunities: '20',
+        baselinePromptingLevel: 'Full Physical',
         baselinePromptingDesc: 'Transitions result in head banging or tantrum/drop approximately 90% of the time; successful transition requires full verbal + gestural + physical prompt chain',
         masteryCriteriaPercent: '80', masteryCriteriaSessions: '5',
         masteryCriteriaSettings: 'Home + school, with familiar and unfamiliar adults',
+        masteryCriteriaPromptingLevel: 'Independent',
         masteryCriteriaPrompting: 'First-Then visual cue only — no additional verbal or physical prompt',
         stoPercent: '60', stoSkillDescription: 'transitioning within 60 sec for 3 high-priority contexts', stoWeeks: '14',
         stoSteps: [
@@ -475,6 +486,33 @@ const EMMA_INTERVIEW_DATA = {
     caregiverSignedCrisisPlan: true,
     rbtTrainedOnPlan: false,
     crisisPlanInBsp: true,
+  },
+  caregiver_training: {
+    completionState: 'complete',
+    caregiverBaselines: { premack_baseline: '15', reinforcement_baseline: '20' },
+    trainingFormat: ['In-session coaching', 'Parent sessions', 'Written guides'],
+    trainingFrequency: '2x/week',
+    trainingBarriers: 'Emma requires constant supervision, limiting Linda\'s availability for focused training. David works full-time and is available evenings only.',
+    caregiverStrengths: 'Linda is highly motivated and already uses a visual schedule daily. Both parents are consistent with each other and receptive to feedback.',
+    caregiverTrainingTargets: makeStandardCaregiverTargets(
+      { premack: 15, reinforcement: 20 },
+      'c4',
+      {
+        premack: [
+          { id: 'cgt-premack-c4-1', targetPercent: '40', durationWeeks: '6', note: 'BCBA-guided practice with visual First-Then board during session' },
+          { id: 'cgt-premack-c4-2', targetPercent: '65', durationWeeks: '8', note: 'Independent delivery across home routines with weekly coaching check-in' },
+        ],
+        reinforcement: [
+          { id: 'cgt-reinf-c4-1', targetPercent: '45', durationWeeks: '4', note: 'Within-3-second delivery during structured discrete trial practice' },
+          { id: 'cgt-reinf-c4-2', targetPercent: '70', durationWeeks: '4', note: 'Generalized across routines; specificity of praise maintained' },
+        ],
+      },
+      {
+        premack:      { ltoPercent: 85, ltoSessions: 3 },
+        reinforcement: { ltoPercent: 85, ltoSessions: 3 },
+      },
+    ),
+    notes: 'Linda Thompson is primary implementer — highly motivated, uses visual schedule daily. David available evenings and weekends. Focus: Premack principle delivery consistency and reinforcement timing/magnitude. Competency benchmark: 85% correct unprompted use across 3 consecutive observed sessions.',
   },
 };
 
@@ -610,9 +648,11 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
         teachingStrategiesOther: '',
         promptingLevel: 'Verbal', promptingLevelCombination: '',
         baselinePercent: '5', baselineOpportunities: '20',
+        baselinePromptingLevel: 'Full Physical',
         baselinePromptingDesc: 'Full verbal model required; unprompted help-seeking absent across all probe settings — Marcus escalates to aggression instead',
         masteryCriteriaPercent: '80', masteryCriteriaSessions: '3',
         masteryCriteriaSettings: 'Home + school + at least 1 community setting',
+        masteryCriteriaPromptingLevel: 'Independent',
         masteryCriteriaPrompting: 'Independent — no verbal or gestural prompt',
         stoPercent: '80', stoSkillDescription: 'unprompted help-seeking across 3 task types at home', stoWeeks: '10',
         stoSteps: [
@@ -631,9 +671,11 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
         teachingStrategiesOther: '',
         promptingLevel: 'Verbal', promptingLevelCombination: '',
         baselinePercent: '38', baselineOpportunities: '8',
+        baselinePromptingLevel: 'Verbal',
         baselinePromptingDesc: 'Completes 3 of 8 steps independently with primary caregiver; 4-6 verbal prompts required; routine averages 55-70 minutes',
         masteryCriteriaPercent: '100', masteryCriteriaSessions: '5',
         masteryCriteriaSettings: 'Home — must meet criterion with both parents as routine leader',
+        masteryCriteriaPromptingLevel: 'Verbal',
         masteryCriteriaPrompting: 'Independent (no more than 1 total verbal prompt per routine)',
         stoPercent: '100', stoSkillDescription: '6 of 8 routine steps independently within 45 min', stoWeeks: '12',
         stoSteps: [
@@ -652,9 +694,11 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
         teachingStrategiesOther: '',
         promptingLevel: 'Gestural', promptingLevelCombination: '',
         baselinePercent: '0', baselineOpportunities: '10',
+        baselinePromptingLevel: 'Gestural',
         baselinePromptingDesc: 'Zero unprompted peer initiations observed across 3 observation sessions; all peer contact is reactive, not initiated',
         masteryCriteriaPercent: '80', masteryCriteriaSessions: '5',
         masteryCriteriaSettings: 'School recess + classroom cooperative tasks',
+        masteryCriteriaPromptingLevel: 'Independent',
         masteryCriteriaPrompting: 'Independent — no verbal or gestural prompt',
         stoPercent: '80', stoSkillDescription: '1 unprompted peer initiation per session in structured setting', stoWeeks: '16',
         stoSteps: [
@@ -673,9 +717,11 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
         teachingStrategiesOther: 'Systematic desensitization with gradual water exposure hierarchy',
         promptingLevel: 'Verbal', promptingLevelCombination: '',
         baselinePercent: '0', baselineOpportunities: '7',
+        baselinePromptingLevel: 'Full Physical',
         baselinePromptingDesc: 'Zero independent bathing completions in past 7 days; 45-60 min refusal episode every evening; sponge bath used as accommodation. Was independent at age 7.',
         masteryCriteriaPercent: '100', masteryCriteriaSessions: '10',
         masteryCriteriaSettings: 'Home — both parents as routine leader across consecutive evenings',
+        masteryCriteriaPromptingLevel: 'Verbal',
         masteryCriteriaPrompting: 'Visual step sequence + 2-minute advance warning only; no additional verbal or physical prompt',
         stoPercent: '100', stoSkillDescription: 'tolerating water contact for 3 min without refusal or dropping', stoWeeks: '10',
         stoSteps: [
@@ -751,7 +797,24 @@ Prior ABA services (Sunshine Behavioral Health, Oct 2022–Jun 2023, 15 hrs/week
     trainingFrequency: '2x/week',
     trainingBarriers: 'Daniela (mother) works from home 3 days/week and is the primary implementer; Javier (father) works outside the home Mon–Fri, available evenings and weekends only. Maternal grandparents provide afterschool care 3x/week but speak primarily Spanish — written materials will need Spanish translations. Sofia (age 6, NT sibling) requires supervision during training sessions.',
     caregiverStrengths: 'Daniela demonstrates strong motivation and has already implemented an informal visual schedule with ~80% success rate. She accurately identifies Marcus\'s early warning signs and uses a quiet-space intervention independently. Javier is engaged and participated in today\'s interview. Both parents show excellent data-keeping potential — they track incidents in a shared notes app.',
-    caregiverTrainingTargets: makeStandardCaregiverTargets({ premack: 35, reinforcement: 50 }, 'c13'),
+    caregiverTrainingTargets: makeStandardCaregiverTargets(
+      { premack: 35, reinforcement: 50 },
+      'c13',
+      {
+        premack: [
+          { id: 'cgt-premack-c13-1', targetPercent: '55', durationWeeks: '4', note: 'Consistent first/then phrasing across home and community settings with BCBA coaching' },
+          { id: 'cgt-premack-c13-2', targetPercent: '75', durationWeeks: '4', note: 'Independent delivery; generalized to Javier and grandparents with Spanish visual guides' },
+        ],
+        reinforcement: [
+          { id: 'cgt-reinf-c13-1', targetPercent: '65', durationWeeks: '4', note: 'Within-3-second delivery with appropriate praise specificity during coaching sessions' },
+          { id: 'cgt-reinf-c13-2', targetPercent: '80', durationWeeks: '4', note: 'Generalized across caregivers; magnitude matched to task effort independently' },
+        ],
+      },
+      {
+        premack:      { ltoPercent: 90, ltoSessions: 3 },
+        reinforcement: { ltoPercent: 90, ltoSessions: 3 },
+      },
+    ),
     transcript: "Dr. Reyes: Tell me about what strategies you've tried at home — things you do instinctively that help Marcus. Daniela: The visual schedule — that was huge. I made it myself from pictures I printed. And the first-then thing, I do that naturally now. Like, first shoes then tablet. It works maybe 40% of the time? But sometimes I forget to say it and just ask him to do things and that goes badly. Javier: On weekends I try to do what Daniela does but I don't always know what step we're on in the routine. We need a shared system. Dr. Reyes: Have you ever had formal ABA parent training? Daniela: At Sunshine they did one parent meeting — it was mostly them telling us what they were doing, not really training us how to do it. Dr. Reyes: Would you be open to training during Marcus's sessions and separate parent coaching sessions? Daniela: Yes, absolutely. That's actually what I've been hoping for. Javier: If there's something we can read or watch on our own time that would help too.",
     notes: 'Observed Daniela\'s spontaneous use of first/then (Premack) — correct structure approximately 35% of interactions observed during home visit intake. Reinforcement delivery observed at 50% — appropriate immediacy but inconsistent praise specificity. Priority skill for caregiver: precise first/then phrasing + consistent reinforcement delivery. Javier to receive Saturday parallel training sessions 2x/month. Grandparent materials: Spanish-language visual guides to be prepared. Competency benchmark: 80% correct unprompted use of both strategies across 3 consecutive observed sessions before independent implementation sign-off.',
     approvalState: 'pending',
@@ -935,9 +998,11 @@ Recommended service intensity: 20 hours per week, center-based with parent train
         teachingStrategiesOther: '',
         promptingLevel: 'Full Verbal', promptingLevelCombination: '',
         baselinePercent: '5', baselineOpportunities: '20',
+        baselinePromptingLevel: 'Full Physical',
         baselinePromptingDesc: 'Full verbal model required; 1 of 20 probed opportunities independent. Typically responds to blocked access with physical aggression or elopement rather than verbal request.',
         masteryCriteriaPercent: '80', masteryCriteriaSessions: '3',
         masteryCriteriaSettings: 'Home + school (minimum 2 settings)',
+        masteryCriteriaPromptingLevel: 'Independent',
         masteryCriteriaPrompting: 'Independent — no gestural or verbal prompt',
         stoPercent: '40', stoSkillDescription: 'requesting help or break across 3 demand contexts', stoWeeks: '8',
         stoSteps: [
@@ -956,9 +1021,11 @@ Recommended service intensity: 20 hours per week, center-based with parent train
         teachingStrategiesOther: '',
         promptingLevel: 'Gestural', promptingLevelCombination: '',
         baselinePercent: '30', baselineOpportunities: '20',
+        baselinePromptingLevel: 'Gestural',
         baselinePromptingDesc: 'Gestural prompt required for second step in most trials; first step followed independently ~80%; combined two-step sequence at 30% accuracy.',
         masteryCriteriaPercent: '80', masteryCriteriaSessions: '3',
         masteryCriteriaSettings: 'Therapy table + natural environment',
+        masteryCriteriaPromptingLevel: 'Independent',
         masteryCriteriaPrompting: 'Independent — no gestural or vocal prompt',
         stoPercent: '80', stoSkillDescription: 'following two-step directions across 5 distinct instruction sets', stoWeeks: '10',
         stoSteps: [
@@ -977,9 +1044,11 @@ Recommended service intensity: 20 hours per week, center-based with parent train
         teachingStrategiesOther: '',
         promptingLevel: 'Gestural', promptingLevelCombination: '',
         baselinePercent: '0', baselineOpportunities: '30',
+        baselinePromptingLevel: 'Gestural',
         baselinePromptingDesc: '0 unprompted initiations per 30-minute session baseline. Parallel play observed near peers but no directed interaction.',
         masteryCriteriaPercent: '80', masteryCriteriaSessions: '5',
         masteryCriteriaSettings: 'School recess + structured classroom activity',
+        masteryCriteriaPromptingLevel: 'Independent',
         masteryCriteriaPrompting: 'Independent — no adult gestural or verbal cue',
         stoPercent: '40', stoSkillDescription: 'initiating 1 peer interaction per 30-min session in 2 structured contexts', stoWeeks: '12',
         stoSteps: [
@@ -999,9 +1068,11 @@ Recommended service intensity: 20 hours per week, center-based with parent train
         teachingStrategiesOther: 'Systematic desensitization with gradual water exposure hierarchy',
         promptingLevel: 'Full Physical', promptingLevelCombination: '',
         baselinePercent: '0', baselineOpportunities: '10',
+        baselinePromptingLevel: 'Full Physical',
         baselinePromptingDesc: 'Complete refusal on baseline probes — will not enter bathroom when bathing is announced. Sponge bath accepted 2-3x/week with 2-person assist. Full bath: 0% step completion independent.',
         masteryCriteriaPercent: '80', masteryCriteriaSessions: '5',
         masteryCriteriaSettings: 'Home (bathroom)',
+        masteryCriteriaPromptingLevel: 'Verbal',
         masteryCriteriaPrompting: '≤1 verbal prompt per step',
         stoPercent: '50', stoSkillDescription: 'completing 5 of 10 hygiene steps with ≤2 prompts per step', stoWeeks: '14',
         stoSteps: [
@@ -1070,7 +1141,24 @@ Recommended service intensity: 20 hours per week, center-based with parent train
     completionState: 'complete',
     approvalState: 'approved',
     caregiverBaselines: { premack_baseline: '40', reinforcement_baseline: '55' },
-    caregiverTrainingTargets: makeStandardCaregiverTargets({ premack: 40, reinforcement: 55 }, 'c5'),
+    caregiverTrainingTargets: makeStandardCaregiverTargets(
+      { premack: 40, reinforcement: 55 },
+      'c5',
+      {
+        premack: [
+          { id: 'cgt-premack-c5-1', targetPercent: '60', durationWeeks: '4', note: 'Consistent first/then delivery across both parents; demand follow-through alignment addressed' },
+          { id: 'cgt-premack-c5-2', targetPercent: '80', durationWeeks: '4', note: 'Generalized to grandparents with Gujarati-translated visual materials; Raj maintenance monitored' },
+        ],
+        reinforcement: [
+          { id: 'cgt-reinf-c5-1', targetPercent: '70', durationWeeks: '4', note: 'Within-3-second contingent delivery across home activities with parent data tracking' },
+          { id: 'cgt-reinf-c5-2', targetPercent: '85', durationWeeks: '4', note: 'Independent delivery across both parents and novel settings; Priya data system in place' },
+        ],
+      },
+      {
+        premack:      { ltoPercent: 90, ltoSessions: 3 },
+        reinforcement: { ltoPercent: 90, ltoSessions: 3 },
+      },
+    ),
     trainingFormat: ['In-session coaching', 'Parent sessions', 'Written guides'],
     trainingFrequency: '2x/week',
     trainingBarriers: 'Raj\'s work schedule limits weekday availability. Grandparents are Gujarati-speaking — English guides will need translation. Priya reports high stress and fatigue from daily behavioral challenges.',
@@ -1240,9 +1328,11 @@ const CHARLOTTE_INTERVIEW_DATA = {
         teachingStrategiesOther: '',
         promptingLevel: 'Gestural', promptingLevelCombination: '',
         baselinePercent: '15', baselineOpportunities: '20',
+        baselinePromptingLevel: 'Gestural',
         baselinePromptingDesc: 'Gestural prompt required for 85% of request opportunities; vocalizes approximations with full prompt in 3 of 20 probes',
         masteryCriteriaPercent: '80', masteryCriteriaSessions: '3',
         masteryCriteriaSettings: 'Home + clinic (minimum 2 settings)',
+        masteryCriteriaPromptingLevel: 'Independent',
         masteryCriteriaPrompting: 'Independent — no gestural or verbal prompt',
         stoSteps: [
           { id: 'sg-c10-1-s1', targetPercent: '30', skillDescription: 'requesting preferred items using 1-word vocalizations with gestural model', durationWeeks: '4' },
@@ -1261,9 +1351,11 @@ const CHARLOTTE_INTERVIEW_DATA = {
         teachingStrategiesOther: '',
         promptingLevel: 'Verbal', promptingLevelCombination: '',
         baselinePercent: '10', baselineOpportunities: '20',
+        baselinePromptingLevel: 'Full Physical',
         baselinePromptingDesc: 'Transitions result in elopement or tantrum approximately 90% of the time; successful transition requires full verbal + physical prompt chain',
         masteryCriteriaPercent: '80', masteryCriteriaSessions: '5',
         masteryCriteriaSettings: 'Home + community',
+        masteryCriteriaPromptingLevel: 'Verbal',
         masteryCriteriaPrompting: 'Verbal cue only; no physical or gestural prompt',
         stoSteps: [
           { id: 'sg-c10-2-s1', targetPercent: '40', skillDescription: 'complying with transition within 60s given First-Then visual + verbal warning', durationWeeks: '6' },
@@ -1292,7 +1384,10 @@ const CHARLOTTE_INTERVIEW_DATA = {
         operationalDefinition: 'Caregiver delivers access to preferred activity only after target behavior is performed, not before or without it',
         baselinePercent: 20,
         baselineContext: 'Observed during initial intake home visit',
-        stoPercent: 50, stoWeeks: 12, sto: '',
+        stoSteps: [
+          { id: 'cgt-premack-c10-1', targetPercent: '45', durationWeeks: '6', note: 'BCBA-guided practice with visual First-Then board; demand follow-through emphasized' },
+          { id: 'cgt-premack-c10-2', targetPercent: '70', durationWeeks: '6', note: 'Independent delivery across tasks; generalized to father with written guide' },
+        ],
         ltoPercent: 90, ltoSessions: 5, lto: '',
       },
       {
@@ -1303,7 +1398,10 @@ const CHARLOTTE_INTERVIEW_DATA = {
         operationalDefinition: 'Caregiver delivers reinforcer within 3 seconds of target behavior at a level matched to the effort required',
         baselinePercent: 35,
         baselineContext: 'Observed during initial intake home visit',
-        stoPercent: 65, stoWeeks: 12, sto: '',
+        stoSteps: [
+          { id: 'cgt-reinf-c10-1', targetPercent: '55', durationWeeks: '4', note: 'Within-3-second delivery with effort-matched magnitude during coaching sessions' },
+          { id: 'cgt-reinf-c10-2', targetPercent: '75', durationWeeks: '4', note: 'Generalized across routines; praise specificity and consistency maintained independently' },
+        ],
         ltoPercent: 90, ltoSessions: 5, lto: '',
       },
     ],
@@ -1320,7 +1418,7 @@ export const SEED_CLIENTS = () => [
   { id:'c7',  name:'Ethan Williams',  dob:'2017-04-18', phone:'(954) 555-0156', address:'800 E Broward Blvd, Ft. Lauderdale, FL',   insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-447721', group_number:'G-12390', referring_provider:'Dr. Sarah Johnson',  referring_provider_npi:'1821934056', referring_provider_phone:'(954) 555-0740', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Michael Williams', parent_relationship:'Father', parent_email:'m.williams@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-02-10', stage_entered_at:'2026-04-05T10:00:00.000Z', stage:'denied',          denial_reason:'Medical necessity not established', bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
   { id:'c8',  name:'Isabella Moore',  dob:'2018-12-25', phone:'(786) 555-0177', address:'6100 SW 57th Ave, South Miami, FL 33143',  insurer_name:'UnitedHealth', health_plan_name:'UnitedHealthcare Community Plan of Florida',   member_id:'UHC-883312', group_number:'G-77811', referring_provider:'Dr. Mark Davis',     referring_provider_npi:'1902847123', referring_provider_phone:'(786) 555-0850', gender:'Female', diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Sarah Moore', parent_relationship:'Mother', parent_email:'s.moore@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-01-20', stage_entered_at:'2026-03-10T09:00:00.000Z', stage:'authorized',      denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-31', reauth_active:false },
   { id:'c9',  name:'Mason Garcia',    dob:'2019-03-14', phone:'(305) 555-0145', address:'11200 SW 8th St, Miami, FL 33174',         insurer_name:'Humana',       health_plan_name:'Humana Healthy Horizons in Florida',          member_id:'HUM-229908', group_number:'G-98712', referring_provider:'Dr. Patricia Lee',   referring_provider_npi:'1073619284', referring_provider_phone:'(305) 555-0960', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Carmen Garcia', parent_relationship:'Mother', parent_email:'carmen.garcia@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-01-05', stage_entered_at:'2026-03-25T08:30:00.000Z', stage:'staffing',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-15', reauth_active:false },
-  { id:'c10', name:'Charlotte Davis', dob:'2018-08-22', phone:'(561) 555-0122', address:'3400 PGA Blvd, Palm Beach Gardens, FL',    insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-556634', group_number:'G-55023', referring_provider:'Dr. James Wilson',   referring_provider_npi:'1154728390', referring_provider_phone:'(561) 555-0170', gender:'Female', diagnosis:'ASD Level 1', icd10:'F84.0', parent_name:'Jennifer Davis', parent_relationship:'Mother', parent_email:'j.davis@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2025-11-12', stage_entered_at:'2026-01-20T10:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-05-27', reauth_active:true  },
+  { id:'c10', name:'Charlotte Davis', dob:'2018-08-22', phone:'(561) 555-0122', address:'3400 PGA Blvd, Palm Beach Gardens, FL',    insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-556634', group_number:'G-55023', referring_provider:'Dr. James Wilson',   referring_provider_npi:'1154728390', referring_provider_phone:'(561) 555-0170', gender:'Female', diagnosis:'ASD Level 1', icd10:'F84.0', parent_name:'Jennifer Davis', parent_relationship:'Mother', parent_email:'j.davis@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2025-11-12', stage_entered_at:'2026-01-20T10:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-07-31', reauth_active:true  },
   { id:'c11', name:'James Martinez',  dob:'2017-05-30', phone:'(786) 555-0190', address:'1800 Coral Way, Miami, FL 33145',          insurer_name:'Aetna',        health_plan_name:'Aetna Better Health of Florida',              member_id:'AET-664433', group_number:'G-44210', referring_provider:'Dr. Angela Rivera',  referring_provider_npi:'1235816047', referring_provider_phone:'(786) 555-0280', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Rosa Martinez', parent_relationship:'Mother', parent_email:'r.martinez@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2025-10-08', stage_entered_at:'2025-12-15T09:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'s1', rbt_id:'s5', auth_expiry_date:'2026-05-20', reauth_active:true  },
   { id:'c12', name:'Amelia Wilson',   dob:'2020-02-14', phone:'(954) 555-0133', address:'2800 Hollywood Blvd, Hollywood, FL 33020', insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-112298', group_number:'G-12390', referring_provider:'Dr. Kevin Brown',    referring_provider_npi:'1316924875', referring_provider_phone:'(954) 555-0390', gender:'Female', diagnosis:'ASD Level 3', icd10:'F84.0', parent_name:'Thomas Wilson', parent_relationship:'Father', parent_email:'t.wilson@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-03-01', stage_entered_at:'2026-03-05T11:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'s2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
   { id:'c13', name:'Marcus Rivera',   dob:'2017-03-04', phone:'(305) 555-0302', address:'4820 SW 137th Ave, Miami, FL 33175',       insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-774421', group_number:'G-12390', referring_provider:'Dr. Adriana Costa',  referring_provider_npi:'1407536982', referring_provider_phone:'(305) 555-0410', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Daniela Rivera', parent_relationship:'Mother', parent_email:'d.rivera@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-05-01', stage_entered_at:'2026-05-02T08:00:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },

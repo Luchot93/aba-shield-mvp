@@ -4,16 +4,11 @@ import React from 'react';
 
 function computeBaseline(goal) {
   if (!goal.baselinePercent && goal.baselinePercent !== 0) return '–';
-  const pct  = goal.baselinePercent;
-  const opps = goal.baselineOpportunities || '?';
-  return `${pct}% across ${opps} opportunities`;
-}
-
-function computeCurrentLevel(goal) {
-  if (goal.currentLevel) return goal.currentLevel;
-  if (!goal.baselinePercent && goal.baselinePercent !== 0) return 'NEW';
-  const prompt = goal.baselinePromptingLevel || goal.promptingLevel?.[0] || 'prompting';
-  return `${goal.baselinePercent}% correct with ${prompt} prompting`;
+  const pct    = goal.baselinePercent;
+  const opps   = goal.baselineOpportunities || '?';
+  const prompt = goal.baselinePromptingLevel || goal.promptingLevel?.[0] || null;
+  const promptPart = prompt ? ` with ${prompt} prompting` : '';
+  return `Client demonstrates ${pct}% correct${promptPart} across ${opps} opportunities.`;
 }
 
 function computeMastery(goal) {
@@ -128,7 +123,6 @@ function GoalBlock({ goal, index }) {
               <TH>Target Behavior</TH>
               <TH>6-Month Target (STO)</TH>
               <TH>Baseline Data</TH>
-              <TH>Current Level</TH>
               <TH>Mastery Criteria (LTO)</TH>
             </tr>
           </thead>
@@ -142,7 +136,6 @@ function GoalBlock({ goal, index }) {
                 }
               </TD>
               <TD>{computeBaseline(goal)}</TD>
-              <TD>{computeCurrentLevel(goal)}</TD>
               <TD>{computeMastery(goal)}</TD>
             </tr>
           </tbody>

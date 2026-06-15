@@ -14,11 +14,13 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
   const showDenialTag = denialCount > 0 && !isDenied; // only on non-denied cards (denied stage has its own banner)
 
   // Auth expiry banner for Services
+  // Show for all reauth_active clients (cycle is running); otherwise threshold-gated
   let authBanner = null;
   if (client.stage === 'services' && client.auth_expiry_date) {
     const days = daysUntil(client.auth_expiry_date);
-    if (days <= 14) authBanner = { days, urgent:true };
-    else if (days <= 30) authBanner = { days, urgent:false };
+    if (client.reauth_active)  authBanner = { days, urgent: days <= 14 };
+    else if (days <= 14)       authBanner = { days, urgent: true };
+    else if (days <= 30)       authBanner = { days, urgent: false };
   }
 
   // RBT cert expiry warning — shown when RBT is assigned and cert expires within 30 days

@@ -12,6 +12,10 @@ import PlanDraftInlinePanel from './PlanDraftInlinePanel.jsx';
 import PlanDraftPreview from './PlanDraftPreview.jsx';
 import { buildGraphsFromSession } from '../../features/assessment/graphBuilder.js';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock.js';
+import ServiceSessionLogPanel from './ServiceSessionLogPanel.jsx';
+import LogSessionModal from './LogSessionModal.jsx';
+import CaregiverTrainingLogPanel from './CaregiverTrainingLogPanel.jsx';
+import CaregiverTrainingLogModal from './CaregiverTrainingLogModal.jsx';
 
 export default function ClientDetailPage({ clientId, clients, staff, setClients, onBack, backLabel, currentUser, addNotif, onClientAdvanced, onOpenAssessment }) {
   useBodyScrollLock();
@@ -28,6 +32,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [viewStage,      setViewStage]      = useState(null);
   const [noteText,       setNoteText]       = useState('');
   const [activeTab,      setActiveTab]      = useState('notes');
+  const [logSessionModalOpen,          setLogSessionModalOpen]          = useState(false);
+  const [logCaregiverSessionModalOpen, setLogCaregiverSessionModalOpen] = useState(false);
+  const [servicesTab,                  setServicesTab]                  = useState('sessions');
   const pickerRef = useRef(null);
   const saveTimers = useRef({});
 
@@ -86,6 +93,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const stageToShow  = isReadOnly ? viewStage : client.stage;
   const nextStage    = NEXT_STAGE[client.stage];
   const isReauthSvc  = !isReadOnly && client.stage === 'services' && client.reauth_active;
+  const serviceTabsActive = client.stage === 'services' && !isReadOnly;
   const displayItems = isReauthSvc ? REAUTH_ITEMS : getStageItems(stageToShow);
   const completeCount = displayItems.filter(it => itemComplete(it, client, staff)).length;
   const allDone   = displayItems.length > 0 && completeCount === displayItems.length;
@@ -111,6 +119,27 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const pushLog = action => {
     const entry = { id:`log_${Date.now()}`, action, ts:new Date().toISOString(), by:currentUser.name };
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, activity_log:[entry, ...c.activity_log] } : c));
+  };
+
+  /* ── session log handlers ── */
+  const handleSaveSessionLog = newLog => {
+    setClients(prev => prev.map(c =>
+      c.id === client.id
+        ? { ...c, service_session_logs: [...(c.service_session_logs ?? []), newLog] }
+        : c,
+    ));
+    pushLog(`Session #${newLog.sessionNumber} logged by ${newLog.rbtName}`);
+    setLogSessionModalOpen(false);
+  };
+
+  const handleSaveCaregiverSessionLog = newLog => {
+    setClients(prev => prev.map(c =>
+      c.id === client.id
+        ? { ...c, caregiver_training_session_logs: [...(c.caregiver_training_session_logs ?? []), newLog] }
+        : c,
+    ));
+    pushLog(`Caregiver training session #${newLog.sessionNumber} logged by ${newLog.bcbaName}`);
+    setLogCaregiverSessionModalOpen(false);
   };
 
   const addNote = () => {
@@ -770,6 +799,27 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               );
             })()}
 
+            {item.type === 'action' && item.id === 'start_reassessment' && (() => {
+              const cycles = client?.reassessment_sessions ?? [];
+              const n      = cycles.length;
+              const latest = cycles[n - 1] ?? null;
+              let label;
+              if (n === 0)                          label = 'Start Reassessment →';
+              else if (latest?.status !== 'complete') label = `Cycle ${n} in progress →`;
+              else                                  label = `Cycle ${n} complete — Start Cycle ${n + 1} →`;
+              return (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-slate-800">{item.label}</span>
+                  <button
+                    onClick={() => onOpenAssessment?.({ type: 'reassessment', clientId: client.id })}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
+                    style={{ background: 'linear-gradient(135deg,#0D9488,#0F766E)' }}>
+                    {label}
+                  </button>
+                </div>
+              );
+            })()}
+
             {item.type === 'dated' && (() => {
               const dateVal = client.checklist[item.clSec]?.[item.dateKey] ?? '';
               const isOld   = dateVal && (Date.now() - new Date(dateVal).getTime()) > 365*24*60*60*1000;
@@ -946,7 +996,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               </div>
             )}
 
-            {isReauthSvc && (
+            {isReauthSvc && !serviceTabsActive && (
               <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-2 mb-3 flex items-center gap-2">
                 <span className="text-teal-600 text-base leading-none">↻</span>
                 <span className="text-sm font-semibold text-teal-700">Reauthorization cycle active</span>
@@ -956,7 +1006,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               </div>
             )}
 
-            <div className="bg-white rounded-xl border border-stone-200 flex flex-col" data-testid="checklist-panel">
+            {!serviceTabsActive && (<div className="bg-white rounded-xl border border-stone-200 flex flex-col" data-testid="checklist-panel">
               {/* Card header */}
               <div className="px-5 py-4 border-b border-stone-100 flex-shrink-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1036,7 +1086,12 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     style={{ background: color.bg, borderColor: color.border }}>
                     <span>{color.icon}</span>
                     <p className="text-xs font-semibold" style={{ color: color.text }}>
-                      Authorization expires in {daysLeft > 0 ? `${daysLeft} days` : 'today'} ({fmtEnd}) — start reauth now
+                      {daysLeft < 0
+                        ? `Authorization expired ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''} ago`
+                        : daysLeft === 0
+                        ? 'Authorization expires today'
+                        : `Authorization expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`
+                      } ({fmtEnd})
                     </p>
                   </div>
                 );
@@ -1255,7 +1310,157 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   </div>
                 );
               })()}
-            </div>
+            </div>)}
+
+            {/* ── In Services: 3-tab shell ── */}
+            {serviceTabsActive && (
+              <div className="bg-white rounded-xl border border-stone-200 flex flex-col" data-testid="services-tab-panel">
+
+                {/* ── Tab panel header ── */}
+                <div className="px-5 pt-4 pb-0 flex-shrink-0">
+                  <div className="flex items-center gap-2 mb-3">
+                    <h2 className="text-sm font-semibold text-slate-900 flex-1" style={{ fontFamily: 'Syne, sans-serif' }}>
+                      In Services
+                    </h2>
+                    {!userCanEdit && (
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200 flex-shrink-0">
+                        Read only
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Reauth countdown — uses submitted auth_end_date or falls back to auth_expiry_date */}
+                  {(() => {
+                    const authEnd = client.checklist?.submitted?.auth_end_date ?? client.auth_expiry_date;
+                    if (!authEnd) return null;
+                    const daysLeft = Math.ceil(
+                      (new Date(authEnd + 'T00:00:00').getTime() - Date.now()) / 86_400_000,
+                    );
+                    const expired = daysLeft < 0;
+                    const c =
+                      expired || daysLeft < 30
+                        ? { bg: '#FEF2F2', border: '#FECACA', text: '#B91C1C', icon: '🔴' }
+                        : daysLeft < 60
+                        ? { bg: '#FFFBEB', border: '#FDE68A', text: '#B45309', icon: '⚠️' }
+                        : { bg: '#F0FDF4', border: '#BBF7D0', text: '#15803D', icon: '✅' };
+                    const fmtEnd = new Date(authEnd + 'T00:00:00').toLocaleDateString('en-US', {
+                      month: 'short', day: 'numeric', year: 'numeric',
+                    });
+                    const daysText = expired
+                      ? `Expired ${Math.abs(daysLeft)} day${Math.abs(daysLeft) !== 1 ? 's' : ''} ago`
+                      : daysLeft === 0
+                      ? 'Expires today'
+                      : `Expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+                    return (
+                      <div
+                        className="mb-3 rounded-xl border px-3.5 py-2.5 flex items-center gap-2.5"
+                        style={{ background: c.bg, borderColor: c.border }}
+                      >
+                        <span className="text-sm leading-none">{c.icon}</span>
+                        <p className="text-xs font-semibold flex-1" style={{ color: c.text }}>
+                          {daysText} ({fmtEnd})
+                        </p>
+                        {isReauthSvc && (
+                          <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
+                            Reauthorization cycle active
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Tab bar */}
+                  <div className="flex border-b border-stone-100 -mx-5 px-5">
+                    {(() => {
+                      const totalSessions =
+                        (client.service_session_logs?.length ?? 0) +
+                        (client.caregiver_training_session_logs?.length ?? 0);
+                      const tabs = [
+                        { key: 'sessions',      label: 'Session Logs',     count: totalSessions, badge: null },
+                        { key: 'reassessment',  label: 'Reassessment',     count: 0, badge: null },
+                        { key: 'reauth',        label: 'Reauthorization',  count: 0, badge: isReauthSvc ? 'Active' : null },
+                      ];
+                      return tabs.map(tab => (
+                        <button
+                          key={tab.key}
+                          onClick={() => setServicesTab(tab.key)}
+                          className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors flex-shrink-0 ${
+                            servicesTab === tab.key
+                              ? 'border-teal-500 text-teal-700'
+                              : 'border-transparent text-slate-500 hover:text-slate-700'
+                          }`}
+                        >
+                          {tab.label}
+                          {tab.count > 0 && (
+                            <span
+                              className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                                servicesTab === tab.key
+                                  ? 'bg-teal-100 text-teal-700'
+                                  : 'bg-stone-100 text-slate-500'
+                              }`}
+                            >
+                              {tab.count}
+                            </span>
+                          )}
+                          {tab.badge && (
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-teal-100 text-teal-700">
+                              {tab.badge}
+                            </span>
+                          )}
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                </div>
+
+                {/* ── Tab 1: Session Logs ── */}
+                {servicesTab === 'sessions' && (
+                  <div className="p-4 space-y-3">
+                    <ServiceSessionLogPanel
+                      client={client}
+                      onLogSession={() => setLogSessionModalOpen(true)}
+                    />
+                    <CaregiverTrainingLogPanel
+                      client={client}
+                      onLogSession={() => setLogCaregiverSessionModalOpen(true)}
+                    />
+                  </div>
+                )}
+
+                {/* ── Tab 2: Reauthorization ── */}
+                {servicesTab === 'reauth' && (
+                  isReauthSvc ? (
+                    <div className="flex-1 overflow-y-auto px-5 py-3">
+                      {REAUTH_ITEMS.map(item => (
+                        <React.Fragment key={item.key ?? item.id}>
+                          {CheckRow({ item, readOnly: !userCanEdit })}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-5 py-12 text-center">
+                      <p className="text-3xl mb-3">↻</p>
+                      <p className="text-sm font-semibold text-slate-700 mb-1">No active reauthorization cycle</p>
+                      <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
+                        The reauthorization cycle activates automatically when the current authorization is approaching its expiration date.
+                      </p>
+                    </div>
+                  )
+                )}
+
+                {/* ── Tab 3: Reassessment ── */}
+                {servicesTab === 'reassessment' && (
+                  <div className="px-5 py-12 text-center">
+                    <p className="text-3xl mb-3">📊</p>
+                    <p className="text-sm font-semibold text-slate-700 mb-1">Reassessment</p>
+                    <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
+                      Progress charts, goal evolution, and reassessment initiation will be available here in the next update.
+                    </p>
+                  </div>
+                )}
+
+              </div>
+            )}
           </div>
 
           {/* right: tabbed context panel */}
@@ -1445,6 +1650,24 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
           </div>
         </div>
       </div>
+
+      {/* ── session log modals ── */}
+      {logSessionModalOpen && (
+        <LogSessionModal
+          client={client}
+          currentUser={currentUser}
+          onSave={handleSaveSessionLog}
+          onClose={() => setLogSessionModalOpen(false)}
+        />
+      )}
+      {logCaregiverSessionModalOpen && (
+        <CaregiverTrainingLogModal
+          client={client}
+          currentUser={currentUser}
+          onSave={handleSaveCaregiverSessionLog}
+          onClose={() => setLogCaregiverSessionModalOpen(false)}
+        />
+      )}
 
       {/* ── advance confirmation dialog ── */}
       {confirmAdvance && (

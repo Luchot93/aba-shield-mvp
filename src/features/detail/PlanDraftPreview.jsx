@@ -222,14 +222,19 @@ function CaregiverSummary({ section }) {
             </thead>
             <tbody>
               {ctTargets.map(t => {
-                const bp  = t.baselinePercent != null ? `${t.baselinePercent}%` : '—';
-                const sto = t.sto?.trim() || (t.stoPercent != null ? `${t.stoPercent}%${t.stoWeeks ? ` / ${t.stoWeeks}wk` : ''}` : '—');
+                const bp = t.baselinePercent != null ? `${t.baselinePercent}%` : '—';
+                const validSteps = (t.stoSteps ?? []).filter(s => s.targetPercent !== '' && s.targetPercent != null);
+                const stoContent = validSteps.length > 0
+                  ? <div className="space-y-0.5">{validSteps.map((s, si) => (
+                      <p key={si} className="text-[11px]">STO {si + 1}: {s.targetPercent}% / {s.durationWeeks || '?'} wks</p>
+                    ))}</div>
+                  : (t.sto?.trim() || '—');
                 const lto = t.lto?.trim() || (t.ltoPercent != null ? `${t.ltoPercent}%${t.ltoSessions ? ` / ${t.ltoSessions} sessions` : ''}` : '—');
                 return (
                   <tr key={t.id} className="bg-white border-b border-stone-100 last:border-0">
                     <td className="px-3 py-1.5 text-[12px] text-slate-700" style={{ borderRight:'1px solid #B2D8D3' }}>{t.goalName || '—'}</td>
                     <td className="px-3 py-1.5 text-[12px] font-medium text-slate-800 tabular-nums" style={{ borderRight:'1px solid #B2D8D3' }}>{bp}</td>
-                    <td className="px-3 py-1.5 text-[12px] text-slate-700" style={{ borderRight:'1px solid #B2D8D3' }}>{sto}</td>
+                    <td className="px-3 py-1.5 text-[12px] text-slate-700" style={{ borderRight:'1px solid #B2D8D3' }}>{stoContent}</td>
                     <td className="px-3 py-1.5 text-[12px] text-slate-700">{lto}</td>
                   </tr>
                 );

@@ -410,3 +410,79 @@ export function renderCaregiverTrainingChart(interventionName, baselinePercent, 
   chart.destroy();
   return base64;
 }
+
+// ─── renderCaregiverSTOChart ──────────────────────────────────────────────────
+
+/**
+ * Line chart showing caregiver accuracy trajectory from baseline → STO steps → LTO.
+ * Mirrors renderSkillSTOChart but for caregiver training targets.
+ *
+ * @param {string}   goalName          – e.g. "Premack Principle (First-Then)"
+ * @param {number}   baselinePercent   – observed baseline %
+ * @param {object[]|null} stoSteps     – [{targetPercent, durationWeeks}]; null = auto midpoint
+ * @param {number}   [ltoPercent=90]  – LTO mastery target %
+ * @returns {string} base64 PNG
+ */
+export function renderCaregiverSTOChart(goalName, baselinePercent, stoSteps, ltoPercent = 90) {
+  let data, labels;
+
+  if (stoSteps && stoSteps.length > 0) {
+    data   = [baselinePercent, ...stoSteps.map(s => parseFloat(s.targetPercent) || 0), ltoPercent];
+    labels = ['Baseline', ...stoSteps.map((_, i) => `STO ${i + 1}`), 'LTO (Mastery)'];
+  } else {
+    const mid = Math.round((baselinePercent + ltoPercent) / 2);
+    data   = [baselinePercent, mid, ltoPercent];
+    labels = ['Baseline', 'STO (auto)', 'LTO (Mastery)'];
+  }
+
+  const canvas = createOffscreenCanvas(600, 300);
+  const ctx    = canvas.getContext('2d');
+  fillBackground(ctx, 600, 300);
+
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label:                'Caregiver Accuracy',
+          data,
+          borderColor:          'rgba(20,184,166,1)',
+          backgroundColor:      'rgba(20,184,166,0.1)',
+          borderWidth:          2,
+          pointBackgroundColor: 'rgba(20,184,166,1)',
+          pointRadius:          5,
+          fill:                 true,
+          tension:              0.3,
+        },
+      ],
+    },
+    options: {
+      responsive: false,
+      animation:  false,
+      plugins: {
+        title: {
+          display: true,
+          text:    `${goalName} — Caregiver Accuracy Trajectory`,
+          font:    { size: 14, weight: 'bold' },
+        },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max:         100,
+          title: { display: true, text: '% of Opportunities' },
+          ticks: { callback: v => `${v}%` },
+        },
+        x: {
+          title: { display: true, text: 'Objective' },
+          ticks: { maxRotation: 30 },
+        },
+      },
+    },
+  });
+
+  const base64 = canvas.toDataURL('image/png').split(',')[1];
+  chart.destroy();
+  return base64;
+}

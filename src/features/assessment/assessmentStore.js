@@ -674,18 +674,16 @@ export function computeStoPercent(baselinePercent) {
 // ─── Caregiver Training Targets ───────────────────────────────────────────────
 
 const CAREGIVER_TRAINING_TARGET_DEFAULTS = {
-  goalName:            '',
+  goalName:              '',
   operationalDefinition: '',
-  baselinePercent:     null,
-  baselineContext:     '',
-  stoPercent:          null,
-  stoWeeks:            null,
-  sto:                 '',
-  ltoPercent:          null,
-  ltoSessions:         null,
-  lto:                 '',
-  isStandard:          false,
-  standardKey:         null,
+  baselinePercent:       null,
+  baselineContext:       '',
+  stoSteps:              [],
+  ltoPercent:            null,
+  ltoSessions:           null,
+  lto:                   '',
+  isStandard:            false,
+  standardKey:           null,
 };
 
 export function addCaregiverTrainingTarget(sessionId, clients, setClients) {
@@ -725,6 +723,58 @@ export function removeCaregiverTrainingTarget(sessionId, targetId, clients, setC
     const session  = c.assessment_session;
     const section  = session.sections['caregiver_training'];
     const updatedTargets = (section.caregiverTrainingTargets ?? []).filter(t => t.isStandard || t.id !== targetId);
+    const updated = { ...section, caregiverTrainingTargets: updatedTargets };
+    const updatedSections = { ...session.sections, caregiver_training: updated };
+    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+  }));
+}
+
+// ─── Caregiver Training STO Steps ────────────────────────────────────────────
+
+export function addCaregiverStoStep(setClients, clientId, targetId) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== clientId) return c;
+    const session = c.assessment_session;
+    const section = session.sections['caregiver_training'];
+    const updatedTargets = (section.caregiverTrainingTargets ?? []).map(t => {
+      if (t.id !== targetId) return t;
+      const newStep = { id: crypto.randomUUID(), targetPercent: '', durationWeeks: '', note: '' };
+      return { ...t, stoSteps: [...(t.stoSteps ?? []), newStep] };
+    });
+    const updated = { ...section, caregiverTrainingTargets: updatedTargets };
+    const updatedSections = { ...session.sections, caregiver_training: updated };
+    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+  }));
+}
+
+export function updateCaregiverStoStep(setClients, clientId, targetId, stepId, field, value) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== clientId) return c;
+    const session = c.assessment_session;
+    const section = session.sections['caregiver_training'];
+    const updatedTargets = (section.caregiverTrainingTargets ?? []).map(t => {
+      if (t.id !== targetId) return t;
+      const updatedSteps = (t.stoSteps ?? []).map(s => s.id === stepId ? { ...s, [field]: value } : s);
+      return { ...t, stoSteps: updatedSteps };
+    });
+    const updated = { ...section, caregiverTrainingTargets: updatedTargets };
+    const updatedSections = { ...session.sections, caregiver_training: updated };
+    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+  }));
+}
+
+export function removeCaregiverStoStep(setClients, clientId, targetId, stepId) {
+  setClients(prev => prev.map(c => {
+    if (c.id !== clientId) return c;
+    const session = c.assessment_session;
+    const section = session.sections['caregiver_training'];
+    const updatedTargets = (section.caregiverTrainingTargets ?? []).map(t => {
+      if (t.id !== targetId) return t;
+      return { ...t, stoSteps: (t.stoSteps ?? []).filter(s => s.id !== stepId) };
+    });
     const updated = { ...section, caregiverTrainingTargets: updatedTargets };
     const updatedSections = { ...session.sections, caregiver_training: updated };
     const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };

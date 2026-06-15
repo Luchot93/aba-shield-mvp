@@ -1,11 +1,144 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   patchSection,
   addCaregiverTrainingTarget,
   updateCaregiverTrainingTarget,
   removeCaregiverTrainingTarget,
-  computeStoPercent,
+  addCaregiverStoStep,
+  updateCaregiverStoStep,
+  removeCaregiverStoStep,
 } from '../assessmentStore.js';
+
+// ─── Goal library ─────────────────────────────────────────────────────────────
+
+const CAREGIVER_LIBRARY = [
+  {
+    name: 'Premack Principle (First-Then)',
+    operationalDefinition: 'Caregiver uses "first [non-preferred], then [preferred]" structure consistently, delivering access to the preferred item contingently and only after the requested behavior is completed.',
+  },
+  {
+    name: 'Reinforcement Delivery',
+    operationalDefinition: 'Caregiver delivers contingent, behavior-specific praise or tangible reinforcement within 3 seconds of the target behavior occurring, using varied reinforcer types matched to learner preference as identified in the most recent preference assessment.',
+  },
+  {
+    name: 'Differential Reinforcement (DR)',
+    operationalDefinition: 'Caregiver delivers contingent praise or tangible reinforcement within 3 seconds of a target behavior occurring, and withholds reinforcement for the absence or opposite of the target behavior, maintaining consistency across at least 80% of opportunities.',
+  },
+  {
+    name: 'Extinction / Ignoring Maintained Behaviors',
+    operationalDefinition: 'Caregiver consistently withholds attention, tangibles, or escape following identified problem behavior, without making eye contact, verbal comments, or providing access to the maintaining reinforcer, across all occurrences within a session.',
+  },
+  {
+    name: 'Prompt Hierarchy Implementation',
+    operationalDefinition: 'Caregiver delivers prompts in the correct sequence (e.g., least-to-most or most-to-least as specified in the protocol), allows the designated wait time between prompts, and fades prompts systematically as the learner demonstrates independence.',
+  },
+  {
+    name: 'Data Collection / Behavior Tracking',
+    operationalDefinition: 'Caregiver accurately records occurrences of the target behavior using the designated data sheet or app (frequency, duration, or interval recording as specified), completing data within 10 minutes following each session or observation period.',
+  },
+  {
+    name: 'Generalization Programming',
+    operationalDefinition: 'Caregiver implements target skill practice across at least 3 different settings, people, or materials per week as specified in the treatment plan, varying antecedent conditions to promote stimulus generalization.',
+  },
+  {
+    name: 'Behavioral Momentum / High-Probability Requests',
+    operationalDefinition: 'Caregiver delivers 3 or more high-probability requests before a low-probability request during instructional sequences, maintaining a brisk pace (≤5 seconds between trials) to build compliance momentum.',
+  },
+  {
+    name: 'Functional Communication Training (FCT) Response',
+    operationalDefinition: 'Caregiver consistently honors the learner\'s FCT response (e.g., request for break, help, or item) within 3 seconds of the communicative act, and blocks and redirects problem behavior without providing the same reinforcer.',
+  },
+  {
+    name: 'Visual Schedule Use',
+    operationalDefinition: 'Caregiver presents the visual schedule before transitions, guides the learner to check off or flip completed items, and uses the schedule to preview upcoming activities, across all scheduled transitions throughout the day.',
+  },
+  {
+    name: 'Crisis / Safety Response Protocol',
+    operationalDefinition: 'Caregiver correctly identifies the early warning signs in the learner\'s escalation cycle and implements the written safety plan steps in the correct sequence, without deviation, within 30 seconds of observing the first indicator.',
+  },
+];
+
+// ─── GoalNameInput — autocomplete from CAREGIVER_LIBRARY ─────────────────────
+
+function GoalNameInput({ value, onChange, onSelect, inputCls }) {
+  const [open, setOpen]   = useState(false);
+  const [pos,  setPos]    = useState({ top: 0, left: 0, width: 0 });
+  const inputRef          = useRef(null);
+  const dropdownRef       = useRef(null);
+
+  const suggestions = (value ?? '').trim().length >= 1
+    ? CAREGIVER_LIBRARY.filter(s => s.name.toLowerCase().includes(value.toLowerCase()))
+    : [];
+
+  const updatePos = () => {
+    if (inputRef.current) {
+      const r = inputRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+  };
+
+  const handleChange = (e) => {
+    onChange(e.target.value);
+    updatePos();
+    setOpen(true);
+  };
+
+  const handleFocus = () => {
+    updatePos();
+    if ((value ?? '').trim()) setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (!inputRef.current?.contains(e.target)) setOpen(false); };
+    const closeOnScroll = (e) => { if (!dropdownRef.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('scroll', closeOnScroll, true);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('scroll', closeOnScroll, true);
+    };
+  }, [open]);
+
+  const dropdown = open && suggestions.length > 0 ? createPortal(
+    <div
+      ref={dropdownRef}
+      onMouseDown={e => e.stopPropagation()}
+      style={{ position: 'fixed', top: pos.top, left: pos.left, width: pos.width, zIndex: 9999, fontFamily: 'DM Sans, sans-serif' }}
+      className="bg-white rounded-xl border border-stone-200 shadow-2xl py-1 max-h-72 overflow-y-auto">
+      {suggestions.map((item, i) => (
+        <button key={item.name} type="button"
+          onMouseDown={e => { e.preventDefault(); onSelect(item); setOpen(false); }}
+          className="w-full text-left px-3.5 py-2.5 hover:bg-teal-50 transition-colors group"
+          style={{ borderBottom: i < suggestions.length - 1 ? '1px solid #F5F5F4' : 'none' }}>
+          <p className="text-[13px] font-semibold text-slate-700 group-hover:text-teal-700">{item.name}</p>
+          <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed"
+            style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {item.operationalDefinition}
+          </p>
+        </button>
+      ))}
+    </div>,
+    document.body,
+  ) : null;
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value ?? ''}
+        onChange={handleChange}
+        onFocus={handleFocus}
+        placeholder="e.g. Premack Principle, Reinforcement Delivery…"
+        className={`w-full ${inputCls}`}
+        style={{ fontFamily: 'DM Sans, sans-serif' }}
+      />
+      {dropdown}
+    </>
+  );
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -91,6 +224,21 @@ const SectionRule = ({ label }) => (
   </div>
 );
 
+function InlineNum({ value, onChange, placeholder, width = '3.5rem' }) {
+  return (
+    <input
+      type="number"
+      value={value ?? ''}
+      onChange={onChange}
+      placeholder={placeholder}
+      min={0}
+      max={9999}
+      className="inline-block text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+      style={{ width, fontFamily: 'DM Sans, sans-serif', lineHeight: 1.5 }}
+    />
+  );
+}
+
 function TrainingTargetCard({ target, index, clientId, setClients }) {
   const [expanded, setExpanded] = useState(true);
   const [customOpen, setCustomOpen] = useState(false);
@@ -98,21 +246,7 @@ function TrainingTargetCard({ target, index, clientId, setClients }) {
   const upd = (field, value) =>
     updateCaregiverTrainingTarget(clientId, target.id, field, value, null, setClients);
 
-  const bpNum = target.baselinePercent !== null && target.baselinePercent !== ''
-    ? Number(target.baselinePercent)
-    : null;
-  const stoComputed = bpNum !== null ? computeStoPercent(bpNum) : null;
-  const stoIsAuto   = target.stoPercent == null && stoComputed !== null;
-
-  // Local draft for the STO % input — lets the user freely edit/clear without
-  // the store snapping the value back mid-keystroke.
-  // Commits to the store on blur; syncs from outside when baseline changes.
-  const stoExternal = target.stoPercent != null ? String(target.stoPercent) : (stoComputed != null ? String(stoComputed) : '');
-  const [stoDraft, setStoDraft] = React.useState(stoExternal);
-  React.useEffect(() => { setStoDraft(stoExternal); }, [stoExternal]);
-
   const ltoDisplay = target.ltoPercent != null ? target.ltoPercent : null;
-
   const inputCls = 'px-2 py-2 text-[13px] text-slate-800 bg-stone-50 border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100 transition-colors';
 
   return (
@@ -155,12 +289,14 @@ function TrainingTargetCard({ target, index, clientId, setClients }) {
         {/* Goal name */}
         <div>
           <FieldLabel>Goal Name</FieldLabel>
-          <input
-            type="text"
+          <GoalNameInput
             value={target.goalName ?? ''}
-            onChange={e => upd('goalName', e.target.value)}
-            placeholder="e.g. Implement Premack principle correctly"
-            className={`w-full ${inputCls}`}
+            onChange={val => upd('goalName', val)}
+            onSelect={item => {
+              upd('goalName', item.name);
+              if (!target.operationalDefinition?.trim()) upd('operationalDefinition', item.operationalDefinition);
+            }}
+            inputCls={inputCls}
           />
         </div>
 
@@ -206,101 +342,91 @@ function TrainingTargetCard({ target, index, clientId, setClients }) {
           </div>
         </div>
 
-        {/* ── Objectives ── */}
+        {/* ── Short-Term Objectives (STO steps) ── */}
         <div>
-          <SectionRule label="Objectives" />
-          <div className="grid grid-cols-2 gap-4 mt-3">
-
-            {/* STO */}
-            <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest mb-2.5" style={{ color: '#14B8A6' }}>
-                Short-Term (STO)
-              </p>
-              <div className="flex gap-2 items-start">
-                <div>
-                  <FieldLabel>Target %</FieldLabel>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number" min={0} max={100}
-                      value={stoDraft}
-                      onChange={e => setStoDraft(e.target.value)}
-                      onBlur={e => upd('stoPercent', e.target.value === '' ? null : Number(e.target.value))}
-                      className={`w-16 ${inputCls}`}
-                    />
-                    <span className="text-[12px] text-slate-400">%</span>
-                  </div>
-                  {stoIsAuto && (
-                    <p className="text-[10px] mt-1" style={{ color: '#5EADA3' }}>auto from {bpNum}%</p>
-                  )}
-                </div>
-                <div>
-                  <FieldLabel>Weeks</FieldLabel>
-                  <input
-                    type="number" min={1}
-                    value={target.stoWeeks ?? ''}
-                    onChange={e => upd('stoWeeks', e.target.value === '' ? null : Number(e.target.value))}
-                    className={`w-16 ${inputCls}`}
+          <SectionRule label="Short-Term Objectives" />
+          <div className="flex items-center justify-between mt-3 mb-1">
+            <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: '#14B8A6' }}>
+              STO Milestones
+            </p>
+            <button
+              type="button"
+              onClick={() => addCaregiverStoStep(setClients, clientId, target.id)}
+              className="flex items-center gap-1 text-[11px] font-semibold text-teal-600 hover:text-teal-700 transition-colors">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+              </svg>
+              Add STO step
+            </button>
+          </div>
+          <p className="text-[11px] text-slate-400 mb-2">
+            Milestones that must be met before reaching the mastery goal
+          </p>
+          {(target.stoSteps ?? []).length === 0 ? (
+            <p className="text-[11px] text-slate-400 italic">No steps defined — auto-formula will be used in the plan</p>
+          ) : (
+            <div className="space-y-2">
+              {(target.stoSteps ?? []).map((step, si) => (
+                <div key={step.id} className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600 rounded-lg px-3 py-2"
+                  style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                  <span className="text-[11px] font-bold text-teal-600 mr-0.5">STO {si + 1}</span>
+                  <span>Caregiver will demonstrate</span>
+                  <InlineNum
+                    value={step.targetPercent}
+                    onChange={e => updateCaregiverStoStep(setClients, clientId, target.id, step.id, 'targetPercent', e.target.value)}
+                    placeholder="60"
+                    width="3rem"
                   />
+                  <span>% accuracy within</span>
+                  <InlineNum
+                    value={step.durationWeeks}
+                    onChange={e => updateCaregiverStoStep(setClients, clientId, target.id, step.id, 'durationWeeks', e.target.value)}
+                    placeholder="4"
+                    width="2.5rem"
+                  />
+                  <span>consecutive weeks.</span>
+                  <button
+                    type="button"
+                    onClick={() => removeCaregiverStoStep(setClients, clientId, target.id, step.id)}
+                    className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none"
+                    title="Remove step">
+                    ×
+                  </button>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Long-Term Objective (LTO) ── */}
+        <div>
+          <SectionRule label="Long-Term Objective" />
+          <div className="flex gap-3 items-start mt-3">
+            <div>
+              <FieldLabel>Target %</FieldLabel>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number" min={0} max={100}
+                  value={target.ltoPercent ?? ''}
+                  onChange={e => upd('ltoPercent', e.target.value === '' ? null : Number(e.target.value))}
+                  className={`w-16 ${inputCls}`}
+                />
+                <span className="text-[12px] text-slate-400">%</span>
               </div>
             </div>
-
-            {/* LTO */}
             <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2.5">
-                Long-Term (LTO)
-              </p>
-              <div className="flex gap-2 items-start">
-                <div>
-                  <FieldLabel>Target %</FieldLabel>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number" min={0} max={100}
-                      value={target.ltoPercent ?? ''}
-                      onChange={e => upd('ltoPercent', e.target.value === '' ? null : Number(e.target.value))}
-                      className={`w-16 ${inputCls}`}
-                    />
-                    <span className="text-[12px] text-slate-400">%</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-1">enter manually</p>
-                </div>
-                <div>
-                  <FieldLabel>Sessions</FieldLabel>
-                  <input
-                    type="number" min={1}
-                    value={target.ltoSessions ?? ''}
-                    onChange={e => upd('ltoSessions', e.target.value === '' ? null : Number(e.target.value))}
-                    className={`w-16 ${inputCls}`}
-                  />
-                </div>
-              </div>
+              <FieldLabel>Sessions to mastery</FieldLabel>
+              <input
+                type="number" min={1}
+                value={target.ltoSessions ?? ''}
+                onChange={e => upd('ltoSessions', e.target.value === '' ? null : Number(e.target.value))}
+                className={`w-16 ${inputCls}`}
+              />
             </div>
           </div>
         </div>
 
-        {/* Narrative preview */}
-        {(target.goalName || bpNum !== null) && (
-          <div className="rounded-lg px-3 py-2.5 space-y-1.5"
-            style={{ background: 'rgba(20,184,166,0.06)', border: '1px solid rgba(20,184,166,0.2)' }}>
-            <p className="text-[9px] font-bold uppercase tracking-widest mb-1" style={{ color: '#5EADA3' }}>
-              Narrative Preview
-            </p>
-            <p className="text-[12px] text-slate-600 leading-relaxed">
-              <span className="font-semibold text-slate-500">STO: </span>
-              Caregiver will demonstrate {target.goalName || 'the target skill'} with{' '}
-              <span className="font-semibold">{stoDraft !== '' ? stoDraft : '?'}%</span> consistency
-              across <span className="font-semibold">{target.stoWeeks != null ? target.stoWeeks : '?'}</span> consecutive weeks.
-            </p>
-            <p className="text-[12px] text-slate-600 leading-relaxed">
-              <span className="font-semibold text-slate-500">LTO: </span>
-              Caregiver will demonstrate {target.goalName || 'the target skill'} with{' '}
-              <span className="font-semibold">{ltoDisplay != null ? ltoDisplay : '?'}%</span> accuracy
-              across <span className="font-semibold">{target.ltoSessions != null ? target.ltoSessions : '?'}</span> consecutive caregiver training sessions.
-            </p>
-          </div>
-        )}
-
-        {/* Custom sentence override (optional) */}
+        {/* Custom LTO sentence override (optional) */}
         <div>
           <button
             type="button"
@@ -310,27 +436,18 @@ function TrainingTargetCard({ target, index, clientId, setClients }) {
               fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
             </svg>
-            Custom sentence override (optional)
+            Custom LTO sentence override (optional)
           </button>
           {customOpen && (
-            <div className="mt-3 space-y-3 pl-3 border-l-2 border-stone-100">
-              <p className="text-[11px] text-slate-400">
-                Free text replaces the auto-generated sentence entirely. Leave blank to use the computed narrative above.
+            <div className="mt-3 pl-3 border-l-2 border-stone-100">
+              <p className="text-[11px] text-slate-400 mb-2">
+                Free text replaces the auto-generated LTO sentence. Leave blank to use computed narrative.
               </p>
-              <div>
-                <FieldLabel>STO Sentence</FieldLabel>
-                <textarea value={target.sto ?? ''} onChange={e => upd('sto', e.target.value)}
-                  rows={2} placeholder="Custom STO sentence…"
-                  className={`w-full leading-relaxed resize-y ${inputCls}`}
-                />
-              </div>
-              <div>
-                <FieldLabel>LTO Sentence</FieldLabel>
-                <textarea value={target.lto ?? ''} onChange={e => upd('lto', e.target.value)}
-                  rows={2} placeholder="Custom LTO sentence…"
-                  className={`w-full leading-relaxed resize-y ${inputCls}`}
-                />
-              </div>
+              <FieldLabel>LTO Sentence</FieldLabel>
+              <textarea value={target.lto ?? ''} onChange={e => upd('lto', e.target.value)}
+                rows={2} placeholder="Custom LTO sentence…"
+                className={`w-full leading-relaxed resize-y ${inputCls}`}
+              />
             </div>
           )}
         </div>

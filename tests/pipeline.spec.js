@@ -279,8 +279,7 @@ test.describe('ABA Shield — Pipeline Kanban', () => {
 
   test('denied stage shows resolution buttons instead of advance', async ({ page }) => {
     await page.locator('[data-testid="card-name-c7"]').click();
-    await expect(page.locator('[data-testid="resolve-authorized"]')).toBeVisible();
-    await expect(page.locator('[data-testid="resolve-submitted"]')).toBeVisible();
+    await expect(page.locator('[data-testid="resolve-return"]')).toBeVisible();
     await expect(page.locator('[data-testid="advance-btn"]')).not.toBeVisible();
   });
 
@@ -295,6 +294,8 @@ test.describe('ABA Shield — Pipeline Kanban', () => {
   test('upload action appears in activity log', async ({ page }) => {
     await page.locator('[data-testid="card-name-c1"]').click();
     await page.locator('[data-testid="upload-referral_form"]').click();
+    // Wait for upload button to be replaced by "Uploaded" state before switching tabs
+    await expect(page.locator('[data-testid="upload-referral_form"]')).not.toBeVisible({ timeout: 5000 });
     await page.locator('[data-testid="detail-tab-activity"]').click();
     await expect(page.locator('[data-testid="activity-log"]')).toContainText('Uploaded: Referral request form');
   });
@@ -308,10 +309,10 @@ test.describe('ABA Shield — Pipeline Kanban', () => {
   });
 
   test('Smart Assessment bridge button navigates to assessment interview', async ({ page }) => {
-    // c4 is assessment stage — has the bridge item
+    // c4 is assessment stage — has an in-progress session, so shows "Continue" button
     await page.locator('[data-testid="card-name-c4"]').click();
-    await expect(page.locator('[data-testid="open-smart-assessment"]')).toBeVisible();
-    await page.locator('[data-testid="open-smart-assessment"]').click();
+    await expect(page.locator('[data-testid="continue-smart-assessment"]')).toBeVisible();
+    await page.locator('[data-testid="continue-smart-assessment"]').click();
     // Button now navigates directly to the assessment interview:
     // modal closes, AssessmentFeature mounts showing the client name breadcrumb
     await expect(page.locator('[data-testid="client-detail-modal"]')).not.toBeVisible({ timeout: 5000 });
@@ -328,24 +329,28 @@ test.describe('ABA Shield — Pipeline Kanban', () => {
   test('reauth banner shows for services clients with reauth_active', async ({ page }) => {
     await page.locator('.overflow-x-auto').evaluate(el => el.scrollLeft = 9999);
     await page.locator('[data-testid="card-name-c10"]').click();
+    // Services stage now shows a 3-tab shell; reauth_active surfaces as a badge in the countdown banner
+    await expect(page.locator('[data-testid="services-tab-panel"]')).toBeVisible();
     await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('Reauthorization cycle active');
-    await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('2026-05-27');
+    await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('Jul 31, 2026');
   });
 
-  test('denied resolution: Move to Authorized opens confirmation dialog', async ({ page }) => {
+  test('denied resolution: clicking resolve closes modal and returns client', async ({ page }) => {
     await page.locator('[data-testid="card-name-c7"]').click();
-    await page.locator('[data-testid="resolve-authorized"]').click();
-    await expect(page.locator('[data-testid="confirm-advance"]')).toBeVisible();
-    await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('Ethan Williams');
-    await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('Authorized');
+    const resolveBtn = page.locator('[data-testid="resolve-return"]');
+    await expect(resolveBtn).toBeVisible();
+    await resolveBtn.click();
+    // Resolution navigates back — modal should close
+    await expect(page.locator('[data-testid="client-detail-modal"]')).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('confirmation cancel keeps client on current stage', async ({ page }) => {
+  test('denied resolve button shows return destination text', async ({ page }) => {
     await page.locator('[data-testid="card-name-c7"]').click();
-    await page.locator('[data-testid="resolve-authorized"]').click();
-    await page.locator('[data-testid="confirm-cancel"]').click();
-    await expect(page.locator('[data-testid="confirm-advance"]')).not.toBeVisible();
-    await expect(page.locator('[data-testid="client-detail-modal"]')).toBeVisible();
+    const resolveBtn = page.locator('[data-testid="resolve-return"]');
+    await expect(resolveBtn).toBeVisible();
+    await expect(resolveBtn).toContainText('Return to');
+    // No advance button for denied clients
+    await expect(page.locator('[data-testid="advance-btn"]')).not.toBeVisible();
   });
 
   test('BCBA header row shows assigned BCBA name', async ({ page }) => {
@@ -368,15 +373,15 @@ test.describe('ABA Shield — Clients Page', () => {
   });
 
   // ── Table renders ─────────────────────────────────────────────────────────
-  test('Clients page shows all 13 seed clients', async ({ page }) => {
+  test('Clients page shows all 14 seed clients', async ({ page }) => {
     const rows = page.locator('[data-testid="clients-table"] tbody tr');
-    await expect(rows).toHaveCount(13);
+    await expect(rows).toHaveCount(14);
   });
 
-  test('all 9 column headers render', async ({ page }) => {
+  test('all 7 column headers render', async ({ page }) => {
     const th = page.locator('[data-testid="clients-table"] thead th');
-    await expect(th).toHaveCount(9);
-    for (const label of ['Client','DOB','Insurer','Member ID','Stage','BCBA','RBT','Referral Date','Source']) {
+    await expect(th).toHaveCount(7);
+    for (const label of ['Client','DOB / Age','Insurer','Member ID','Stage','Care Team','Referral Date']) {
       await expect(page.locator('[data-testid="clients-table"] thead')).toContainText(label);
     }
   });
@@ -411,7 +416,7 @@ test.describe('ABA Shield — Clients Page', () => {
 
   test('search with no match shows empty state', async ({ page }) => {
     await page.locator('[data-testid="clients-search"]').fill('zzznomatch');
-    await expect(page.locator('[data-testid="clients-table"]')).toContainText('No clients found.');
+    await expect(page.locator('[data-testid="clients-table"]')).toContainText('No clients match your search');
   });
 
   // ── Filter chips ──────────────────────────────────────────────────────────
@@ -446,8 +451,8 @@ test.describe('ABA Shield — Clients Page', () => {
   test('In Progress filter excludes intake, services, denied', async ({ page }) => {
     await page.getByTestId('filter-in_progress').click();
     const rows = page.locator('[data-testid="clients-table"] tbody tr');
-    // stages: auth_assessment(2), assessment(2), plan_draft(1), submitted(1), authorized(1), staffing(1) = 8
-    await expect(rows).toHaveCount(8);
+    // stages: auth_assessment(2), assessment(2), plan_draft(1), submitted(2), authorized(1), staffing(1) = 9
+    await expect(rows).toHaveCount(9);
   });
 
   // ── Sort ──────────────────────────────────────────────────────────────────
@@ -475,8 +480,8 @@ test.describe('ABA Shield — Clients Page', () => {
   // ── Row click → Client Detail ─────────────────────────────────────────────
   test('clicking a row opens Client Detail', async ({ page }) => {
     await page.locator('[data-testid="client-row-c1"]').click();
-    await expect(page.locator('[data-testid="client-detail-modal"]')).toBeVisible();
-    await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('Liam Rodriguez');
+    await expect(page.locator('[data-testid="client-profile-panel"]')).toBeVisible();
+    await expect(page.locator('[data-testid="client-profile-panel"]')).toContainText('Liam Rodriguez');
   });
 
   // ── New Client button ─────────────────────────────────────────────────────
@@ -495,7 +500,7 @@ test.describe('ABA Shield — Clients Page', () => {
     await page.locator('[data-testid="save-client"]').click();
     await expect(page.locator('[data-testid="clients-table"]')).toContainText('Test Import Child');
     const rows = page.locator('[data-testid="clients-table"] tbody tr');
-    await expect(rows).toHaveCount(14);
+    await expect(rows).toHaveCount(15);
   });
 
   // ── Import CSV/Excel button ───────────────────────────────────────────────
@@ -574,9 +579,9 @@ test.describe('ABA Shield — Staff Page', () => {
   // ── Filter chips ──────────────────────────────────────────────────────────
   test('Available filter shows only active staff', async ({ page }) => {
     await page.getByTestId('staff-filter-available').click();
-    // 10 active in seed data (u2 + u4 + s1-s8)
+    // 12 active in seed data (u2 + u4 + s1-s10)
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(10);
+    await expect(cards).toHaveCount(12);
   });
 
   // ── Card expand ───────────────────────────────────────────────────────────
@@ -758,12 +763,20 @@ test.describe('ABA Shield — Notifications', () => {
       const cb = checks.nth(i);
       if (!(await cb.isChecked())) await cb.check();
     }
-    const advBtn = modal.locator('[data-testid="advance-btn"]');
-    if (await advBtn.isEnabled()) {
-      await advBtn.click();
-      await page.locator('[data-testid="confirm-advance"]').click();
+    // Fill required date field (first_session_date) so advance button enables
+    const dateInput = modal.locator('[data-testid="detail-field-first_session_date"]');
+    if (await dateInput.isVisible()) {
+      await dateInput.fill('2026-06-20');
+      await dateInput.press('Enter');
     }
-    // Bell should now show notification
+    // Wait for advance button to become enabled after state updates
+    const advBtn = modal.locator('[data-testid="advance-btn"]');
+    await expect(advBtn).toBeEnabled({ timeout: 5000 });
+    await advBtn.click();
+    await page.locator('[data-testid="confirm-advance"]').click();
+    // Wait for modal to close after advancing
+    await expect(page.locator('[data-testid="client-detail-modal"]')).not.toBeVisible({ timeout: 5000 });
+    // Bell should now show notification for Mason Garcia
     await page.locator('[data-testid="bell-btn"]').click();
     await expect(page.locator('[data-testid="notif-panel"]')).toContainText('Mason Garcia');
   });

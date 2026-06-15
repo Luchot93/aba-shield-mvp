@@ -3,6 +3,24 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { computeStoPercent } from '../assessmentStore.js';
 
+function computeReviewSTO(t) {
+  const validSteps = (t.stoSteps ?? []).filter(
+    s => s.targetPercent !== '' && s.targetPercent != null,
+  );
+  if (validSteps.length > 0) {
+    return validSteps.map((s, i) =>
+      `STO ${i + 1}: ${s.targetPercent}% accuracy within ${s.durationWeeks || '?'} wks`,
+    );
+  }
+  // Legacy fallback
+  const bpNum = t.baselinePercent != null && t.baselinePercent !== '' ? Number(t.baselinePercent) : null;
+  const stoPercent = t.stoPercent != null ? t.stoPercent : (bpNum !== null ? computeStoPercent(bpNum) : null);
+  const text = t.sto?.trim()
+    ? t.sto
+    : `Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${stoPercent != null ? stoPercent : '?'}% consistency across ${t.stoWeeks != null ? t.stoWeeks : '?'} consecutive weeks.`;
+  return [text];
+}
+
 // ─── Table primitives — exact match to SkillAcquisitions / MaladaptiveBehaviors ─
 
 const TH = ({ children }) => (
@@ -113,13 +131,7 @@ export default function CaregiverTrainingReviewView({ session, draftContent }) {
                 {targets.map((t, i) => {
                   const bpNum = t.baselinePercent !== null && t.baselinePercent !== ''
                     ? Number(t.baselinePercent) : null;
-                  const stoPercent = t.stoPercent != null ? t.stoPercent
-                    : (bpNum !== null ? computeStoPercent(bpNum) : null);
-
-                  const stoText = t.sto?.trim()
-                    ? t.sto
-                    : `Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${stoPercent != null ? stoPercent : '?'}% consistency across ${t.stoWeeks != null ? t.stoWeeks : '?'} consecutive weeks.`;
-
+                  const stoLines = computeReviewSTO(t);
                   const ltoText = t.lto?.trim()
                     ? t.lto
                     : `Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${t.ltoPercent != null ? t.ltoPercent : '?'}% accuracy across ${t.ltoSessions != null ? t.ltoSessions : '?'} consecutive caregiver training sessions.`;
@@ -127,8 +139,16 @@ export default function CaregiverTrainingReviewView({ session, draftContent }) {
                   return (
                     <tr key={t.id ?? i} className="bg-white">
                       <TD>{t.goalName || <span className="text-slate-400 italic">Untitled</span>}</TD>
-                      <TD>{bpNum !== null ? `${bpNum}%` : '–'}</TD>
-                      <TD>{stoText}</TD>
+                      <TD>{bpNum !== null ? `${bpNum}%${t.baselineContext?.trim() ? ` (${t.baselineContext.trim()})` : ''}` : '–'}</TD>
+                      <TD>
+                        {stoLines.length === 1 ? stoLines[0] : (
+                          <div className="space-y-1">
+                            {stoLines.map((line, li) => (
+                              <p key={li} className="text-[12px]">{line}</p>
+                            ))}
+                          </div>
+                        )}
+                      </TD>
                       <TD>{ltoText}</TD>
                     </tr>
                   );

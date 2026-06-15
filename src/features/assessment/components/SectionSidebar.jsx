@@ -8,10 +8,18 @@ const DOT_COLORS = {
   complete: 'bg-emerald-500 border-2 border-emerald-500',
 };
 
-export default function SectionSidebar({ session, activeSection, onSelectSection }) {
+export default function SectionSidebar({ session, activeSection, onSelectSection, sectionOrder }) {
   if (!session) return null;
 
-  const sections = session.sections;
+  const sections     = session.sections;
+  const effectiveOrder = sectionOrder ?? SECTION_ORDER;
+
+  function getCompletionState(key) {
+    if (key === 'progress_note') {
+      return session.progressNarrativeText?.trim() ? 'complete' : 'empty';
+    }
+    return sections[key]?.completionState ?? 'empty';
+  }
 
   return (
     <div className="flex flex-col h-full" style={{ fontFamily: 'DM Sans, sans-serif' }}>
@@ -19,9 +27,8 @@ export default function SectionSidebar({ session, activeSection, onSelectSection
       {/* ── Segmented progress bar ───────────────────────────────────────── */}
       <div className="flex-shrink-0 px-3 pt-3 pb-2">
         <div className="flex gap-[3px]">
-          {SECTION_ORDER.map((key) => {
-            const state = sections[key]?.completionState ?? 'empty';
-            const done  = state !== 'empty';
+          {effectiveOrder.map((key) => {
+            const done = getCompletionState(key) !== 'empty';
             return (
               <div
                 key={key}
@@ -33,16 +40,16 @@ export default function SectionSidebar({ session, activeSection, onSelectSection
         </div>
         <p className="mt-1.5 text-[10px] font-medium text-slate-400 text-right"
           style={{ fontFamily: 'DM Mono, monospace' }}>
-          {SECTION_ORDER.filter(k => sections[k]?.completionState !== 'empty').length}/{SECTION_ORDER.length} with data
+          {effectiveOrder.filter(k => getCompletionState(k) !== 'empty').length}/{effectiveOrder.length} with data
         </p>
       </div>
 
       {/* Section list */}
       <div className="flex-1 overflow-y-auto pb-2">
-        {SECTION_ORDER.map((key, idx) => {
+        {effectiveOrder.map((key, idx) => {
           const section = sections[key];
           const isActive = key === activeSection;
-          const completionState = section?.completionState ?? 'empty';
+          const completionState = getCompletionState(key);
           const hasTranscript = !!section?.transcript;
           const hasNotes = !!(section?.notes?.trim());
 

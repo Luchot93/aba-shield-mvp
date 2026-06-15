@@ -42,6 +42,7 @@ export default function SectionCard({
   onTranscriptToggle,
   onRecordStart,
   addNotif,
+  headerContent = null,
 }) {
   const section = session?.sections?.[sectionKey];
   if (!section) return null;
@@ -129,6 +130,20 @@ export default function SectionCard({
       {/* Expanded body */}
       {isExpanded && (
         <div className="px-4 pb-4 pt-1 border-t border-teal-100/60">
+
+          {/* Pre-fill chip — shown when section notes were copied from the initial assessment */}
+          {section?.prefillSource === 'initial_assessment' && (
+            <div className="flex items-center gap-1.5 mt-2 mb-3 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold"
+              style={{ background: 'rgba(20,184,166,0.08)', color: '#0D9488' }}>
+              <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+              Pre-filled from initial assessment — edit as needed.
+            </div>
+          )}
+
+          {/* Optional injected header (e.g. caregiver training summary table) */}
+          {headerContent}
 
           {/* Conflict flag */}
           <ConflictFlag section={section} />

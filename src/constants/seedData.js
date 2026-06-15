@@ -1214,9 +1214,313 @@ Recommended service intensity: 20 hours per week, center-based with parent train
   },
 };
 
+// ── James Martinez mock data ─────────────────────────────────────────────────
+
+const JAMES_INTERVIEW_DATA = {
+  behavior_targets: {
+    completionState: 'complete',
+    approvalState: 'approved',
+    notes: 'Target 1: Physical Aggression. Topography: hitting, kicking, biting staff/peers. Frequency: 8x/day. Ant: demand presentation, item removal, peer proximity. Function: escape + access. Target 2: Vocal Disruption. Topography: screaming and shouting during academic and self-care tasks. Frequency: 12x/day. Ant: non-preferred activities, transitions. Function: escape. Target 3: Property Destruction. Topography: knocking over materials, tearing papers. Frequency: 4x/day. Ant: difficult tasks, frustration. Function: escape + attention.',
+    behaviorTargets: [
+      {
+        id: 'bt-c11-1',
+        behaviorName: 'Physical Aggression',
+        operationalDefinition: 'CLIENT makes forceful physical contact with another person by hitting, kicking, or biting. Each discrete contact event is scored as one instance. Accidental contact during gross motor activities is not scored.',
+        topography: ['Open-hand hitting', 'Kicking', 'Biting'],
+        frequencyPerDay: '8', frequencyUnit: 'day',
+        durationSeconds: '3', durationUnit: 'seconds',
+        intensityRating: 'Severe',
+        antecedents: 'Demand presentation, removal of preferred item, proximity of peers during unstructured time',
+        primaryTargets: ['Staff / Therapist', 'Peers'],
+        hypothesizedFunction: 'Escape',
+        baselineFrequency: '8',
+        targetFrequency: '1',
+        stoSteps: [
+          { id: 'sto-c11-1-1', targetFrequency: '6', durationWeeks: '6', note: 'Reduce to ≤6 incidents/day using FCT "break" card; demand fading initiated' },
+          { id: 'sto-c11-1-2', targetFrequency: '3', durationWeeks: '6', note: 'Reduce to ≤3 incidents/day; FCT generalized across staff and settings' },
+          { id: 'sto-c11-1-3', targetFrequency: '1', durationWeeks: '6', note: 'Reduce to ≤1 incident/day with independent FCT use across demands' },
+        ],
+        measurementSystem: 'Event Recording',
+        priorFBACompleted: true, priorBIPCompleted: false,
+        notes: '',
+      },
+      {
+        id: 'bt-c11-2',
+        behaviorName: 'Vocal Disruption',
+        operationalDefinition: 'CLIENT produces loud screaming or shouting at a volume that disrupts ongoing activities. Episode begins at onset of vocalization above conversational volume and ends when CLIENT is silent or speaking at conversational level for 5 consecutive seconds.',
+        topography: ['Screaming', 'Shouting'],
+        frequencyPerDay: '12', frequencyUnit: 'day',
+        durationSeconds: '30', durationUnit: 'seconds',
+        intensityRating: 'Moderate',
+        antecedents: 'Non-preferred academic tasks, hygiene routines, transition away from preferred activity',
+        primaryTargets: ['Self'],
+        hypothesizedFunction: 'Escape',
+        baselineFrequency: '12',
+        targetFrequency: '2',
+        stoSteps: [
+          { id: 'sto-c11-2-1', targetFrequency: '9', durationWeeks: '6', note: 'Reduce to ≤9 episodes/day with visual task schedule and advance warnings' },
+          { id: 'sto-c11-2-2', targetFrequency: '5', durationWeeks: '6', note: 'Reduce to ≤5 episodes/day using self-monitoring card across tasks' },
+          { id: 'sto-c11-2-3', targetFrequency: '2', durationWeeks: '6', note: 'Reduce to ≤2 episodes/day; replacement behavior (quiet request) independent' },
+        ],
+        measurementSystem: 'Event Recording',
+        priorFBACompleted: false, priorBIPCompleted: false,
+        notes: '',
+      },
+      {
+        id: 'bt-c11-3',
+        behaviorName: 'Property Destruction',
+        operationalDefinition: 'CLIENT intentionally knocks over materials, tears papers, or throws objects resulting in damage. Each discrete destructive act is scored as one instance. Accidental drops are not scored.',
+        topography: ['Knocking over materials', 'Tearing papers', 'Throwing objects'],
+        frequencyPerDay: '4', frequencyUnit: 'day',
+        durationSeconds: '2', durationUnit: 'seconds',
+        intensityRating: 'Moderate',
+        antecedents: 'Difficult task demands, frustration during academic work, attention redirection to non-preferred items',
+        primaryTargets: ['Environment'],
+        hypothesizedFunction: 'Escape',
+        baselineFrequency: '4',
+        targetFrequency: '0',
+        stoSteps: [
+          { id: 'sto-c11-3-1', targetFrequency: '2', durationWeeks: '6', note: 'Reduce to ≤2 incidents/day using task modification and environmental arrangement' },
+          { id: 'sto-c11-3-2', targetFrequency: '0', durationWeeks: '8', note: 'Zero incidents for 3 consecutive weeks; replacement behavior (verbal/gestural protest) independent' },
+        ],
+        measurementSystem: 'Event Recording',
+        priorFBACompleted: false, priorBIPCompleted: false,
+        notes: '',
+      },
+    ],
+  },
+  skill_acquisitions: {
+    completionState: 'complete',
+    approvalState: 'approved',
+    notes: 'Family priorities: (1) functional communication to replace aggression and vocal disruption; (2) following multi-step instructions independently; (3) social interaction with peers.',
+    skillGoals: [
+      {
+        id: 'sg-c11-1',
+        domain: 'Communication',
+        targetSkill: 'Functional Communication (Mand Training)',
+        operationalDefinition: 'James independently vocalizes or uses an AAC symbol to request a preferred item, activity, or break within 10 seconds of access opportunity, without physical prompting, across 3 consecutive sessions.',
+        definitionIsAiGenerated: false, definitionIsLoading: false,
+        teachingStrategies: ['Discrete Trial Training (DTT)', 'Natural Environment Teaching (NET)', 'Functional Communication Training (FCT)'],
+        teachingStrategiesOther: '',
+        promptingLevel: 'Gestural', promptingLevelCombination: '',
+        baselinePercent: '20', baselineOpportunities: '20',
+        baselinePromptingLevel: 'Full Verbal',
+        baselinePromptingDesc: 'Full verbal prompt required for 80% of request opportunities; spontaneous mands observed in 4 of 20 high-preference probes only',
+        masteryCriteriaPercent: '80', masteryCriteriaSessions: '3',
+        masteryCriteriaSettings: 'Clinic + home (minimum 2 settings)',
+        masteryCriteriaPromptingLevel: 'Independent',
+        masteryCriteriaPrompting: 'Independent — no verbal or gestural prompt',
+        stoSteps: [
+          { id: 'sg-c11-1-s1', targetPercent: '45', skillDescription: 'requesting preferred items and break using 1-word vocalization or AAC with gestural model', durationWeeks: '6' },
+          { id: 'sg-c11-1-s2', targetPercent: '65', skillDescription: 'requesting across 3 categories (item, activity, break) without physical prompt', durationWeeks: '6' },
+        ],
+        stoPercent: '', stoSkillDescription: '', stoWeeks: '', sto: '',
+        generalizationNotes: 'Priority probe: demand presentation contexts that historically trigger aggression — mand for "break" or "help" must be established before demand fading begins.',
+      },
+      {
+        id: 'sg-c11-2',
+        domain: 'Academic',
+        targetSkill: 'Following 2-Step Instructions',
+        operationalDefinition: 'James independently follows a 2-step verbal instruction (e.g., "get your pencil and sit down") within 10 seconds of delivery, completing both steps in correct sequence, without repetition or physical prompting.',
+        definitionIsAiGenerated: false, definitionIsLoading: false,
+        teachingStrategies: ['Discrete Trial Training (DTT)', 'Task Analysis / Chaining'],
+        teachingStrategiesOther: '',
+        promptingLevel: 'Gestural', promptingLevelCombination: '',
+        baselinePercent: '15', baselineOpportunities: '20',
+        baselinePromptingLevel: 'Full Verbal + Gestural',
+        baselinePromptingDesc: 'Completes step 1 in 60% of probes with verbal prompt; step 2 requires gestural or physical prompt in 90% of trials',
+        masteryCriteriaPercent: '80', masteryCriteriaSessions: '3',
+        masteryCriteriaSettings: 'Clinic + home',
+        masteryCriteriaPromptingLevel: 'Independent',
+        masteryCriteriaPrompting: 'Independent — no verbal repetition or gestural prompt',
+        stoSteps: [
+          { id: 'sg-c11-2-s1', targetPercent: '40', skillDescription: 'following 2-step instructions involving preferred materials with gestural prompt for step 2', durationWeeks: '6' },
+          { id: 'sg-c11-2-s2', targetPercent: '65', skillDescription: 'following 2-step instructions across 5 instruction types without gestural prompt', durationWeeks: '6' },
+        ],
+        stoPercent: '', stoSkillDescription: '', stoWeeks: '', sto: '',
+        generalizationNotes: 'Coordinate with school staff to align instruction formats. Begin with high-preference step 1 to build compliance momentum.',
+      },
+    ],
+  },
+  caregiver_training: {
+    completionState: 'complete',
+    approvalState: 'approved',
+    notes: 'Rosa Martinez is primary implementer, highly motivated but limited English proficiency — Spanish preferred for all coaching sessions. Key targets: naturalistic teaching delivery and behavior-specific praise.',
+    caregiverBaselines: { premack_baseline: '30', reinforcement_baseline: '40' },
+    trainingFormat: ['In-session coaching', 'Home visits'],
+    trainingFrequency: '2x/month',
+    trainingBarriers: 'Language barrier (Spanish primary); work schedule; limited experience with structured behavioral strategies.',
+    caregiverStrengths: 'Strong attachment to James; highly consistent with routines; open to learning; responds well to role-play demonstration.',
+    caregiverTrainingTargets: [
+      {
+        id: 'ctgt_jm_1',
+        isStandard: false,
+        standardKey: null,
+        goalName: 'Natural environment teaching',
+        operationalDefinition: 'Caregiver embeds learning opportunities into daily routines (meals, play, hygiene) by following child\'s lead, pairing instruction with preferred items, and providing immediate reinforcement for target responses.',
+        baselinePercent: 30,
+        baselineContext: 'Observed during initial caregiver interview and home visit',
+        stoSteps: [
+          { id: 'ctgt-jm-1-1', targetPercent: '55', durationWeeks: '6', note: 'BCBA-guided NET practice during meals and play; at least 3 embedded trials observed per session' },
+          { id: 'ctgt-jm-1-2', targetPercent: '75', durationWeeks: '6', note: 'Independent NET delivery across 3 daily routines with written cue card faded out' },
+        ],
+        ltoPercent: 90, ltoSessions: 5, lto: '',
+      },
+      {
+        id: 'ctgt_jm_2',
+        isStandard: false,
+        standardKey: null,
+        goalName: 'Behavior-specific praise',
+        operationalDefinition: 'Caregiver delivers verbal praise that names the specific behavior (e.g., "Great job asking for a break using your words!") within 3 seconds of the target behavior, rather than generic praise or no acknowledgment.',
+        baselinePercent: 40,
+        baselineContext: 'Observed during initial caregiver interview and home visit',
+        stoSteps: [
+          { id: 'ctgt-jm-2-1', targetPercent: '60', durationWeeks: '6', note: 'BCBA models and caregiver practices during session; specificity prompts faded from verbal to written' },
+          { id: 'ctgt-jm-2-2', targetPercent: '78', durationWeeks: '6', note: 'Independent behavior-specific praise across communication and compliance targets' },
+        ],
+        ltoPercent: 90, ltoSessions: 5, lto: '',
+      },
+    ],
+  },
+};
+
 // ── Charlotte Davis mock data ────────────────────────────────────────────────
 
 const CHARLOTTE_INTERVIEW_DATA = {
+  demographics: {
+    notes: 'Charlotte Davis, DOB 08/22/2018 (age 7). Dx: ASD Level 1 F84.0 (Dr. James Wilson, Jupiter Medical Center Developmental Peds, Oct 2024 — ADOS-2 Module 3, ADI-R, Vineland-3). No secondary diagnoses. Insurance: Cigna Healthspring Florida CIG-556634 / G-55023. Lives with mother Jennifer Davis (primary caregiver) in Palm Beach Gardens. No siblings. Jennifer is employed part-time; available for sessions Mon–Thu. School: Palm Beach Gardens Elementary, 1st grade — attends general education classroom with resource room pull-out 45 min/day (reading support); no 1:1 aide. IEP: behavior support plan in place. SLP: 30 min/week through school. No prior ABA services.',
+    completionState: 'complete',
+  },
+  presenting_concerns: {
+    notes: 'Jennifer\'s top concerns: (1) Transition-related tantrums — Charlotte screams, cries, and drops to the floor whenever an activity ends or a demand is placed. Averaging 5 episodes/day at home, up to 8 on school days. (2) Elopement — Charlotte has run away from Jennifer in parking lots and a playground twice in the past 2 months; one near-miss incident near a roadway. Jennifer now avoids community settings without a second adult present. (3) Task refusal — Charlotte refuses the majority of non-preferred demands (academic, hygiene, chores) averaging ~25 refusals/day. Transition protocols at school partially effective but inconsistent at home. Family priorities: reduce elopement risk first, then tantrums, then task compliance.',
+    transcript: "The running is the scariest part. We were in the parking lot at the mall and she just bolted. I had the groceries and she was through two rows of cars before I caught her. It happened again at the playground — she ran toward the road and I had to sprint. I don't go anywhere alone with her now unless there's another adult or I have her in a stroller, which she's starting to refuse. The tantrums happen constantly — as soon as I say it's time to stop something, or when she has to do something she doesn't want to do, it's instant crying and dropping. School says they use a visual schedule and it helps some, but at home I can't seem to get it to work the same way.",
+    completionState: 'complete',
+  },
+  self_help: {
+    notes: 'Toileting: fully trained, day and night. Self-initiates reliably; manages clothing independently. Dressing: independent for most clothing — manages shirt on/off, pants, velcro shoes. Buttons and zippers require adult assistance. Tactile sensitivity: mild — prefers soft fabrics, tolerates seams with no behavioral response. Feeding: age-appropriate variety; no significant food selectivity. Will try new foods with verbal encouragement in low-demand contexts. Minor preference for specific plate/cup but no behavioral escalation if unavailable. Hygiene: tooth brushing — 50% compliance; hair brushing — frequent refusal (~75%); bathing — compliant 4 of 7 days with verbal prompt, 3 of 7 require significant caregiver prompting or refusal. Personal hygiene refusals addressed in Task Refusal behavior target.',
+    completionState: 'complete',
+  },
+  daily_living: {
+    notes: 'Morning routine: takes 60–75 min with significant caregiver prompting at each step. Charlotte capable of most steps independently but requires repeated verbal prompts and frequently refuses (see Task Refusal). Visual schedule implemented at school with good results — not yet in use at home; Jennifer interested in implementing. Bedtime: generally cooperative once routine initiated (~30 min); occasional refusal to put away tablet. Sleep onset: 15–20 min. No night waking. Community outings: severely limited by elopement risk and tantrum likelihood in public settings. Family has not visited grocery stores or restaurants in ~8 weeks without a second adult. Leisure: iPad (games and YouTube — 3–4 hrs/day unregulated), playground (when safe), crafts. Chores: none consistently completed — task refusal prevents initiation. Jennifer has attempted reward charts without sustained success.',
+    completionState: 'complete',
+  },
+  safety: {
+    notes: 'Elopement is the primary safety concern. Two documented near-miss incidents in the past 60 days — both in community settings with vehicular traffic present. Charlotte does not look for traffic before entering roadways. No pool at home; backyard is fenced with latched gate. Elopement in school: no documented incidents — structured campus and adult supervision sufficient. Aggression: hitting and pushing directed at Jennifer during demand presentation or item removal; 5 incidents/day average, no injuries to date. No sibling in the home. No SIB. No property destruction incidents beyond knocking over materials during tantrums. No prior law enforcement contact.',
+    transcript: "I think about it all the time — what would happen if I wasn't fast enough. She doesn't look for cars. She doesn't understand the danger. She just runs when she wants to get away from something. And it's always in response to a demand or a transition — she's not running toward something, she's running away from me. The hitting is upsetting but it doesn't scare me the same way. She hits when I take something away or when I ask her to stop. It stings but she's seven and small. It's the elopement I lie awake about.",
+    completionState: 'complete',
+    riskLevel: 'High',
+    sibPresent: false,
+    aggressionPresent: true,
+    aggressionTopography: ['Open-hand hitting', 'Pushing'],
+    aggressionTargets: ['Parent / Caregiver'],
+    aggressionFrequency: '5',
+    aggressionInjuryHistory: false,
+    aggressionInjuryNotes: 'No injuries reported. Hitting force low relative to child size — stings but no bruising or marks.',
+    elopementPresent: true,
+    elopementFrequency: '2',
+    elopementNotes: 'Two documented community incidents in 60 days. Both in parking lots or near roadways. One near-miss with vehicular traffic. No school elopement.',
+    propertyDestructionPresent: false,
+    envSafety: ['Pool / water body secured or no access', 'Firearms secured or not present'],
+    lawEnforcementInvolvement: false,
+    hospitalizationHistory: false,
+  },
+  communication: {
+    notes: 'Verbal communication age-appropriate in preferred contexts. MLU 5–7 words. Intelligibility: ~95% familiar adults, ~80% unfamiliar. Charlotte communicates effectively to request preferred items, comment on preferred topics, and protest. Critical gap: does not use verbal language to request a break, ask for help, or negotiate during demand situations — instead escalates directly to tantrum, elopement, or aggression. No AAC system. Receptive: follows multi-step instructions in low-demand familiar contexts; compliance drops dramatically under demand. Consistent yes/no. Full name, address, and caregiver phone number known — appropriate for age. Pragmatics: initiates conversation on preferred topics (animals, princess themes); peer interaction age-appropriate in unstructured play; turn-taking 3–5 exchanges. No language-related school concerns; reading at grade level per teacher report. SLP focus is social communication pragmatics only.',
+    completionState: 'complete',
+    primaryCommunicationModes: ['Verbal Speech'],
+    aacSystem: null,
+    functionalRepertoire: ['Requesting preferred items/activities', 'Protesting / refusing', 'Commenting on preferred topics', 'Basic conversation'],
+    receptiveSingleStep: '95',
+    receptiveTwoStep: '85',
+    receptiveMultiStep: true,
+    eyeContact: 'Adequate',
+    initiatesCommunication: 'Frequently',
+    turnTaking: '3-5 exchanges on preferred topics',
+    slpServices: true,
+    slpFrequencyPerWeek: '1',
+    slpFocus: 'Social communication pragmatics',
+  },
+  self_stim: {
+    notes: 'Hand flapping: bilateral, during excitement and high-interest moments — low frequency, non-disruptive. Spinning: occasional self-spinning in open spaces. Rocking: mild, seated, during video watching. No mouthing. No sensory behaviors that significantly interfere with learning. OT evaluation has not been conducted — Jennifer has not noted significant sensory concerns. No sensory diet in place. Self-stimulatory behaviors present at subclinical frequency and do not constitute a treatment target at this time; BCBA will monitor for escalation.',
+    completionState: 'partial',
+  },
+  medical_necessity: {
+    notes: 'Dx: ASD Level 1 F84.0 — Dr. James Wilson, Jupiter Medical Center Developmental Peds, Oct 2024. ADOS-2 Module 3, ADI-R, Vineland-3 administered. No secondary diagnoses. No current medications. Pediatrician: Dr. Michelle Park (last visit Sep 2025; next scheduled Apr 2026). No medical contraindications to any behavioral intervention modality. No seizure history. No cardiac conditions. Despite Level 1 classification, Charlotte\'s functional impairment is clinically significant: elopement creates acute safety risk with documented near-miss incidents; task refusal prevents participation in educational programming and daily routines; aggression disrupts family functioning and caregiver-child relationship. No prior ABA. School behavior support plan in place but insufficient to address community and home generalization deficits. Prior non-ABA intervention: SLP 30 min/week (school) — does not address behavioral targets. Recommended intensity: 10–15 hrs/week center-based with parent training; less-restrictive intervention has been tried and is insufficient. Medical necessity clearly established.',
+    transcript: "She has the diagnosis from Dr. Wilson at Jupiter Medical — he did the full evaluation in October, the ADOS and the Vineland testing. He actually said her profile was interesting because her language is good but her behavior is more severe than you'd expect for Level 1. He's the one who strongly recommended ABA. Our pediatrician Dr. Park agreed. Charlotte doesn't have any medical problems — no medications, no allergies, nothing like that. The school has a behavior support plan but it only applies at school and it doesn't stop the elopement at home or in the community. They've never seen her run at school because there's always an adult near her in a structured setting. But at home with just me, it's a real emergency.",
+    completionState: 'complete',
+    approvalState: 'approved',
+    draftContent: `## Medical Necessity
+
+### Diagnostic Support
+
+Primary diagnosis of Autism Spectrum Disorder, Level 1 (DSM-5, F84.0) confirmed by Dr. James Wilson, Developmental Pediatrics, Jupiter Medical Center, October 2024. Diagnostic instruments included the ADOS-2 (Module 3), ADI-R, and Vineland-3 Adaptive Behavior Scales. Full evaluation report on file. No co-occurring psychiatric diagnoses. No current medications. Pediatrician: Dr. Michelle Park (last visit September 2025). No seizure history, cardiac conditions, or medical contraindications to behavioral intervention.
+
+### Functional Impact
+
+Despite a Level 1 ASD classification, Charlotte's behavioral profile produces clinically significant functional impairment across home and community settings. Elopement represents the highest-acuity concern: Charlotte has eloped into active traffic on two documented occasions, requiring caregiver physical intervention to prevent injury. This behavior has effectively eliminated all unsupported community participation (grocery shopping, parks, family outings) and creates daily acute safety demands on the primary caregiver.
+
+Task refusal occurs approximately 25 times per day and has disrupted morning routines, school preparation, and structured learning activities. Aggression toward the caregiver (5 incidents/day at baseline) has strained the caregiver-child relationship and limited Jennifer Davis's ability to implement any behavioral strategies without professional support. The school's existing behavior support plan addresses in-school behavior only and has not produced generalization to home or community settings.
+
+No prior ABA services have been received. Less-restrictive interventions — including school-based behavior support and incidental SLP services — have been insufficient to address the safety-critical behavioral targets identified in this assessment.
+
+### Clinical Justification
+
+Applied Behavior Analysis is clinically indicated and medically necessary for Charlotte Davis on the following grounds: **(1)** confirmed primary diagnosis of ASD Level 1 (F84.0) with substantial functional impairment disproportionate to diagnostic severity level; **(2)** documented acute elopement safety risk with two confirmed near-miss traffic incidents; **(3)** behavioral targets (elopement, task refusal, aggression) that have not responded to less-restrictive, school-based interventions; **(4)** caregiver urgently requires structured behavioral training to implement evidence-based safety protocols, transition supports, and reinforcement procedures with fidelity.
+
+**Recommended intensity:** 10–12 hours/week, center-based with parent training component, consistent with severity profile, safety risk level, and caregiver availability. Expected outcomes for the 6-month authorization period include reduction of elopement attempts from 10/day to ≤2/day; reduction of task refusal from 25/day to ≤8/day; reduction of aggression from 5/day to ≤1/day; caregiver-implemented First-Then transition protocol with ≥80% independent delivery accuracy; mastery of PECS-based communication exchange for 3 functional requests.`,
+    coOccurringDiagnoses: [],
+    medications: [],
+    hasPriorABA: false,
+    priorABAHistory: [],
+    recommendedHoursPerWeek: '12',
+    recommendedSetting: 'Center-based',
+  },
+  crisis_plan: {
+    notes: 'No prior crisis events, hospitalizations, or law enforcement involvement. Elopement is the highest-risk behavior — all crisis protocols prioritize preventing and responding to elopement. Aggression incidents are low-severity and managed with standard redirectional strategies. Charlotte responds to calm, low-tone verbal cues when not at peak agitation. Return to baseline: 5–10 min with space and low demand. Caregiver has reviewed and signed crisis plan.',
+    transcript: "When she's about to run I can sometimes see it coming — she gets this look, kind of goes still, and then she's off. If I block her physically she escalates to hitting immediately. The best thing is to get in front of her calmly before she bolts and redirect to something she likes. Once she's in full tantrum, I just give her space and wait it out. Talking to her when she's in it makes everything worse. Usually 5 to 10 minutes and she's done and she comes to me and wants a hug. The hitting — I just block with my arm and don't react. Reacting makes it go on longer.",
+    completionState: 'complete',
+    emergencyContacts: [
+      { id: 'ec-c1', name: 'Jennifer Davis', relationship: 'Mother', phone: '(561) 555-0122', role: 'Primary' },
+      { id: 'ec-c2', name: 'Robert Davis', relationship: 'Father (non-custodial)', phone: '(561) 555-0135', role: 'Backup' },
+      { id: 'ec-c3', name: 'Dr. Michelle Park', relationship: 'Pediatrician', phone: '(561) 555-0200', role: 'Medical' },
+    ],
+    warningSignsSelected: [
+      'Goes still / body tenses before elopement',
+      'Elevated vocal volume',
+      'Crying onset',
+      'Reaching for door or gate',
+    ],
+    warningSignsCustom: 'Eye contact breaks and Charlotte scans for an exit — most reliable early indicator of imminent elopement attempt.',
+    deEscalationWorks: [
+      'Calm, low-tone verbal redirect before peak agitation',
+      'Offer preferred item or activity as transition',
+      'Physical space / no hovering',
+      'Wait quietly during tantrum without verbal prompts',
+    ],
+    deEscalationWorsens: [
+      'Physical blocking once elopement has initiated',
+      'Repeated verbal prompts during tantrum',
+      'Raised voice or urgent tone',
+      'Removing preferred item during tantrum',
+    ],
+    deEscalationNotes: 'Physical blocking after elopement initiates immediately escalates to hitting. Intercept before movement begins or redirect via preferred item. During tantrums: minimum interaction, wait for the natural end of the episode before re-engaging.',
+    bcbaCallMinutes: '10',
+    bcbaCallIncidents: '2',
+    bcbaCallWindow: '15',
+    call911Threshold: true,
+    call911Notes: 'Elopement into vehicular traffic or other high-risk environment and child cannot be safely retrieved. Any injury requiring medical attention.',
+    sessionSuspendThreshold: false,
+    baselineReturnMin: '5',
+    baselineReturnMax: '10',
+    postCrisisDebrief: false,
+    remorsePresentPostCrisis: true,
+    remorseNotes: 'Charlotte typically seeks physical affection (hug) 2–5 minutes after returning to baseline — this is the reliable end-of-episode signal and the moment to re-engage. Do not re-present the demand that precipitated the episode immediately; allow 5 min minimum before reintroducing.',
+    medicalContraindications: ['No prone restraint', 'No physical blocking once elopement has initiated'],
+    medicalNotes: 'No medications. No allergies. No seizure history. No medical contraindications to behavioral intervention. Physical blocking is contraindicated not for medical but for behavioral reasons — escalates to hitting.',
+    caregiverSignedCrisisPlan: true,
+    rbtTrainedOnPlan: true,
+    crisisPlanInBsp: true,
+  },
   behavior_targets: {
     completionState: 'complete',
     approvalState: 'approved',
@@ -1444,8 +1748,13 @@ export const SEED_CLIENTS = () => [
       { id:'n9a', stage:'authorized', text:'Called caregiver, left voicemail re: schedule change for upcoming assessment week.', author:'Dr. Priya Sharma', timestamp:'2026-05-15T14:32:00Z' },
     ],
     c10: [
-      { id:'n10b', stage:'services',  text:'Reauth paperwork submitted to Cigna. Expect decision within 10 business days per rep.', author:'Jordan Ellis', timestamp:'2026-05-19T11:05:00Z' },
-      { id:'n10a', stage:'services',  text:'Family reported positive progress with self-regulation goals this month. Updated behavior plan accordingly.', author:'Jordan Ellis', timestamp:'2026-05-12T16:45:00Z' },
+      { id:'n10g', stage:'services',   text:'Reauth paperwork submitted to Cigna. Expect decision within 10 business days per rep. Included updated behavioral graphs, progress report, and Vineland-3 update.', author:'Dr. Ana Reyes', timestamp:'2026-05-14T11:05:00Z' },
+      { id:'n10f', stage:'services',   text:'Jennifer reported Charlotte initiated a verbal request for "break" independently during a non-preferred task at home for the first time. Transition compliance up to ~60% per parent report. RBT confirmed similar gains in clinic. Updated STO tracking — Tantrum STO 3 nearly met.', author:'Dr. Ana Reyes', timestamp:'2026-05-01T09:30:00Z' },
+      { id:'n10e', stage:'services',   text:'Supervision session with James Torres (30 min). Reviewed ABC data from past month. Discussed prompt fading plan for Mand Training — moving to gestural-only starting next week. Throwing objects emerging behavior is stabilizing; FCT "I need help" card introduced and James is collecting frequency data.', author:'Dr. Ana Reyes', timestamp:'2026-03-03T14:00:00Z' },
+      { id:'n10d', stage:'services',   text:'Caregiver training session 2 completed with Jennifer Davis (60 min in-clinic). Role-played First-Then board delivery for transition routine. Jennifer\'s Premack delivery consistency has improved to ~45%. Reinforcement timing improving but still inconsistent on non-preferred tasks — will target specifically in session 3.', author:'Dr. Ana Reyes', timestamp:'2026-01-12T15:00:00Z' },
+      { id:'n10c', stage:'plan_draft', text:'Treatment plan review call with Jennifer Davis (45 min). Reviewed all four behavior-reduction goals and two skill targets. Jennifer agreed with the STO schedule and First-Then transition protocol. Parent training set for 2x/month in-clinic. Signed treatment plan received by fax — uploading now.', author:'Dr. Ana Reyes', timestamp:'2026-01-05T13:00:00Z' },
+      { id:'n10b', stage:'assessment', text:'Direct observation completed (45 min, clinic). All four target behaviors confirmed. Tantrum duration averaging ~8 min; Elopement clear escape function — immediately tries doors during transitions. Task refusal highest frequency (~25/day). BCBA observed strong imitation skills and good eye contact — favorable prognosis for Mand Training. Vineland-3 and BASC-3 administered and scored.', author:'Dr. Ana Reyes', timestamp:'2025-12-01T16:00:00Z' },
+      { id:'n10a', stage:'assessment', text:'Caregiver interview completed with Jennifer Davis (~75 min). Confirmed ASD Level 1 diagnosis and all four target behaviors. Jennifer identified transition compliance as top priority — Charlotte elopement incidents have resulted in two near-miss safety events near roadways. First-Then visual support has shown promising early results at home per parent report. Assessment report generation queued.', author:'Dr. Ana Reyes', timestamp:'2025-11-25T14:30:00Z' },
     ],
     c11: [
       { id:'n11a', stage:'services',  text:'Discussed session frequency reduction with caregiver — agreed to move from 5x to 4x/week pending reauth approval.', author:'Dr. Rachel Kim', timestamp:'2026-05-17T10:20:00Z' },
@@ -1624,12 +1933,12 @@ export const SEED_CLIENTS = () => [
   if (c.id === 'c10') {
     cl.intake         = { referral_form:true, insurance_card:true, cde:true, aba_prescription:true, consent_signed:true, demographics_confirmed:true, referral_source:'Dr. James Wilson · (561) 555-0170', insurance_plan:'Cigna Healthspring Florida', member_id_verified:'CIG-556634 / G-55023', copay_deductible:'$0 copay, $0 deductible remaining', preferred_language:'English', insurance_verified:true, benefits_verified:true };
     cl.auth_assessment = { cde_confirmed:true, prescription_confirmed:true, referral_confirmed:true, prior_assessments:true, auth_submitted:true, submission_date:'2025-11-20', units_requested:'16', expected_response_date:'2025-12-04', auth_portal:'Availity', reference_number:'CIG-AUTH-2025-1120-3301', cpt_97151_received:true, bcba_assigned:true };
-    cl.assessment     = { bcba_confirmed:true, caregiver_interview:true, direct_observation:true, vineland3:true, vineland3_date:'2025-12-01', basc3:true, basc3_date:'2025-12-01', additional_assessments:true, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
+    cl.assessment     = { bcba_confirmed:true, caregiver_interview:true, direct_observation:true, vineland3:true, vineland3_date:'2025-12-01', basc3:true, basc3_date:'2025-12-01', additional_assessments:true, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true, observation_date:'2025-12-01', additional_assessments_detail:'ABLLS-R screening, VBMAPP partial administration' };
     cl.plan_draft     = { medical_necessity:true, skill_targets:true, behavior_goals:true, intervention_strategies:true, hours_97153:'80', hours_97155:'12', hours_97156:'8', data_methodology:'Event recording with same-day ABC notation', plan_start_date:'2026-01-20', plan_end_date:'2026-07-20', sessions_per_week:'10', session_duration_min:'120', baseline_graphs:true, ai_draft_approved:true, treatment_plan_finalized:true };
-    cl.submitted      = { treatment_plan_submitted:true, plan_submission_date:'2026-01-05', auth_approval_doc:true, auth_reference_number:'CIG-AUT-2026-0105-9901', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_period_start:'2026-01-20', auth_period_end:'2026-07-20' };
-    cl.authorized     = { bcba_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, weekly_schedule:'Mon/Wed/Fri 9am–1pm, Tue/Thu 10am–12pm', session_location:'Center-based' };
-    cl.staffing       = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2026-01-20', first_session_time:'9:00 AM', session_location:'Center-based', first_session_completed:true };
-    cl.services       = { progress_report:true, behavioral_graphs:true, vineland3_updated:false, basc3_updated:false, reauth_submitted:false, reauth_submission_date:'', hours_97153_used:'', hours_97155_used:'', hours_97156_used:'' };
+    cl.submitted      = { plan_submitted:true, plan_submission_date:'2026-01-05', approval_uploaded:true, auth_reference_number:'CIG-AUT-2026-0105-9901', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2026-01-20', auth_end_date:'2026-07-20' };
+    cl.authorized     = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Wed/Fri 9am–1pm, Tue/Thu 10am–12pm', session_location:'Center-based', scheduled_hours_week:'19', scheduled_97155_week:'3', scheduled_97156_week:'2' };
+    cl.staffing       = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2026-01-20', first_session_time:'9:00 AM', session_location:'Center-based' };
+    cl.services_reauth = { progress_report:true, updated_graphs:true, vineland3_updated:true, basc3_updated:false, reauth_submitted:false, reauth_submission_date:'', hours_consumed_97153:'72', hours_consumed_97155:'11', hours_consumed_97156:'7' };
 
     const assessment_session_charlotte = (() => {
       const s = makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes', CHARLOTTE_INTERVIEW_DATA, {
@@ -1757,8 +2066,161 @@ export const SEED_CLIENTS = () => [
       },
     ];
 
+    const C10_DOCS = [
+      { id:'c10doc1',  type:'referral_form',     label:'Charlotte_Davis_ABA_Referral_Dr_Wilson.pdf',            uploaded_at:'2025-11-12T10:00:00.000Z', by:'Admin User',    stage:'intake'          },
+      { id:'c10doc2',  type:'insurance_card',    label:'Cigna_Insurance_Card_Charlotte_Davis.pdf',               uploaded_at:'2025-11-12T10:05:00.000Z', by:'Admin User',    stage:'intake'          },
+      { id:'c10doc3',  type:'cde',               label:'Charlotte_Davis_CDE_Dr_Wilson_2024.pdf',                 uploaded_at:'2025-11-12T10:10:00.000Z', by:'Admin User',    stage:'intake'          },
+      { id:'c10doc4',  type:'aba_prescription',  label:'Charlotte_Davis_ABA_Script_2025.pdf',                    uploaded_at:'2025-11-12T10:15:00.000Z', by:'Admin User',    stage:'intake'          },
+      { id:'c10doc5',  type:'consent',           label:'Charlotte_Davis_Consent_Packet_Signed.pdf',              uploaded_at:'2025-11-12T10:20:00.000Z', by:'Admin User',    stage:'intake'          },
+      { id:'c10doc6',  type:'prior_assessments', label:'Charlotte_Davis_Prior_Psych_Eval_Dr_Wilson_2024.pdf',    uploaded_at:'2025-11-20T09:00:00.000Z', by:'Dr. Ana Reyes', stage:'auth_assessment'  },
+      { id:'c10doc7',  type:'assessment_draft',  label:'Charlotte_Davis_ABA_Assessment_Draft_2025-12-05.docx',  uploaded_at:'2025-12-05T16:30:00.000Z', by:'Dr. Ana Reyes', stage:'assessment'       },
+      { id:'c10doc8',  type:'final_assessment',  label:'Charlotte_Davis_ABA_Assessment_FINAL_2025-12-10.pdf',   uploaded_at:'2025-12-10T11:00:00.000Z', by:'Dr. Ana Reyes', stage:'assessment'       },
+      { id:'c10doc9',  type:'treatment_plan',    label:'Charlotte_Davis_Treatment_Plan_SIGNED_2026-01-05.pdf',  uploaded_at:'2026-01-05T14:00:00.000Z', by:'Dr. Ana Reyes', stage:'plan_draft'       },
+      { id:'c10doc10', type:'auth_approval',     label:'Cigna_Auth_Approval_Charlotte_Davis_Jan2026.pdf',        uploaded_at:'2026-01-15T11:00:00.000Z', by:'Admin User',    stage:'submitted'        },
+      { id:'c10doc11', type:'progress_report',   label:'Charlotte_Davis_Progress_Report_Q1_2026.pdf',            uploaded_at:'2026-05-01T10:00:00.000Z', by:'Dr. Ana Reyes', stage:'services'         },
+      { id:'c10doc12', type:'behavioral_graphs', label:'Charlotte_Davis_Behavioral_Graphs_May2026.pdf',          uploaded_at:'2026-05-01T10:15:00.000Z', by:'Dr. Ana Reyes', stage:'services'         },
+    ];
+
+    const C10_LOG = [
+      // newest first
+      { id:'c10log1',  action:'Reauthorization cycle initiated — auth expires Jul 31, 2026',                                  by:'Dr. Ana Reyes', ts:'2026-05-14T11:00:00Z' },
+      { id:'c10log2',  action:'Uploaded: Behavioral graphs — Charlotte_Davis_Behavioral_Graphs_May2026.pdf',                   by:'Dr. Ana Reyes', ts:'2026-05-01T10:15:00Z' },
+      { id:'c10log3',  action:'Uploaded: Progress report — Charlotte_Davis_Progress_Report_Q1_2026.pdf',                       by:'Dr. Ana Reyes', ts:'2026-05-01T10:00:00Z' },
+      { id:'c10log4',  action:'Updated: Hours used this auth period (97153: 72h · 97155: 11h · 97156: 7h)',                    by:'Dr. Ana Reyes', ts:'2026-05-01T09:45:00Z' },
+      { id:'c10log5',  action:'Session logged — Caregiver training session 3 (Dr. Ana Reyes)',                                 by:'Dr. Ana Reyes', ts:'2026-03-03T12:00:00Z' },
+      { id:'c10log6',  action:'Session logged — RBT behavior session 5 (James Torres)',                                        by:'James Torres',  ts:'2026-03-10T12:00:00Z' },
+      { id:'c10log7',  action:'Session logged — RBT behavior session 4 (James Torres)',                                        by:'James Torres',  ts:'2026-02-09T12:00:00Z' },
+      { id:'c10log8',  action:'Session logged — Caregiver training session 2 (Dr. Ana Reyes)',                                 by:'Dr. Ana Reyes', ts:'2026-01-12T14:00:00Z' },
+      { id:'c10log9',  action:'Session logged — RBT behavior session 3 (James Torres) · New behavior flagged: Throwing objects', by:'James Torres', ts:'2026-01-12T12:00:00Z' },
+      { id:'c10log10', action:'Moved to In Services',                                                                          by:'Admin User',    ts:'2026-01-20T10:00:00Z' },
+      { id:'c10log11', action:'Checked: First session completed',                                                              by:'James Torres',  ts:'2026-01-20T09:30:00Z' },
+      { id:'c10log12', action:'Moved to Staffing',                                                                             by:'Admin User',    ts:'2026-01-17T15:00:00Z' },
+      { id:'c10log13', action:'Updated: First session date — Jan 20, 2026 at 9:00 AM',                                        by:'Admin User',    ts:'2026-01-17T14:45:00Z' },
+      { id:'c10log14', action:'Updated: Weekly schedule and session location',                                                  by:'Admin User',    ts:'2026-01-16T11:30:00Z' },
+      { id:'c10log15', action:'RBT assigned: James Torres',                                                                    by:'Admin User',    ts:'2026-01-16T11:00:00Z' },
+      { id:'c10log16', action:'Checked: BCBA credentials verified',                                                            by:'Admin User',    ts:'2026-01-15T14:00:00Z' },
+      { id:'c10log17', action:'Moved to Authorized',                                                                           by:'Admin User',    ts:'2026-01-15T13:30:00Z' },
+      { id:'c10log18', action:'Uploaded: Authorization approval document — Cigna_Auth_Approval_Charlotte_Davis_Jan2026.pdf',    by:'Admin User',    ts:'2026-01-15T11:00:00Z' },
+      { id:'c10log19', action:'Updated: Authorization reference number — CIG-AUT-2026-0105-9901',                              by:'Admin User',    ts:'2026-01-15T10:45:00Z' },
+      { id:'c10log20', action:'Moved to Submitted',                                                                            by:'Dr. Ana Reyes', ts:'2026-01-05T14:30:00Z' },
+      { id:'c10log21', action:'Uploaded: Signed treatment plan — Charlotte_Davis_Treatment_Plan_SIGNED_2026-01-05.pdf',        by:'Dr. Ana Reyes', ts:'2026-01-05T14:00:00Z' },
+      { id:'c10log22', action:'Checked: AI draft reviewed and approved by BCBA',                                               by:'Dr. Ana Reyes', ts:'2026-01-05T13:30:00Z' },
+      { id:'c10log23', action:'Updated: CPT hours (97153: 80h · 97155: 12h · 97156: 8h) and data-collection methodology',     by:'Dr. Ana Reyes', ts:'2026-01-05T12:00:00Z' },
+      { id:'c10log24', action:'Moved to Plan Draft',                                                                           by:'Dr. Ana Reyes', ts:'2025-12-15T10:00:00Z' },
+      { id:'c10log25', action:'Uploaded: Final assessment report — Charlotte_Davis_ABA_Assessment_FINAL_2025-12-10.pdf',       by:'Dr. Ana Reyes', ts:'2025-12-10T11:00:00Z' },
+      { id:'c10log26', action:'Smart Assessment exported — assessment report generated',                                        by:'Dr. Ana Reyes', ts:'2025-12-05T16:30:00Z' },
+      { id:'c10log27', action:'Smart Assessment continued',                                                                    by:'Dr. Ana Reyes', ts:'2025-12-01T16:00:00Z' },
+      { id:'c10log28', action:'Session logged — Caregiver training session 1 (Dr. Ana Reyes)',                                 by:'Dr. Ana Reyes', ts:'2025-12-01T12:00:00Z' },
+      { id:'c10log29', action:'Session logged — RBT behavior session 2 (James Torres)',                                        by:'James Torres',  ts:'2025-12-08T12:00:00Z' },
+      { id:'c10log30', action:'Session logged — RBT behavior session 1 (James Torres)',                                        by:'James Torres',  ts:'2025-11-17T12:00:00Z' },
+      { id:'c10log31', action:'Moved to Assessment',                                                                           by:'Admin User',    ts:'2025-12-02T09:00:00Z' },
+      { id:'c10log32', action:'BCBA assigned: Dr. Ana Reyes',                                                                  by:'Admin User',    ts:'2025-12-02T08:45:00Z' },
+      { id:'c10log33', action:'Checked: CPT 97151 authorization received',                                                     by:'Admin User',    ts:'2025-12-02T08:30:00Z' },
+      { id:'c10log34', action:'Uploaded: Prior assessments — Charlotte_Davis_Prior_Psych_Eval_Dr_Wilson_2024.pdf',             by:'Dr. Ana Reyes', ts:'2025-11-20T09:00:00Z' },
+      { id:'c10log35', action:'Checked: Authorization submitted to insurer',                                                   by:'Dr. Ana Reyes', ts:'2025-11-20T08:45:00Z' },
+      { id:'c10log36', action:'Updated: Submission reference number — CIG-AUTH-2025-1120-3301',                                by:'Dr. Ana Reyes', ts:'2025-11-20T08:30:00Z' },
+      { id:'c10log37', action:'Moved to Auth Assessment',                                                                      by:'Admin User',    ts:'2025-11-14T15:00:00Z' },
+      { id:'c10log38', action:'Checked: Benefits verification completed',                                                      by:'Admin User',    ts:'2025-11-14T14:45:00Z' },
+      { id:'c10log39', action:'Checked: Insurance information verified',                                                       by:'Admin User',    ts:'2025-11-14T14:30:00Z' },
+      { id:'c10log40', action:'Uploaded: Consent packet signed',                                                               by:'Admin User',    ts:'2025-11-12T10:20:00Z' },
+      { id:'c10log41', action:'Uploaded: ABA prescription / script',                                                           by:'Admin User',    ts:'2025-11-12T10:15:00Z' },
+      { id:'c10log42', action:'Uploaded: Comprehensive Diagnostic Evaluation (CDE)',                                           by:'Admin User',    ts:'2025-11-12T10:10:00Z' },
+      { id:'c10log43', action:'Uploaded: Insurance card',                                                                      by:'Admin User',    ts:'2025-11-12T10:05:00Z' },
+      { id:'c10log44', action:'Uploaded: Referral request form',                                                               by:'Admin User',    ts:'2025-11-12T10:00:00Z' },
+      { id:'c10log45', action:'Client record created',                                                                         by:'Admin User',    ts:'2025-11-12T09:45:00Z' },
+    ];
+
     const smart_session_id_charlotte = assessment_session_charlotte.id;
-    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_charlotte, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session: assessment_session_charlotte, service_session_logs: C10_SERVICE_SESSION_LOGS, caregiver_training_session_logs: C10_CAREGIVER_TRAINING_LOGS };
+
+    const reassessment_cycle1_charlotte = {
+      ...makeReassessmentSession(
+        c,
+        assessment_session_charlotte,
+        C10_SERVICE_SESSION_LOGS,
+        'Nov 1, 2025',
+        'Apr 30, 2026',
+      ),
+      status: 'in_progress',
+    };
+
+    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_charlotte, checklist:cl, documents: C10_DOCS, activity_log: C10_LOG, case_notes: SEED_NOTES[c.id] || [], assessment_session: assessment_session_charlotte, service_session_logs: C10_SERVICE_SESSION_LOGS, caregiver_training_session_logs: C10_CAREGIVER_TRAINING_LOGS, reassessment_sessions: [reassessment_cycle1_charlotte] };
+  }
+
+  // ── c11 James Martinez — services (Aetna, reauth active) ───────────────────
+  if (c.id === 'c11') {
+    cl.intake         = { referral_form:true, insurance_card:true, cde:true, aba_prescription:true, consent_signed:true, demographics_confirmed:true, referral_source:'Dr. Angela Rivera · (786) 555-0280', insurance_plan:'Aetna Better Health of Florida', member_id_verified:'AET-664433 / G-44210', copay_deductible:'$0 copay, $0 deductible remaining', preferred_language:'Spanish', insurance_verified:true, benefits_verified:true };
+    cl.auth_assessment = { cde_confirmed:true, prescription_confirmed:true, referral_confirmed:true, prior_assessments:true, auth_submitted:true, submission_date:'2025-10-28', units_requested:'16', expected_response_date:'2025-11-11', auth_portal:'Availity', reference_number:'AET-AUTH-2025-1028-5513', cpt_97151_received:true, bcba_assigned:true };
+    cl.assessment     = { bcba_confirmed:true, caregiver_interview:true, direct_observation:true, vineland3:true, vineland3_date:'2025-11-10', basc3:true, basc3_date:'2025-11-10', additional_assessments:true, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
+    cl.plan_draft     = { medical_necessity:true, skill_targets:true, behavior_goals:true, intervention_strategies:true, hours_97153:'80', hours_97155:'12', hours_97156:'8', data_methodology:'Event recording with daily ABC notation; Spanish-language data sheets provided to caregiver', plan_start_date:'2025-12-15', plan_end_date:'2026-06-15', sessions_per_week:'10', session_duration_min:'120', baseline_graphs:true, ai_draft_approved:true, treatment_plan_finalized:true };
+    cl.submitted      = { plan_submitted:true, plan_submission_date:'2025-12-01', approval_uploaded:true, auth_reference_number:'AET-AUT-2025-1201-7742', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-12-15', auth_end_date:'2026-06-15' };
+    cl.authorized     = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Wed/Fri 10am–2pm, Tue/Thu 9am–11am', session_location:'Center-based', scheduled_hours_week:'19', scheduled_97155_week:'3', scheduled_97156_week:'2' };
+    cl.staffing       = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2025-12-15', first_session_time:'10:00 AM', session_location:'Center-based' };
+    cl.services_reauth = { progress_report:false, updated_graphs:false, vineland3_updated:false, basc3_updated:false, reauth_submitted:false, reauth_submission_date:'', hours_consumed_97153:'', hours_consumed_97155:'', hours_consumed_97156:'' };
+
+    const assessment_session_james = (() => {
+      const s = makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Rachel Kim', JAMES_INTERVIEW_DATA, {
+        dob: c.dob, phone: c.phone, address: c.address,
+        insurerName: c.insurer_name, memberId: c.member_id, groupNumber: c.group_number,
+        referringProvider: c.referring_provider, referralDate: c.referral_date,
+        gender: 'Male', diagnosis: 'Autism Spectrum Disorder, Level 2', icd10: 'F84.0',
+        medicaidId: '', assessmentDate: '2025-11-10', assessmentType: 'Initial',
+        preferredLanguage: 'Spanish', parentGuardianNames: 'Rosa Martinez',
+        relationship: 'Mother', reasonForReferral: 'ABA evaluation for physical aggression, vocal disruption, and limited functional communication',
+        _intakeMissingFields: [],
+      });
+      const sectionCount = Object.values(s.sections).filter(sec => sec.key !== 'demographics').length;
+      return { ...s, status: 'complete', sectionsApproved: sectionCount };
+    })();
+
+    const C11_SERVICE_SESSION_LOGS = [
+      {
+        id: 'slog_c11_1', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
+        sessionDate: '2025-12-22', sessionNumber: 1, notes: '',
+        behaviorEntries: [
+          { behaviorId: 'bt-c11-1', behaviorName: 'Physical Aggression', isNew: false, baselineFrequency: 8,  sessionFrequency: 7,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c11-2', behaviorName: 'Vocal Disruption',    isNew: false, baselineFrequency: 12, sessionFrequency: 11, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c11-3', behaviorName: 'Property Destruction', isNew: false, baselineFrequency: 4,  sessionFrequency: 3,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+        ],
+        skillEntries: [],
+        createdAt: '2025-12-22T12:00:00.000Z',
+      },
+      {
+        id: 'slog_c11_2', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
+        sessionDate: '2026-01-26', sessionNumber: 2, notes: '',
+        behaviorEntries: [
+          { behaviorId: 'bt-c11-1', behaviorName: 'Physical Aggression', isNew: false, baselineFrequency: 8,  sessionFrequency: 6,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c11-2', behaviorName: 'Vocal Disruption',    isNew: false, baselineFrequency: 12, sessionFrequency: 9,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c11-3', behaviorName: 'Property Destruction', isNew: false, baselineFrequency: 4,  sessionFrequency: 3,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+        ],
+        skillEntries: [],
+        createdAt: '2026-01-26T12:00:00.000Z',
+      },
+      {
+        id: 'slog_c11_3', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
+        sessionDate: '2026-03-02', sessionNumber: 3, notes: '',
+        behaviorEntries: [
+          { behaviorId: 'bt-c11-1', behaviorName: 'Physical Aggression', isNew: false, baselineFrequency: 8,  sessionFrequency: 4,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c11-2', behaviorName: 'Vocal Disruption',    isNew: false, baselineFrequency: 12, sessionFrequency: 7,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c11-3', behaviorName: 'Property Destruction', isNew: false, baselineFrequency: 4,  sessionFrequency: 2,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+        ],
+        skillEntries: [],
+        createdAt: '2026-03-02T12:00:00.000Z',
+      },
+      {
+        id: 'slog_c11_4', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
+        sessionDate: '2026-04-06', sessionNumber: 4, notes: '',
+        behaviorEntries: [
+          { behaviorId: 'bt-c11-1', behaviorName: 'Physical Aggression', isNew: false, baselineFrequency: 8,  sessionFrequency: 3,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c11-2', behaviorName: 'Vocal Disruption',    isNew: false, baselineFrequency: 12, sessionFrequency: 5,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c11-3', behaviorName: 'Property Destruction', isNew: false, baselineFrequency: 4,  sessionFrequency: 1,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+        ],
+        skillEntries: [],
+        createdAt: '2026-04-06T12:00:00.000Z',
+      },
+    ];
+
+    const smart_session_id_james = assessment_session_james.id;
+    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_james, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session: assessment_session_james, service_session_logs: C11_SERVICE_SESSION_LOGS, caregiver_training_session_logs: [] };
   }
 
   return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session, service_session_logs: [], caregiver_training_session_logs: [] };
@@ -2010,9 +2472,20 @@ export const makeReassessmentSession = (
         trend:                'flat',
         stoStatus:            'not_yet_started',
         currentStoNumber:     1,
-        sto:                  target.stoPercent != null
-          ? `${target.stoPercent}% accuracy over ${target.stoWeeks} weeks`
-          : (target.sto ?? ''),
+        sto: (() => {
+          const validSteps = (target.stoSteps ?? []).filter(
+            s => s.targetPercent !== '' && s.targetPercent != null,
+          );
+          if (validSteps.length > 0) {
+            return validSteps.map((s, i) =>
+              `STO ${i + 1}: ${s.targetPercent}% within ${s.durationWeeks ?? '?'} wks`,
+            ).join('; ');
+          }
+          if (target.stoPercent != null && target.stoPercent !== '') {
+            return `${target.stoPercent}% accuracy over ${target.stoWeeks} weeks`;
+          }
+          return target.sto ?? '';
+        })(),
         lto:                  target.ltoPercent != null
           ? `${target.ltoPercent}% accuracy across ${target.ltoSessions} sessions`
           : (target.lto ?? ''),
@@ -2037,18 +2510,52 @@ export const makeReassessmentSession = (
       trend,
       stoStatus:            last?.stoStatus ?? 'not_yet_started',
       currentStoNumber:     last?.currentStoNumber ?? 1,
-      sto:                  target.stoPercent != null
-        ? `${target.stoPercent}% accuracy over ${target.stoWeeks} weeks`
-        : (target.sto ?? ''),
+      sto: (() => {
+        const validSteps = (target.stoSteps ?? []).filter(
+          s => s.targetPercent !== '' && s.targetPercent != null,
+        );
+        if (validSteps.length > 0) {
+          return validSteps.map((s, i) =>
+            `STO ${i + 1}: ${s.targetPercent}% within ${s.durationWeeks ?? '?'} wks`,
+          ).join('; ');
+        }
+        if (target.stoPercent != null && target.stoPercent !== '') {
+          return `${target.stoPercent}% accuracy over ${target.stoWeeks} weeks`;
+        }
+        return target.sto ?? '';
+      })(),
       lto:                  target.ltoPercent != null
         ? `${target.ltoPercent}% accuracy across ${target.ltoSessions} sessions`
         : (target.lto ?? ''),
     };
   });
 
+  // ── (7) prefill sections 1-7 and crisis_plan from initial session ─────────
+  // Copies the BCBA's notes/transcript so the reassessment starts pre-populated.
+  // Section 8 (medical_necessity) and the progress_note are intentionally left blank.
+  const PREFILL_KEYS = [
+    'demographics', 'presenting_concerns', 'self_help', 'daily_living',
+    'safety', 'communication', 'self_stim', 'crisis_plan',
+  ];
+
+  const prefillSections = {};
+  for (const key of PREFILL_KEYS) {
+    const src = initialSession?.sections?.[key];
+    if (!src) continue;
+    const hasContent = !!(src.notes?.trim() || src.transcript);
+    prefillSections[key] = {
+      ...base.sections[key],
+      notes:           src.notes      ?? '',
+      transcript:      src.transcript ?? null,
+      completionState: hasContent ? 'complete' : 'empty',
+      prefillSource:   'initial_assessment',
+    };
+  }
+
   // ── assemble ───────────────────────────────────────────────────────────────
   return {
     ...base,
+    sections:               { ...base.sections, ...prefillSections },
     id: `session_${client.id}_reassessment_${Date.now()}`,
     sessionType:            'reassessment',
     authPeriodStart,

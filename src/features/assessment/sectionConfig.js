@@ -29,6 +29,7 @@ export const SECTION_TITLES = {
   communication:       'Communication',
   self_stim:           'Self-Stimulatory Behavior',
   medical_necessity:   'Medical Necessity',
+  progress_note:       'Progress Note',
   skill_acquisitions:  'Skill Acquisitions',
   behavior_targets:    'Maladaptive Behaviors',
   caregiver_training:  'Caregiver Training',

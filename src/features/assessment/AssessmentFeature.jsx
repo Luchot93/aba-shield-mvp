@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import AssessmentInterviewPage from './AssessmentInterviewPage.jsx';
-import AssessmentChecklistPage from './AssessmentChecklistPage.jsx';
-import AssessmentReviewPage    from './AssessmentReviewPage.jsx';
+import React, { useState, useCallback } from 'react';
+import AssessmentInterviewPage   from './AssessmentInterviewPage.jsx';
+import AssessmentChecklistPage   from './AssessmentChecklistPage.jsx';
+import AssessmentReviewPage      from './AssessmentReviewPage.jsx';
+import ReassessmentReviewPage    from './ReassessmentReviewPage.jsx';
 import { completeSession, canExport } from './assessmentStore.js';
 import { generateAssessmentDoc } from './lib/generateAssessmentDoc.js';
 import { generateTemplateDoc }   from './lib/docxExport.js';
@@ -19,10 +20,9 @@ const STATUS_TAG = {
 // ─── AssessmentFeature ────────────────────────────────────────────────────────
 
 export default function AssessmentFeature({
-  clientId, clients, staff, setClients, currentUser, addNotif, onClose, onBack,
+  clientId, clients, staff, setClients, currentUser, addNotif,
+  onClose, onBack, onReassessmentComplete,
 }) {
-  const handleClose = onClose ?? onBack;
-
   const [page,          setPage]          = useState('interview');
   const [targetSection, setTargetSection] = useState(null);
   const [isExporting,   setIsExporting]   = useState(false);
@@ -35,6 +35,44 @@ export default function AssessmentFeature({
 
   const client  = clients?.find(c => c.id === clientId);
   const session = client?.assessment_session ?? null;
+
+  // ── Reassessment close/complete — un-swap the session back ────────────────
+  //
+  // When a reassessment was opened, App.jsx swapped the reassessment session
+  // into client.assessment_session and saved the original in client._initialAssessment.
+  // On close or completion we snapshot the current state back to
+  // client.reassessment_sessions[] and restore client.assessment_session.
+
+  const archiveReassessmentAndClose = useCallback((afterArchive) => {
+    if (session?.sessionType === 'reassessment') {
+      setClients(prev => prev.map(c => {
+        if (c.id !== clientId) return c;
+        const currentSession = c.assessment_session;
+        const existing = c.reassessment_sessions ?? [];
+        const idx = existing.findIndex(s => s.id === currentSession.id);
+        const updatedSessions = idx >= 0
+          ? existing.map((s, i) => (i === idx ? currentSession : s))
+          : [...existing, currentSession];
+        return {
+          ...c,
+          assessment_session:    c._initialAssessment ?? c.assessment_session,
+          reassessment_sessions: updatedSessions,
+          _initialAssessment:    undefined,
+        };
+      }));
+    }
+    afterArchive?.();
+  }, [session, clientId, setClients]);
+
+  // Back: archive (if reassessment) then call onClose/onBack
+  const handleClose = useCallback(() => {
+    archiveReassessmentAndClose(onClose ?? onBack);
+  }, [archiveReassessmentAndClose, onClose, onBack]);
+
+  // Called by ReassessmentReviewPage after successful doc generation
+  const handleReassessmentComplete = useCallback(() => {
+    archiveReassessmentAndClose(() => onReassessmentComplete?.(clientId));
+  }, [archiveReassessmentAndClose, onReassessmentComplete, clientId]);
 
   const status      = session?.status ?? 'not_started';
   const tagMeta     = STATUS_TAG[status] ?? STATUS_TAG.not_started;
@@ -138,13 +176,34 @@ export default function AssessmentFeature({
 
   // ── Top bar ────────────────────────────────────────────────────────────────
 
-  // Back button behaviour depends on current page
-  const handleBack = page === 'interview' ? handleClose : () => setPage('interview');
-  const backLabel  = page === 'interview' ? 'Assessments' : 'Interview';
+  const isReassessment = session?.sessionType === 'reassessment';
 
-  // Right-side action button
+  // Back button label and destination depend on which page we're on
+  const handleBack = page === 'interview' ? handleClose : () => setPage('interview');
+  const backLabel  = page === 'interview'
+    ? 'Assessments'
+    : page === 'reassessment_review'
+      ? 'Interview'
+      : 'Interview';
+
+  // Right-side action button — varies by page and session type
   const ActionButton = () => {
     if (page === 'interview') {
+      // Reassessment: "Review Progress →" goes straight to the reassessment review page
+      if (isReassessment) {
+        return (
+          <button
+            onClick={() => setPage('reassessment_review')}
+            className="flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-xl text-white hover:opacity-90 active:scale-[0.97] transition-all"
+            style={{ background: '#0D9488' }}>
+            Review Progress
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+        );
+      }
+      // Initial assessment: goes to pre-generation checklist
       return (
         <button
           onClick={() => setPage('checklist')}
@@ -197,6 +256,7 @@ export default function AssessmentFeature({
       );
     }
 
+    // reassessment_review has its own sticky footer generate button — nothing needed in the top bar
     return null;
   };
 
@@ -213,6 +273,7 @@ export default function AssessmentFeature({
     onNavigate: handleNavigate,
     hideTopBar: true,
     onBack: handleClose,
+    onComplete: handleReassessmentComplete,  // used by ReassessmentReviewPage
     targetSection,
     onTargetSectionHandled: () => setTargetSection(null),
   };
@@ -283,6 +344,9 @@ export default function AssessmentFeature({
         )}
         {page === 'review' && (
           <AssessmentReviewPage {...pageProps} />
+        )}
+        {page === 'reassessment_review' && (
+          <ReassessmentReviewPage {...pageProps} />
         )}
       </div>
     </div>

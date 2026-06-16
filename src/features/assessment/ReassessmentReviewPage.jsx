@@ -17,6 +17,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Chart from 'chart.js/auto';
 import { patchSession } from './assessmentStore.js';
 import { generateAssessmentDoc } from './lib/generateAssessmentDoc.js';
+import { buildBehaviorTrendFromLogs } from './graphBuilder.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -95,93 +96,242 @@ function SubLabel({ label, count }) {
 
 // ─── Panel A — Behavior Progress ─────────────────────────────────────────────
 
-/**
- * Single row in the "From Treatment Plan" behavior table.
- * Avg frequency is editable; % change is computed live; STO status is a dropdown.
- */
-function BehaviorProgressRow({ item, onPatch }) {
+/** Line chart showing per-session frequency data for one behavior. */
+function BehaviorProgressChart({ behaviorId, summaryItem, sessionLogs, behaviorTargets }) {
+  const canvasRef = useRef(null);
+  const chartRef  = useRef(null);
+
+  const { entries, baseline: computedBaseline } = buildBehaviorTrendFromLogs(sessionLogs ?? [], behaviorId);
+  const baseline = summaryItem.baselineFrequency ?? computedBaseline;
+
+  const bt       = (behaviorTargets ?? []).find(t => t.id === behaviorId);
+  const stoSteps = (bt?.stoSteps ?? []).map(s => parseFloat(s.targetFrequency)).filter(v => !isNaN(v));
+
+  const avg   = summaryItem.averageFrequency;
+  const trend = summaryItem.trend;
+  const trendIcon  = trend === 'improving' ? '↓' : trend === 'worsening' ? '↑' : '→';
+  const trendColor = trend === 'improving' ? '#10B981' : trend === 'worsening' ? '#EF4444' : '#94A3B8';
+
+  const dataKey = JSON.stringify({ entries, baseline, stoSteps });
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
+
+    const n        = Math.max(entries.length, 2);
+    const labels   = entries.length > 0 ? entries.map((_, i) => `S${i + 1}`) : [''];
+    const freqVals = entries.map(e => e.frequency);
+    const yMax     = Math.max(baseline ?? 0, ...freqVals, 1) * 1.3;
+    const refLine  = val => val != null ? Array(n).fill(val) : null;
+
+    const datasets = [];
+
+    if (entries.length > 0) {
+      datasets.push({
+        type: 'line', label: 'Frequency', data: freqVals,
+        borderColor: 'rgba(239,68,68,0.9)', backgroundColor: 'rgba(239,68,68,0.08)',
+        borderWidth: 2, pointRadius: 4, pointBackgroundColor: 'rgba(239,68,68,0.9)',
+        tension: 0.3, fill: false, order: 1,
+      });
+    }
+
+    const baseData = refLine(baseline);
+    if (baseData) datasets.push({
+      type: 'line', label: `Baseline (${baseline})`, data: baseData,
+      borderColor: 'rgba(148,163,184,0.7)', borderWidth: 1.5,
+      borderDash: [4, 3], pointRadius: 0, fill: false, order: 3,
+    });
+
+    stoSteps.forEach((freq, i) => {
+      const d = refLine(freq);
+      if (d) datasets.push({
+        type: 'line', label: `STO ${i + 1} (${freq})`, data: d,
+        borderColor: 'rgba(245,158,11,0.7)', borderWidth: 1.5,
+        borderDash: [6, 3], pointRadius: 0, fill: false, order: 4 + i,
+      });
+    });
+
+    chartRef.current = new Chart(canvasRef.current.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 }, color: '#64748B' } },
+          tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}` } },
+        },
+        scales: {
+          y: {
+            beginAtZero: true, max: Math.ceil(yMax),
+            ticks: { font: { size: 10 }, color: '#94A3B8', stepSize: 1 },
+            grid: { color: 'rgba(0,0,0,0.04)' },
+          },
+          x: { ticks: { font: { size: 10 }, color: '#94A3B8' }, grid: { display: false } },
+        },
+      },
+    });
+
+    return () => { if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; } };
+  }, [dataKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="rounded-xl border border-stone-200 bg-stone-50 overflow-hidden">
+      <div className="px-4 pt-3 pb-2 relative" style={{ height: 180 }}>
+        <canvas ref={canvasRef} />
+        {entries.length === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <p className="text-[11px] text-slate-400 font-semibold bg-white/80 px-2 py-0.5 rounded">
+              No sessions logged for this behavior.
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-4 px-4 py-2 border-t border-stone-100 bg-white flex-wrap">
+        <span className="text-[11px] text-slate-500 font-semibold">
+          {entries.length} session{entries.length !== 1 ? 's' : ''} logged
+        </span>
+        {avg != null && (
+          <span className="text-[11px] text-slate-500 font-semibold">
+            Avg: <span className="text-slate-700" style={{ fontFamily: 'DM Mono, monospace' }}>
+              {typeof avg === 'number' ? avg.toFixed(1) : avg}
+            </span>
+          </span>
+        )}
+        <span className="text-[11px] font-bold" style={{ color: trendColor }}>Trend {trendIcon}</span>
+      </div>
+    </div>
+  );
+}
+
+/** Compact table showing raw session-by-session data for one behavior. */
+function BehaviorSessionTable({ behaviorId, sessionLogs }) {
+  const { entries } = buildBehaviorTrendFromLogs(sessionLogs ?? [], behaviorId);
+  if (entries.length === 0) return null;
+
+  const stoLabel = status => {
+    if (!status) return '—';
+    const map = { in_progress: 'In progress', met: 'Met ✓', regressed: 'Regressed', not_yet_started: 'Not started', discontinued: 'Discontinued' };
+    return map[status] ?? status.replace(/_/g, ' ');
+  };
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left" style={{ minWidth: 300 }}>
+        <thead>
+          <tr>
+            {['Session', 'Date', 'Frequency', 'STO #', 'Status'].map(h => (
+              <th key={h} className="pb-1.5 pr-3 text-[9px] font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map(e => (
+            <tr key={e.sessionNumber} className="border-t border-stone-100">
+              <td className="py-1.5 pr-3 text-[11px] font-semibold text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>S{e.sessionNumber}</td>
+              <td className="py-1.5 pr-3 text-[11px] text-slate-500 whitespace-nowrap">{fmtDate(e.sessionDate)}</td>
+              <td className="py-1.5 pr-3 text-[12px] font-bold text-slate-700 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>{e.frequency}</td>
+              <td className="py-1.5 pr-3 text-[11px] text-slate-500">{e.currentStoNumber != null ? `STO ${e.currentStoNumber}` : '—'}</td>
+              <td className="py-1.5">
+                <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
+                  e.stoStatus === 'met'         ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                  e.stoStatus === 'in_progress' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                  e.stoStatus === 'regressed'   ? 'bg-red-50 text-red-600 border-red-200' :
+                  'bg-slate-50 text-slate-500 border-slate-200'
+                }`}>
+                  {stoLabel(e.stoStatus)}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Card for one behavior — shows summary row + collapsible chart & session table. */
+function BehaviorCard({ item, onPatch, sessionLogs, behaviorTargets }) {
   const [localAvg, setLocalAvg] = useState(
     item.averageFrequency != null ? String(item.averageFrequency) : '',
   );
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     setLocalAvg(item.averageFrequency != null ? String(item.averageFrequency) : '');
   }, [item.averageFrequency]);
 
-  const parsedAvg = parseFloat(localAvg);
-  const base = item.baselineFrequency;
+  const parsedAvg  = parseFloat(localAvg);
+  const base       = item.baselineFrequency;
+  const pctChange  = (!isNaN(parsedAvg) && base != null && base > 0) ? ((parsedAvg - base) / base) * 100 : null;
+  const handleBlur = () => { if (!isNaN(parsedAvg)) onPatch({ averageFrequency: parsedAvg }); };
 
-  // For maladaptive behaviors: reduction is good → negative pctChange shown in green
-  const pctChange = (!isNaN(parsedAvg) && base != null && base > 0)
-    ? ((parsedAvg - base) / base) * 100
-    : null;
-
-  const handleBlur = () => {
-    if (!isNaN(parsedAvg)) onPatch({ averageFrequency: parsedAvg });
-  };
-
-  // trend arrow: improving = fewer occurrences = ↓ green
   const trendIcon  = item.trend === 'improving' ? '↓' : item.trend === 'worsening' ? '↑' : '→';
   const trendColor = item.trend === 'improving' ? '#10B981' : item.trend === 'worsening' ? '#EF4444' : '#94A3B8';
   const stoClass   = STO_STATUS_COLORS[item.stoStatus] ?? STO_STATUS_COLORS.in_progress;
 
   return (
-    <tr className="border-t border-stone-100 align-middle">
-
-      {/* Behavior name */}
-      <td className="py-2.5 pr-2 text-sm font-medium text-slate-700 max-w-[100px] truncate" title={item.behaviorName}>
-        {item.behaviorName}
-      </td>
-
-      {/* Baseline */}
-      <td className="py-2.5 px-2 text-sm text-slate-500 text-center tabular-nums whitespace-nowrap">
-        {base ?? '—'}
-      </td>
-
-      {/* Avg (editable) */}
-      <td className="py-2.5 px-2 text-center">
-        <input
-          type="number"
-          value={localAvg}
-          onChange={e => setLocalAvg(e.target.value)}
-          onBlur={handleBlur}
-          min={0}
-          placeholder="—"
-          className="w-14 text-center text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
-          style={{ fontFamily: 'DM Mono, monospace' }}
-        />
-      </td>
-
-      {/* % change (live) — negative = green for behaviors */}
-      <td className="py-2.5 px-2 text-center text-sm font-semibold tabular-nums whitespace-nowrap">
-        {pctChange === null ? (
-          <span className="text-slate-300">—</span>
-        ) : pctChange <= 0 ? (
-          <span className="text-emerald-600">{pctChange.toFixed(1)}%</span>
-        ) : (
-          <span className="text-red-500">+{pctChange.toFixed(1)}%</span>
-        )}
-      </td>
-
-      {/* Trend */}
-      <td className="py-2.5 px-2 text-center text-base font-bold">
-        <span style={{ color: trendColor }}>{trendIcon}</span>
-      </td>
-
-      {/* STO status dropdown */}
-      <td className="py-2.5 pl-2">
+    <div className="rounded-xl border border-stone-200 bg-white overflow-hidden">
+      {/* Summary row */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5">
+        <span className="text-sm font-semibold text-slate-700 truncate flex-1 min-w-0" title={item.behaviorName}>
+          {item.behaviorName}
+        </span>
+        <div className="flex-shrink-0 text-center">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Base</p>
+          <p className="text-sm font-semibold text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>{base ?? '—'}</p>
+        </div>
+        <div className="flex-shrink-0 text-center">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Avg</p>
+          <input
+            type="number" value={localAvg} onChange={e => setLocalAvg(e.target.value)} onBlur={handleBlur}
+            min={0} placeholder="—"
+            className="w-14 text-center text-sm font-semibold text-slate-700 bg-stone-50 border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
+            style={{ fontFamily: 'DM Mono, monospace' }}
+          />
+        </div>
+        <div className="flex-shrink-0 text-center min-w-[52px]">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Δ%</p>
+          {pctChange === null ? (
+            <span className="text-sm text-slate-300">—</span>
+          ) : pctChange <= 0 ? (
+            <span className="text-sm font-semibold tabular-nums text-emerald-600">{pctChange.toFixed(1)}%</span>
+          ) : (
+            <span className="text-sm font-semibold tabular-nums text-red-500">+{pctChange.toFixed(1)}%</span>
+          )}
+        </div>
+        <span className="flex-shrink-0 text-base font-bold" style={{ color: trendColor }}>{trendIcon}</span>
         <select
-          value={item.stoStatus ?? 'in_progress'}
-          onChange={e => onPatch({ stoStatus: e.target.value })}
-          className={`text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${stoClass}`}
+          value={item.stoStatus ?? 'in_progress'} onChange={e => onPatch({ stoStatus: e.target.value })}
+          className={`flex-shrink-0 text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${stoClass}`}
           style={{ fontFamily: 'DM Sans, sans-serif' }}
         >
-          {STO_STATUS_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
+          {STO_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-      </td>
-    </tr>
+        <button
+          type="button" onClick={() => setExpanded(v => !v)}
+          className="flex-shrink-0 flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-teal-600 transition-colors"
+        >
+          <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+            fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+          </svg>
+          {expanded ? 'Hide' : 'Sessions'}
+        </button>
+      </div>
+
+      {/* Expanded: chart + session table */}
+      {expanded && (
+        <div className="border-t border-stone-100 px-3.5 py-3 bg-stone-50 space-y-3">
+          <BehaviorProgressChart
+            behaviorId={item.behaviorId}
+            summaryItem={item}
+            sessionLogs={sessionLogs}
+            behaviorTargets={behaviorTargets}
+          />
+          <BehaviorSessionTable behaviorId={item.behaviorId} sessionLogs={sessionLogs} />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -299,6 +449,106 @@ function SkillProgressRow({ item, onPatch }) {
         </select>
       </td>
     </tr>
+  );
+}
+
+/** Card for one skill — summary row + always-visible progress bar with session observation count. */
+function SkillCard({ item, onPatch, sessionLogs }) {
+  const [localPct, setLocalPct] = useState(
+    item.currentPercent != null ? String(item.currentPercent) : '',
+  );
+
+  useEffect(() => {
+    setLocalPct(item.currentPercent != null ? String(item.currentPercent) : '');
+  }, [item.currentPercent]);
+
+  const parsedPct  = parseFloat(localPct);
+  const handleBlur = () => {
+    const clamped = Math.min(100, Math.max(0, parsedPct));
+    if (!isNaN(clamped)) onPatch({ currentPercent: clamped });
+  };
+
+  const statusClass = SKILL_STATUS_COLORS[item.status] ?? SKILL_STATUS_COLORS.new;
+
+  const observedCount = (sessionLogs ?? []).filter(log =>
+    (log.skillEntries ?? []).some(e =>
+      item.skillId ? e.skillId === item.skillId : e.skillName === item.skillName,
+    )
+  ).length;
+  const totalSessions = (sessionLogs ?? []).length;
+
+  const currentVal = !isNaN(parsedPct) ? parsedPct : (item.currentPercent ?? null);
+  const barWidth   = currentVal !== null ? Math.min(100, Math.max(0, currentVal)) : 0;
+  const baseline   = item.baselinePercent ?? 0;
+
+  return (
+    <div className="rounded-xl border border-stone-200 bg-white overflow-hidden">
+      {/* Summary row */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-700 truncate">{item.skillName}</p>
+          {item.domain && <p className="text-[10px] text-slate-400">{item.domain}</p>}
+        </div>
+        <div className="flex-shrink-0 text-center">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Base</p>
+          <p className="text-sm text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>
+            {item.baselinePercent ?? '—'}%
+          </p>
+        </div>
+        <div className="flex-shrink-0 text-center">
+          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Current</p>
+          <div className="flex items-center justify-center gap-0.5">
+            <input
+              type="number" value={localPct} onChange={e => setLocalPct(e.target.value)}
+              onBlur={handleBlur} min={0} max={100} placeholder="—"
+              className="w-14 text-center text-sm font-semibold text-slate-700 bg-stone-50 border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
+              style={{ fontFamily: 'DM Mono, monospace' }}
+            />
+            <span className="text-xs text-slate-400">%</span>
+          </div>
+        </div>
+        <select
+          value={item.status ?? 'new'} onChange={e => onPatch({ status: e.target.value })}
+          className={`flex-shrink-0 text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${statusClass}`}
+          style={{ fontFamily: 'DM Sans, sans-serif' }}
+        >
+          {SKILL_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+
+      {/* Progress bar */}
+      <div className="px-3.5 pb-2.5 bg-stone-50 border-t border-stone-100">
+        <div className="relative h-1.5 bg-stone-200 rounded-full overflow-hidden mt-2">
+          {currentVal !== null && (
+            <div
+              className="absolute left-0 top-0 h-full rounded-full transition-all duration-300"
+              style={{ width: `${barWidth}%`, background: 'rgba(20,184,166,0.6)' }}
+            />
+          )}
+          {baseline > 0 && (
+            <div
+              className="absolute top-0 h-full w-0.5 bg-slate-400"
+              style={{ left: `${Math.min(100, baseline)}%` }}
+            />
+          )}
+        </div>
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-[10px] text-slate-400">
+            Base {item.baselinePercent ?? '—'}%
+            {currentVal !== null
+              ? <span className="text-teal-600 font-semibold ml-1">→ {currentVal}%</span>
+              : <span className="text-slate-300 ml-1">→ enter current %</span>}
+          </span>
+          {totalSessions > 0 && (
+            <span className="text-[10px] text-slate-400">
+              {observedCount > 0
+                ? `Observed ${observedCount}/${totalSessions} sessions`
+                : 'Not in session logs'}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -510,12 +760,14 @@ export default function ReassessmentReviewPage({
   if (!session) return null;
 
   // ── Data arrays from session ───────────────────────────────────────────────
-  const origBehaviors = session.originalBehaviorSummary  ?? [];
-  const newBehaviors  = session.newBehaviorSummary        ?? [];
-  const origSkills    = session.originalSkillSummary      ?? [];
-  const newSkills     = session.newSkillSummary           ?? [];
-  const ctSummary     = session.caregiverTrainingSummary  ?? [];
-  const ctLogs        = client?.caregiver_training_session_logs ?? [];
+  const origBehaviors   = session.originalBehaviorSummary  ?? [];
+  const newBehaviors    = session.newBehaviorSummary        ?? [];
+  const origSkills      = session.originalSkillSummary      ?? [];
+  const newSkills       = session.newSkillSummary           ?? [];
+  const ctSummary       = session.caregiverTrainingSummary  ?? [];
+  const ctLogs          = client?.caregiver_training_session_logs ?? [];
+  const sessionLogs     = client?.service_session_logs ?? [];
+  const behaviorTargets = session?.sections?.behavior_targets?.behaviorTargets ?? [];
 
   // ── Patch helpers (immutable array updates via patchSession) ──────────────
   const patchOrigBehavior = (idx, patch) =>
@@ -685,33 +937,22 @@ export default function ReassessmentReviewPage({
                 </svg>
               }
             >
-              {/* Original behaviors table */}
+              {/* Original behaviors — card layout with collapsible chart & session detail */}
               <div>
                 <SubLabel label="From treatment plan" count={origBehaviors.length} />
                 {origBehaviors.length === 0 ? (
                   <p className="text-sm text-slate-400 py-6 text-center">No behaviors from treatment plan.</p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left" style={{ minWidth: 360 }}>
-                      <thead>
-                        <tr>
-                          {['Behavior', 'Base', 'Avg', 'Δ%', '', 'Status'].map(h => (
-                            <th key={h} className="pb-2 pr-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap">
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {origBehaviors.map((item, i) => (
-                          <BehaviorProgressRow
-                            key={item.behaviorId ?? item.behaviorName ?? i}
-                            item={item}
-                            onPatch={patch => patchOrigBehavior(i, patch)}
-                          />
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="space-y-2">
+                    {origBehaviors.map((item, i) => (
+                      <BehaviorCard
+                        key={item.behaviorId ?? item.behaviorName ?? i}
+                        item={item}
+                        onPatch={patch => patchOrigBehavior(i, patch)}
+                        sessionLogs={sessionLogs}
+                        behaviorTargets={behaviorTargets}
+                      />
+                    ))}
                   </div>
                 )}
               </div>
@@ -739,33 +980,21 @@ export default function ReassessmentReviewPage({
                 </svg>
               }
             >
-              {/* Original skills table */}
+              {/* Original skills — card layout with progress bar */}
               <div>
                 <SubLabel label="From treatment plan" count={origSkills.length} />
                 {origSkills.length === 0 ? (
                   <p className="text-sm text-slate-400 py-6 text-center">No skill goals from treatment plan.</p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left" style={{ minWidth: 320 }}>
-                      <thead>
-                        <tr>
-                          {['Skill', 'Base', 'Current', 'Status'].map(h => (
-                            <th key={h} className="pb-2 pr-2 text-[10px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap">
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {origSkills.map((item, i) => (
-                          <SkillProgressRow
-                            key={item.skillId ?? item.skillName ?? i}
-                            item={item}
-                            onPatch={patch => patchOrigSkill(i, patch)}
-                          />
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="space-y-2">
+                    {origSkills.map((item, i) => (
+                      <SkillCard
+                        key={item.skillId ?? item.skillName ?? i}
+                        item={item}
+                        onPatch={patch => patchOrigSkill(i, patch)}
+                        sessionLogs={sessionLogs}
+                      />
+                    ))}
                   </div>
                 )}
               </div>

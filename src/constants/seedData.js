@@ -2328,12 +2328,22 @@ export const makeReassessmentSession = (
   const linkedSessionLogIds = (sessionLogs ?? []).map(l => l.id);
 
   // ── (2) originalBehaviorSummary ────────────────────────────────────────────
-  // Collect all entries where isNew === false, keyed by behaviorId (or name as fallback)
+  // Pre-pass: collect every behavior key ever logged as isNew, so we can exclude
+  // their subsequent isNew:false entries from the original-behavior aggregation.
+  const everNewKeys = new Set();
+  for (const log of (sessionLogs ?? [])) {
+    for (const entry of (log.behaviorEntries ?? [])) {
+      if (entry.isNew) everNewKeys.add(entry.behaviorId ?? entry.behaviorName);
+    }
+  }
+
+  // Collect all entries where isNew === false AND never appeared as isNew
   const origMap = new Map();
   for (const log of (sessionLogs ?? [])) {
     for (const entry of (log.behaviorEntries ?? [])) {
       if (entry.isNew) continue;
       const key = entry.behaviorId ?? entry.behaviorName;
+      if (everNewKeys.has(key)) continue;
       if (!origMap.has(key)) {
         origMap.set(key, {
           behaviorId:        entry.behaviorId,

@@ -92,6 +92,56 @@ function ProgressNoteCard({ session, clientId, setClients, sectionIndex, isExpan
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
+/** Compact collapsible table for per-session data. columns: [{key, label}], rows: [object] */
+function SessionDetailTable({ columns, rows }) {
+  const [open, setOpen] = useState(false);
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1 text-[10px] font-semibold text-slate-400 hover:text-teal-600 transition-colors"
+      >
+        <svg
+          className={`w-3 h-3 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+        </svg>
+        {open ? 'Hide sessions' : `Show ${rows.length} session${rows.length !== 1 ? 's' : ''}`}
+      </button>
+
+      {open && (
+        <div className="mt-2 overflow-x-auto rounded-lg border border-stone-100 bg-stone-50">
+          <table className="w-full text-left" style={{ minWidth: 280 }}>
+            <thead>
+              <tr className="bg-stone-100">
+                {columns.map(c => (
+                  <th key={c.key} className="px-2.5 py-1.5 text-[9px] font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">
+                    {c.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={i} className="border-t border-stone-100">
+                  {columns.map(c => (
+                    <td key={c.key} className="px-2.5 py-1.5 text-[11px] text-slate-600">
+                      {row[c.key] ?? '—'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const STO_STATUS_OPTIONS = [
   { value: 'not_yet_started', label: 'Not Started' },
   { value: 'in_progress',     label: 'In Progress' },
@@ -116,7 +166,7 @@ function fmtDate(iso) {
 
 // ─── Part A: single row in the "from treatment plan" table ────────────────────
 
-function OrigBehaviorRow({ item, idx, patchOrigItem }) {
+function OrigBehaviorRow({ item, idx, patchOrigItem, sessionLogs }) {
   const [localAvg, setLocalAvg] = useState(
     item.averageFrequency != null ? String(item.averageFrequency) : '',
   );
@@ -128,7 +178,7 @@ function OrigBehaviorRow({ item, idx, patchOrigItem }) {
   const parsedAvg = parseFloat(localAvg);
   const base      = item.baselineFrequency;
   const pctChange = (!isNaN(parsedAvg) && base && base !== 0)
-    ? ((base - parsedAvg) / base) * 100   // positive = reduction = good
+    ? ((base - parsedAvg) / base) * 100
     : null;
 
   const handleAvgBlur = () => {
@@ -137,73 +187,123 @@ function OrigBehaviorRow({ item, idx, patchOrigItem }) {
 
   const statusColorClass = STO_STATUS_COLORS[item.stoStatus] ?? STO_STATUS_COLORS.in_progress;
 
+  // Build per-session rows for the detail table
+  const sessionRows = (sessionLogs ?? [])
+    .filter(log => (log.behaviorEntries ?? []).some(be => be.behaviorId === item.behaviorId))
+    .sort((a, b) => new Date(a.sessionDate) - new Date(b.sessionDate))
+    .map((log, i) => {
+      const be = log.behaviorEntries.find(be => be.behaviorId === item.behaviorId);
+      const stoStatusLabel = be?.stoStatus
+        ? ({ in_progress: 'In progress', met: 'Met ✓', regressed: 'Regressed', not_yet_started: 'Not started' }[be.stoStatus] ?? be.stoStatus)
+        : '—';
+      return {
+        session:   `S${i + 1}`,
+        date:      fmtDate(log.sessionDate),
+        frequency: be?.sessionFrequency ?? '—',
+        sto:       be?.currentStoNumber != null ? `STO ${be.currentStoNumber}` : '—',
+        status:    stoStatusLabel,
+      };
+    });
+
   return (
-    <tr className="border-t border-stone-100 align-middle">
+    <>
+      <tr className="border-t border-stone-100 align-middle">
 
-      {/* Behavior name */}
-      <td className="py-2.5 pr-3 text-sm font-medium text-slate-700 whitespace-nowrap">
-        {item.behaviorName}
-      </td>
+        {/* Behavior name */}
+        <td className="py-2.5 pr-3 text-sm font-medium text-slate-700 whitespace-nowrap">
+          {item.behaviorName}
+        </td>
 
-      {/* Baseline */}
-      <td className="py-2.5 px-2 text-sm text-slate-500 text-center tabular-nums whitespace-nowrap">
-        {base ?? '—'}
-      </td>
+        {/* Baseline */}
+        <td className="py-2.5 px-2 text-sm text-slate-500 text-center tabular-nums whitespace-nowrap">
+          {base ?? '—'}
+        </td>
 
-      {/* Avg (editable) */}
-      <td className="py-2.5 px-2 text-center">
-        <input
-          type="number"
-          value={localAvg}
-          onChange={e => setLocalAvg(e.target.value)}
-          onBlur={handleAvgBlur}
-          min={0}
-          className="w-16 text-center text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
-          style={{ fontFamily: 'DM Mono, monospace' }}
-        />
-      </td>
+        {/* Avg (editable) */}
+        <td className="py-2.5 px-2 text-center">
+          <input
+            type="number"
+            value={localAvg}
+            onChange={e => setLocalAvg(e.target.value)}
+            onBlur={handleAvgBlur}
+            min={0}
+            className="w-16 text-center text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
+            style={{ fontFamily: 'DM Mono, monospace' }}
+          />
+        </td>
 
-      {/* % Change (live) */}
-      <td className="py-2.5 px-2 text-center text-sm font-semibold tabular-nums whitespace-nowrap">
-        {pctChange === null ? (
-          <span className="text-slate-300">—</span>
-        ) : pctChange >= 0 ? (
-          <span className="text-emerald-600">↓ {pctChange.toFixed(1)}%</span>
-        ) : (
-          <span className="text-red-500">↑ {Math.abs(pctChange).toFixed(1)}%</span>
-        )}
-      </td>
+        {/* % Change (live) */}
+        <td className="py-2.5 px-2 text-center text-sm font-semibold tabular-nums whitespace-nowrap">
+          {pctChange === null ? (
+            <span className="text-slate-300">—</span>
+          ) : pctChange >= 0 ? (
+            <span className="text-emerald-600">↓ {pctChange.toFixed(1)}%</span>
+          ) : (
+            <span className="text-red-500">↑ {Math.abs(pctChange).toFixed(1)}%</span>
+          )}
+        </td>
 
-      {/* Current STO */}
-      <td className="py-2.5 px-2 text-center text-xs text-slate-500 whitespace-nowrap">
-        STO {item.currentStoNumber ?? 1}
-      </td>
+        {/* Current STO */}
+        <td className="py-2.5 px-2 text-center text-xs text-slate-500 whitespace-nowrap">
+          STO {item.currentStoNumber ?? 1}
+        </td>
 
-      {/* STO status (editable dropdown) */}
-      <td className="py-2.5 pl-2">
-        <select
-          value={item.stoStatus ?? 'in_progress'}
-          onChange={e => patchOrigItem(idx, { stoStatus: e.target.value })}
-          className={`text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${statusColorClass}`}
-          style={{ fontFamily: 'DM Sans, sans-serif' }}
-        >
-          {STO_STATUS_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-      </td>
-    </tr>
+        {/* STO status (editable dropdown) */}
+        <td className="py-2.5 pl-2">
+          <select
+            value={item.stoStatus ?? 'in_progress'}
+            onChange={e => patchOrigItem(idx, { stoStatus: e.target.value })}
+            className={`text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${statusColorClass}`}
+            style={{ fontFamily: 'DM Sans, sans-serif' }}
+          >
+            {STO_STATUS_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </td>
+      </tr>
+
+      {/* Per-session detail (collapsible, spans all columns) */}
+      {sessionRows.length > 0 && (
+        <tr className="border-0">
+          <td colSpan={6} className="pb-2 pt-0 pl-1 pr-0">
+            <SessionDetailTable
+              columns={[
+                { key: 'session',   label: 'Session' },
+                { key: 'date',      label: 'Date' },
+                { key: 'frequency', label: 'Frequency' },
+                { key: 'sto',       label: 'STO #' },
+                { key: 'status',    label: 'Status' },
+              ]}
+              rows={sessionRows}
+            />
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
 // ─── Part B: card for a single emerging behavior ──────────────────────────────
 
+// RBT label → BCBA function label (RBTs log 'tangible', BCBAs see 'Access' etc.)
+const FN_NORMALIZE = { tangible: 'Access', escape: 'Escape', attention: 'Attention', automatic: 'Automatic' };
+
 function NewBehaviorRow({ item, idx, patchNewItem }) {
-  const [defDraft, setDefDraft] = useState(item.bcbaDefinitionFinal ?? '');
+  // Pre-fill from RBT draft if BCBA hasn't written their own version yet
+  const [defDraft, setDefDraft] = useState(item.bcbaDefinitionFinal || item.rbtDefinitionDraft || '');
 
   useEffect(() => {
-    setDefDraft(item.bcbaDefinitionFinal ?? '');
-  }, [item.bcbaDefinitionFinal]);
+    setDefDraft(item.bcbaDefinitionFinal || item.rbtDefinitionDraft || '');
+  }, [item.bcbaDefinitionFinal, item.rbtDefinitionDraft]);
+
+  // Normalize RBT-stored function value to match BCBA button labels
+  const resolvedFn = FN_NORMALIZE[item.function?.toLowerCase()] ?? item.function ?? '';
+
+  // Capitalize severity for display (seed stores lowercase e.g. 'moderate')
+  const severityLabel = item.severity
+    ? item.severity.charAt(0).toUpperCase() + item.severity.slice(1).toLowerCase()
+    : '';
 
   const addStoStep = () => {
     const next = [
@@ -243,13 +343,13 @@ function NewBehaviorRow({ item, idx, patchNewItem }) {
             NEW — first seen {fmtDate(item.firstSeenDate)}
           </span>
         )}
-        {item.severity && (
+        {severityLabel && (
           <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
-            item.severity === 'Severe'   ? 'bg-red-50 text-red-700 border border-red-200' :
-            item.severity === 'Moderate' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+            severityLabel === 'Severe'   ? 'bg-red-50 text-red-700 border border-red-200' :
+            severityLabel === 'Moderate' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
             'bg-green-50 text-green-700 border border-green-200'
           }`}>
-            {item.severity}
+            {severityLabel}
           </span>
         )}
       </div>
@@ -257,15 +357,17 @@ function NewBehaviorRow({ item, idx, patchNewItem }) {
       {/* Body */}
       <div className="px-4 py-3 space-y-4">
 
-        {/* RBT data strip */}
-        <div className="flex flex-wrap gap-4 items-start">
-          {item.rbtDefinitionDraft && (
-            <div className="flex-1 min-w-0">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">RBT Description</p>
-              <p className="text-[12px] text-slate-500 leading-relaxed italic">{item.rbtDefinitionDraft}</p>
-            </div>
-          )}
-          <div className="flex gap-5 flex-shrink-0 text-center">
+        {/* Pre-filled chip */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold"
+          style={{ background: 'rgba(20,184,166,0.08)', color: '#0D9488' }}>
+          <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+          Pre-filled from session logs — review and edit as needed.
+        </div>
+
+        {/* Stats strip: baseline / avg / trend */}
+        <div className="flex gap-5 flex-shrink-0 text-center">
             <div>
               <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Baseline</p>
               <p className="text-sm font-semibold text-slate-700 tabular-nums">{item.baselineFrequency ?? '—'}</p>
@@ -279,17 +381,17 @@ function NewBehaviorRow({ item, idx, patchNewItem }) {
               <p className={`text-base font-bold ${trendColor}`}>{trendIcon}</p>
             </div>
           </div>
-        </div>
 
         <div className="h-px bg-amber-100"/>
 
-        {/* BCBA assessment */}
+        {/* BCBA review fields */}
         <div className="space-y-3">
-          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">BCBA Assessment</p>
 
-          {/* Topographic definition */}
+          {/* Topographic definition — pre-filled from RBT */}
           <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Topographic Definition</p>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+              Topographic Definition <span className="normal-case font-normal text-slate-400">(from RBT — edit as needed)</span>
+            </p>
             <textarea
               value={defDraft}
               onChange={e => setDefDraft(e.target.value)}
@@ -301,12 +403,12 @@ function NewBehaviorRow({ item, idx, patchNewItem }) {
             />
           </div>
 
-          {/* Function */}
+          {/* Function — pre-selected from session logs */}
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Hypothesized Function</p>
             <div className="flex flex-wrap gap-1.5">
               {FUNCTIONS.map(fn => {
-                const active = item.function === fn;
+                const active = resolvedFn === fn;
                 return (
                   <button key={fn} type="button"
                     onClick={() => patchNewItem(idx, { function: fn })}
@@ -402,7 +504,7 @@ function NewBehaviorRow({ item, idx, patchNewItem }) {
 // ─── Maladaptive Behaviors section — reassessment view ────────────────────────
 
 function BehaviorTargetsReassessmentCard({
-  session, clientId, setClients, sectionIndex, isExpanded, onToggle,
+  session, clientId, setClients, sectionIndex, isExpanded, onToggle, sessionLogs,
 }) {
   const origSummary = session.originalBehaviorSummary ?? [];
   const newSummary  = session.newBehaviorSummary ?? [];
@@ -492,6 +594,7 @@ function BehaviorTargetsReassessmentCard({
                         item={item}
                         idx={idx}
                         patchOrigItem={patchOrigItem}
+                        sessionLogs={sessionLogs}
                       />
                     ))}
                   </tbody>
@@ -535,7 +638,7 @@ function BehaviorTargetsReassessmentCard({
   );
 }
 
-// ─── Part A: single row in the "from treatment plan" skills table ─────────────
+// ─── Part A: single row in the "from treatment plan" skills table ────────────
 
 const SKILL_STATUS_OPTIONS = [
   { value: 'new',         label: 'New'         },
@@ -549,7 +652,7 @@ const SKILL_STATUS_COLORS = {
   met:         'text-emerald-700 bg-emerald-50 border-emerald-200',
 };
 
-function OrigSkillRow({ item, idx, patchOrigItem }) {
+function OrigSkillRow({ item, idx, patchOrigItem, sessionLogs }) {
   const [localCurrent, setLocalCurrent] = useState(
     item.currentPercent != null ? String(item.currentPercent) : '',
   );
@@ -564,6 +667,13 @@ function OrigSkillRow({ item, idx, patchOrigItem }) {
   };
 
   const statusColorClass = SKILL_STATUS_COLORS[item.status] ?? SKILL_STATUS_COLORS.new;
+
+  const observedCount = (sessionLogs ?? []).filter(log =>
+    (log.skillEntries ?? []).some(e =>
+      item.skillId ? e.skillId === item.skillId : e.skillName === item.skillName,
+    )
+  ).length;
+  const totalSessions = (sessionLogs ?? []).length;
 
   return (
     <tr className="border-t border-stone-100 align-middle">
@@ -610,6 +720,11 @@ function OrigSkillRow({ item, idx, patchOrigItem }) {
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
+        {totalSessions > 0 && (
+          <p className="text-[9px] text-slate-400 mt-0.5 whitespace-nowrap">
+            {observedCount > 0 ? `${observedCount}/${totalSessions} sessions` : 'Not in logs'}
+          </p>
+        )}
       </td>
     </tr>
   );
@@ -772,7 +887,7 @@ function NewSkillRow({ item, idx, patchNewItem }) {
 // ─── Skill Acquisitions section — reassessment view ───────────────────────────
 
 function SkillAcquisitionsReassessmentCard({
-  session, clientId, setClients, sectionIndex, isExpanded, onToggle,
+  session, clientId, setClients, sectionIndex, isExpanded, onToggle, sessionLogs,
 }) {
   const origSummary = session.originalSkillSummary ?? [];
   const newSummary  = session.newSkillSummary ?? [];
@@ -862,6 +977,7 @@ function SkillAcquisitionsReassessmentCard({
                         item={item}
                         idx={idx}
                         patchOrigItem={patchOrigItem}
+                        sessionLogs={sessionLogs}
                       />
                     ))}
                   </tbody>
@@ -907,7 +1023,7 @@ function SkillAcquisitionsReassessmentCard({
 
 // ─── Caregiver Training summary row (Part A) ─────────────────────────────────
 
-function CaregiverTrainingSummaryRow({ item, idx, patchItem }) {
+function CaregiverTrainingSummaryRow({ item, idx, patchItem, ctLogs }) {
   const [localAvg, setLocalAvg] = useState(
     item.averageSessionPercent != null ? String(item.averageSessionPercent) : '',
   );
@@ -933,71 +1049,111 @@ function CaregiverTrainingSummaryRow({ item, idx, patchItem }) {
 
   const stoColorClass = STO_STATUS_COLORS[item.stoStatus] ?? STO_STATUS_COLORS.in_progress;
 
+  // Build per-session rows from caregiver training logs
+  const ctSessionRows = (ctLogs ?? [])
+    .filter(log => (log.trainingEntries ?? []).some(te =>
+      item.targetId ? te.targetId === item.targetId : te.goalName === item.goalName,
+    ))
+    .sort((a, b) => new Date(a.sessionDate) - new Date(b.sessionDate))
+    .map((log, i) => {
+      const te = log.trainingEntries.find(te =>
+        item.targetId ? te.targetId === item.targetId : te.goalName === item.goalName,
+      );
+      const stoLabel = te?.stoStatus
+        ? ({ in_progress: 'In progress', met: 'Met ✓', not_yet_started: 'Not started' }[te.stoStatus] ?? te.stoStatus)
+        : '—';
+      return {
+        session: `S${i + 1}`,
+        date:    fmtDate(log.sessionDate),
+        pct:     te?.sessionPercent != null ? `${te.sessionPercent}%` : '—',
+        status:  stoLabel,
+      };
+    });
+
   return (
-    <tr className="border-t border-stone-100 align-middle">
+    <>
+      <tr className="border-t border-stone-100 align-middle">
 
-      {/* Goal name */}
-      <td className="py-2.5 pr-3 text-sm font-medium text-slate-700 whitespace-nowrap">
-        {item.goalName}
-      </td>
+        {/* Goal name */}
+        <td className="py-2.5 pr-3 text-sm font-medium text-slate-700 whitespace-nowrap">
+          {item.goalName}
+        </td>
 
-      {/* Baseline % */}
-      <td className="py-2.5 px-2 text-sm text-slate-500 text-center tabular-nums whitespace-nowrap">
-        {base != null ? `${base}%` : '—'}
-      </td>
+        {/* Baseline % */}
+        <td className="py-2.5 px-2 text-sm text-slate-500 text-center tabular-nums whitespace-nowrap">
+          {base != null ? `${base}%` : '—'}
+        </td>
 
-      {/* Avg this period (editable) */}
-      <td className="py-2.5 px-2 text-center">
-        <div className="flex items-center justify-center gap-0.5">
-          <input
-            type="number"
-            value={localAvg}
-            onChange={e => setLocalAvg(e.target.value)}
-            onBlur={handleAvgBlur}
-            min={0} max={100}
-            placeholder="—"
-            className="w-16 text-center text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
-            style={{ fontFamily: 'DM Mono, monospace' }}
-          />
-          <span className="text-xs text-slate-400">%</span>
-        </div>
-      </td>
+        {/* Avg this period (editable) */}
+        <td className="py-2.5 px-2 text-center">
+          <div className="flex items-center justify-center gap-0.5">
+            <input
+              type="number"
+              value={localAvg}
+              onChange={e => setLocalAvg(e.target.value)}
+              onBlur={handleAvgBlur}
+              min={0} max={100}
+              placeholder="—"
+              className="w-16 text-center text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
+              style={{ fontFamily: 'DM Mono, monospace' }}
+            />
+            <span className="text-xs text-slate-400">%</span>
+          </div>
+        </td>
 
-      {/* % Change (live) */}
-      <td className="py-2.5 px-2 text-center text-sm font-semibold tabular-nums whitespace-nowrap">
-        {pctChange === null ? (
-          <span className="text-slate-300">—</span>
-        ) : pctChange >= 0 ? (
-          <span className="text-emerald-600">+{pctChange.toFixed(1)}%</span>
-        ) : (
-          <span className="text-red-500">{pctChange.toFixed(1)}%</span>
-        )}
-      </td>
+        {/* % Change (live) */}
+        <td className="py-2.5 px-2 text-center text-sm font-semibold tabular-nums whitespace-nowrap">
+          {pctChange === null ? (
+            <span className="text-slate-300">—</span>
+          ) : pctChange >= 0 ? (
+            <span className="text-emerald-600">+{pctChange.toFixed(1)}%</span>
+          ) : (
+            <span className="text-red-500">{pctChange.toFixed(1)}%</span>
+          )}
+        </td>
 
-      {/* Trend icon */}
-      <td className="py-2.5 px-2 text-center text-base font-bold">
-        <span className={trendColor}>{trendIcon}</span>
-      </td>
+        {/* Trend icon */}
+        <td className="py-2.5 px-2 text-center text-base font-bold">
+          <span className={trendColor}>{trendIcon}</span>
+        </td>
 
-      {/* STO Status dropdown */}
-      <td className="py-2.5 pl-2">
-        <select
-          value={item.stoStatus ?? 'in_progress'}
-          onChange={e => patchItem(idx, { stoStatus: e.target.value })}
-          className={`text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${stoColorClass}`}
-          style={{ fontFamily: 'DM Sans, sans-serif' }}
-        >
-          {STO_STATUS_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-      </td>
-    </tr>
+        {/* STO Status dropdown */}
+        <td className="py-2.5 pl-2">
+          <select
+            value={item.stoStatus ?? 'in_progress'}
+            onChange={e => patchItem(idx, { stoStatus: e.target.value })}
+            className={`text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${stoColorClass}`}
+            style={{ fontFamily: 'DM Sans, sans-serif' }}
+          >
+            {STO_STATUS_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </td>
+      </tr>
+
+      {/* Per-session detail (collapsible, spans all columns) */}
+      {ctSessionRows.length > 0 && (
+        <tr className="border-0">
+          <td colSpan={6} className="pb-2 pt-0 pl-1 pr-0">
+            <SessionDetailTable
+              columns={[
+                { key: 'session', label: 'Session' },
+                { key: 'date',    label: 'Date' },
+                { key: 'pct',     label: '% Achieved' },
+                { key: 'status',  label: 'STO Status' },
+              ]}
+              rows={ctSessionRows}
+            />
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
 // Chip + table injected at the top of the caregiver_training section in reassessment
-function CaregiverTrainingSummaryHeader({ session, clientId, setClients }) {
+function CaregiverTrainingSummaryHeader({ session, clientId, setClients, ctLogs }) {
   const summary = session.caregiverTrainingSummary ?? [];
 
   const patchItem = (idx, patch) =>
@@ -1035,6 +1191,7 @@ function CaregiverTrainingSummaryHeader({ session, clientId, setClients }) {
                 item={item}
                 idx={idx}
                 patchItem={patchItem}
+                ctLogs={ctLogs}
               />
             ))}
           </tbody>
@@ -1043,6 +1200,36 @@ function CaregiverTrainingSummaryHeader({ session, clientId, setClients }) {
 
       {/* Divider before existing narrative fields */}
       <div className="border-t border-teal-100/60 mt-4"/>
+    </div>
+  );
+}
+
+// ─── Medical Necessity prior statement reference box ─────────────────────────
+
+function MedicalNecessityPriorStatementBox({ initialAssessment }) {
+  const [expanded, setExpanded] = useState(false);
+  const text = initialAssessment?.sections?.medical_necessity?.draftContent;
+  if (!text) return null;
+
+  const preview = text.length > 300 ? text.slice(0, 300) + '…' : text;
+
+  return (
+    <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+      <p className="text-[9px] font-bold uppercase tracking-widest text-amber-600 mb-1.5">
+        Previous Statement (from initial assessment)
+      </p>
+      <p className="text-[12px] text-slate-600 leading-relaxed whitespace-pre-wrap">
+        {expanded ? text : preview}
+      </p>
+      {text.length > 300 && (
+        <button
+          type="button"
+          onClick={() => setExpanded(v => !v)}
+          className="mt-1.5 text-[10px] font-semibold text-amber-600 hover:text-amber-800 transition-colors"
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
     </div>
   );
 }
@@ -1063,7 +1250,10 @@ export default function AssessmentInterviewPage({
   const client  = clients.find(c => c.id === clientId);
   const session = client?.assessment_session;
 
-  const isReassessment = session?.sessionType === 'reassessment';
+  const isReassessment     = session?.sessionType === 'reassessment';
+  const sessionLogs        = client?.service_session_logs ?? [];
+  const ctLogs             = client?.caregiver_training_session_logs ?? [];
+  const initialAssessment  = client?._initialAssessment;
   const effectiveSectionOrder = useMemo(() => {
     if (!isReassessment) return SECTION_ORDER;
     const idx = SECTION_ORDER.indexOf('behavior_targets');
@@ -1240,6 +1430,7 @@ export default function AssessmentInterviewPage({
                     sectionIndex={idx + 1}
                     isExpanded={expandedSections.includes(key)}
                     onToggle={() => handleToggle(key)}
+                    sessionLogs={sessionLogs}
                   />
                 ) : key === 'skill_acquisitions' && isReassessment ? (
                   <SkillAcquisitionsReassessmentCard
@@ -1249,6 +1440,7 @@ export default function AssessmentInterviewPage({
                     sectionIndex={idx + 1}
                     isExpanded={expandedSections.includes(key)}
                     onToggle={() => handleToggle(key)}
+                    sessionLogs={sessionLogs}
                   />
                 ) : (
                   <SectionCard
@@ -1267,7 +1459,9 @@ export default function AssessmentInterviewPage({
                     addNotif={addNotif}
                     headerContent={
                       key === 'caregiver_training' && isReassessment && (session.caregiverTrainingSummary ?? []).length > 0
-                        ? <CaregiverTrainingSummaryHeader session={session} clientId={clientId} setClients={setClients} />
+                        ? <CaregiverTrainingSummaryHeader session={session} clientId={clientId} setClients={setClients} ctLogs={ctLogs} />
+                        : key === 'medical_necessity' && isReassessment && initialAssessment
+                        ? <MedicalNecessityPriorStatementBox initialAssessment={initialAssessment} />
                         : null
                     }
                   />

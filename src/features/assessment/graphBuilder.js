@@ -44,9 +44,11 @@ export function buildBehaviorTrendFromLogs(sessionLogs, behaviorId) {
   const entries = matched.map((log, i) => {
     const be = log.behaviorEntries.find(be => be.behaviorId === behaviorId);
     return {
-      sessionNumber: i + 1,
-      sessionDate:   log.sessionDate,
-      frequency:     be?.frequency ?? 0,
+      sessionNumber:    i + 1,
+      sessionDate:      log.sessionDate,
+      frequency:        be?.sessionFrequency ?? be?.frequency ?? 0,
+      currentStoNumber: be?.currentStoNumber ?? null,
+      stoStatus:        be?.stoStatus ?? null,
     };
   });
 
@@ -54,7 +56,9 @@ export function buildBehaviorTrendFromLogs(sessionLogs, behaviorId) {
     return { entries: [], baseline: null, average: null, percentReduction: null, trend: 'flat' };
   }
 
-  const baseline  = entries[0].frequency;
+  // Use the assessment baseline from the first matched log entry (not the first session frequency)
+  const firstBe   = matched[0]?.behaviorEntries?.find(be => be.behaviorId === behaviorId);
+  const baseline  = firstBe?.baselineFrequency ?? entries[0].frequency;
   const average   = entries.reduce((sum, e) => sum + e.frequency, 0) / entries.length;
   const percentReduction = baseline > 0 ? ((baseline - average) / baseline) * 100 : 0;
   const threshold = baseline * 0.05;

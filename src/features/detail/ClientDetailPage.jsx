@@ -12,8 +12,10 @@ import PlanDraftInlinePanel from './PlanDraftInlinePanel.jsx';
 import PlanDraftPreview from './PlanDraftPreview.jsx';
 import { buildGraphsFromSession } from '../../features/assessment/graphBuilder.js';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock.js';
-import ServiceSessionLogPanel from './ServiceSessionLogPanel.jsx';
-import LogSessionModal from './LogSessionModal.jsx';
+import BehaviorSessionLogPanel from './BehaviorSessionLogPanel.jsx';
+import SkillSessionLogPanel    from './SkillSessionLogPanel.jsx';
+import BehaviorSessionModal    from './BehaviorSessionModal.jsx';
+import SkillSessionModal       from './SkillSessionModal.jsx';
 import CaregiverTrainingLogPanel from './CaregiverTrainingLogPanel.jsx';
 import CaregiverTrainingLogModal from './CaregiverTrainingLogModal.jsx';
 
@@ -33,6 +35,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [noteText,       setNoteText]       = useState('');
   const [activeTab,      setActiveTab]      = useState('notes');
   const [logSessionModalOpen,          setLogSessionModalOpen]          = useState(false);
+  const [logSkillSessionModalOpen,     setLogSkillSessionModalOpen]     = useState(false);
   const [logCaregiverSessionModalOpen, setLogCaregiverSessionModalOpen] = useState(false);
   const [servicesTab,                  setServicesTab]                  = useState('sessions');
   const pickerRef = useRef(null);
@@ -128,8 +131,18 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
         ? { ...c, service_session_logs: [...(c.service_session_logs ?? []), newLog] }
         : c,
     ));
-    pushLog(`Session #${newLog.sessionNumber} logged by ${newLog.rbtName}`);
+    pushLog(`Behavior session #${newLog.sessionNumber} logged by ${newLog.rbtName}`);
     setLogSessionModalOpen(false);
+  };
+
+  const handleSaveSkillLog = newLog => {
+    setClients(prev => prev.map(c =>
+      c.id === client.id
+        ? { ...c, service_session_logs: [...(c.service_session_logs ?? []), newLog] }
+        : c,
+    ));
+    pushLog(`Skill session #${newLog.sessionNumber} logged by ${newLog.rbtName}`);
+    setLogSkillSessionModalOpen(false);
   };
 
   const handleSaveCaregiverSessionLog = newLog => {
@@ -1416,9 +1429,13 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 {/* ── Tab 1: Session Logs ── */}
                 {servicesTab === 'sessions' && (
                   <div className="p-4 space-y-3">
-                    <ServiceSessionLogPanel
+                    <BehaviorSessionLogPanel
                       client={client}
                       onLogSession={() => setLogSessionModalOpen(true)}
+                    />
+                    <SkillSessionLogPanel
+                      client={client}
+                      onLogSession={() => setLogSkillSessionModalOpen(true)}
                     />
                     <CaregiverTrainingLogPanel
                       client={client}
@@ -1653,11 +1670,19 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
       {/* ── session log modals ── */}
       {logSessionModalOpen && (
-        <LogSessionModal
+        <BehaviorSessionModal
           client={client}
           currentUser={currentUser}
           onSave={handleSaveSessionLog}
           onClose={() => setLogSessionModalOpen(false)}
+        />
+      )}
+      {logSkillSessionModalOpen && (
+        <SkillSessionModal
+          client={client}
+          currentUser={currentUser}
+          onSave={handleSaveSkillLog}
+          onClose={() => setLogSkillSessionModalOpen(false)}
         />
       )}
       {logCaregiverSessionModalOpen && (

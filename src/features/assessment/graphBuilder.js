@@ -44,9 +44,11 @@ export function buildBehaviorTrendFromLogs(sessionLogs, behaviorId) {
   const entries = matched.map((log, i) => {
     const be = log.behaviorEntries.find(be => be.behaviorId === behaviorId);
     return {
-      sessionNumber: i + 1,
-      sessionDate:   log.sessionDate,
-      frequency:     be?.frequency ?? 0,
+      sessionNumber:    i + 1,
+      sessionDate:      log.sessionDate,
+      frequency:        be?.sessionFrequency ?? be?.frequency ?? 0,
+      currentStoNumber: be?.currentStoNumber ?? null,
+      stoStatus:        be?.stoStatus ?? null,
     };
   });
 
@@ -54,7 +56,9 @@ export function buildBehaviorTrendFromLogs(sessionLogs, behaviorId) {
     return { entries: [], baseline: null, average: null, percentReduction: null, trend: 'flat' };
   }
 
-  const baseline  = entries[0].frequency;
+  // Use the assessment baseline from the first matched log entry (not the first session frequency)
+  const firstBe   = matched[0]?.behaviorEntries?.find(be => be.behaviorId === behaviorId);
+  const baseline  = firstBe?.baselineFrequency ?? entries[0].frequency;
   const average   = entries.reduce((sum, e) => sum + e.frequency, 0) / entries.length;
   const percentReduction = baseline > 0 ? ((baseline - average) / baseline) * 100 : 0;
   const threshold = baseline * 0.05;
@@ -63,6 +67,44 @@ export function buildBehaviorTrendFromLogs(sessionLogs, behaviorId) {
     : 'flat';
 
   return { entries, baseline, average, percentReduction, trend };
+}
+
+// ─── buildSkillTrendFromLogs ──────────────────────────────────────────────────
+
+/**
+ * Extracts per-session accuracy % for a single skill goal from RBT session logs.
+ * Only considers non-isNew entries (existing plan skills, not newly flagged ones).
+ * @param {object[]} sessionLogs  Array of service_session_log objects.
+ * @param {string}   skillId      ID of the skill goal to extract.
+ * @returns {{ entries, average, trend }}
+ */
+export function buildSkillTrendFromLogs(sessionLogs, skillId) {
+  const matched = (sessionLogs ?? [])
+    .filter(log => (log.skillEntries ?? []).some(se => !se.isNew && se.skillId === skillId))
+    .sort((a, b) => new Date(a.sessionDate) - new Date(b.sessionDate));
+
+  const entries = matched.map((log, i) => {
+    const se = log.skillEntries.find(se => se.skillId === skillId);
+    return {
+      sessionNumber:    i + 1,
+      sessionDate:      log.sessionDate,
+      accuracy:         se?.accuracyPercent ?? 0,
+      currentStoNumber: se?.currentStoNumber ?? null,
+      stoStatus:        se?.stoStatus ?? null,
+    };
+  });
+
+  if (entries.length === 0) {
+    return { entries: [], average: null, trend: 'flat' };
+  }
+
+  const average = entries.reduce((sum, e) => sum + e.accuracy, 0) / entries.length;
+  const first   = entries[0].accuracy;
+  const trend   = average > first + 5 ? 'improving'
+    : average < first - 5 ? 'worsening'
+    : 'flat';
+
+  return { entries, average, trend };
 }
 
 // ─── renderCaregiverTrainingTargetChart ───────────────────────────────────────

@@ -10,16 +10,29 @@ function fmtDate(dateStr) {
 }
 
 function stoStatusLabel(status) {
-  if (status === 'met')               return 'Met ✓';
   if (status === 'in_progress')       return 'In progress';
   if (status === 'not_yet_started')   return 'Not started';
   return 'Not started';
 }
 
 function stoStatusColor(status) {
-  if (status === 'met')             return 'text-emerald-600';
   if (status === 'in_progress')     return 'text-teal-600';
   return 'text-slate-400';
+}
+
+function StoStatusChip({ stoNumber, stoStatus }) {
+  if (stoStatus === 'met') {
+    return (
+      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+        Met ✓
+      </span>
+    );
+  }
+  return (
+    <span className={`text-[11px] font-medium ${stoStatusColor(stoStatus)}`}>
+      STO #{stoNumber} — {stoStatusLabel(stoStatus)}
+    </span>
+  );
 }
 
 // ── Trend arrow ───────────────────────────────────────────────────────────────
@@ -47,6 +60,11 @@ function TrainingLogCard({ log, prevLog, defaultOpen }) {
     );
   }, [prevLog]);
 
+  // Split entries into plan, monitoring, and new flags
+  const planEntries     = (log.trainingEntries ?? []).filter(e => e.targetId && !e.isNew && !e.isMonitoring);
+  const monitoringItems = (log.trainingEntries ?? []).filter(e => e.isMonitoring);
+  const newFlags        = (log.trainingEntries ?? []).filter(e => e.isNew);
+
   return (
     <div className="border-b border-stone-100 last:border-b-0">
 
@@ -66,6 +84,25 @@ function TrainingLogCard({ log, prevLog, defaultOpen }) {
         <span className="text-[11px] text-slate-400 flex-shrink-0">·</span>
         <span className="text-[12px] text-slate-500 truncate">{log.bcbaName}</span>
 
+        {!open && (() => {
+          const masteredCount = planEntries.filter(e => e.stoStatus === 'met').length;
+          return masteredCount > 0 && (
+            <span className="flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+              {masteredCount} mastered ✓
+            </span>
+          );
+        })()}
+        {newFlags.length > 0 && (
+          <span className="text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full flex-shrink-0">
+            🚩 {newFlags.length} new
+          </span>
+        )}
+        {monitoringItems.length > 0 && (
+          <span className="text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.5 rounded-full flex-shrink-0">
+            {monitoringItems.length} monitoring
+          </span>
+        )}
+
         <span className="ml-auto text-[11px] text-slate-400 flex-shrink-0">{open ? '▲' : '▼'}</span>
       </button>
 
@@ -73,10 +110,10 @@ function TrainingLogCard({ log, prevLog, defaultOpen }) {
       {open && (
         <div className="px-5 pb-4 space-y-3">
 
-          {/* Training entries */}
-          {(log.trainingEntries ?? []).length > 0 && (
+          {/* Plan training entries */}
+          {planEntries.length > 0 && (
             <div className="space-y-2.5">
-              {log.trainingEntries.map((entry, i) => (
+              {planEntries.map((entry, i) => (
                 <div key={entry.targetId ?? i} className="flex items-start gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-[13px] font-medium text-slate-800 leading-snug">
@@ -97,12 +134,52 @@ function TrainingLogCard({ log, prevLog, defaultOpen }) {
                           />
                         </span>
                       )}
-                      <span
-                        className={`text-[11px] font-medium ${stoStatusColor(entry.stoStatus)}`}
-                      >
-                        STO #{entry.currentStoNumber} — {stoStatusLabel(entry.stoStatus)}
-                      </span>
+                      <StoStatusChip stoNumber={entry.currentStoNumber} stoStatus={entry.stoStatus} />
                     </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Monitoring entries */}
+          {monitoringItems.length > 0 && (
+            <div className="pt-2 border-t border-stone-100 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-teal-600">Monitoring</p>
+              {monitoringItems.map((entry, i) => (
+                <div key={entry.goalName + i} className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium text-slate-800 leading-snug">{entry.goalName}</p>
+                    <div className="flex items-center flex-wrap gap-x-2.5 gap-y-0.5 mt-0.5">
+                      {entry.baselinePercent != null && (
+                        <span className="text-[11px] text-slate-400">Baseline {entry.baselinePercent}%</span>
+                      )}
+                      {entry.sessionPercent != null && (
+                        <span className="text-[12px] text-slate-700 font-medium">{entry.sessionPercent}% this session</span>
+                      )}
+                      <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">Monitoring</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Newly flagged goals */}
+          {newFlags.length > 0 && (
+            <div className="pt-2 border-t border-stone-100 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600">New Goals Flagged</p>
+              {newFlags.map((entry, i) => (
+                <div key={entry.goalName + i} className="flex items-start gap-2">
+                  <span className="text-base leading-none mt-0.5">🚩</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-medium text-slate-800 leading-snug">{entry.goalName}</p>
+                    {entry.baselinePercent != null && (
+                      <p className="text-[11px] text-slate-400">Baseline {entry.baselinePercent}%</p>
+                    )}
+                    {entry.notes?.trim() && (
+                      <p className="text-[12px] text-slate-500 italic leading-relaxed mt-0.5">{entry.notes}</p>
+                    )}
                   </div>
                 </div>
               ))}

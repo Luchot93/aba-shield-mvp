@@ -43,6 +43,7 @@ export default function SectionCard({
   onRecordStart,
   addNotif,
   headerContent = null,
+  isReassessment = false,
 }) {
   const section = session?.sections?.[sectionKey];
   if (!section) return null;
@@ -158,14 +159,14 @@ export default function SectionCard({
             />
           ) : isCommunication ? (
             <>
-              {/* 1. Guide the interview */}
-              <GuidedPrompts sectionKey={sectionKey} />
-              {/* 2. Capture it */}
-              <div className="mb-3">
-                <RecordButton clientId={clientId} sectionKey={sectionKey} session={session}
-                  setClients={setClients} addNotif={addNotif} onConsentNeeded={onRecordStart}/>
-              </div>
-              {hasTranscript && (
+              {!isReassessment && <GuidedPrompts sectionKey={sectionKey} />}
+              {!isReassessment && (
+                <div className="mb-3">
+                  <RecordButton clientId={clientId} sectionKey={sectionKey} session={session}
+                    setClients={setClients} addNotif={addNotif} onConsentNeeded={onRecordStart}/>
+                </div>
+              )}
+              {!isReassessment && hasTranscript && (
                 <div className="mb-3">
                   <button onClick={onTranscriptToggle}
                     className="flex items-center gap-1.5 text-[11px] font-semibold text-teal-600 hover:text-teal-800 mb-2 transition-colors">
@@ -181,22 +182,22 @@ export default function SectionCard({
                   )}
                 </div>
               )}
-              {/* 3. Document structured data */}
               <div className="border-t border-teal-100/60 my-4"/>
               <CommunicationForm clientId={clientId} session={session} setClients={setClients}/>
-              {/* 4. Additional notes */}
               <div className="border-t border-teal-100/60 my-4"/>
               <FreeTextNotes clientId={clientId} sectionKey={sectionKey}
                 section={section} setClients={setClients}/>
             </>
           ) : isSafety ? (
             <>
-              <GuidedPrompts sectionKey={sectionKey} />
-              <div className="mb-3">
-                <RecordButton clientId={clientId} sectionKey={sectionKey} session={session}
-                  setClients={setClients} addNotif={addNotif} onConsentNeeded={onRecordStart}/>
-              </div>
-              {hasTranscript && (
+              {!isReassessment && <GuidedPrompts sectionKey={sectionKey} />}
+              {!isReassessment && (
+                <div className="mb-3">
+                  <RecordButton clientId={clientId} sectionKey={sectionKey} session={session}
+                    setClients={setClients} addNotif={addNotif} onConsentNeeded={onRecordStart}/>
+                </div>
+              )}
+              {!isReassessment && hasTranscript && (
                 <div className="mb-3">
                   <button onClick={onTranscriptToggle}
                     className="flex items-center gap-1.5 text-[11px] font-semibold text-teal-600 hover:text-teal-800 mb-2 transition-colors">
@@ -220,12 +221,14 @@ export default function SectionCard({
             </>
           ) : isMedicalNecessity ? (
             <>
-              <GuidedPrompts sectionKey={sectionKey} />
-              <div className="mb-3">
-                <RecordButton clientId={clientId} sectionKey={sectionKey} session={session}
-                  setClients={setClients} addNotif={addNotif} onConsentNeeded={onRecordStart}/>
-              </div>
-              {hasTranscript && (
+              {!isReassessment && <GuidedPrompts sectionKey={sectionKey} />}
+              {!isReassessment && (
+                <div className="mb-3">
+                  <RecordButton clientId={clientId} sectionKey={sectionKey} session={session}
+                    setClients={setClients} addNotif={addNotif} onConsentNeeded={onRecordStart}/>
+                </div>
+              )}
+              {!isReassessment && hasTranscript && (
                 <div className="mb-3">
                   <button onClick={onTranscriptToggle}
                     className="flex items-center gap-1.5 text-[11px] font-semibold text-teal-600 hover:text-teal-800 mb-2 transition-colors">
@@ -251,12 +254,14 @@ export default function SectionCard({
             </>
           ) : isCrisisPlan ? (
             <>
-              <GuidedPrompts sectionKey={sectionKey} />
-              <div className="mb-3">
-                <RecordButton clientId={clientId} sectionKey={sectionKey} session={session}
-                  setClients={setClients} addNotif={addNotif} onConsentNeeded={onRecordStart}/>
-              </div>
-              {hasTranscript && (
+              {!isReassessment && <GuidedPrompts sectionKey={sectionKey} />}
+              {!isReassessment && (
+                <div className="mb-3">
+                  <RecordButton clientId={clientId} sectionKey={sectionKey} session={session}
+                    setClients={setClients} addNotif={addNotif} onConsentNeeded={onRecordStart}/>
+                </div>
+              )}
+              {!isReassessment && hasTranscript && (
                 <div className="mb-3">
                   <button onClick={onTranscriptToggle}
                     className="flex items-center gap-1.5 text-[11px] font-semibold text-teal-600 hover:text-teal-800 mb-2 transition-colors">
@@ -292,63 +297,68 @@ export default function SectionCard({
             />
           ) : isCaregiverTraining ? (
             <>
-              <GuidedPrompts sectionKey={sectionKey} />
-              <div className="border-t border-teal-100/60 my-4"/>
-              <CaregiverTrainingForm clientId={clientId} session={session} setClients={setClients}/>
-              <div className="border-t border-teal-100/60 my-4"/>
-              <div className="mb-3">
-                <RecordButton
-                  clientId={clientId}
-                  sectionKey={sectionKey}
-                  session={session}
-                  setClients={setClients}
-                  addNotif={addNotif}
-                  onConsentNeeded={onRecordStart}
-                />
-              </div>
-              {hasTranscript && (
-                <div className="mb-3">
-                  <button
-                    onClick={onTranscriptToggle}
-                    className="flex items-center gap-1.5 text-[11px] font-semibold text-teal-600 hover:text-teal-800 mb-2 transition-colors">
-                    <svg className={`w-3 h-3 transition-transform ${transcriptVisible ? 'rotate-180' : ''}`}
-                      fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
-                    </svg>
-                    {transcriptVisible ? 'Hide transcript' : 'Show transcript'}
-                  </button>
-                  {transcriptVisible && (
-                    <TranscriptPanel
+              {!isReassessment && <GuidedPrompts sectionKey={sectionKey} />}
+              {!isReassessment && <div className="border-t border-teal-100/60 my-4"/>}
+              <CaregiverTrainingForm clientId={clientId} session={session} setClients={setClients} isReassessment={isReassessment}/>
+              {!isReassessment && (
+                <>
+                  <div className="border-t border-teal-100/60 my-4"/>
+                  <div className="mb-3">
+                    <RecordButton
                       clientId={clientId}
                       sectionKey={sectionKey}
-                      section={section}
+                      session={session}
                       setClients={setClients}
+                      addNotif={addNotif}
+                      onConsentNeeded={onRecordStart}
                     />
+                  </div>
+                  {hasTranscript && (
+                    <div className="mb-3">
+                      <button
+                        onClick={onTranscriptToggle}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-teal-600 hover:text-teal-800 mb-2 transition-colors">
+                        <svg className={`w-3 h-3 transition-transform ${transcriptVisible ? 'rotate-180' : ''}`}
+                          fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                        {transcriptVisible ? 'Hide transcript' : 'Show transcript'}
+                      </button>
+                      {transcriptVisible && (
+                        <TranscriptPanel
+                          clientId={clientId}
+                          sectionKey={sectionKey}
+                          section={section}
+                          setClients={setClients}
+                        />
+                      )}
+                    </div>
                   )}
-                </div>
+                </>
               )}
-              <FreeTextNotes clientId={clientId} sectionKey={sectionKey}
-                section={section} setClients={setClients}/>
+              {!isReassessment && (
+                <FreeTextNotes clientId={clientId} sectionKey={sectionKey}
+                  section={section} setClients={setClients}/>
+              )}
             </>
           ) : (
             <>
-              {/* Guided prompts */}
-              <GuidedPrompts sectionKey={sectionKey} />
+              {!isReassessment && <GuidedPrompts sectionKey={sectionKey} />}
 
-              {/* Record button */}
-              <div className="mb-3">
-                <RecordButton
-                  clientId={clientId}
-                  sectionKey={sectionKey}
-                  session={session}
-                  setClients={setClients}
-                  addNotif={addNotif}
-                  onConsentNeeded={onRecordStart}
-                />
-              </div>
+              {!isReassessment && (
+                <div className="mb-3">
+                  <RecordButton
+                    clientId={clientId}
+                    sectionKey={sectionKey}
+                    session={session}
+                    setClients={setClients}
+                    addNotif={addNotif}
+                    onConsentNeeded={onRecordStart}
+                  />
+                </div>
+              )}
 
-              {/* Transcript (toggle) */}
-              {hasTranscript && (
+              {!isReassessment && hasTranscript && (
                 <div className="mb-3">
                   <button
                     onClick={onTranscriptToggle}

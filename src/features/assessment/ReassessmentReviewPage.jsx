@@ -17,7 +17,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Chart from 'chart.js/auto';
 import { patchSession } from './assessmentStore.js';
 import { generateAssessmentDoc } from './lib/generateAssessmentDoc.js';
-import { buildBehaviorTrendFromLogs } from './graphBuilder.js';
+import { buildBehaviorTrendFromLogs, buildSkillTrendFromLogs } from './graphBuilder.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -452,8 +452,8 @@ function SkillProgressRow({ item, onPatch }) {
   );
 }
 
-/** Card for one skill — summary row + always-visible progress bar with session observation count. */
-function SkillCard({ item, onPatch, sessionLogs }) {
+/** Card for one skill — summary row + Chart.js session accuracy chart. */
+function SkillCard({ item, onPatch, sessionLogs, skillGoal }) {
   const [localPct, setLocalPct] = useState(
     item.currentPercent != null ? String(item.currentPercent) : '',
   );
@@ -469,17 +469,6 @@ function SkillCard({ item, onPatch, sessionLogs }) {
   };
 
   const statusClass = SKILL_STATUS_COLORS[item.status] ?? SKILL_STATUS_COLORS.new;
-
-  const observedCount = (sessionLogs ?? []).filter(log =>
-    (log.skillEntries ?? []).some(e =>
-      item.skillId ? e.skillId === item.skillId : e.skillName === item.skillName,
-    )
-  ).length;
-  const totalSessions = (sessionLogs ?? []).length;
-
-  const currentVal = !isNaN(parsedPct) ? parsedPct : (item.currentPercent ?? null);
-  const barWidth   = currentVal !== null ? Math.min(100, Math.max(0, currentVal)) : 0;
-  const baseline   = item.baselinePercent ?? 0;
 
   return (
     <div className="rounded-xl border border-stone-200 bg-white overflow-hidden">
@@ -516,37 +505,16 @@ function SkillCard({ item, onPatch, sessionLogs }) {
         </select>
       </div>
 
-      {/* Progress bar */}
-      <div className="px-3.5 pb-2.5 bg-stone-50 border-t border-stone-100">
-        <div className="relative h-1.5 bg-stone-200 rounded-full overflow-hidden mt-2">
-          {currentVal !== null && (
-            <div
-              className="absolute left-0 top-0 h-full rounded-full transition-all duration-300"
-              style={{ width: `${barWidth}%`, background: 'rgba(20,184,166,0.6)' }}
-            />
-          )}
-          {baseline > 0 && (
-            <div
-              className="absolute top-0 h-full w-0.5 bg-slate-400"
-              style={{ left: `${Math.min(100, baseline)}%` }}
-            />
-          )}
-        </div>
-        <div className="flex items-center justify-between mt-1">
-          <span className="text-[10px] text-slate-400">
-            Base {item.baselinePercent ?? '—'}%
-            {currentVal !== null
-              ? <span className="text-teal-600 font-semibold ml-1">→ {currentVal}%</span>
-              : <span className="text-slate-300 ml-1">→ enter current %</span>}
-          </span>
-          {totalSessions > 0 && (
-            <span className="text-[10px] text-slate-400">
-              {observedCount > 0
-                ? `Observed ${observedCount}/${totalSessions} sessions`
-                : 'Not in session logs'}
-            </span>
-          )}
-        </div>
+      {/* Session accuracy chart */}
+      <div className="border-t border-stone-100">
+        <SkillProgressChart
+          skillId={item.skillId}
+          skillName={item.skillName}
+          baselinePercent={item.baselinePercent ?? 0}
+          stoSteps={skillGoal?.stoSteps ?? []}
+          masteryCriteriaPercent={skillGoal?.masteryCriteriaPercent ?? 80}
+          sessionLogs={sessionLogs}
+        />
       </div>
     </div>
   );
@@ -567,6 +535,147 @@ function NewSkillRow({ item }) {
       <span className="text-sm font-medium text-slate-700 truncate flex-1">
         {item.skillName ?? item.bcbaGoalName ?? '(unnamed)'}
       </span>
+    </div>
+  );
+}
+
+// ─── Panel B — Skill progress chart ──────────────────────────────────────────
+
+/**
+ * Inline Chart.js line chart for one skill acquisition goal.
+ * Shows per-session accuracy % with baseline, per-STO, and mastery reference lines.
+ */
+function SkillProgressChart({ skillId, skillName, baselinePercent, stoSteps, masteryCriteriaPercent, sessionLogs }) {
+  const canvasRef = useRef(null);
+  const chartRef  = useRef(null);
+
+  const { entries, average, trend } = buildSkillTrendFromLogs(sessionLogs ?? [], skillId);
+
+  const baseline  = Number(baselinePercent ?? 0);
+  const mastery   = Number(masteryCriteriaPercent ?? 80);
+  const validSTOs = (stoSteps ?? []).filter(s => s.targetPercent !== '' && s.targetPercent != null);
+
+  const trendIcon  = trend === 'improving' ? '↑' : trend === 'worsening' ? '↓' : '→';
+  const trendColor = trend === 'improving' ? '#10B981' : trend === 'worsening' ? '#EF4444' : '#94A3B8';
+
+  const dataKey = JSON.stringify({ entries, baseline, validSTOs, mastery });
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; }
+
+    const n      = Math.max(entries.length, 2);
+    const labels = entries.length > 0 ? entries.map((_, i) => `S${i + 1}`) : [''];
+
+    const refLine = val => (val != null ? Array(n).fill(val) : null);
+
+    const datasets = [];
+
+    if (entries.length > 0) {
+      datasets.push({
+        type:            'line',
+        label:           'Accuracy %',
+        data:            entries.map(e => e.accuracy),
+        borderColor:     'rgba(20,184,166,1)',
+        backgroundColor: 'rgba(20,184,166,0.10)',
+        borderWidth:     2,
+        pointRadius:     4,
+        pointBackgroundColor: 'rgba(20,184,166,1)',
+        tension:         0.3,
+        fill:            false,
+        order:           1,
+      });
+    }
+
+    const baseData = refLine(baseline);
+    if (baseData) datasets.push({
+      type: 'line', label: `Baseline (${baseline}%)`, data: baseData,
+      borderColor: 'rgba(148,163,184,0.7)', borderWidth: 1.5,
+      borderDash: [4, 3], pointRadius: 0, fill: false, order: 5,
+    });
+
+    validSTOs.forEach((s, i) => {
+      const val = Number(s.targetPercent);
+      if (isNaN(val)) return;
+      datasets.push({
+        type: 'line', label: `STO ${i + 1} (${val}%)`, data: refLine(val),
+        borderColor: 'rgba(245,158,11,0.8)', borderWidth: 1.5,
+        borderDash: [6, 3], pointRadius: 0, fill: false, order: 4,
+      });
+    });
+
+    const masteryData = refLine(mastery);
+    if (masteryData) datasets.push({
+      type: 'line', label: `Mastery (${mastery}%)`, data: masteryData,
+      borderColor: 'rgba(52,211,153,0.9)', borderWidth: 1.5,
+      borderDash: [3, 3], pointRadius: 0, fill: false, order: 3,
+    });
+
+    chartRef.current = new Chart(canvasRef.current.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets },
+      options: {
+        responsive:          true,
+        maintainAspectRatio: false,
+        animation:           false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels:   { boxWidth: 12, font: { size: 10 }, color: '#64748B' },
+          },
+          tooltip: {
+            callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}%` },
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            max:         100,
+            ticks:       { callback: v => `${v}%`, font: { size: 10 }, color: '#94A3B8' },
+            grid:        { color: 'rgba(0,0,0,0.04)' },
+          },
+          x: {
+            ticks: { font: { size: 10 }, color: '#94A3B8' },
+            grid:  { display: false },
+          },
+        },
+      },
+    });
+
+    return () => { if (chartRef.current) { chartRef.current.destroy(); chartRef.current = null; } };
+  }, [dataKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="rounded-xl border border-stone-200 bg-stone-50 overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-stone-100 bg-white">
+        <p className="text-[12px] font-bold text-slate-700">{skillName}</p>
+      </div>
+      <div className="px-4 pt-3 pb-2 relative" style={{ height: 180 }}>
+        <canvas ref={canvasRef} />
+        {entries.length === 0 && (
+          <div className="absolute inset-0 flex items-end justify-center pb-4 pointer-events-none">
+            <p className="text-[11px] text-slate-400 font-semibold bg-white/80 px-2 py-0.5 rounded">
+              No session data logged yet.
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-4 px-4 py-2 border-t border-stone-100 bg-white flex-wrap">
+        <span className="text-[11px] text-slate-500 font-semibold">
+          {entries.length} session{entries.length !== 1 ? 's' : ''} logged
+        </span>
+        {average != null && (
+          <span className="text-[11px] text-slate-500 font-semibold">
+            Avg:{' '}
+            <span className="text-slate-700" style={{ fontFamily: 'DM Mono, monospace' }}>
+              {average.toFixed(1)}%
+            </span>
+          </span>
+        )}
+        <span className="text-[11px] font-bold" style={{ color: trendColor }}>
+          Trend {trendIcon}
+        </span>
+      </div>
     </div>
   );
 }
@@ -768,6 +877,7 @@ export default function ReassessmentReviewPage({
   const ctLogs          = client?.caregiver_training_session_logs ?? [];
   const sessionLogs     = client?.service_session_logs ?? [];
   const behaviorTargets = session?.sections?.behavior_targets?.behaviorTargets ?? [];
+  const skillGoalsDefs  = session?.sections?.skill_acquisitions?.skillGoals ?? [];
 
   // ── Patch helpers (immutable array updates via patchSession) ──────────────
   const patchOrigBehavior = (idx, patch) =>
@@ -987,14 +1097,18 @@ export default function ReassessmentReviewPage({
                   <p className="text-sm text-slate-400 py-6 text-center">No skill goals from treatment plan.</p>
                 ) : (
                   <div className="space-y-2">
-                    {origSkills.map((item, i) => (
-                      <SkillCard
-                        key={item.skillId ?? item.skillName ?? i}
-                        item={item}
-                        onPatch={patch => patchOrigSkill(i, patch)}
-                        sessionLogs={sessionLogs}
-                      />
-                    ))}
+                    {origSkills.map((item, i) => {
+                      const skillGoal = skillGoalsDefs.find(g => g.id === item.skillId) ?? null;
+                      return (
+                        <SkillCard
+                          key={item.skillId ?? item.skillName ?? i}
+                          item={item}
+                          onPatch={patch => patchOrigSkill(i, patch)}
+                          sessionLogs={sessionLogs}
+                          skillGoal={skillGoal}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>

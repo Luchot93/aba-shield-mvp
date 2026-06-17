@@ -53,6 +53,22 @@ export default function LogSessionModal({ client, onSave, onClose, currentUser }
     );
   }, [client]);
 
+  // Build a map from the latest existing log for default STO number per skill goal
+  const latestSkillLogMap = useMemo(() => {
+    const logs = client?.service_session_logs ?? [];
+    if (logs.length === 0) return {};
+    const sorted = [...logs].sort((a, b) => b.sessionNumber - a.sessionNumber);
+    const result = {};
+    for (const log of sorted) {
+      for (const se of (log.skillEntries ?? [])) {
+        if (!se.isNew && se.skillId && !result[se.skillId]) {
+          result[se.skillId] = se;
+        }
+      }
+    }
+    return result;
+  }, [client]);
+
   // ── SECTION 1 — Date + notes ──
   const [sessionDate, setSessionDate] = useState(todayIso);
   const [notes,       setNotes]       = useState('');
@@ -90,6 +106,25 @@ export default function LogSessionModal({ client, onSave, onClose, currentUser }
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  }
+
+  // ── SECTION 2b — Skill progress entries (one row per treatment-plan skill goal) ──
+  const [skillProgressEntries, setSkillProgressEntries] = useState(() =>
+    skillGoals.map(g => {
+      const prev = latestSkillLogMap[g.id];
+      return {
+        skillId:          g.id,
+        skillName:        g.targetSkill,
+        isNew:            false,
+        accuracyPercent:  '',
+        currentStoNumber: prev?.currentStoNumber ?? 1,
+        stoStatus:        prev?.stoStatus ?? 'in_progress',
+      };
+    }),
+  );
+
+  function updateSkillEntry(idx, field, value) {
+    setSkillProgressEntries(prev => prev.map((e, i) => (i === idx ? { ...e, [field]: value } : e)));
   }
 
   // ── SECTION 3 — New behavior (collapsed by default) ──
@@ -152,15 +187,29 @@ export default function LogSessionModal({ client, onSave, onClose, currentUser }
         : []),
     ];
 
-    const skillEntries = newSkillValid
-      ? [{
-          skillId:      null,
-          skillName:    newSkillName.trim(),
-          isNew:        true,
-          firstSeenDate: sessionDate,
-          notes:        newSkillNotes.trim(),
-        }]
-      : [];
+    const skillEntries = [
+      // existing plan skills with accuracy entered
+      ...skillProgressEntries
+        .filter(e => e.accuracyPercent !== '' && !isNaN(parseFloat(e.accuracyPercent)))
+        .map(e => ({
+          skillId:          e.skillId,
+          skillName:        e.skillName,
+          isNew:            false,
+          accuracyPercent:  parseFloat(e.accuracyPercent),
+          currentStoNumber: e.currentStoNumber,
+          stoStatus:        e.stoStatus,
+        })),
+      // newly flagged skill (if valid)
+      ...(newSkillValid
+        ? [{
+            skillId:       null,
+            skillName:     newSkillName.trim(),
+            isNew:         true,
+            firstSeenDate: sessionDate,
+            notes:         newSkillNotes.trim(),
+          }]
+        : []),
+    ];
 
     const sessionNumber = (client?.service_session_logs?.length ?? 0) + 1;
 
@@ -393,6 +442,129 @@ export default function LogSessionModal({ client, onSave, onClose, currentUser }
                               value={opt.value}
                               checked={entry.stoStatus === opt.value}
                               onChange={() => updateEntry(idx, 'stoStatus', opt.value)}
+                              className="accent-teal-600"
+                            />
+                            <span className="text-[12px] text-slate-700">{opt.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ── SECTION 2b: Skill acquisition targets from treatment plan ── */}
+          {skillGoals.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                Skill Acquisition Targets <span className="font-normal normal-case text-slate-300">(optional)</span>
+              </p>
+
+              {skillProgressEntries.map((entry, idx) => {
+                const g     = skillGoals[idx];
+                const stoIdx = (entry.currentStoNumber ?? 1) - 1;
+                const stoStep = g?.stoSteps?.[stoIdx];
+                const prevEntry = latestSkillLogMap[entry.skillId];
+
+                return (
+                  <div
+                    key={entry.skillId}
+                    className="border border-stone-200 rounded-xl p-3.5 space-y-2.5"
+                  >
+                    {/* Name + domain chip */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[13px] font-semibold text-slate-800 leading-snug">
+                        {entry.skillName}
+                      </span>
+                      {g?.domain && (
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-teal-100 text-teal-700">
+                          {g.domain}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Clinical context strip */}
+                    <div className="flex items-center gap-2 flex-wrap text-[11px] text-slate-400">
+                      {g?.baselinePercent != null && (
+                        <span>
+                          Baseline{' '}
+                          <span className="font-medium text-slate-500">{g.baselinePercent}%</span>
+                        </span>
+                      )}
+
+                      {prevEntry?.accuracyPercent != null && (() => {
+                        const prev  = prevEntry.accuracyPercent;
+                        const base  = Number(g?.baselinePercent ?? 0);
+                        const color = prev > base ? 'text-emerald-600' : prev < base ? 'text-rose-500' : 'text-slate-500';
+                        const arrow = prev > base ? ' ↑' : prev < base ? ' ↓' : ' →';
+                        return (
+                          <>
+                            <span className="text-stone-200">·</span>
+                            <span>
+                              Last session:{' '}
+                              <span className={`font-medium ${color}`}>{prev}%{arrow}</span>
+                            </span>
+                          </>
+                        );
+                      })()}
+
+                      {stoStep?.targetPercent != null && stoStep.targetPercent !== '' && (
+                        <>
+                          <span className="text-stone-200">·</span>
+                          <span>
+                            STO #{entry.currentStoNumber} goal:{' '}
+                            <span className="font-medium text-amber-600">{stoStep.targetPercent}%</span>
+                          </span>
+                        </>
+                      )}
+
+                      {g?.masteryCriteriaPercent != null && g.masteryCriteriaPercent !== '' && (
+                        <>
+                          <span className="text-stone-200">·</span>
+                          <span>
+                            Mastery:{' '}
+                            <span className="font-medium text-teal-600">{g.masteryCriteriaPercent}%</span>
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Accuracy input */}
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <label className="text-[11px] text-slate-500 font-medium">
+                        Accuracy this session:
+                      </label>
+                      <input
+                        type="number"
+                        min="0" max="100" step="1"
+                        value={entry.accuracyPercent}
+                        onChange={e => updateSkillEntry(idx, 'accuracyPercent', e.target.value)}
+                        placeholder="—"
+                        className="w-16 border border-stone-200 rounded-lg px-2 py-1 text-sm text-slate-800 text-center focus:outline-none focus:ring-2 focus:ring-teal-400"
+                      />
+                      <span className="text-[11px] text-slate-400">%</span>
+                    </div>
+
+                    {/* STO status */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[11px] text-slate-400 flex-shrink-0">
+                          Working on STO #{entry.currentStoNumber}
+                        </span>
+                        <span className="text-[11px] text-slate-300 flex-shrink-0">·</span>
+                        <span className="text-[11px] text-slate-400 flex-shrink-0">Status:</span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {STO_STATUS_OPTIONS.map(opt => (
+                          <label key={opt.value} className="flex items-center gap-1 cursor-pointer">
+                            <input
+                              type="radio"
+                              name={`skill_sto_status_${entry.skillId}`}
+                              value={opt.value}
+                              checked={entry.stoStatus === opt.value}
+                              onChange={() => updateSkillEntry(idx, 'stoStatus', opt.value)}
                               className="accent-teal-600"
                             />
                             <span className="text-[12px] text-slate-700">{opt.label}</span>

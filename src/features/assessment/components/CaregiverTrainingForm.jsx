@@ -443,13 +443,15 @@ function TrainingTargetCard({ target, index, clientId, setClients }) {
 
 // ─── CaregiverTrainingForm ─────────────────────────────────────────────────────
 
-export default function CaregiverTrainingForm({ clientId, session, setClients }) {
+export default function CaregiverTrainingForm({ clientId, session, setClients, isReassessment = false }) {
   const sec      = session?.sections?.['caregiver_training'] ?? {};
   const format    = sec.trainingFormat ?? [];
   const freq      = sec.trainingFrequency ?? '';
   const barriers  = sec.trainingBarriers ?? '';
   const strengths = sec.caregiverStrengths ?? '';
   const targets   = sec.caregiverTrainingTargets ?? [];
+
+  if (isReassessment) return null;
 
   const patch = (fields) =>
     patchSection(setClients, clientId, 'caregiver_training', {
@@ -481,27 +483,33 @@ export default function CaregiverTrainingForm({ clientId, session, setClients })
               </span>
             )}
           </p>
-          <button
-            type="button"
-            onClick={() => addCaregiverTrainingTarget(clientId, null, setClients)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-200 text-slate-600 hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50/40 transition-all">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
-            </svg>
-            Add goal
-          </button>
+          {!isReassessment && (
+            <button
+              type="button"
+              onClick={() => addCaregiverTrainingTarget(clientId, null, setClients)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-stone-200 text-slate-600 hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50/40 transition-all">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+              </svg>
+              Add goal
+            </button>
+          )}
         </div>
         {targets.length === 0 ? (
-          <button
-            type="button"
-            onClick={() => addCaregiverTrainingTarget(clientId, null, setClients)}
-            className="w-full flex flex-col items-center gap-2 py-8 border-2 border-dashed border-stone-200 rounded-xl text-slate-400 hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50/40 transition-all mb-2">
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
-            </svg>
-            <span className="text-sm font-semibold">Add your first training goal</span>
-            <span className="text-xs">Each goal becomes a caregiver training objective in the plan</span>
-          </button>
+          !isReassessment ? (
+            <button
+              type="button"
+              onClick={() => addCaregiverTrainingTarget(clientId, null, setClients)}
+              className="w-full flex flex-col items-center gap-2 py-8 border-2 border-dashed border-stone-200 rounded-xl text-slate-400 hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50/40 transition-all mb-2">
+              <svg className="w-7 h-7" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+              </svg>
+              <span className="text-sm font-semibold">Add your first training goal</span>
+              <span className="text-xs">Each goal becomes a caregiver training objective in the plan</span>
+            </button>
+          ) : (
+            <p className="text-[13px] text-slate-400 text-center py-4">Training targets defined in the initial assessment.</p>
+          )
         ) : (
           targets.map((t, i) => (
             <TrainingTargetCard

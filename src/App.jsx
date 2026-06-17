@@ -57,39 +57,126 @@ export default function App() {
       // 2. Check archived sessions for an in-progress entry
       const inProgress = (client.reassessment_sessions ?? []).find(s => s.status !== 'complete');
 
+      // Always regenerate from the latest session logs so newly-logged sessions
+      // (flagged behaviors, skill entries) appear. Merge back any BCBA edits already made.
+      const authEnd   = client.auth_expiry_date ?? null;
+      const authStart = authEnd
+        ? new Date(new Date(authEnd).setMonth(new Date(authEnd).getMonth() - 6))
+            .toISOString().slice(0, 10)
+        : null;
+      const freshSession = makeReassessmentSession(
+        client,
+        client._initialAssessment ?? client.assessment_session,
+        client.service_session_logs ?? [],
+        authStart,
+        authEnd,
+      );
+
+      // If there's an in-progress session, preserve BCBA edits by merging them in
       if (inProgress) {
-        setClients(prev => prev.map(c => {
-          if (c.id !== cId) return c;
-          return {
-            ...c,
-            _initialAssessment: c.assessment_session,
-            assessment_session: inProgress,
-          };
-        }));
-      } else {
-        // 3. Create a new reassessment session from the initial assessment + session logs
-        const authEnd   = client.auth_expiry_date ?? null;
-        const authStart = authEnd
-          ? new Date(new Date(authEnd).setMonth(new Date(authEnd).getMonth() - 6))
-              .toISOString().slice(0, 10)
-          : null;
-        const newSession = makeReassessmentSession(
-          client,
-          client.assessment_session,
-          client.service_session_logs ?? [],
-          authStart,
-          authEnd,
+        const bcbaNewBehaviorEdits = Object.fromEntries(
+          (inProgress.newBehaviorSummary ?? []).map(item => [item.behaviorName, item]),
         );
-        setClients(prev => prev.map(c => {
-          if (c.id !== cId) return c;
+        const bcbaOrigBehaviorEdits = Object.fromEntries(
+          (inProgress.originalBehaviorSummary ?? []).map(item => [item.behaviorId ?? item.behaviorName, item]),
+        );
+        const bcbaNewSkillEdits = Object.fromEntries(
+          (inProgress.newSkillSummary ?? []).map(item => [item.skillName, item]),
+        );
+        const bcbaOrigSkillEdits = Object.fromEntries(
+          (inProgress.originalSkillSummary ?? []).map(item => [item.skillId ?? item.skillName, item]),
+        );
+
+        freshSession.newBehaviorSummary = (freshSession.newBehaviorSummary ?? []).map(item => {
+          const saved = bcbaNewBehaviorEdits[item.behaviorName];
+          if (!saved) return item;
           return {
-            ...c,
-            _initialAssessment: c.assessment_session,
-            assessment_session: newSession,
-            reassessment_sessions: [...(c.reassessment_sessions ?? []), newSession],
+            ...item,
+            bcbaDefinitionFinal:      saved.bcbaDefinitionFinal ?? item.bcbaDefinitionFinal,
+            function:                 saved.includedInPlan != null ? (saved.function ?? item.function) : item.function,
+            includedInPlan:           saved.includedInPlan,
+            stoStructure:             saved.stoStructure ?? item.stoStructure,
+            masteryCriteriaFrequency: saved.masteryCriteriaFrequency ?? item.masteryCriteriaFrequency,
+            masteryCriteriaWeeks:     saved.masteryCriteriaWeeks ?? item.masteryCriteriaWeeks,
+            bcbaLtoText:              saved.bcbaLtoText ?? item.bcbaLtoText,
           };
-        }));
+        });
+
+        freshSession.originalBehaviorSummary = (freshSession.originalBehaviorSummary ?? []).map(item => {
+          const saved = bcbaOrigBehaviorEdits[item.behaviorId ?? item.behaviorName];
+          if (!saved) return item;
+          return {
+            ...item,
+            averageFrequency: saved.averageFrequency ?? item.averageFrequency,
+            stoStatus:        saved.stoStatus ?? item.stoStatus,
+            // sessionDerivedStoStatus always comes from live session logs — never merge saved BCBA value.
+            // The Mastered/Active partition in AssessmentInterviewPage reads this field.
+            sessionDerivedStoStatus: item.sessionDerivedStoStatus,
+          };
+        });
+
+        freshSession.newSkillSummary = (freshSession.newSkillSummary ?? []).map(item => {
+          const saved = bcbaNewSkillEdits[item.skillName];
+          if (!saved) return item;
+          return {
+            ...item,
+            bcbaGoalName:          saved.bcbaGoalName ?? item.bcbaGoalName,
+            bcbaDefinition:        saved.bcbaDefinition ?? item.bcbaDefinition,
+            bcbaDomain:            saved.bcbaDomain ?? item.bcbaDomain,
+            includedInPlan:        saved.includedInPlan,
+            stoSteps:              saved.stoSteps ?? item.stoSteps,
+            masteryCriteriaPercent: saved.masteryCriteriaPercent ?? item.masteryCriteriaPercent,
+            masteryCriteriaWeeks:   saved.masteryCriteriaWeeks ?? item.masteryCriteriaWeeks,
+            bcbaLtoText:            saved.bcbaLtoText ?? item.bcbaLtoText,
+            baselinePct:            saved.baselinePct ?? item.baselinePct,
+          };
+        });
+
+        freshSession.originalSkillSummary = (freshSession.originalSkillSummary ?? []).map(item => {
+          const saved = bcbaOrigSkillEdits[item.skillId ?? item.skillName];
+          if (!saved) return item;
+          return {
+            ...item,
+            currentPercent: saved.currentPercent ?? item.currentPercent,
+            status:         saved.status ?? item.status,
+            // sessionDerivedStatus always comes from live session logs — never merge saved BCBA value.
+            sessionDerivedStatus: item.sessionDerivedStatus,
+          };
+        });
+
+        // Merge newCaregiverSummary BCBA edits
+        const bcbaCgEdits = Object.fromEntries(
+          (inProgress.newCaregiverSummary ?? []).map(item => [item.goalName, item]),
+        );
+        freshSession.newCaregiverSummary = (freshSession.newCaregiverSummary ?? []).map(item => {
+          const saved = bcbaCgEdits[item.goalName];
+          if (!saved) return item;
+          return {
+            ...item,
+            includedInPlan:         saved.includedInPlan,
+            stoSteps:               saved.stoSteps ?? item.stoSteps,
+            masteryCriteriaPercent: saved.masteryCriteriaPercent ?? item.masteryCriteriaPercent,
+            masteryCriteriaWeeks:   saved.masteryCriteriaWeeks ?? item.masteryCriteriaWeeks,
+            bcbaLtoText:            saved.bcbaLtoText ?? item.bcbaLtoText,
+          };
+        });
+
+        // Preserve session-level fields (BCBA-reviewed AI sections, status, etc.)
+        freshSession.id     = inProgress.id;
+        freshSession.status = inProgress.status;
+        freshSession.sectionApprovalStatus = inProgress.sectionApprovalStatus ?? freshSession.sectionApprovalStatus;
       }
+
+      setClients(prev => prev.map(c => {
+        if (c.id !== cId) return c;
+        const existingSessions = (c.reassessment_sessions ?? []).filter(s => s.id !== freshSession.id);
+        return {
+          ...c,
+          _initialAssessment: c._initialAssessment ?? c.assessment_session,
+          assessment_session: freshSession,
+          reassessment_sessions: [...existingSessions, freshSession],
+        };
+      }));
 
       setAssessmentClientId(cId);
       setPage('assessment');

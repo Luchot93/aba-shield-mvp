@@ -93,6 +93,24 @@ function ProgressNoteCard({ session, clientId, setClients, sectionIndex, isExpan
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
 /** Compact collapsible table for per-session data. columns: [{key, label}], rows: [object] */
+function StoStatusCellChip({ statusRaw, label }) {
+  if (!statusRaw || statusRaw === '—') return <span className="text-slate-400">{label ?? '—'}</span>;
+  if (statusRaw === 'met') {
+    return (
+      <span className="inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+        Met ✓
+      </span>
+    );
+  }
+  if (statusRaw === 'in_progress') {
+    return <span className="text-[11px] font-semibold text-teal-600 whitespace-nowrap">{label ?? 'In progress'}</span>;
+  }
+  if (statusRaw === 'regressed') {
+    return <span className="text-[11px] font-semibold text-red-500 whitespace-nowrap">{label ?? 'Regressed'}</span>;
+  }
+  return <span className="text-[11px] text-slate-400 whitespace-nowrap">{label ?? statusRaw}</span>;
+}
+
 function SessionDetailTable({ columns, rows }) {
   const [open, setOpen] = useState(false);
   if (rows.length === 0) return null;
@@ -129,7 +147,9 @@ function SessionDetailTable({ columns, rows }) {
                 <tr key={i} className="border-t border-stone-100">
                   {columns.map(c => (
                     <td key={c.key} className="px-2.5 py-1.5 text-[11px] text-slate-600">
-                      {row[c.key] ?? '—'}
+                      {c.key === 'status' && row.statusRaw !== undefined
+                        ? <StoStatusCellChip statusRaw={row.statusRaw} label={row.status} />
+                        : (row[c.key] ?? '—')}
                     </td>
                   ))}
                 </tr>
@@ -142,19 +162,33 @@ function SessionDetailTable({ columns, rows }) {
   );
 }
 
-const STO_STATUS_OPTIONS = [
-  { value: 'not_yet_started', label: 'Not Started' },
-  { value: 'in_progress',     label: 'In Progress' },
-  { value: 'mastered',        label: 'Mastered'    },
-  { value: 'discontinued',    label: 'Discontinued'},
-];
-
-const STO_STATUS_COLORS = {
-  not_yet_started: 'text-slate-500 bg-slate-50 border-slate-200',
-  in_progress:     'text-amber-700 bg-amber-50 border-amber-200',
-  mastered:        'text-emerald-700 bg-emerald-50 border-emerald-200',
-  discontinued:    'text-red-600 bg-red-50 border-red-200',
-};
+// ── Read-only status badge for reassessment rows ──────────────────────────────
+// Derives status from session logs (sessionDerivedStoStatus / sessionDerivedStatus),
+// falling back to the item field. Replaces the editable dropdown — status is now
+// driven by what RBTs actually logged, not by BCBA manual entry.
+function ReassessmentStatusBadge({ status }) {
+  const s = status ?? 'not_yet_started';
+  if (s === 'met' || s === 'mastered') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+        Mastered ✓
+      </span>
+    );
+  }
+  if (s === 'in_progress') {
+    return (
+      <span className="inline-flex items-center text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap">
+        In Progress
+      </span>
+    );
+  }
+  // 'new', 'not_yet_started', or anything else
+  return (
+    <span className="inline-flex items-center text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-500 border border-slate-200 whitespace-nowrap">
+      Not Started
+    </span>
+  );
+}
 
 const FUNCTIONS = ['Escape', 'Attention', 'Access', 'Automatic'];
 
@@ -185,8 +219,6 @@ function OrigBehaviorRow({ item, idx, patchOrigItem, sessionLogs }) {
     if (!isNaN(parsedAvg)) patchOrigItem(idx, { averageFrequency: parsedAvg });
   };
 
-  const statusColorClass = STO_STATUS_COLORS[item.stoStatus] ?? STO_STATUS_COLORS.in_progress;
-
   // Build per-session rows for the detail table
   const sessionRows = (sessionLogs ?? [])
     .filter(log => (log.behaviorEntries ?? []).some(be => be.behaviorId === item.behaviorId))
@@ -202,6 +234,7 @@ function OrigBehaviorRow({ item, idx, patchOrigItem, sessionLogs }) {
         frequency: be?.sessionFrequency ?? '—',
         sto:       be?.currentStoNumber != null ? `STO ${be.currentStoNumber}` : '—',
         status:    stoStatusLabel,
+        statusRaw: be?.stoStatus ?? null,
       };
     });
 
@@ -209,9 +242,14 @@ function OrigBehaviorRow({ item, idx, patchOrigItem, sessionLogs }) {
     <>
       <tr className="border-t border-stone-100 align-middle">
 
-        {/* Behavior name */}
-        <td className="py-2.5 pr-3 text-sm font-medium text-slate-700 whitespace-nowrap">
-          {item.behaviorName}
+        {/* Behavior name + LTO */}
+        <td className="py-2.5 pr-3 whitespace-nowrap">
+          <p className="text-sm font-medium text-slate-700">{item.behaviorName}</p>
+          {item.ltoFrequency != null && (
+            <p className="text-[10px] text-teal-600 mt-0.5 font-medium">
+              LTO: ≤{item.ltoFrequency}× per day
+            </p>
+          )}
         </td>
 
         {/* Baseline */}
@@ -248,18 +286,9 @@ function OrigBehaviorRow({ item, idx, patchOrigItem, sessionLogs }) {
           STO {item.currentStoNumber ?? 1}
         </td>
 
-        {/* STO status (editable dropdown) */}
+        {/* STO status — read-only badge derived from session logs */}
         <td className="py-2.5 pl-2">
-          <select
-            value={item.stoStatus ?? 'in_progress'}
-            onChange={e => patchOrigItem(idx, { stoStatus: e.target.value })}
-            className={`text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${statusColorClass}`}
-            style={{ fontFamily: 'DM Sans, sans-serif' }}
-          >
-            {STO_STATUS_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          <ReassessmentStatusBadge status={item.sessionDerivedStoStatus ?? item.stoStatus} />
         </td>
       </tr>
 
@@ -366,21 +395,45 @@ function NewBehaviorRow({ item, idx, patchNewItem }) {
           Pre-filled from session logs — review and edit as needed.
         </div>
 
-        {/* Stats strip: baseline / avg / trend */}
-        <div className="flex gap-5 flex-shrink-0 text-center">
-            <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Baseline</p>
-              <p className="text-sm font-semibold text-slate-700 tabular-nums">{item.baselineFrequency ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Avg</p>
-              <p className="text-sm font-semibold text-slate-700 tabular-nums">{item.averageFrequency ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">Trend</p>
-              <p className={`text-base font-bold ${trendColor}`}>{trendIcon}</p>
+        {/* Stats strip + session history table */}
+        <div>
+          {/* Summary stat pills */}
+          <div className="flex flex-wrap gap-2.5">
+            {[
+              { label: 'Baseline', value: item.baselineFrequency },
+              { label: 'Min',      value: item.minFrequency },
+              { label: 'Max',      value: item.maxFrequency },
+              { label: 'Avg',      value: item.averageFrequency },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex flex-col items-center px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-200 min-w-[52px]">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">{label}</p>
+                <p className="text-sm font-semibold text-slate-700 tabular-nums">
+                  {value != null ? `${value}×` : '—'}
+                </p>
+              </div>
+            ))}
+            <div className="flex flex-col items-center px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-200 min-w-[52px]">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Trend</p>
+              <p className={`text-base font-bold leading-none mt-0.5 ${trendColor}`}>{trendIcon}</p>
             </div>
           </div>
+
+          {/* Per-session history */}
+          {(item.sessionHistory ?? []).length > 0 && (
+            <SessionDetailTable
+              columns={[
+                { key: 'session',   label: 'Session' },
+                { key: 'date',      label: 'Date' },
+                { key: 'frequency', label: 'Frequency' },
+              ]}
+              rows={(item.sessionHistory ?? []).map((pt, i) => ({
+                session:   `S${i + 1}`,
+                date:      fmtDate(pt.sessionDate),
+                frequency: pt.frequency != null ? `${pt.frequency}×` : '—',
+              }))}
+            />
+          )}
+        </div>
 
         <div className="h-px bg-amber-100"/>
 
@@ -428,7 +481,14 @@ function NewBehaviorRow({ item, idx, patchNewItem }) {
             <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Include in Treatment Plan</p>
             <div className="flex gap-2">
               <button type="button"
-                onClick={() => patchNewItem(idx, { includedInPlan: true })}
+                onClick={() => {
+                  const patch = { includedInPlan: true };
+                  // Seed one STO so BCBA doesn't miss defining steps
+                  if ((item.stoStructure ?? []).length === 0) {
+                    patch.stoStructure = [{ id: `new_sto_${Date.now()}`, targetFrequency: '', durationWeeks: '' }];
+                  }
+                  patchNewItem(idx, patch);
+                }}
                 className={`px-3 py-1 text-[12px] font-semibold rounded-lg border transition-all ${
                   item.includedInPlan === true
                     ? 'text-white border-teal-600 bg-teal-600'
@@ -448,51 +508,99 @@ function NewBehaviorRow({ item, idx, patchNewItem }) {
             </div>
           </div>
 
-          {/* STO builder (only when included) */}
+          {/* STO + LTO builder (only when included in plan) */}
           {item.includedInPlan === true && (
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Short-Term Objectives</p>
-                <button type="button" onClick={addStoStep}
-                  className="flex items-center gap-1 text-[11px] font-semibold text-teal-600 hover:text-teal-700 transition-colors">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
-                  </svg>
-                  Add STO
-                </button>
-              </div>
-              {(item.stoStructure ?? []).length === 0 ? (
-                <p className="text-[11px] text-slate-400 italic">No steps defined — auto-formula will be used</p>
-              ) : (
-                <div className="space-y-2">
-                  {(item.stoStructure ?? []).map((step, si) => (
-                    <div key={step.id}
-                      className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600 rounded-lg px-3 py-2"
-                      style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                      <span className="text-[11px] font-bold text-amber-600 mr-0.5">STO {si + 1}</span>
-                      <span>{item.behaviorName || 'Behavior'} will reduce to</span>
-                      <input
-                        type="number" min={0}
-                        value={step.targetFrequency ?? ''}
-                        onChange={e => patchStoStep(step.id, 'targetFrequency', e.target.value)}
-                        className="inline-block w-12 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
-                      />
-                      <span>per day for</span>
-                      <input
-                        type="number" min={1}
-                        value={step.durationWeeks ?? ''}
-                        onChange={e => patchStoStep(step.id, 'durationWeeks', e.target.value)}
-                        className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
-                      />
-                      <span>consecutive weeks.</span>
-                      <button type="button" onClick={() => removeStoStep(step.id)}
-                        className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none">
-                        ×
-                      </button>
-                    </div>
-                  ))}
+            <div className="space-y-4">
+
+              {/* STO steps */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Short-Term Objectives</p>
+                  <button type="button" onClick={addStoStep}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-teal-600 hover:text-teal-700 transition-colors">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add STO
+                  </button>
                 </div>
-              )}
+                {(item.stoStructure ?? []).length === 0 ? (
+                  <p className="text-[11px] text-slate-400 italic">No steps defined — auto-formula will be used</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(item.stoStructure ?? []).map((step, si) => (
+                      <div key={step.id}
+                        className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600 rounded-lg px-3 py-2"
+                        style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                        <span className="text-[11px] font-bold text-amber-600 mr-0.5">STO {si + 1}</span>
+                        <span>{item.behaviorName || 'Behavior'} will reduce to</span>
+                        <input
+                          type="number" min={0}
+                          value={step.targetFrequency ?? ''}
+                          onChange={e => patchStoStep(step.id, 'targetFrequency', e.target.value)}
+                          className="inline-block w-12 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                        />
+                        <span>per day for</span>
+                        <input
+                          type="number" min={1}
+                          value={step.durationWeeks ?? ''}
+                          onChange={e => patchStoStep(step.id, 'durationWeeks', e.target.value)}
+                          className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                        />
+                        <span>consecutive weeks.</span>
+                        <button type="button" onClick={() => removeStoStep(step.id)}
+                          className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* LTO / Mastery criterion */}
+              <div className="rounded-lg px-3 py-2.5" style={{ background: 'rgba(13,148,136,0.06)', border: '1px solid rgba(13,148,136,0.2)' }}>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-teal-600 mb-2">
+                  Long-Term Objective (LTO) — Mastery Criterion
+                </p>
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600">
+                  <span>{item.behaviorName || 'Behavior'} will reduce to</span>
+                  <input
+                    type="number" min={0}
+                    value={item.masteryCriteriaFrequency ?? ''}
+                    onChange={e => {
+                      const v = e.target.value;
+                      patchNewItem(idx, { masteryCriteriaFrequency: v === '' ? null : parseFloat(v) });
+                    }}
+                    placeholder="0"
+                    className="inline-block w-12 text-center text-[14px] font-semibold text-teal-700 bg-white border-b-2 border-teal-400 focus:border-teal-600 outline-none transition-colors mx-0.5"
+                  />
+                  <span>or fewer per day for</span>
+                  <input
+                    type="number" min={1}
+                    value={item.masteryCriteriaWeeks ?? ''}
+                    onChange={e => {
+                      const v = e.target.value;
+                      patchNewItem(idx, { masteryCriteriaWeeks: v === '' ? null : parseInt(v, 10) });
+                    }}
+                    placeholder="4"
+                    className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-white border-b-2 border-teal-400 focus:border-teal-600 outline-none transition-colors mx-0.5"
+                  />
+                  <span>consecutive weeks.</span>
+                  {item.masteryCriteriaFrequency === 0 && (
+                    <span className="text-[11px] font-semibold text-teal-600 ml-1">(full elimination)</span>
+                  )}
+                </div>
+                <textarea
+                  value={item.bcbaLtoText ?? ''}
+                  onChange={e => patchNewItem(idx, { bcbaLtoText: e.target.value })}
+                  placeholder="Optional — additional context or generalization criteria…"
+                  rows={2}
+                  className="mt-2 w-full rounded-lg border border-teal-200 bg-white px-3 py-2 text-[12px] text-slate-600 placeholder:text-slate-300 resize-none focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-200 transition-colors"
+                  style={{ fontFamily: 'DM Sans, sans-serif' }}
+                />
+              </div>
+
             </div>
           )}
         </div>
@@ -580,23 +688,56 @@ function BehaviorTargetsReassessmentCard({
                 <table className="w-full text-left min-w-[480px]">
                   <thead>
                     <tr>
-                      {['Behavior', 'Baseline', 'Avg this period', '% Change', 'STO', 'Status'].map(h => (
-                        <th key={h} className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 pr-3 whitespace-nowrap">
-                          {h}
-                        </th>
-                      ))}
+                      <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 pr-3 whitespace-nowrap text-left">Behavior</th>
+                      <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 px-2 whitespace-nowrap text-center">Baseline</th>
+                      <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 px-2 whitespace-nowrap text-center">Avg this period</th>
+                      <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 px-2 whitespace-nowrap text-center">% Change</th>
+                      <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 px-2 whitespace-nowrap text-center">STO</th>
+                      <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 pl-2 whitespace-nowrap text-left">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {origSummary.map((item, idx) => (
-                      <OrigBehaviorRow
-                        key={item.behaviorId ?? idx}
-                        item={item}
-                        idx={idx}
-                        patchOrigItem={patchOrigItem}
-                        sessionLogs={sessionLogs}
-                      />
-                    ))}
+                    {(() => {
+                      // Use sessionDerivedStoStatus (immutable, from live session logs) for
+                      // the Mastered/Active partition so BCBA dropdown edits never corrupt it.
+                      const active   = origSummary.filter(item => (item.sessionDerivedStoStatus ?? item.stoStatus) !== 'met');
+                      const mastered = origSummary.filter(item => (item.sessionDerivedStoStatus ?? item.stoStatus) === 'met');
+                      return (
+                        <>
+                          {active.map((item, i) => (
+                            <OrigBehaviorRow
+                              key={item.behaviorId ?? i}
+                              item={item}
+                              idx={origSummary.indexOf(item)}
+                              patchOrigItem={patchOrigItem}
+                              sessionLogs={sessionLogs}
+                            />
+                          ))}
+                          {mastered.length > 0 && (
+                            <tr>
+                              <td colSpan={6} className="pt-3 pb-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 border-t border-emerald-200" />
+                                  <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 whitespace-nowrap">
+                                    Mastered This Period
+                                  </span>
+                                  <div className="flex-1 border-t border-emerald-200" />
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          {mastered.map((item, i) => (
+                            <OrigBehaviorRow
+                              key={item.behaviorId ?? `m${i}`}
+                              item={item}
+                              idx={origSummary.indexOf(item)}
+                              patchOrigItem={patchOrigItem}
+                              sessionLogs={sessionLogs}
+                            />
+                          ))}
+                        </>
+                      );
+                    })()}
                   </tbody>
                 </table>
               </div>
@@ -640,17 +781,6 @@ function BehaviorTargetsReassessmentCard({
 
 // ─── Part A: single row in the "from treatment plan" skills table ────────────
 
-const SKILL_STATUS_OPTIONS = [
-  { value: 'new',         label: 'New'         },
-  { value: 'in_progress', label: 'In Progress'  },
-  { value: 'met',         label: 'Met'          },
-];
-
-const SKILL_STATUS_COLORS = {
-  new:         'text-slate-500 bg-slate-50 border-slate-200',
-  in_progress: 'text-amber-700 bg-amber-50 border-amber-200',
-  met:         'text-emerald-700 bg-emerald-50 border-emerald-200',
-};
 
 function OrigSkillRow({ item, idx, patchOrigItem, sessionLogs }) {
   const [localCurrent, setLocalCurrent] = useState(
@@ -666,92 +796,129 @@ function OrigSkillRow({ item, idx, patchOrigItem, sessionLogs }) {
     if (!isNaN(v)) patchOrigItem(idx, { currentPercent: Math.min(100, Math.max(0, v)) });
   };
 
-  const statusColorClass = SKILL_STATUS_COLORS[item.status] ?? SKILL_STATUS_COLORS.new;
-
-  const observedCount = (sessionLogs ?? []).filter(log =>
-    (log.skillEntries ?? []).some(e =>
-      item.skillId ? e.skillId === item.skillId : e.skillName === item.skillName,
-    )
-  ).length;
-  const totalSessions = (sessionLogs ?? []).length;
+  // Build per-session rows from skill log entries
+  const sessionRows = (sessionLogs ?? [])
+    .filter(log => (log.skillEntries ?? []).some(se =>
+      !se.isNew && (item.skillId ? se.skillId === item.skillId : se.skillName === item.skillName),
+    ))
+    .sort((a, b) => new Date(a.sessionDate) - new Date(b.sessionDate))
+    .map((log, i) => {
+      const se = log.skillEntries.find(se =>
+        !se.isNew && (item.skillId ? se.skillId === item.skillId : se.skillName === item.skillName),
+      );
+      const stoStatusLabel = se?.stoStatus
+        ? ({ in_progress: 'In progress', met: 'Met ✓', regressed: 'Regressed', not_yet_started: 'Not started' }[se.stoStatus] ?? se.stoStatus)
+        : '—';
+      return {
+        session:   `S${i + 1}`,
+        date:      fmtDate(log.sessionDate),
+        accuracy:  se?.accuracyPercent != null ? `${se.accuracyPercent}%` : '—',
+        sto:       se?.currentStoNumber != null ? `STO ${se.currentStoNumber}` : '—',
+        status:    stoStatusLabel,
+        statusRaw: se?.stoStatus ?? null,
+      };
+    });
 
   return (
-    <tr className="border-t border-stone-100 align-middle">
+    <>
+      <tr className="border-t border-stone-100 align-middle">
 
-      {/* Skill name + domain */}
-      <td className="py-2.5 pr-3">
-        <p className="text-sm font-medium text-slate-700">{item.skillName}</p>
-        {item.domain && (
-          <p className="text-[10px] text-slate-400 mt-0.5">{item.domain}</p>
-        )}
-      </td>
+        {/* Skill name + domain */}
+        <td className="py-2.5 pr-3">
+          <p className="text-sm font-medium text-slate-700">{item.skillName}</p>
+          {item.domain && (
+            <p className="text-[10px] text-slate-400 mt-0.5">{item.domain}</p>
+          )}
+        </td>
 
-      {/* Baseline % (read-only) */}
-      <td className="py-2.5 px-2 text-sm text-slate-500 text-center tabular-nums whitespace-nowrap">
-        {item.baselinePercent != null ? `${item.baselinePercent}%` : '—'}
-      </td>
+        {/* Baseline % (read-only) */}
+        <td className="py-2.5 px-2 text-sm text-slate-500 text-center tabular-nums whitespace-nowrap">
+          {item.baselinePercent != null ? `${item.baselinePercent}%` : '—'}
+        </td>
 
-      {/* Current % (editable) */}
-      <td className="py-2.5 px-2 text-center">
-        <div className="flex items-center justify-center gap-0.5">
-          <input
-            type="number"
-            value={localCurrent}
-            onChange={e => setLocalCurrent(e.target.value)}
-            onBlur={handleCurrentBlur}
-            min={0} max={100}
-            placeholder="—"
-            className="w-16 text-center text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
-            style={{ fontFamily: 'DM Mono, monospace' }}
-          />
-          <span className="text-xs text-slate-400">%</span>
-        </div>
-      </td>
+        {/* Current % (editable) */}
+        <td className="py-2.5 px-2 text-center">
+          <div className="flex items-center justify-center gap-0.5">
+            <input
+              type="number"
+              value={localCurrent}
+              onChange={e => setLocalCurrent(e.target.value)}
+              onBlur={handleCurrentBlur}
+              min={0} max={100}
+              placeholder="—"
+              className="w-16 text-center text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
+              style={{ fontFamily: 'DM Mono, monospace' }}
+            />
+            <span className="text-xs text-slate-400">%</span>
+          </div>
+        </td>
 
-      {/* Status dropdown */}
-      <td className="py-2.5 pl-2">
-        <select
-          value={item.status ?? 'new'}
-          onChange={e => patchOrigItem(idx, { status: e.target.value })}
-          className={`text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${statusColorClass}`}
-          style={{ fontFamily: 'DM Sans, sans-serif' }}
-        >
-          {SKILL_STATUS_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-        {totalSessions > 0 && (
-          <p className="text-[9px] text-slate-400 mt-0.5 whitespace-nowrap">
-            {observedCount > 0 ? `${observedCount}/${totalSessions} sessions` : 'Not in logs'}
-          </p>
-        )}
-      </td>
-    </tr>
+        {/* Status — read-only badge derived from session logs */}
+        <td className="py-2.5 pl-2">
+          <ReassessmentStatusBadge status={item.sessionDerivedStatus ?? item.status} />
+        </td>
+      </tr>
+
+      {/* Per-session detail (collapsible, spans all columns) */}
+      {sessionRows.length > 0 && (
+        <tr className="border-0">
+          <td colSpan={4} className="pb-2 pt-0 pl-1 pr-0">
+            <SessionDetailTable
+              columns={[
+                { key: 'session',  label: 'Session' },
+                { key: 'date',     label: 'Date' },
+                { key: 'accuracy', label: 'Accuracy %' },
+                { key: 'sto',      label: 'STO #' },
+                { key: 'status',   label: 'Status' },
+              ]}
+              rows={sessionRows}
+            />
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 
 // ─── Part B: card for a single new skill ──────────────────────────────────────
 
 function NewSkillRow({ item, idx, patchNewItem }) {
-  const [stoText,     setStoText]     = useState(item.bcbaStoText     ?? '');
-  const [ltoText,     setLtoText]     = useState(item.bcbaLtoText     ?? '');
+  const [ltoText,     setLtoText]     = useState(item.bcbaLtoText ?? '');
+  const [masteryCrit, setMasteryCrit] = useState(
+    item.masteryCriteriaPercent != null ? String(item.masteryCriteriaPercent) : '',
+  );
   const [baselinePct, setBaselinePct] = useState(
     item.baselinePercent != null ? String(item.baselinePercent) : '',
   );
-  const [currentPct,  setCurrentPct]  = useState(
-    item.currentPercent != null ? String(item.currentPercent) : '',
-  );
 
-  useEffect(() => { setStoText(item.bcbaStoText     ?? ''); }, [item.bcbaStoText]);
-  useEffect(() => { setLtoText(item.bcbaLtoText     ?? ''); }, [item.bcbaLtoText]);
+  useEffect(() => { setLtoText(item.bcbaLtoText ?? ''); }, [item.bcbaLtoText]);
+  useEffect(() => {
+    setMasteryCrit(item.masteryCriteriaPercent != null ? String(item.masteryCriteriaPercent) : '');
+  }, [item.masteryCriteriaPercent]);
   useEffect(() => {
     setBaselinePct(item.baselinePercent != null ? String(item.baselinePercent) : '');
   }, [item.baselinePercent]);
-  useEffect(() => {
-    setCurrentPct(item.currentPercent != null ? String(item.currentPercent) : '');
-  }, [item.currentPercent]);
 
   const clampPct = (v) => Math.min(100, Math.max(0, parseFloat(v)));
+
+  const addStoStep = () => {
+    const next = [
+      ...(item.stoSteps ?? []),
+      { id: `nsksto_${Date.now()}`, targetPercent: '', durationWeeks: '' },
+    ];
+    patchNewItem(idx, { stoSteps: next });
+  };
+
+  const patchStoStep = (stepId, field, value) => {
+    const next = (item.stoSteps ?? []).map(s =>
+      s.id === stepId ? { ...s, [field]: value } : s,
+    );
+    patchNewItem(idx, { stoSteps: next });
+  };
+
+  const removeStoStep = (stepId) => {
+    patchNewItem(idx, { stoSteps: (item.stoSteps ?? []).filter(s => s.id !== stepId) });
+  };
 
   return (
     <div className="rounded-xl border border-teal-200 overflow-hidden"
@@ -759,7 +926,6 @@ function NewSkillRow({ item, idx, patchNewItem }) {
 
       {/* Card header */}
       <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 border-b border-teal-100 bg-teal-50/30">
-        {/* Flag icon */}
         <svg className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" fill="currentColor" viewBox="0 0 16 16">
           <path d="M14.778.085A.5.5 0 0 1 15 .5V8a.5.5 0 0 1-.314.464l-.003.001-.006.003-.023.009a12.435 12.435 0 0 1-.397.15c-.264.095-.631.223-1.047.35-.816.252-1.879.523-2.71.523-.847 0-1.548-.28-2.158-.525l-.028-.01C7.68 8.71 7.14 8.5 6.5 8.5c-.7 0-1.638.23-2.437.477A19.626 19.626 0 0 0 3 9.342V15.5a.5.5 0 0 1-1 0V.5a.5.5 0 0 1 1 0v.282c.226-.079.496-.17.79-.26C4.606.272 5.67 0 6.5 0c.84 0 1.524.277 2.121.519l.043.018C9.286.788 9.828 1 10.5 1c.7 0 1.638-.23 2.437-.477a19.587 19.587 0 0 0 1.349-.476l.019-.007.004-.002h.001"/>
         </svg>
@@ -767,99 +933,121 @@ function NewSkillRow({ item, idx, patchNewItem }) {
         <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 border border-teal-200">
           NEW{item.firstSeenDate ? ` — first seen ${fmtDate(item.firstSeenDate)}` : ''}
         </span>
+        {item.rbtNotes && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500 text-white">
+            Pre-filled from session logs
+          </span>
+        )}
       </div>
 
       {/* Body */}
       <div className="px-4 py-3 space-y-4">
 
-        {/* RBT notes (read-only) */}
+        {/* Pre-fill notice */}
         {item.rbtNotes && (
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1">RBT Notes</p>
-            <p className="text-[12px] text-slate-500 leading-relaxed italic">{item.rbtNotes}</p>
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold"
+            style={{ background: 'rgba(20,184,166,0.08)', color: '#0D9488' }}>
+            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+            Pre-filled from session logs — review and edit as needed.
           </div>
         )}
 
-        <div className="h-px bg-teal-100"/>
-
-        {/* BCBA section */}
         <div className="space-y-3">
           <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">BCBA Assessment</p>
 
-          {/* Baseline + Current % — inline row */}
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Baseline %</p>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number" min={0} max={100}
-                  value={baselinePct}
-                  onChange={e => setBaselinePct(e.target.value)}
-                  onBlur={() => {
-                    const v = clampPct(baselinePct);
-                    if (!isNaN(v)) patchNewItem(idx, { baselinePercent: v });
-                  }}
-                  placeholder="0"
-                  className="w-20 text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-2 py-1 focus:outline-none focus:border-teal-400 tabular-nums"
-                  style={{ fontFamily: 'DM Mono, monospace' }}
-                />
-                <span className="text-xs text-slate-400">%</span>
+          {/* Session history stats + table */}
+          <div>
+            {/* Stat pills */}
+            <div className="flex flex-wrap gap-2.5">
+              {[
+                { label: 'Baseline', value: item.baselinePercent },
+                { label: 'Min',      value: item.minAccuracy },
+                { label: 'Max',      value: item.maxAccuracy },
+                { label: 'Avg',      value: item.avgAccuracy },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex flex-col items-center px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-200 min-w-[52px]">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">{label}</p>
+                  <p className="text-sm font-semibold text-slate-700 tabular-nums">
+                    {value != null ? `${value}%` : '—'}
+                  </p>
+                </div>
+              ))}
+              <div className="flex flex-col items-center px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-200 min-w-[52px]">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Trend</p>
+                <p className={`text-base font-bold leading-none mt-0.5 ${
+                  item.trend === 'up'   ? 'text-emerald-600'
+                  : item.trend === 'down' ? 'text-rose-500'
+                  : 'text-slate-400'
+                }`}>
+                  {item.trend === 'up' ? '↑' : item.trend === 'down' ? '↓' : '→'}
+                </p>
               </div>
             </div>
-            <div className="flex-1">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Current %</p>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number" min={0} max={100}
-                  value={currentPct}
-                  onChange={e => setCurrentPct(e.target.value)}
-                  onBlur={() => {
-                    const v = clampPct(currentPct);
-                    if (!isNaN(v)) patchNewItem(idx, { currentPercent: v });
-                  }}
-                  placeholder="—"
-                  className="w-20 text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-2 py-1 focus:outline-none focus:border-teal-400 tabular-nums"
-                  style={{ fontFamily: 'DM Mono, monospace' }}
-                />
-                <span className="text-xs text-slate-400">%</span>
-              </div>
+
+            {/* Per-session accuracy table */}
+            {(item.sessionHistory ?? []).length > 0 && (
+              <SessionDetailTable
+                columns={[
+                  { key: 'session',  label: 'Session' },
+                  { key: 'date',     label: 'Date' },
+                  { key: 'accuracy', label: 'Accuracy' },
+                ]}
+                rows={(item.sessionHistory ?? []).map((pt, i) => ({
+                  session:  `S${i + 1}`,
+                  date:     fmtDate(pt.sessionDate),
+                  accuracy: pt.accuracy != null ? `${pt.accuracy}%` : '—',
+                }))}
+              />
+            )}
+          </div>
+
+          {/* BCBA-adjustable baseline */}
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+              Adjust Baseline % <span className="font-normal normal-case text-slate-400">(BCBA — override if needed)</span>
+            </p>
+            <div className="flex items-center gap-1">
+              <input
+                type="number" min={0} max={100}
+                value={baselinePct}
+                onChange={e => setBaselinePct(e.target.value)}
+                onBlur={() => {
+                  const v = clampPct(baselinePct);
+                  if (!isNaN(v)) patchNewItem(idx, { baselinePercent: v });
+                }}
+                placeholder="0"
+                className="w-20 text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-2 py-1 focus:outline-none focus:border-teal-400 tabular-nums"
+                style={{ fontFamily: 'DM Mono, monospace' }}
+              />
+              <span className="text-xs text-slate-400">%</span>
             </div>
           </div>
 
-          {/* Short-term objective */}
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Short-Term Objective</p>
-            <textarea
-              value={stoText}
-              onChange={e => setStoText(e.target.value)}
-              onBlur={() => patchNewItem(idx, { bcbaStoText: stoText })}
-              placeholder="Describe the short-term milestone for this skill…"
-              rows={2}
-              className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-300 resize-none focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400 transition-colors"
-              style={{ fontFamily: 'DM Sans, sans-serif' }}
-            />
-          </div>
+          {/* RBT notes (pre-fill preview, collapsible if long) */}
+          {item.rbtNotes && (
+            <div className="rounded-lg px-3 py-2 border border-teal-100"
+              style={{ background: 'rgba(20,184,166,0.05)' }}>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-teal-500 mb-1">RBT Session Notes</p>
+              <p className="text-[12px] text-slate-600 leading-relaxed italic">{item.rbtNotes}</p>
+            </div>
+          )}
 
-          {/* Long-term goal */}
-          <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Long-Term Goal</p>
-            <textarea
-              value={ltoText}
-              onChange={e => setLtoText(e.target.value)}
-              onBlur={() => patchNewItem(idx, { bcbaLtoText: ltoText })}
-              placeholder="Describe the mastery criterion for this skill…"
-              rows={2}
-              className="w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-300 resize-none focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400 transition-colors"
-              style={{ fontFamily: 'DM Sans, sans-serif' }}
-            />
-          </div>
+          <div className="h-px bg-teal-100"/>
 
-          {/* Include in plan toggle */}
+          {/* Include in plan toggle — placed before STO so BCBA decides first */}
           <div>
             <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Include in Treatment Plan</p>
             <div className="flex gap-2">
               <button type="button"
-                onClick={() => patchNewItem(idx, { includedInPlan: true })}
+                onClick={() => {
+                  const patch = { includedInPlan: true };
+                  if ((item.stoSteps ?? []).length === 0) {
+                    patch.stoSteps = [{ id: `nsksto_${Date.now()}`, targetPercent: '', durationWeeks: '' }];
+                  }
+                  patchNewItem(idx, patch);
+                }}
                 className={`px-3 py-1 text-[12px] font-semibold rounded-lg border transition-all ${
                   item.includedInPlan === true
                     ? 'text-white border-teal-600 bg-teal-600'
@@ -878,6 +1066,101 @@ function NewSkillRow({ item, idx, patchNewItem }) {
               </button>
             </div>
           </div>
+
+          {/* Clinical goal fields — only when included in plan */}
+          {item.includedInPlan === true && (
+            <>
+              {/* STO steps */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Short-Term Objectives</p>
+                  <button type="button" onClick={addStoStep}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-teal-600 hover:text-teal-700 transition-colors">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add STO
+                  </button>
+                </div>
+                {(item.stoSteps ?? []).length === 0 ? (
+                  <p className="text-[11px] text-slate-400 italic">No steps defined yet — click Add STO to build milestones</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(item.stoSteps ?? []).map((step, si) => (
+                      <div key={step.id}
+                        className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600 rounded-lg px-3 py-2"
+                        style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                        <span className="text-[11px] font-bold text-teal-600 mr-0.5">STO {si + 1}</span>
+                        <span>{item.skillName || 'Skill'} at</span>
+                        <input
+                          type="number" min={0} max={100}
+                          value={step.targetPercent ?? ''}
+                          onChange={e => patchStoStep(step.id, 'targetPercent', e.target.value)}
+                          className="inline-block w-12 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                        />
+                        <span>% accuracy for</span>
+                        <input
+                          type="number" min={1}
+                          value={step.durationWeeks ?? ''}
+                          onChange={e => patchStoStep(step.id, 'durationWeeks', e.target.value)}
+                          className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                        />
+                        <span>consecutive weeks.</span>
+                        <button type="button" onClick={() => removeStoStep(step.id)}
+                          className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* LTO / Mastery criterion — teal block */}
+              <div className="rounded-lg px-3 py-2.5" style={{ background: 'rgba(13,148,136,0.06)', border: '1px solid rgba(13,148,136,0.2)' }}>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-teal-600 mb-2">
+                  Long-Term Objective (LTO) — Mastery Criterion
+                </p>
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600">
+                  <span>{item.skillName || 'Skill'} at</span>
+                  <input
+                    type="number" min={0} max={100}
+                    value={masteryCrit}
+                    onChange={e => setMasteryCrit(e.target.value)}
+                    onBlur={() => {
+                      const v = clampPct(masteryCrit);
+                      if (!isNaN(v)) patchNewItem(idx, { masteryCriteriaPercent: v });
+                    }}
+                    placeholder="80"
+                    className="inline-block w-14 text-center text-[14px] font-semibold text-teal-700 bg-white border-b-2 border-teal-400 focus:border-teal-600 outline-none transition-colors mx-0.5"
+                    style={{ fontFamily: 'DM Mono, monospace' }}
+                  />
+                  <span>% accuracy maintained for</span>
+                  <input
+                    type="number" min={1}
+                    value={item.masteryCriteriaWeeks ?? ''}
+                    onChange={e => {
+                      const v = e.target.value;
+                      patchNewItem(idx, { masteryCriteriaWeeks: v === '' ? null : parseInt(v, 10) });
+                    }}
+                    placeholder="4"
+                    className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-white border-b-2 border-teal-400 focus:border-teal-600 outline-none transition-colors mx-0.5"
+                    style={{ fontFamily: 'DM Mono, monospace' }}
+                  />
+                  <span>consecutive weeks.</span>
+                </div>
+                <textarea
+                  value={ltoText}
+                  onChange={e => setLtoText(e.target.value)}
+                  onBlur={() => patchNewItem(idx, { bcbaLtoText: ltoText })}
+                  placeholder="Optional — generalization criteria or additional context…"
+                  rows={2}
+                  className="mt-2 w-full rounded-lg border border-teal-200 bg-white px-3 py-2 text-[12px] text-slate-600 placeholder:text-slate-300 resize-none focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-200 transition-colors"
+                  style={{ fontFamily: 'DM Sans, sans-serif' }}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -963,23 +1246,54 @@ function SkillAcquisitionsReassessmentCard({
                 <table className="w-full text-left min-w-[400px]">
                   <thead>
                     <tr>
-                      {['Skill', 'Baseline', 'Current Level', 'Status'].map(h => (
-                        <th key={h} className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 pr-3 whitespace-nowrap">
-                          {h}
-                        </th>
-                      ))}
+                      <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 pr-3 whitespace-nowrap text-left">Skill</th>
+                      <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 px-2 whitespace-nowrap text-center">Baseline</th>
+                      <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 px-2 whitespace-nowrap text-center">Current Level</th>
+                      <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 pl-2 whitespace-nowrap text-left">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {origSummary.map((item, idx) => (
-                      <OrigSkillRow
-                        key={item.skillId ?? idx}
-                        item={item}
-                        idx={idx}
-                        patchOrigItem={patchOrigItem}
-                        sessionLogs={sessionLogs}
-                      />
-                    ))}
+                    {(() => {
+                      // Use sessionDerivedStatus (immutable, from live session logs) for
+                      // the Mastered/Active partition so BCBA dropdown edits never corrupt it.
+                      const active   = origSummary.filter(item => (item.sessionDerivedStatus ?? item.status) !== 'met');
+                      const mastered = origSummary.filter(item => (item.sessionDerivedStatus ?? item.status) === 'met');
+                      return (
+                        <>
+                          {active.map((item, i) => (
+                            <OrigSkillRow
+                              key={item.skillId ?? i}
+                              item={item}
+                              idx={origSummary.indexOf(item)}
+                              patchOrigItem={patchOrigItem}
+                              sessionLogs={sessionLogs}
+                            />
+                          ))}
+                          {mastered.length > 0 && (
+                            <tr>
+                              <td colSpan={4} className="pt-3 pb-1">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 border-t border-emerald-200" />
+                                  <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 whitespace-nowrap">
+                                    Mastered This Period
+                                  </span>
+                                  <div className="flex-1 border-t border-emerald-200" />
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          {mastered.map((item, i) => (
+                            <OrigSkillRow
+                              key={item.skillId ?? `m${i}`}
+                              item={item}
+                              idx={origSummary.indexOf(item)}
+                              patchOrigItem={patchOrigItem}
+                              sessionLogs={sessionLogs}
+                            />
+                          ))}
+                        </>
+                      );
+                    })()}
                   </tbody>
                 </table>
               </div>
@@ -1047,8 +1361,6 @@ function CaregiverTrainingSummaryRow({ item, idx, patchItem, ctLogs }) {
   const trendIcon  = item.trend === 'improving' ? '↑' : item.trend === 'worsening' ? '↓' : '→';
   const trendColor = item.trend === 'improving' ? 'text-emerald-600' : item.trend === 'worsening' ? 'text-red-500' : 'text-slate-400';
 
-  const stoColorClass = STO_STATUS_COLORS[item.stoStatus] ?? STO_STATUS_COLORS.in_progress;
-
   // Build per-session rows from caregiver training logs
   const ctSessionRows = (ctLogs ?? [])
     .filter(log => (log.trainingEntries ?? []).some(te =>
@@ -1063,10 +1375,11 @@ function CaregiverTrainingSummaryRow({ item, idx, patchItem, ctLogs }) {
         ? ({ in_progress: 'In progress', met: 'Met ✓', not_yet_started: 'Not started' }[te.stoStatus] ?? te.stoStatus)
         : '—';
       return {
-        session: `S${i + 1}`,
-        date:    fmtDate(log.sessionDate),
-        pct:     te?.sessionPercent != null ? `${te.sessionPercent}%` : '—',
-        status:  stoLabel,
+        session:   `S${i + 1}`,
+        date:      fmtDate(log.sessionDate),
+        pct:       te?.sessionPercent != null ? `${te.sessionPercent}%` : '—',
+        status:    stoLabel,
+        statusRaw: te?.stoStatus ?? null,
       };
     });
 
@@ -1117,18 +1430,9 @@ function CaregiverTrainingSummaryRow({ item, idx, patchItem, ctLogs }) {
           <span className={trendColor}>{trendIcon}</span>
         </td>
 
-        {/* STO Status dropdown */}
+        {/* STO Status — read-only badge derived from caregiver training logs */}
         <td className="py-2.5 pl-2">
-          <select
-            value={item.stoStatus ?? 'in_progress'}
-            onChange={e => patchItem(idx, { stoStatus: e.target.value })}
-            className={`text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${stoColorClass}`}
-            style={{ fontFamily: 'DM Sans, sans-serif' }}
-          >
-            {STO_STATUS_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          <ReassessmentStatusBadge status={item.sessionDerivedStoStatus ?? item.stoStatus} />
         </td>
       </tr>
 
@@ -1152,13 +1456,306 @@ function CaregiverTrainingSummaryRow({ item, idx, patchItem, ctLogs }) {
   );
 }
 
+// ─── NewCaregiverRow — flagged caregiver goals in reassessment ───────────────
+
+function NewCaregiverRow({ item, idx, patchItem }) {
+  const [ltoText,     setLtoText]     = useState(item.bcbaLtoText ?? '');
+  const [masteryCrit, setMasteryCrit] = useState(
+    item.masteryCriteriaPercent != null ? String(item.masteryCriteriaPercent) : '',
+  );
+  const [baselinePct, setBaselinePct] = useState(
+    item.baselinePercent != null ? String(item.baselinePercent) : '',
+  );
+
+  useEffect(() => { setLtoText(item.bcbaLtoText ?? ''); }, [item.bcbaLtoText]);
+  useEffect(() => {
+    setMasteryCrit(item.masteryCriteriaPercent != null ? String(item.masteryCriteriaPercent) : '');
+  }, [item.masteryCriteriaPercent]);
+  useEffect(() => {
+    setBaselinePct(item.baselinePercent != null ? String(item.baselinePercent) : '');
+  }, [item.baselinePercent]);
+
+  const clampPct = (v) => Math.min(100, Math.max(0, parseFloat(v)));
+
+  const addStoStep = () => {
+    const next = [
+      ...(item.stoSteps ?? []),
+      { id: `cgsto_${Date.now()}`, targetPercent: '', durationWeeks: '' },
+    ];
+    patchItem(idx, { stoSteps: next });
+  };
+
+  const patchStoStep = (stepId, field, value) => {
+    const next = (item.stoSteps ?? []).map(s =>
+      s.id === stepId ? { ...s, [field]: value } : s,
+    );
+    patchItem(idx, { stoSteps: next });
+  };
+
+  const removeStoStep = (stepId) => {
+    patchItem(idx, { stoSteps: (item.stoSteps ?? []).filter(s => s.id !== stepId) });
+  };
+
+  return (
+    <div className="rounded-xl border border-teal-200 overflow-hidden"
+      style={{ background: 'rgba(20,184,166,0.025)', fontFamily: 'DM Sans, sans-serif' }}>
+
+      {/* Card header */}
+      <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 border-b border-teal-100 bg-teal-50/30">
+        <svg className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M9.5 2a.5.5 0 0 1 1 0v.5h.5a.5.5 0 0 1 0 1h-.5v.5a.5.5 0 0 1-1 0v-.5h-.5a.5.5 0 0 1 0-1h.5V2zm-3 4.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM2 13a5 5 0 0 1 10 0H2z"/>
+        </svg>
+        <span className="text-sm font-semibold text-slate-700">{item.goalName}</span>
+        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 border border-teal-200">
+          NEW{item.firstSeenDate ? ` — first seen ${fmtDate(item.firstSeenDate)}` : ''}
+        </span>
+        {item.notes && (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-500 text-white">
+            Pre-filled from session logs
+          </span>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="px-4 py-3 space-y-4">
+
+        {/* Pre-fill notice */}
+        {item.notes && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold"
+            style={{ background: 'rgba(20,184,166,0.08)', color: '#0D9488' }}>
+            <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+            Pre-filled from session logs — review and edit as needed.
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">BCBA Assessment</p>
+
+          {/* Session history stats + table */}
+          <div>
+            {/* Stat cards */}
+            <div className="flex flex-wrap gap-2.5">
+              {[
+                { label: 'Baseline', value: item.baselinePercent },
+                { label: 'Min',      value: item.minAccuracy },
+                { label: 'Max',      value: item.maxAccuracy },
+                { label: 'Avg',      value: item.avgAccuracy },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex flex-col items-center px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-200 min-w-[52px]">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">{label}</p>
+                  <p className="text-sm font-semibold text-slate-700 tabular-nums">
+                    {value != null ? `${value}%` : '—'}
+                  </p>
+                </div>
+              ))}
+              <div className="flex flex-col items-center px-3 py-1.5 rounded-lg bg-stone-50 border border-stone-200 min-w-[52px]">
+                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Trend</p>
+                <p className={`text-base font-bold leading-none mt-0.5 ${
+                  item.trend === 'improving' ? 'text-emerald-600'
+                  : item.trend === 'worsening' ? 'text-rose-500'
+                  : 'text-slate-400'
+                }`}>
+                  {item.trend === 'improving' ? '↑' : item.trend === 'worsening' ? '↓' : '→'}
+                </p>
+              </div>
+            </div>
+
+            {/* Per-session table */}
+            {(item.sessionHistory ?? []).length > 0 && (
+              <SessionDetailTable
+                columns={[
+                  { key: 'session', label: 'Session' },
+                  { key: 'date',    label: 'Date' },
+                  { key: 'percent', label: '% Achieved' },
+                ]}
+                rows={(item.sessionHistory ?? []).map((pt, i) => ({
+                  session: `S${i + 1}`,
+                  date:    fmtDate(pt.sessionDate),
+                  percent: pt.percent != null ? `${pt.percent}%` : '—',
+                }))}
+              />
+            )}
+          </div>
+
+          {/* BCBA-adjustable baseline */}
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">
+              Adjust Baseline % <span className="font-normal normal-case text-slate-400">(BCBA — override if needed)</span>
+            </p>
+            <div className="flex items-center gap-1">
+              <input
+                type="number" min={0} max={100}
+                value={baselinePct}
+                onChange={e => setBaselinePct(e.target.value)}
+                onBlur={() => {
+                  const v = clampPct(baselinePct);
+                  if (!isNaN(v)) patchItem(idx, { baselinePercent: v });
+                }}
+                placeholder="0"
+                className="w-20 text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-2 py-1 focus:outline-none focus:border-teal-400 tabular-nums"
+                style={{ fontFamily: 'DM Mono, monospace' }}
+              />
+              <span className="text-xs text-slate-400">%</span>
+            </div>
+          </div>
+
+          {/* BCBA session notes */}
+          {item.notes && (
+            <div className="rounded-lg px-3 py-2 border border-teal-100"
+              style={{ background: 'rgba(20,184,166,0.05)' }}>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-teal-500 mb-1">BCBA Session Notes</p>
+              <p className="text-[12px] text-slate-600 leading-relaxed italic">{item.notes}</p>
+            </div>
+          )}
+
+          <div className="h-px bg-teal-100"/>
+
+          {/* Include in plan toggle */}
+          <div>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Include in Treatment Plan</p>
+            <div className="flex gap-2">
+              <button type="button"
+                onClick={() => {
+                  const patch = { includedInPlan: true };
+                  if ((item.stoSteps ?? []).length === 0) {
+                    patch.stoSteps = [{ id: `cgsto_${Date.now()}`, targetPercent: '', durationWeeks: '' }];
+                  }
+                  patchItem(idx, patch);
+                }}
+                className={`px-3 py-1 text-[12px] font-semibold rounded-lg border transition-all ${
+                  item.includedInPlan === true
+                    ? 'text-white border-teal-600 bg-teal-600'
+                    : 'text-slate-500 border-stone-200 bg-white hover:border-teal-300'
+                }`}>
+                Yes — add to plan
+              </button>
+              <button type="button"
+                onClick={() => patchItem(idx, { includedInPlan: false })}
+                className={`px-3 py-1 text-[12px] font-semibold rounded-lg border transition-all ${
+                  item.includedInPlan === false
+                    ? 'text-white border-slate-500 bg-slate-500'
+                    : 'text-slate-500 border-stone-200 bg-white hover:border-slate-300'
+                }`}>
+                No — monitor only
+              </button>
+            </div>
+          </div>
+
+          {/* STOs + LTO — only when included */}
+          {item.includedInPlan === true && (
+            <>
+              {/* STO steps */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">Short-Term Objectives</p>
+                  <button type="button" onClick={addStoStep}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-teal-600 hover:text-teal-700 transition-colors">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Add STO
+                  </button>
+                </div>
+                {(item.stoSteps ?? []).length === 0 ? (
+                  <p className="text-[11px] text-slate-400 italic">No steps defined yet — click Add STO to build milestones</p>
+                ) : (
+                  <div className="space-y-2">
+                    {(item.stoSteps ?? []).map((step, si) => (
+                      <div key={step.id}
+                        className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600 rounded-lg px-3 py-2"
+                        style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+                        <span className="text-[11px] font-bold text-teal-600 mr-0.5">STO {si + 1}</span>
+                        <span>At</span>
+                        <input
+                          type="number" min={0} max={100}
+                          value={step.targetPercent ?? ''}
+                          onChange={e => patchStoStep(step.id, 'targetPercent', e.target.value)}
+                          className="inline-block w-12 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                        />
+                        <span>% accuracy for</span>
+                        <input
+                          type="number" min={1}
+                          value={step.durationWeeks ?? ''}
+                          onChange={e => patchStoStep(step.id, 'durationWeeks', e.target.value)}
+                          className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                        />
+                        <span>consecutive weeks.</span>
+                        <button type="button" onClick={() => removeStoStep(step.id)}
+                          className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none">
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* LTO / Mastery criterion — teal block */}
+              <div className="rounded-lg px-3 py-2.5" style={{ background: 'rgba(13,148,136,0.06)', border: '1px solid rgba(13,148,136,0.2)' }}>
+                <p className="text-[9px] font-bold uppercase tracking-widest text-teal-600 mb-2">
+                  Long-Term Objective (LTO) — Mastery Criterion
+                </p>
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600">
+                  <span>At</span>
+                  <input
+                    type="number" min={0} max={100}
+                    value={masteryCrit}
+                    onChange={e => setMasteryCrit(e.target.value)}
+                    onBlur={() => {
+                      const v = clampPct(masteryCrit);
+                      if (!isNaN(v)) patchItem(idx, { masteryCriteriaPercent: v });
+                    }}
+                    placeholder="80"
+                    className="inline-block w-14 text-center text-[14px] font-semibold text-teal-700 bg-white border-b-2 border-teal-400 focus:border-teal-600 outline-none transition-colors mx-0.5"
+                    style={{ fontFamily: 'DM Mono, monospace' }}
+                  />
+                  <span>% accuracy maintained for</span>
+                  <input
+                    type="number" min={1}
+                    value={item.masteryCriteriaWeeks ?? ''}
+                    onChange={e => {
+                      const v = e.target.value;
+                      patchItem(idx, { masteryCriteriaWeeks: v === '' ? null : parseInt(v, 10) });
+                    }}
+                    placeholder="4"
+                    className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-white border-b-2 border-teal-400 focus:border-teal-600 outline-none transition-colors mx-0.5"
+                    style={{ fontFamily: 'DM Mono, monospace' }}
+                  />
+                  <span>consecutive weeks.</span>
+                </div>
+                <textarea
+                  value={ltoText}
+                  onChange={e => setLtoText(e.target.value)}
+                  onBlur={() => patchItem(idx, { bcbaLtoText: ltoText })}
+                  placeholder="Optional — generalization criteria or additional context…"
+                  rows={2}
+                  className="mt-2 w-full rounded-lg border border-teal-200 bg-white px-3 py-2 text-[12px] text-slate-600 placeholder:text-slate-300 resize-none focus:outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-200 transition-colors"
+                  style={{ fontFamily: 'DM Sans, sans-serif' }}
+                />
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Chip + table injected at the top of the caregiver_training section in reassessment
 function CaregiverTrainingSummaryHeader({ session, clientId, setClients, ctLogs }) {
-  const summary = session.caregiverTrainingSummary ?? [];
+  const summary    = session.caregiverTrainingSummary ?? [];
+  const newSummary = session.newCaregiverSummary ?? [];
 
   const patchItem = (idx, patch) =>
     patchSession(setClients, clientId, {
       caregiverTrainingSummary: summary.map((item, i) => i === idx ? { ...item, ...patch } : item),
+    });
+
+  const patchNewItem = (idx, patch) =>
+    patchSession(setClients, clientId, {
+      newCaregiverSummary: newSummary.map((item, i) => i === idx ? { ...item, ...patch } : item),
     });
 
   return (
@@ -1172,31 +1769,82 @@ function CaregiverTrainingSummaryHeader({ session, clientId, setClients, ctLogs 
         Pre-filled from caregiver training session logs — edit as needed.
       </div>
 
-      {/* Summary table */}
-      <div className="overflow-x-auto -mx-1">
-        <table className="w-full text-left min-w-[520px]">
-          <thead>
-            <tr>
-              {['Goal', 'Baseline', 'Avg this period', '% Change', 'Trend', 'STO Status'].map(h => (
-                <th key={h} className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 pr-3 whitespace-nowrap">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {summary.map((item, idx) => (
-              <CaregiverTrainingSummaryRow
-                key={item.targetId ?? idx}
-                item={item}
-                idx={idx}
-                patchItem={patchItem}
-                ctLogs={ctLogs}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Formal goals summary table */}
+      {summary.length > 0 && (
+        <div className="overflow-x-auto -mx-1">
+          <table className="w-full text-left min-w-[520px]">
+            <thead>
+              <tr>
+                  <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 pr-3 whitespace-nowrap text-left">Goal</th>
+                  <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 px-2 whitespace-nowrap text-center">Baseline</th>
+                  <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 px-2 whitespace-nowrap text-center">Avg this period</th>
+                  <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 px-2 whitespace-nowrap text-center">% Change</th>
+                  <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 px-2 whitespace-nowrap text-center">Trend</th>
+                  <th className="text-[9px] font-bold uppercase tracking-widest text-slate-400 pb-2 pl-2 whitespace-nowrap text-left">STO Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                // Use sessionDerivedStoStatus (immutable, from live CT logs) for partition.
+                const active   = summary.filter(item => (item.sessionDerivedStoStatus ?? item.stoStatus) !== 'met');
+                const mastered = summary.filter(item => (item.sessionDerivedStoStatus ?? item.stoStatus) === 'met');
+                return (
+                  <>
+                    {active.map((item, i) => (
+                      <CaregiverTrainingSummaryRow
+                        key={item.targetId ?? i}
+                        item={item}
+                        idx={summary.indexOf(item)}
+                        patchItem={patchItem}
+                        ctLogs={ctLogs}
+                      />
+                    ))}
+                    {mastered.length > 0 && (
+                      <tr>
+                        <td colSpan={6} className="pt-3 pb-1">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 border-t border-emerald-200" />
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-600 whitespace-nowrap">
+                              Mastered This Period
+                            </span>
+                            <div className="flex-1 border-t border-emerald-200" />
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    {mastered.map((item, i) => (
+                      <CaregiverTrainingSummaryRow
+                        key={item.targetId ?? `m${i}`}
+                        item={item}
+                        idx={summary.indexOf(item)}
+                        patchItem={patchItem}
+                        ctLogs={ctLogs}
+                      />
+                    ))}
+                  </>
+                );
+              })()}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Newly flagged caregiver goals */}
+      {newSummary.length > 0 && (
+        <div className="mt-4 space-y-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-600">
+            New Goals Observed This Period
+          </p>
+          {newSummary.map((item, idx) => (
+            <NewCaregiverRow
+              key={item.goalName + idx}
+              item={item}
+              idx={idx}
+              patchItem={patchNewItem}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Divider before existing narrative fields */}
       <div className="border-t border-teal-100/60 mt-4"/>
@@ -1457,6 +2105,7 @@ export default function AssessmentInterviewPage({
                     onTranscriptToggle={() => handleTranscriptToggle(key)}
                     onRecordStart={handleRecordStart}
                     addNotif={addNotif}
+                    isReassessment={isReassessment}
                     headerContent={
                       key === 'caregiver_training' && isReassessment && (session.caregiverTrainingSummary ?? []).length > 0
                         ? <CaregiverTrainingSummaryHeader session={session} clientId={clientId} setClients={setClients} ctLogs={ctLogs} />

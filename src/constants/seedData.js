@@ -1956,9 +1956,10 @@ export const SEED_CLIENTS = () => [
     })();
 
     const C10_SERVICE_SESSION_LOGS = [
+      // ── Behavior sessions ──────────────────────────────────────────────────
       {
-        id: 'slog_c10_1', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
-        sessionDate: '2025-11-17', sessionNumber: 1, notes: '',
+        id: 'slog_c10_b1', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2025-11-17', sessionNumber: 1, sessionType: 'behavior', notes: '',
         behaviorEntries: [
           { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',      isNew: false, baselineFrequency: 5,  sessionFrequency: 3,  currentStoNumber: 2, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
           { behaviorId: 'bt-c10-2', behaviorName: 'Elopement',    isNew: false, baselineFrequency: 10, sessionFrequency: 8,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
@@ -1969,8 +1970,8 @@ export const SEED_CLIENTS = () => [
         createdAt: '2025-11-17T12:00:00.000Z',
       },
       {
-        id: 'slog_c10_2', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
-        sessionDate: '2025-12-08', sessionNumber: 2, notes: '',
+        id: 'slog_c10_b2', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2025-12-08', sessionNumber: 2, sessionType: 'behavior', notes: '',
         behaviorEntries: [
           { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',      isNew: false, baselineFrequency: 5,  sessionFrequency: 2,  currentStoNumber: 2, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
           { behaviorId: 'bt-c10-2', behaviorName: 'Elopement',    isNew: false, baselineFrequency: 10, sessionFrequency: 7,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
@@ -1981,8 +1982,8 @@ export const SEED_CLIENTS = () => [
         createdAt: '2025-12-08T12:00:00.000Z',
       },
       {
-        id: 'slog_c10_3', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
-        sessionDate: '2026-01-12', sessionNumber: 3, notes: '',
+        id: 'slog_c10_b3', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2026-01-12', sessionNumber: 3, sessionType: 'behavior', notes: '',
         behaviorEntries: [
           { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',          isNew: false, baselineFrequency: 5,  sessionFrequency: 2,  currentStoNumber: 2, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
           { behaviorId: 'bt-c10-2', behaviorName: 'Elopement',        isNew: false, baselineFrequency: 10, sessionFrequency: 6,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
@@ -1994,45 +1995,106 @@ export const SEED_CLIENTS = () => [
         createdAt: '2026-01-12T12:00:00.000Z',
       },
       {
-        id: 'slog_c10_4', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
-        sessionDate: '2026-02-09', sessionNumber: 4, notes: '',
+        id: 'slog_c10_b4', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2026-02-09', sessionNumber: 4, sessionType: 'behavior', notes: '',
         behaviorEntries: [
           { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',          isNew: false, baselineFrequency: 5,  sessionFrequency: 2,  currentStoNumber: 3, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
           { behaviorId: 'bt-c10-2', behaviorName: 'Elopement',        isNew: false, baselineFrequency: 10, sessionFrequency: 5,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
-          { behaviorId: 'bt-c10-3', behaviorName: 'Task Refusal',     isNew: false, baselineFrequency: 25, sessionFrequency: 15, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
-          { behaviorId: 'bt-c10-4', behaviorName: 'Aggression',       isNew: false, baselineFrequency: 5,  sessionFrequency: 2,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
-          { behaviorId: null,        behaviorName: 'Throwing objects', isNew: false, baselineFrequency: null, sessionFrequency: 4, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-3', behaviorName: 'Task Refusal',     isNew: false, baselineFrequency: 25, sessionFrequency: 15, currentStoNumber: 2, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-4', behaviorName: 'Aggression',       isNew: false, baselineFrequency: 5,  sessionFrequency: 2,  currentStoNumber: 2, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: null, behaviorName: 'Throwing objects', isNew: false, isMonitoring: true, baselineFrequency: 5, sessionFrequency: 4, currentStoNumber: null, stoStatus: null, newBehaviorDefinition: 'CLIENT intentionally throws objects when denied access to preferred items', newBehaviorFunction: 'tangible', newBehaviorSeverity: 'moderate', firstSeenDate: '2026-01-12' },
         ],
         skillEntries: [],
         createdAt: '2026-02-09T12:00:00.000Z',
       },
       {
-        id: 'slog_c10_5', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
-        sessionDate: '2026-03-10', sessionNumber: 5, notes: '',
+        id: 'slog_c10_b5', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2026-03-10', sessionNumber: 5, sessionType: 'behavior', notes: '',
         behaviorEntries: [
           { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',          isNew: false, baselineFrequency: 5,  sessionFrequency: 1,  currentStoNumber: 3, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
           { behaviorId: 'bt-c10-2', behaviorName: 'Elopement',        isNew: false, baselineFrequency: 10, sessionFrequency: 4,  currentStoNumber: 3, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
-          { behaviorId: 'bt-c10-3', behaviorName: 'Task Refusal',     isNew: false, baselineFrequency: 25, sessionFrequency: 14, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
-          { behaviorId: 'bt-c10-4', behaviorName: 'Aggression',       isNew: false, baselineFrequency: 5,  sessionFrequency: 2,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
-          { behaviorId: null,        behaviorName: 'Throwing objects', isNew: false, baselineFrequency: null, sessionFrequency: 3, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-3', behaviorName: 'Task Refusal',     isNew: false, baselineFrequency: 25, sessionFrequency: 14, currentStoNumber: 2, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-4', behaviorName: 'Aggression',       isNew: false, baselineFrequency: 5,  sessionFrequency: 2,  currentStoNumber: 2, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: null, behaviorName: 'Throwing objects', isNew: false, isMonitoring: true, baselineFrequency: 5, sessionFrequency: 3, currentStoNumber: null, stoStatus: null, newBehaviorDefinition: 'CLIENT intentionally throws objects when denied access to preferred items', newBehaviorFunction: 'tangible', newBehaviorSeverity: 'moderate', firstSeenDate: '2026-01-12' },
         ],
-        skillEntries: [
-          { skillId: null, skillName: 'Waiting for preferred item', isNew: true, firstSeenDate: '2026-03-10', notes: '' },
-        ],
+        skillEntries: [],
         createdAt: '2026-03-10T12:00:00.000Z',
       },
       {
-        id: 'slog_c10_6', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
-        sessionDate: '2026-04-14', sessionNumber: 6, notes: '',
+        id: 'slog_c10_b6', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2026-04-14', sessionNumber: 6, sessionType: 'behavior', notes: '',
         behaviorEntries: [
-          { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',          isNew: false, baselineFrequency: 5,  sessionFrequency: 1,  currentStoNumber: 3, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-1', behaviorName: 'Tantrum',          isNew: false, baselineFrequency: 5,  sessionFrequency: 1,  currentStoNumber: 4, stoStatus: 'met',         newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
           { behaviorId: 'bt-c10-2', behaviorName: 'Elopement',        isNew: false, baselineFrequency: 10, sessionFrequency: 3,  currentStoNumber: 3, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
-          { behaviorId: 'bt-c10-3', behaviorName: 'Task Refusal',     isNew: false, baselineFrequency: 25, sessionFrequency: 12, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
-          { behaviorId: 'bt-c10-4', behaviorName: 'Aggression',       isNew: false, baselineFrequency: 5,  sessionFrequency: 1,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
-          { behaviorId: null,        behaviorName: 'Throwing objects', isNew: false, baselineFrequency: null, sessionFrequency: 3, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-3', behaviorName: 'Task Refusal',     isNew: false, baselineFrequency: 25, sessionFrequency: 12, currentStoNumber: 2, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: 'bt-c10-4', behaviorName: 'Aggression',       isNew: false, baselineFrequency: 5,  sessionFrequency: 1,  currentStoNumber: 2, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
+          { behaviorId: null, behaviorName: 'Throwing objects', isNew: false, isMonitoring: true, baselineFrequency: 5, sessionFrequency: 2, currentStoNumber: null, stoStatus: null, newBehaviorDefinition: 'CLIENT intentionally throws objects when denied access to preferred items', newBehaviorFunction: 'tangible', newBehaviorSeverity: 'moderate', firstSeenDate: '2026-01-12' },
         ],
         skillEntries: [],
         createdAt: '2026-04-14T12:00:00.000Z',
+      },
+      // ── Skill sessions ─────────────────────────────────────────────────────
+      {
+        id: 'slog_c10_s1', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2025-11-17', sessionNumber: 1, sessionType: 'skill', notes: '',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c10-1', skillName: 'Mand Training (Functional Requesting)', isNew: false, accuracyPercent: 20, currentStoNumber: 1, stoStatus: 'in_progress' },
+          { skillId: 'sg-c10-2', skillName: 'Transition Compliance (First-Then)',     isNew: false, accuracyPercent: 12, currentStoNumber: 1, stoStatus: 'in_progress' },
+        ],
+        createdAt: '2025-11-17T13:00:00.000Z',
+      },
+      {
+        id: 'slog_c10_s2', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2025-12-08', sessionNumber: 2, sessionType: 'skill', notes: '',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c10-1', skillName: 'Mand Training (Functional Requesting)', isNew: false, accuracyPercent: 28, currentStoNumber: 1, stoStatus: 'in_progress' },
+          { skillId: 'sg-c10-2', skillName: 'Transition Compliance (First-Then)',     isNew: false, accuracyPercent: 18, currentStoNumber: 1, stoStatus: 'in_progress' },
+        ],
+        createdAt: '2025-12-08T13:00:00.000Z',
+      },
+      {
+        id: 'slog_c10_s3', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2026-01-12', sessionNumber: 3, sessionType: 'skill', notes: '',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c10-1', skillName: 'Mand Training (Functional Requesting)', isNew: false, accuracyPercent: 38, currentStoNumber: 1, stoStatus: 'in_progress' },
+          { skillId: 'sg-c10-2', skillName: 'Transition Compliance (First-Then)',     isNew: false, accuracyPercent: 22, currentStoNumber: 1, stoStatus: 'in_progress' },
+        ],
+        createdAt: '2026-01-12T13:00:00.000Z',
+      },
+      {
+        id: 'slog_c10_s4', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2026-02-09', sessionNumber: 4, sessionType: 'skill', notes: '',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c10-1', skillName: 'Mand Training (Functional Requesting)', isNew: false, accuracyPercent: 48, currentStoNumber: 1, stoStatus: 'in_progress' },
+          { skillId: 'sg-c10-2', skillName: 'Transition Compliance (First-Then)',     isNew: false, accuracyPercent: 30, currentStoNumber: 1, stoStatus: 'in_progress' },
+        ],
+        createdAt: '2026-02-09T13:00:00.000Z',
+      },
+      {
+        id: 'slog_c10_s5', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2026-03-10', sessionNumber: 5, sessionType: 'skill', notes: '',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c10-1', skillName: 'Mand Training (Functional Requesting)', isNew: false, accuracyPercent: 58, currentStoNumber: 2, stoStatus: 'in_progress' },
+          { skillId: 'sg-c10-2', skillName: 'Transition Compliance (First-Then)',     isNew: false, accuracyPercent: 38, currentStoNumber: 1, stoStatus: 'in_progress' },
+          { skillId: null, skillName: 'Waiting for preferred item', isNew: true, firstSeenDate: '2026-03-10', baselinePercent: 20, notes: 'CLIENT spontaneously waited ~5 seconds for a preferred item when RBT held it up and said "wait." Observed twice in session 5 without any prompting. No tantrum or reaching — client maintained eye contact and accepted the item calmly. Appears to be an emerging replacement behavior for access-maintained tantrum. Recommend formalizing as a skill goal with graduated wait-time increments.' },
+        ],
+        createdAt: '2026-03-10T13:00:00.000Z',
+      },
+      {
+        id: 'slog_c10_s6', clientId: 'c10', rbtId: 'u4', rbtName: 'James Torres',
+        sessionDate: '2026-04-14', sessionNumber: 6, sessionType: 'skill', notes: '',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c10-1', skillName: 'Mand Training (Functional Requesting)', isNew: false, accuracyPercent: 65, currentStoNumber: 2, stoStatus: 'in_progress' },
+          { skillId: 'sg-c10-2', skillName: 'Transition Compliance (First-Then)',     isNew: false, accuracyPercent: 45, currentStoNumber: 1, stoStatus: 'in_progress' },
+          { skillId: null, skillName: 'Waiting for preferred item', isNew: false, isMonitoring: true, accuracyPercent: 30, baselinePercent: 20, firstSeenDate: '2026-03-10' },
+        ],
+        createdAt: '2026-04-14T13:00:00.000Z',
       },
     ];
 
@@ -2061,8 +2123,19 @@ export const SEED_CLIENTS = () => [
         trainingEntries: [
           { targetId: 'ctgt_1', goalName: 'Consistent Premack delivery',       baselinePercent: 20, sessionPercent: 62, stoStatus: 'met',         currentStoNumber: 2 },
           { targetId: 'ctgt_2', goalName: 'Reinforcement timing and magnitude', baselinePercent: 35, sessionPercent: 72, stoStatus: 'in_progress', currentStoNumber: 1 },
+          { targetId: null, goalName: 'Visual schedule implementation', isNew: true, firstSeenDate: '2026-03-03', baselinePercent: 25, sessionPercent: 25, notes: 'Jennifer independently used the visual schedule for the morning routine for the first time — partial use (3 of 6 steps) but showed real initiative. Not yet a formal plan target. Recommend monitoring and formalizing as a goal in the reauth plan. Strong candidate given she already self-initiated without prompting.' },
         ],
         createdAt: '2026-03-03T12:00:00.000Z',
+      },
+      {
+        id: 'ctlog_c10_4', clientId: 'c10', bcbaId: 'u2', bcbaName: 'Dr. Ana Reyes',
+        sessionDate: '2026-04-14', sessionNumber: 4, notes: 'Good session — Jennifer is gaining confidence. Visual schedule now used for full morning routine on most days.',
+        trainingEntries: [
+          { targetId: 'ctgt_1', goalName: 'Consistent Premack delivery',       baselinePercent: 20, sessionPercent: 71, stoStatus: 'met',         currentStoNumber: 2 },
+          { targetId: 'ctgt_2', goalName: 'Reinforcement timing and magnitude', baselinePercent: 35, sessionPercent: 78, stoStatus: 'in_progress', currentStoNumber: 2 },
+          { targetId: null, goalName: 'Visual schedule implementation', isNew: false, isMonitoring: true, sessionPercent: 45, baselinePercent: 25, firstSeenDate: '2026-03-03' },
+        ],
+        createdAt: '2026-04-14T13:00:00.000Z',
       },
     ];
 
@@ -2137,8 +2210,8 @@ export const SEED_CLIENTS = () => [
         c,
         assessment_session_charlotte,
         C10_SERVICE_SESSION_LOGS,
-        'Nov 1, 2025',
-        'Apr 30, 2026',
+        '2026-01-20',
+        '2026-07-20',
       ),
       status: 'in_progress',
     };
@@ -2175,7 +2248,7 @@ export const SEED_CLIENTS = () => [
     const C11_SERVICE_SESSION_LOGS = [
       {
         id: 'slog_c11_1', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
-        sessionDate: '2025-12-22', sessionNumber: 1, notes: '',
+        sessionDate: '2025-12-22', sessionNumber: 1, sessionType: 'behavior', notes: '',
         behaviorEntries: [
           { behaviorId: 'bt-c11-1', behaviorName: 'Physical Aggression', isNew: false, baselineFrequency: 8,  sessionFrequency: 7,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
           { behaviorId: 'bt-c11-2', behaviorName: 'Vocal Disruption',    isNew: false, baselineFrequency: 12, sessionFrequency: 11, currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
@@ -2186,7 +2259,7 @@ export const SEED_CLIENTS = () => [
       },
       {
         id: 'slog_c11_2', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
-        sessionDate: '2026-01-26', sessionNumber: 2, notes: '',
+        sessionDate: '2026-01-26', sessionNumber: 2, sessionType: 'behavior', notes: '',
         behaviorEntries: [
           { behaviorId: 'bt-c11-1', behaviorName: 'Physical Aggression', isNew: false, baselineFrequency: 8,  sessionFrequency: 6,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
           { behaviorId: 'bt-c11-2', behaviorName: 'Vocal Disruption',    isNew: false, baselineFrequency: 12, sessionFrequency: 9,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
@@ -2197,7 +2270,7 @@ export const SEED_CLIENTS = () => [
       },
       {
         id: 'slog_c11_3', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
-        sessionDate: '2026-03-02', sessionNumber: 3, notes: '',
+        sessionDate: '2026-03-02', sessionNumber: 3, sessionType: 'behavior', notes: '',
         behaviorEntries: [
           { behaviorId: 'bt-c11-1', behaviorName: 'Physical Aggression', isNew: false, baselineFrequency: 8,  sessionFrequency: 4,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
           { behaviorId: 'bt-c11-2', behaviorName: 'Vocal Disruption',    isNew: false, baselineFrequency: 12, sessionFrequency: 7,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
@@ -2208,7 +2281,7 @@ export const SEED_CLIENTS = () => [
       },
       {
         id: 'slog_c11_4', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
-        sessionDate: '2026-04-06', sessionNumber: 4, notes: '',
+        sessionDate: '2026-04-06', sessionNumber: 4, sessionType: 'behavior', notes: '',
         behaviorEntries: [
           { behaviorId: 'bt-c11-1', behaviorName: 'Physical Aggression', isNew: false, baselineFrequency: 8,  sessionFrequency: 3,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
           { behaviorId: 'bt-c11-2', behaviorName: 'Vocal Disruption',    isNew: false, baselineFrequency: 12, sessionFrequency: 5,  currentStoNumber: 1, stoStatus: 'in_progress', newBehaviorDefinition: '', newBehaviorFunction: '', newBehaviorSeverity: '', firstSeenDate: null },
@@ -2359,21 +2432,35 @@ export const makeReassessmentSession = (
     }
   }
 
+  // Build lookup from the initial assessment plan: behaviorId → target (for LTO)
+  const planBtList = initialSession?.sections?.behavior_targets?.behaviorTargets ?? [];
+  const planBtMap  = Object.fromEntries(planBtList.map(bt => [bt.id, bt]));
+
   const originalBehaviorSummary = Array.from(origMap.values()).map(rec => {
-    const avg = mean(rec.frequencies);
+    const avg      = mean(rec.frequencies);
+    const planBt   = planBtMap[rec.behaviorId];
+    const ltoFreq  = planBt?.targetFrequency != null && planBt.targetFrequency !== ''
+      ? parseFloat(planBt.targetFrequency)
+      : null;
+    const derivedStoStatus = rec.lastEntry?.stoStatus ?? 'in_progress';
     return {
-      behaviorId:          rec.behaviorId,
-      behaviorName:        rec.behaviorName,
-      baselineFrequency:   rec.baselineFrequency,
-      sessionsLogged:      rec.frequencies.length,
-      averageFrequency:    avg !== null ? Math.round(avg * 100) / 100 : null,
-      lastSessionFrequency:rec.lastEntry?.sessionFrequency ?? null,
-      percentReduction:    (avg !== null && rec.baselineFrequency)
+      behaviorId:              rec.behaviorId,
+      behaviorName:            rec.behaviorName,
+      baselineFrequency:       rec.baselineFrequency,
+      ltoFrequency:            ltoFreq,
+      sessionsLogged:          rec.frequencies.length,
+      averageFrequency:        avg !== null ? Math.round(avg * 100) / 100 : null,
+      lastSessionFrequency:    rec.lastEntry?.sessionFrequency ?? null,
+      percentReduction:        (avg !== null && rec.baselineFrequency)
         ? Math.round(((rec.baselineFrequency - avg) / rec.baselineFrequency) * 10000) / 100
         : null,
-      trend:               computeTrend(avg, rec.baselineFrequency),
-      currentStoNumber:    rec.lastEntry?.currentStoNumber ?? 1,
-      stoStatus:           rec.lastEntry?.stoStatus ?? 'in_progress',
+      trend:                   computeTrend(avg, rec.baselineFrequency),
+      currentStoNumber:        rec.lastEntry?.currentStoNumber ?? 1,
+      stoStatus:               derivedStoStatus,
+      // sessionDerivedStoStatus is the immutable truth from session logs.
+      // It is NEVER overwritten by the BCBA-dropdown merge in App.jsx.
+      // The Mastered/Active partition in AssessmentInterviewPage uses this field.
+      sessionDerivedStoStatus: derivedStoStatus,
     };
   });
 
@@ -2393,9 +2480,16 @@ export const makeReassessmentSession = (
           severity:           entry.newBehaviorSeverity,
           firstFrequency:     entry.sessionFrequency,
           frequencies:        [],
+          sessionHistory:     [],
         });
       }
       newMap.get(key).frequencies.push(entry.sessionFrequency);
+      newMap.get(key).sessionHistory.push({
+        sessionNumber: log.sessionNumber,
+        sessionDate:   log.sessionDate,
+        frequency:     entry.sessionFrequency,
+        isFlag:        true,
+      });
     }
     // also collect subsequent non-isNew entries for known new behaviors (by name only)
   }
@@ -2405,6 +2499,12 @@ export const makeReassessmentSession = (
     for (const entry of (log.behaviorEntries ?? [])) {
       if (entry.isNew || !newBehaviorNames.has(entry.behaviorName)) continue;
       newMap.get(entry.behaviorName).frequencies.push(entry.sessionFrequency);
+      newMap.get(entry.behaviorName).sessionHistory.push({
+        sessionNumber: log.sessionNumber,
+        sessionDate:   log.sessionDate,
+        frequency:     entry.sessionFrequency,
+        isFlag:        false,
+      });
     }
   }
 
@@ -2412,6 +2512,15 @@ export const makeReassessmentSession = (
     const allFreqs = rec.frequencies;
     const avg = mean(allFreqs);
     const baseline = rec.firstFrequency;
+    // sort history oldest → newest; deduplicate by sessionNumber in case loops overlap
+    const seenSessions = new Set();
+    const sessionHistory = rec.sessionHistory
+      .sort((a, b) => a.sessionNumber - b.sessionNumber)
+      .filter(pt => {
+        if (seenSessions.has(pt.sessionNumber)) return false;
+        seenSessions.add(pt.sessionNumber);
+        return true;
+      });
     return {
       behaviorName:        rec.behaviorName,
       firstSeenDate:       rec.firstSeenDate,
@@ -2420,10 +2529,16 @@ export const makeReassessmentSession = (
       severity:            rec.severity,
       baselineFrequency:   baseline,
       averageFrequency:    avg !== null ? Math.round(avg * 100) / 100 : null,
+      minFrequency:        allFreqs.length > 0 ? Math.min(...allFreqs) : null,
+      maxFrequency:        allFreqs.length > 0 ? Math.max(...allFreqs) : null,
       trend:               computeTrend(avg, baseline),
-      bcbaDefinitionFinal: '',
-      includedInPlan:      null,
-      stoStructure:        [],
+      sessionHistory,
+      bcbaDefinitionFinal:       '',
+      includedInPlan:            null,
+      stoStructure:              [],
+      masteryCriteriaFrequency:  null,
+      masteryCriteriaWeeks:      null,
+      bcbaLtoText:               '',
     };
   });
 
@@ -2431,14 +2546,45 @@ export const makeReassessmentSession = (
   const initialSkillGoals =
     initialSession?.sections?.skill_acquisitions?.skillGoals ?? [];
 
-  const originalSkillSummary = initialSkillGoals.map(goal => ({
-    skillId:        goal.id,
-    skillName:      goal.targetSkill ?? goal.skillName ?? '',
-    domain:         goal.domain ?? '',
-    baselinePercent:Number(goal.baselinePercent ?? 0),
-    currentPercent: null,
-    status:         'new',
-  }));
+  const originalSkillSummary = initialSkillGoals.map(goal => {
+    const skillEntries = (sessionLogs ?? [])
+      .flatMap(log =>
+        (log.skillEntries ?? []).filter(se => !se.isNew && se.skillId === goal.id),
+      )
+      .sort((a, b) => {
+        const la = (sessionLogs ?? []).find(l => (l.skillEntries ?? []).includes(a));
+        const lb = (sessionLogs ?? []).find(l => (l.skillEntries ?? []).includes(b));
+        return new Date(la?.sessionDate ?? 0) - new Date(lb?.sessionDate ?? 0);
+      });
+
+    const sessionsLogged = skillEntries.length;
+    const percents       = skillEntries.map(se => se.accuracyPercent ?? 0);
+    const average        = sessionsLogged > 0 ? percents.reduce((s, v) => s + v, 0) / sessionsLogged : null;
+    const currentPercent = sessionsLogged > 0 ? percents[percents.length - 1] : null;
+    const first          = percents[0] ?? 0;
+    const trend          = average !== null && average > first + 5 ? 'improving'
+      : average !== null && average < first - 5 ? 'worsening'
+      : 'flat';
+
+    return {
+      skillId:        goal.id,
+      skillName:      goal.targetSkill ?? goal.skillName ?? '',
+      domain:         goal.domain ?? '',
+      baselinePercent:Number(goal.baselinePercent ?? 0),
+      currentPercent,
+      sessionsLogged,
+      averageAccuracy: average,
+      trend,
+      // Read the most recent skill log's stoStatus so mastered skills surface correctly.
+      // sessionDerivedStatus is the immutable truth from session logs (never merged from BCBA edits).
+      sessionDerivedStatus: sessionsLogged > 0
+        ? (skillEntries[skillEntries.length - 1]?.stoStatus ?? 'in_progress')
+        : 'new',
+      status: sessionsLogged > 0
+        ? (skillEntries[skillEntries.length - 1]?.stoStatus ?? 'in_progress')
+        : 'new',
+    };
+  });
 
   // ── (5) newSkillSummary ────────────────────────────────────────────────────
   const seenSkills = new Map();
@@ -2447,20 +2593,83 @@ export const makeReassessmentSession = (
       if (!entry.isNew) continue;
       if (!seenSkills.has(entry.skillName)) {
         seenSkills.set(entry.skillName, {
-          skillId:              entry.skillId,
-          skillName:            entry.skillName,
-          firstSeenDate:        entry.firstSeenDate,
-          rbtNotes:             entry.notes,
-          bcbaGoalName:         '',
-          bcbaDefinition:       '',
-          bcbaDomain:           '',
-          includedInPlan:       null,
-          stoStructure:         [],
+          skillId:                entry.skillId,
+          skillName:              entry.skillName,
+          firstSeenDate:          entry.firstSeenDate,
+          rbtNotes:               entry.notes,
+          baselinePercent:        entry.baselinePercent ?? null,
+          currentPercent:         null,
+          bcbaGoalName:           '',
+          bcbaDefinition:         '',
+          bcbaDomain:             '',
+          includedInPlan:         null,
+          stoSteps:               [],
+          masteryCriteriaPercent: null,
+          masteryCriteriaWeeks:   null,
+          bcbaLtoText:            '',
+          _sessionHistory:        [],
+          _accuracies:            [],
+          _latestDate:            null,
         });
+      }
+      const rec = seenSkills.get(entry.skillName);
+      const firstAccuracy = entry.baselinePercent ?? null;
+      rec._sessionHistory.push({ sessionNumber: log.sessionNumber, sessionDate: log.sessionDate, accuracy: firstAccuracy, isFlag: true });
+      if (firstAccuracy != null) rec._accuracies.push(firstAccuracy);
+    }
+  }
+  // Collect monitoring entries (non-isNew entries by skillName match)
+  const seenSkillNamesSet = new Set(seenSkills.keys());
+  for (const log of (sessionLogs ?? [])) {
+    for (const entry of (log.skillEntries ?? [])) {
+      if (entry.isNew || !seenSkillNamesSet.has(entry.skillName)) continue;
+      const rec = seenSkills.get(entry.skillName);
+      // Deduplicate by sessionNumber
+      if (rec._sessionHistory.some(pt => pt.sessionNumber === log.sessionNumber)) continue;
+      const accuracy = entry.accuracyPercent ?? null;
+      rec._sessionHistory.push({ sessionNumber: log.sessionNumber, sessionDate: log.sessionDate, accuracy, isFlag: false });
+      if (accuracy != null) rec._accuracies.push(accuracy);
+      // Track currentPercent from most recent log
+      if (!rec._latestDate || log.sessionDate > rec._latestDate) {
+        rec._latestDate = log.sessionDate;
+        rec.currentPercent = accuracy;
       }
     }
   }
-  const newSkillSummary = Array.from(seenSkills.values());
+
+  const newSkillSummary = Array.from(seenSkills.values()).map(rec => {
+    const allAcc = rec._accuracies;
+    const avg = allAcc.length > 0
+      ? Math.round((allAcc.reduce((s, v) => s + v, 0) / allAcc.length) * 100) / 100
+      : null;
+    const sessionHistory = [...rec._sessionHistory].sort((a, b) => a.sessionNumber - b.sessionNumber);
+    const firstAcc = sessionHistory[0]?.accuracy ?? null;
+    const lastAcc  = rec.currentPercent;
+    const trend    = allAcc.length > 1
+      ? (lastAcc > firstAcc ? 'up' : lastAcc < firstAcc ? 'down' : 'stable')
+      : 'none';
+    return {
+      skillId:                rec.skillId,
+      skillName:              rec.skillName,
+      firstSeenDate:          rec.firstSeenDate,
+      rbtNotes:               rec.rbtNotes,
+      baselinePercent:        rec.baselinePercent,
+      currentPercent:         rec.currentPercent,
+      bcbaGoalName:           rec.bcbaGoalName,
+      bcbaDefinition:         rec.bcbaDefinition,
+      bcbaDomain:             rec.bcbaDomain,
+      includedInPlan:         rec.includedInPlan,
+      stoSteps:               rec.stoSteps,
+      masteryCriteriaPercent: rec.masteryCriteriaPercent,
+      masteryCriteriaWeeks:   rec.masteryCriteriaWeeks,
+      bcbaLtoText:            rec.bcbaLtoText,
+      sessionHistory,
+      minAccuracy:            allAcc.length > 0 ? Math.min(...allAcc) : null,
+      maxAccuracy:            allAcc.length > 0 ? Math.max(...allAcc) : null,
+      avgAccuracy:            avg,
+      trend,
+    };
+  });
 
   // ── (6) caregiverTrainingSummary ───────────────────────────────────────────
   const ctTargets =
@@ -2518,8 +2727,9 @@ export const makeReassessmentSession = (
       averageSessionPercent:avg !== null ? Math.round(avg * 100) / 100 : null,
       lastSessionPercent:   last?.sessionPercent ?? null,
       trend,
-      stoStatus:            last?.stoStatus ?? 'not_yet_started',
-      currentStoNumber:     last?.currentStoNumber ?? 1,
+      stoStatus:               last?.stoStatus ?? 'not_yet_started',
+      sessionDerivedStoStatus: last?.stoStatus ?? 'not_yet_started',
+      currentStoNumber:        last?.currentStoNumber ?? 1,
       sto: (() => {
         const validSteps = (target.stoSteps ?? []).filter(
           s => s.targetPercent !== '' && s.targetPercent != null,
@@ -2537,6 +2747,85 @@ export const makeReassessmentSession = (
       lto:                  target.ltoPercent != null
         ? `${target.ltoPercent}% accuracy across ${target.ltoSessions} sessions`
         : (target.lto ?? ''),
+    };
+  });
+
+  // ── (6b) newCaregiverSummary — goals flagged during sessions, not in the formal plan ──
+  const ctPlanNames = new Set(ctTargets.map(t => t.goalName?.toLowerCase()));
+  const newCgMap = new Map();
+
+  for (const log of ctLogs) {
+    for (const entry of (log.trainingEntries ?? [])) {
+      if (!entry.isNew && !entry.isMonitoring) continue;
+      if (entry.targetId) continue; // formal plan target
+      const name = entry.goalName;
+      if (!name) continue;
+      if (ctPlanNames.has(name.toLowerCase())) continue;
+
+      if (entry.isNew) {
+        if (!newCgMap.has(name)) {
+          newCgMap.set(name, {
+            goalName:        name,
+            firstSeenDate:   entry.firstSeenDate ?? log.sessionDate,
+            baselinePercent: entry.baselinePercent ?? null,
+            notes:           entry.notes ?? '',
+            _accuracies:     [],
+            _sessionHistory: [],
+          });
+        }
+        // The flag session itself counts as the first data point
+        if (entry.sessionPercent != null && !isNaN(entry.sessionPercent)) {
+          newCgMap.get(name)._accuracies.push(entry.sessionPercent);
+          newCgMap.get(name)._sessionHistory.push({
+            sessionNumber: log.sessionNumber,
+            sessionDate:   log.sessionDate,
+            percent:       entry.sessionPercent,
+            isFlag:        true,
+          });
+        }
+      } else if (entry.isMonitoring) {
+        if (!newCgMap.has(name)) continue; // shouldn't happen if data is consistent
+        if (entry.sessionPercent != null && !isNaN(entry.sessionPercent)) {
+          newCgMap.get(name)._accuracies.push(entry.sessionPercent);
+          newCgMap.get(name)._sessionHistory.push({
+            sessionNumber: log.sessionNumber,
+            sessionDate:   log.sessionDate,
+            percent:       entry.sessionPercent,
+            isFlag:        false,
+          });
+        }
+      }
+    }
+  }
+
+  const newCaregiverSummary = Array.from(newCgMap.values()).map(item => {
+    const accs = item._accuracies;
+    const hist = [...item._sessionHistory]
+      .sort((a, b) => new Date(a.sessionDate) - new Date(b.sessionDate));
+    const avgAcc = accs.length > 0 ? Math.round((accs.reduce((s, v) => s + v, 0) / accs.length) * 10) / 10 : null;
+    const minAcc = accs.length > 0 ? Math.min(...accs) : null;
+    const maxAcc = accs.length > 0 ? Math.max(...accs) : null;
+    const base   = item.baselinePercent;
+    const trend  = (avgAcc === null || base === null)
+      ? 'flat'
+      : avgAcc > base + 5 ? 'improving'
+      : avgAcc < base - 5 ? 'worsening'
+      : 'flat';
+    return {
+      goalName:               item.goalName,
+      firstSeenDate:          item.firstSeenDate,
+      baselinePercent:        base,
+      notes:                  item.notes,
+      sessionHistory:         hist,
+      minAccuracy:            minAcc,
+      maxAccuracy:            maxAcc,
+      avgAccuracy:            avgAcc,
+      trend,
+      includedInPlan:         null,    // BCBA decision
+      stoSteps:               [],
+      masteryCriteriaPercent: null,
+      masteryCriteriaWeeks:   null,
+      bcbaLtoText:            '',
     };
   });
 
@@ -2576,6 +2865,7 @@ export const makeReassessmentSession = (
     originalSkillSummary,
     newSkillSummary,
     caregiverTrainingSummary,
+    newCaregiverSummary,
     progressNarrativeText:  '',
   };
 };

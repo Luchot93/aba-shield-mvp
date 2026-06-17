@@ -318,27 +318,53 @@ Key payers in scope: BCBS (via Lucet/WebPass), Cigna/Evernorth, Sunshine Health 
 
 ## Completed Work (this branch)
 
-**feat/caregiver-training-update-STO-LTO-part-2** — Two major feature tracks:
+**feat/reassessment-workflow-part-2** — Met Goals visual treatment + session logging modals + reassessment partition fixes
 
-### Track 1: Multi-step STO milestones for skill acquisition goals
-- Added `stoSteps[]` to `SKILL_GOAL_DEFAULTS` in `assessmentStore.js`
-- Three new store functions: `addSkillStoStep`, `updateSkillStoStep`, `removeSkillStoStep`
-- `SkillGoalCard.jsx` — replaced single STO fields with multi-step row UI (matches BehaviorTargetCard pattern); steps placed between Baseline and Mastery Criteria
-- All 6 downstream consumers updated with 4-tier fallback hierarchy (stoSteps → stoPercent/stoSkillDescription/stoWeeks → goal.sto → auto-formula)
-- New `renderSkillSTOChart` in `chartRenderer.js` and per-skill trajectory charts in `graphBuilder.js`
-- Seed data: stoSteps added to Emma Thompson, Marcus Rivera, Oliver Patel, Charlotte Davis skill goals
+### Track 1: Met Goals visual treatment in session logging modals
+Three modals (`BehaviorSessionModal.jsx`, `SkillSessionModal.jsx`, `CaregiverTrainingLogModal.jsx`) now partition plan targets into:
+- **Active Goals** — `stoStatus !== 'met'` — rendered as before
+- **Maintenance (Mastered Goals)** — `stoStatus === 'met'` — emerald-tinted section with "Met ✓" badge replacing STO radios, data entry optional, `↩ Return to active` button for regression/misclick recovery
+- Save logic: maintenance goals don't block save; `allPlanMastered` / `allSkillsMastered` / `allGoalsMastered` edge case allows saving an all-mastered session with no data entered
+- `stoStatus` is initialized from `latestLogEntryMap` so mastery state carries forward across sessions
 
-### Track 2: Multi-step STO milestones for maladaptive behavior targets (existing pattern, new seed data)
-- stoSteps were already wired in the behavior target pipeline; audit confirmed all 7 consumers correct
-- Seed data added to all remaining behavior targets: Emma (Head Banging, Tantrum), Marcus (Physical Aggression, Bathing Refusal), Oliver (Physical Aggression, Elopement), Charlotte Davis (Task Refusal, Aggression)
+### Track 2: Session timeline log panels — mastery badges
+`BehaviorSessionLogPanel.jsx`, `SkillSessionLogPanel.jsx`, `CaregiverTrainingLogPanel.jsx`:
+- `StoStatusChip` component: renders "Met ✓" emerald pill for mastered goals; plain colored text for in_progress/not_started
+- Collapsed session header shows "N mastered ✓" badge when any goals in that session are Met
 
-### Track 3: STO Milestone Rail in Plan Draft pipeline panel
-- `PlanDraftInlinePanel.jsx` — added `StoMilestoneRail` component + expand-per-card UX for both `SkillTargetsPanel` and `BehaviorGoalsPanel`
+### Track 3: Reassessment "Mastered This Period" partition — correctness fixes
+`AssessmentInterviewPage.jsx` — `OrigBehaviorRow` / `OrigSkillRow` / `CaregiverTrainingSummaryRow`:
+- **Two-field pattern**: `sessionDerivedStoStatus` (behavior/caregiver) and `sessionDerivedStatus` (skill) — computed fresh from session logs in `makeReassessmentSession`, never overwritten by BCBA dropdown merge in `App.jsx`
+- **App.jsx merge fix**: the behavior/skill merge now explicitly re-applies `sessionDerived*` from the fresh rebuild, so previously-saved stale BCBA values can't corrupt the partition
+- **Skill status fix**: `originalSkillSummary.status` was hardcoded to `'in_progress'/'new'` — now reads `skillEntries[last]?.stoStatus` so mastered skills correctly surface
+- **Caregiver**: added `sessionDerivedStoStatus` for consistency and future-proof merge safety
+- Partition predicates in all three tables changed from `item.stoStatus` → `(item.sessionDerivedStoStatus ?? item.stoStatus)` and similarly for skills
 
-### Caregiver Training (previous work, completed)
-- Dynamic caregiver training graph generation via `caregiverTrainingTargets[]`
-- `makeStandardCaregiverTargets()` helper in `seedData.js`
-- `renderCaregiverTrainingTargetChart()` in `graphBuilder.js`
+### Track 4: Reassessment per-session detail table — color-coded STATUS column
+`SessionDetailTable` component in `AssessmentInterviewPage.jsx`:
+- Added `StoStatusCellChip` component: "Met ✓" emerald pill, "In progress" teal text, "Regressed" red text, muted slate for not started
+- All three `sessionRows` / `ctSessionRows` builders now include `statusRaw: entry.stoStatus` alongside the formatted `status` label string
+- `SessionDetailTable` detects `c.key === 'status'` + `row.statusRaw` and renders the chip instead of plain text
+
+### Track 5: Reassessment STATUS column — replaced dropdown with read-only badge
+`OrigBehaviorRow`, `OrigSkillRow`, `CaregiverTrainingSummaryRow`:
+- Removed editable `<select>` dropdowns for STO status (were causing partition corruption when BCBA opened reassessment before latest sessions were logged)
+- Replaced with `ReassessmentStatusBadge` component: "Mastered ✓" emerald pill, "In Progress" amber pill, "Not Started" slate pill
+- Badge reads `sessionDerived*` field (immutable from logs), never the stale saved value
+- Removed now-unused `STO_STATUS_OPTIONS`, `STO_STATUS_COLORS`, `SKILL_STATUS_OPTIONS`, `SKILL_STATUS_COLORS` constants and `statusColorClass` / `stoColorClass` variables
+
+### Seed data
+- Charlotte Davis session 6: Tantrum `stoStatus: 'met'` (clinically correct — hit ≤1×/day target)
+- `makeReassessmentSession` `originalBehaviorSummary`: added `sessionDerivedStoStatus` field
+- `makeReassessmentSession` `originalSkillSummary`: `status` now derived from last skill log entry's `stoStatus`; added `sessionDerivedStatus` field
+- `makeReassessmentSession` caregiver summary: added `sessionDerivedStoStatus` field
+
+### Previous completed work (prior sessions on this branch)
+**feat/caregiver-training-update-STO-LTO-part-2:**
+- Multi-step STO milestones for skill acquisition goals (`stoSteps[]` in `assessmentStore.js`, `SkillGoalCard.jsx`, all 6 downstream consumers, `renderSkillSTOChart`)
+- Multi-step STO milestones for behavior targets (seed data for Emma, Marcus, Oliver, Charlotte)
+- STO Milestone Rail in Plan Draft pipeline panel (`PlanDraftInlinePanel.jsx`)
+- Dynamic caregiver training graph generation (`caregiverTrainingTargets[]`, `makeStandardCaregiverTargets()`, `renderCaregiverTrainingTargetChart()`)
 
 ---
 

@@ -78,10 +78,9 @@ export default function AssessmentFeature({
   const tagMeta     = STATUS_TAG[status] ?? STATUS_TAG.not_started;
   const exportReady = canExport(client);
 
-  // Count sections still pending (not approved or skipped), excluding demographics
   const pendingCount = session
-    ? Object.entries(session.sections)
-        .filter(([key, s]) => key !== 'demographics' && s.approvalState !== 'approved' && s.approvalState !== 'skipped')
+    ? Object.values(session.sections)
+        .filter(s => s.approvalState !== 'approved' && s.approvalState !== 'skipped')
         .length
     : 0;
 

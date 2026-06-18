@@ -222,13 +222,115 @@ export function renderCaregiverTrainingTargetChart(target, options = {}) {
 const normalize = (label) =>
   label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
 
+// ─── renderProgressLineChart ──────────────────────────────────────────────────
+
+/**
+ * Session-by-session actual progress line chart for the reassessment document.
+ * Shows observed values per session with a dashed baseline reference line.
+ *
+ * @param {Array}  entries   — [{sessionNumber, frequency|accuracy|percent}]
+ * @param {number} baseline  — original plan baseline value
+ * @param {string} title     — behavior/skill/goal name (chart title)
+ * @param {object} [opts]
+ * @param {boolean} [opts.isPercent=false]  — true → y-axis is 0–100%, false → frequency
+ * @param {boolean} [opts.higherIsBetter=false]  — true for skills/CT (green = going up)
+ * @returns {string} base64 PNG
+ */
+function renderProgressLineChart(entries, baseline, title, opts = {}) {
+  const { isPercent = false, higherIsBetter = false } = opts;
+
+  const labels = entries.map((_, i) => `S${i + 1}`);
+  const data   = entries.map(e =>
+    isPercent
+      ? (e.accuracy ?? e.percent ?? e.sessionPercent ?? 0)
+      : (e.frequency ?? 0)
+  );
+
+  // Trend colour: green if improving (lower freq or higher %), red if worsening
+  const last  = data[data.length - 1] ?? baseline;
+  const improving = higherIsBetter ? last > baseline : last < baseline;
+  const lineColor = improving ? 'rgba(16,185,129,1)' : 'rgba(239,68,68,1)'; // emerald / red
+
+  const canvas = createOffscreenCanvas(540, 280);
+  const ctx    = canvas.getContext('2d');
+  ctx.save();
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0, 0, 540, 280);
+  ctx.restore();
+
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label:           isPercent ? 'Session accuracy %' : 'Session frequency',
+          data,
+          borderColor:     lineColor,
+          backgroundColor: lineColor.replace('1)', '0.08)'),
+          borderWidth:     2.5,
+          tension:         0.3,
+          fill:            true,
+          pointRadius:     4,
+          pointBackgroundColor: lineColor,
+        },
+        {
+          label:       `Baseline (${baseline}${isPercent ? '%' : '×'})`,
+          data:        entries.map(() => baseline),
+          borderColor: 'rgba(148,163,184,0.9)',
+          borderWidth: 1.5,
+          borderDash:  [6, 4],
+          pointRadius: 0,
+          fill:        false,
+        },
+      ],
+    },
+    options: {
+      responsive: false,
+      animation:  false,
+      plugins: {
+        title: {
+          display: true,
+          text:    title,
+          font:    { size: 13, weight: 'bold' },
+          padding: { bottom: 10 },
+          color:   '#1e293b',
+        },
+        legend: { display: true, position: 'bottom', labels: { font: { size: 11 } } },
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ...(isPercent ? { max: 100 } : {}),
+          title: {
+            display: true,
+            text:    isPercent ? '% Correct' : 'Frequency / Day',
+            font: { size: 11 },
+          },
+        },
+        x: {
+          title: { display: true, text: 'Session', font: { size: 11 } },
+          grid:  { display: false },
+        },
+      },
+    },
+  });
+
+  const base64 = canvas.toDataURL('image/png').split(',')[1];
+  chart.destroy();
+  return base64;
+}
+
 // ─── buildGraphsFromSession ───────────────────────────────────────────────────
 
 /**
- * @param {object} session  Full assessment_session (makeAssessmentSession shape).
+ * @param {object} session              Full assessment_session.
+ * @param {object} [opts]
+ * @param {object[]} [opts.sessionLogs] Service session logs (for reassessment progress charts).
+ * @param {object[]} [opts.ctLogs]      Caregiver training session logs (for reassessment progress charts).
  * @returns {Promise<Record<string, string>>}  Map of graphKey → base64 PNG string.
  */
-export async function buildGraphsFromSession(session) {
+export async function buildGraphsFromSession(session, { sessionLogs = [], ctLogs = [] } = {}) {
   const result = {};
 
   // ── Step 1 & 2 — Maladaptive behavior charts + STO trajectories ─────────────
@@ -383,6 +485,136 @@ export async function buildGraphsFromSession(session) {
       } catch (err) {
         console.warn('Chart failed: caregiver_reinforcement', err);
       }
+    }
+  }
+
+  // ── Step 5 — New-cycle charts for reassessment sessions ─────────────────────
+  //
+  // Generates STO trajectory + baseline-vs-target charts for behaviors and skills
+  // that the BCBA has marked "Include in plan" in the reassessment interview.
+  // Keys are prefixed `reauth_` to avoid colliding with the initial assessment keys.
+
+  if (session?.sessionType === 'reassessment') {
+    const newBehaviors = session.newBehaviorSummary ?? [];
+    for (const item of newBehaviors) {
+      if (item.includedInPlan !== true) continue;
+      const name = (item.behaviorName || '').trim();
+      if (!name) continue;
+      const baseline  = parseFloat(item.baselineFrequency) || 0;
+      const target    = item.masteryCriteriaFrequency != null ? parseFloat(item.masteryCriteriaFrequency) : 0;
+      const unit      = item.frequencyUnit || 'day';
+      const stoSteps  = (item.stoStructure ?? []).filter(
+        s => s.targetFrequency !== '' && s.targetFrequency != null,
+      );
+
+      try {
+        result[`reauth_behavior_${normalize(name)}`] = renderMaladaptiveBehaviorChart(name, baseline, target, unit);
+      } catch (e) { console.warn(`Reauth chart failed: reauth_behavior_${normalize(name)}`, e); }
+
+      if (baseline > 0) {
+        try {
+          result[`reauth_sto_${normalize(name)}`] = renderSTOTrajectoryChart(
+            name, baseline, masteryDates, target, stoSteps.length > 0 ? stoSteps : null,
+          );
+        } catch (e) { console.warn(`Reauth chart failed: reauth_sto_${normalize(name)}`, e); }
+      }
+    }
+
+    const newSkills = session.newSkillSummary ?? [];
+    for (const item of newSkills) {
+      if (item.includedInPlan !== true) continue;
+      const name = (item.skillName ?? item.bcbaGoalName ?? '').trim();
+      if (!name) continue;
+      const baseline = parseFloat(item.baselinePercent) || 0;
+      const mastery  = parseFloat(item.masteryCriteriaPercent) || 80;
+      const stoSteps = (item.stoSteps ?? []).filter(
+        s => s.targetPercent !== '' && s.targetPercent != null,
+      );
+      try {
+        result[`reauth_skill_sto_${normalize(name)}`] = renderSkillSTOChart(
+          name, baseline, stoSteps.length > 0 ? stoSteps : null, mastery,
+        );
+      } catch (e) { console.warn(`Reauth chart failed: reauth_skill_sto_${normalize(name)}`, e); }
+    }
+
+    const newCT = session.newCaregiverSummary ?? [];
+    for (const item of newCT) {
+      if (item.includedInPlan !== true) continue;
+      const name = (item.goalName || '').trim();
+      if (!name) continue;
+      const ctTarget = {
+        goalName:               item.goalName,
+        baselinePercent:        item.baselinePercent,
+        masteryCriteriaPercent: item.masteryCriteriaPercent,
+        stoSteps:               item.stoStructure ?? [],  // stoStructure maps to stoSteps for chart
+      };
+      try {
+        result[`reauth_ct_${normalize(name)}`] = renderCaregiverTrainingTargetChart(ctTarget);
+      } catch (e) { console.warn(`Reauth chart failed: reauth_ct_${normalize(name)}`, e); }
+    }
+  }
+
+  // ── Step 6 — Actual progress trend charts (reassessment only) ───────────────
+  //
+  // Session-by-session observed data for original plan targets.
+  // Requires sessionLogs / ctLogs to be passed from the caller.
+  // Keys: progress_behavior_*, progress_skill_*, progress_ct_*
+
+  if (session?.sessionType === 'reassessment' && (sessionLogs.length > 0 || ctLogs.length > 0)) {
+    // Behavior progress charts
+    const origBehaviors = session.originalBehaviorSummary ?? [];
+    for (const item of origBehaviors) {
+      const name = (item.behaviorName || '').trim();
+      if (!name || !item.behaviorId) continue;
+      const { entries, baseline: computedBaseline } =
+        buildBehaviorTrendFromLogs(sessionLogs, item.behaviorId);
+      if (entries.length < 2) continue; // not enough data for a meaningful trend chart
+      const baseline = item.baselineFrequency ?? computedBaseline ?? 0;
+      try {
+        result[`progress_behavior_${normalize(name)}`] = renderProgressLineChart(
+          entries, baseline, `${name} — Progress This Period`,
+          { isPercent: false, higherIsBetter: false },
+        );
+      } catch (e) { console.warn(`Progress chart failed: progress_behavior_${normalize(name)}`, e); }
+    }
+
+    // Skill progress charts
+    const origSkills = session.originalSkillSummary ?? [];
+    for (const item of origSkills) {
+      const name = (item.skillName || '').trim();
+      if (!name || !item.skillId) continue;
+      const { entries } = buildSkillTrendFromLogs(sessionLogs, item.skillId);
+      if (entries.length < 2) continue;
+      const baseline = item.baselinePercent ?? 0;
+      try {
+        result[`progress_skill_${normalize(name)}`] = renderProgressLineChart(
+          entries, baseline, `${name} — Accuracy Progress`,
+          { isPercent: true, higherIsBetter: true },
+        );
+      } catch (e) { console.warn(`Progress chart failed: progress_skill_${normalize(name)}`, e); }
+    }
+
+    // Caregiver training progress charts
+    const ctSummary = session.caregiverTrainingSummary ?? [];
+    for (const item of ctSummary) {
+      const name = (item.goalName || '').trim();
+      if (!name || !item.targetId) continue;
+      // Build per-session entries from ctLogs
+      const ctEntries = (ctLogs ?? [])
+        .filter(log => (log.trainingEntries ?? []).some(te => te.targetId === item.targetId))
+        .sort((a, b) => new Date(a.sessionDate) - new Date(b.sessionDate))
+        .map((log, i) => {
+          const te = log.trainingEntries.find(te => te.targetId === item.targetId);
+          return { sessionNumber: i + 1, accuracy: te?.sessionPercent ?? 0 };
+        });
+      if (ctEntries.length < 2) continue;
+      const baseline = item.baselinePercent ?? 0;
+      try {
+        result[`progress_ct_${normalize(name)}`] = renderProgressLineChart(
+          ctEntries, baseline, `${name} — Caregiver Training Progress`,
+          { isPercent: true, higherIsBetter: true },
+        );
+      } catch (e) { console.warn(`Progress chart failed: progress_ct_${normalize(name)}`, e); }
     }
   }
 

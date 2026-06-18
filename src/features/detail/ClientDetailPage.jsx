@@ -1448,6 +1448,32 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 {servicesTab === 'reauth' && (
                   isReauthSvc ? (
                     <div className="flex-1 overflow-y-auto px-5 py-3">
+                      {/* Reassessment CPT hours requested — read-only reference from the reassessment doc */}
+                      {(() => {
+                        const reSession = (client.reassessment_sessions ?? []).find(s => s.status !== 'complete');
+                        const rh = reSession?.cptHours;
+                        if (!rh || !Object.values(rh).some(v => v)) return null;
+                        return (
+                          <div className="mb-4 rounded-xl border border-teal-100 bg-teal-50/50 px-4 py-3">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-teal-600 mb-2">
+                              Hours Requested in Reassessment
+                            </p>
+                            <div className="flex gap-4">
+                              {[
+                                { code: '97153', label: 'Direct' },
+                                { code: '97155', label: 'BCBA' },
+                                { code: '97156', label: 'Caregiver' },
+                              ].map(({ code, label }) => rh[code] ? (
+                                <div key={code} className="text-center">
+                                  <p className="text-[11px] font-bold text-slate-700 tabular-nums">{rh[code]}h/mo</p>
+                                  <p className="text-[9px] text-slate-400 uppercase tracking-wide">{code}</p>
+                                  <p className="text-[9px] text-slate-400">{label}</p>
+                                </div>
+                              ) : null)}
+                            </div>
+                          </div>
+                        );
+                      })()}
                       {REAUTH_ITEMS.map(item => (
                         <React.Fragment key={item.key ?? item.id}>
                           {CheckRow({ item, readOnly: !userCanEdit })}

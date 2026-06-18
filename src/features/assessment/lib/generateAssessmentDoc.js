@@ -1637,6 +1637,1510 @@ function signatureSection() {
   ];
 }
 
+// ─── Reassessment document helpers ───────────────────────────────────────────
+//
+// All functions below are used exclusively by generateReassessmentDoc().
+// They are NOT called by generateInitialAssessmentDoc() / generateAssessmentDoc().
+
+/** Shared date formatter used across reassessment sections */
+const fmtDocDate = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d) ? iso : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+/** Shared table border style for reassessment progress tables */
+const PROGRESS_BORDERS = {
+  top:     { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+  bottom:  { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+  left:    { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+  right:   { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+  insideH: { style: BorderStyle.SINGLE, size: 2, color: TEAL_BORDER },
+  insideV: { style: BorderStyle.SINGLE, size: 2, color: TEAL_BORDER },
+};
+
+/** Shared cell builder for progress tables */
+const progressCell = (text, opts = {}) => new TableCell({
+  children: [new Paragraph({
+    children: parseBoldRuns(text ?? '—', { size: SZ_SM, font: FONT, bold: opts.header ?? false }),
+    spacing: { after: 0 },
+  })],
+  shading:  opts.header ? { type: ShadingType.SOLID, color: TEAL_LIGHT } : undefined,
+  margins:  { top: 60, bottom: 60, left: 100, right: 100 },
+  width:    opts.width ? { size: opts.width, type: WidthType.PERCENTAGE } : undefined,
+});
+
+// ── R1. Reassessment title block ──────────────────────────────────────────────
+
+function reassessmentTitleBlock(session) {
+  const p        = session.clientProfile ?? {};
+  const fmt      = (iso) => iso
+    ? new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const assessDate = fmt(p.assessmentDate);
+  const authStart  = session.authPeriodStart ? fmt(session.authPeriodStart) : null;
+  const authEnd    = session.authPeriodEnd   ? fmt(session.authPeriodEnd)   : null;
+
+  return [
+    new Paragraph({
+      children: [new TextRun({ text: 'ABA SHIELD BEHAVIORAL SERVICES', bold: true, size: SZ_XL, font: FONT, color: TEAL })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 60 },
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: 'RE-ASSESSMENT REPORT', bold: true, size: SZ_LG, font: FONT })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 40 },
+    }),
+    new Paragraph({
+      children: [new TextRun({
+        text: 'Progress Report & New Authorization Cycle Treatment Plan',
+        size: SZ, font: FONT, italics: true,
+      })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 60 },
+    }),
+    new Paragraph({
+      children: [new TextRun({
+        text: authStart && authEnd
+          ? `Authorization Period: ${authStart} — ${authEnd}  ·  Assessment Date: ${assessDate}`
+          : `Assessment Date: ${assessDate}`,
+        size: SZ_SM, font: FONT, color: SLATE, italics: true,
+      })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 240 },
+    }),
+  ];
+}
+
+// ── R2. Executive Summary (progressNarrativeText) ─────────────────────────────
+
+function executiveSummarySection(session) {
+  const heading = session.authPeriodStart || session.authPeriodEnd
+    ? `Clinical Overview — Authorization Period ${fmtDocDate(session.authPeriodStart)} — ${fmtDocDate(session.authPeriodEnd)}`
+    : 'Clinical Overview';
+
+  const text     = session.progressNarrativeText?.trim();
+  const children = [sectionHeading(heading)];
+
+  if (text) {
+    children.push(...markdownToParagraphs(text));
+  } else {
+    children.push(new Paragraph({
+      children: [new TextRun({
+        text: '[ BCBA ACTION REQUIRED — Complete the narrative in the Reassessment Review page before generating this document ]',
+        bold: true, size: SZ_SM, font: FONT, color: 'DC2626',
+      })],
+      spacing: { after: 80 },
+      shading: { type: ShadingType.SOLID, color: 'FEF2F2' },
+    }));
+    children.push(bodyPara(
+      'Complete the "Progress Narrative" field in the Narrative & Document panel of the Reassessment Review page. ' +
+      'Include: summary of progress this authorization period, clinical reasoning for continued services, ' +
+      'key changes from initial assessment, and recommendation for new authorization.'
+    ));
+  }
+
+  children.push(empty(80));
+  return children;
+}
+
+// ── R3. Clinical background sections (prefilled from initial, BCBA-reviewed) ──
+
+const REASSESSMENT_BACKGROUND_SECTIONS = [
+  { key: 'demographics',        label: 'Demographics & Referral Information' },
+  { key: 'presenting_concerns', label: 'Presenting Concerns'                 },
+  { key: 'self_help',           label: 'Self-Help Skills'                    },
+  { key: 'daily_living',        label: 'Daily Living Skills'                 },
+  { key: 'safety',              label: 'Safety Concerns'                     },
+  { key: 'communication',       label: 'Communication'                       },
+  { key: 'self_stim',           label: 'Self-Stimulatory Behavior'           },
+];
+
+function reassessmentClinicalBackgroundSections(session) {
+  const children = [];
+
+  for (const cfg of REASSESSMENT_BACKGROUND_SECTIONS) {
+    const sec        = session.sections?.[cfg.key];
+    const isApproved = sec?.approvalState === 'approved' || sec?.approvalState === 'edited';
+    const isPrefilled = sec?.prefillSource === 'initial_assessment';
+    const text       = sec?.draftContent?.trim() || sec?.notes?.trim() || '';
+
+    children.push(sectionHeading(cfg.label));
+
+    // Provenance note
+    if (isApproved && sec?.draftContent?.trim()) {
+      children.push(new Paragraph({
+        children: [new TextRun({
+          text: 'Reviewed & updated at reassessment',
+          size: SZ_SM, font: FONT, color: '059669', italics: true,
+        })],
+        spacing: { after: 80 },
+      }));
+    } else if (isPrefilled && text) {
+      children.push(new Paragraph({
+        children: [new TextRun({
+          text: 'Carried forward from initial assessment — review and update as clinically indicated',
+          size: SZ_SM, font: FONT, color: '6366F1', italics: true,
+        })],
+        spacing: { after: 80 },
+      }));
+    }
+
+    if (text) {
+      children.push(...markdownToParagraphs(text));
+    } else {
+      children.push(bodyPara('[Section not yet completed — update in the reassessment interview or add clinical notes.]'));
+    }
+
+    children.push(empty(80));
+  }
+
+  return children;
+}
+
+// ── R4. Continued Medical Necessity (re-evaluated — NOT prefilled) ─────────────
+
+function reassessmentMedicalSection(session) {
+  const sec  = session.sections?.medical_necessity;
+  const text = sec?.draftContent?.trim() || sec?.notes?.trim() || '';
+  const meds = sec?.medications          ?? [];
+  const diag = sec?.coOccurringDiagnoses ?? [];
+  const aba  = sec?.priorABAHistory      ?? [];
+
+  const children = [sectionHeading('Continued Medical Necessity')];
+
+  children.push(new Paragraph({
+    children: [new TextRun({
+      text: 'This section documents continued medical necessity for ABA services as evaluated at reassessment. A new clinical justification is required for the upcoming authorization period.',
+      size: SZ_SM, font: FONT, color: SLATE, italics: true,
+    })],
+    spacing: { after: 120 },
+  }));
+
+  if (text) {
+    children.push(...markdownToParagraphs(text));
+  } else {
+    children.push(new Paragraph({
+      children: [new TextRun({
+        text: '[ BCBA ACTION REQUIRED — Complete the Medical Necessity section in the reassessment interview ]',
+        bold: true, size: SZ_SM, font: FONT, color: 'DC2626',
+      })],
+      spacing: { after: 80 },
+      shading: { type: ShadingType.SOLID, color: 'FEF2F2' },
+    }));
+  }
+  children.push(empty(80));
+
+  // Structured medical data
+  if (diag.length) {
+    children.push(subHeading('Co-Occurring Diagnoses'));
+    for (const dx of diag) {
+      children.push(bullet(
+        `${dx.diagnosis}${dx.icd10 ? ` (${dx.icd10})` : ''} — confirmed by ${dx.provider ?? '—'}, ${dx.date ?? '—'}`
+      ));
+    }
+    children.push(empty(80));
+  }
+
+  children.push(subHeading('Current Medications'));
+  if (meds.length) {
+    for (const med of meds) {
+      children.push(bullet(
+        `${med.name} ${med.dose}, ${med.frequency}` +
+        (med.prescriber ? ` — prescribed by ${med.prescriber}` : '') +
+        (med.purpose ? ` for ${med.purpose}` : '')
+      ));
+    }
+  } else {
+    children.push(bodyPara('No current medications reported.'));
+  }
+  children.push(empty(80));
+
+  if (aba.length) {
+    children.push(subHeading('Prior ABA Services'));
+    for (const a of aba) {
+      children.push(bullet(
+        `${a.provider} (${a.startDate ?? '—'} – ${a.endDate ?? 'present'}, ` +
+        `${a.hoursPerWeek ?? '—'} hrs/week, ${a.setting ?? '—'})` +
+        (a.reasonDiscontinued ? `. Discontinued: ${a.reasonDiscontinued}` : '')
+      ));
+    }
+    children.push(empty(80));
+  }
+
+  if (sec?.recommendedHoursPerWeek) {
+    children.push(labelVal(
+      'Recommended Service Intensity',
+      `${sec.recommendedHoursPerWeek} hours/week — ${sec.recommendedSetting ?? 'as clinically indicated'}`
+    ));
+  }
+
+  children.push(empty(80));
+  return children;
+}
+
+// ── R5. Strengths (initial baseline + gains this period) ──────────────────────
+
+function reassessmentStrengthsSection(session) {
+  const skillGoals = session.sections?.skill_acquisitions?.skillGoals ?? [];
+  const notes      = session.sections?.skill_acquisitions?.notes ?? '';
+  const origSkills = session.originalSkillSummary   ?? [];
+  const origBehav  = session.originalBehaviorSummary ?? [];
+  const ctSummary  = session.caregiverTrainingSummary ?? [];
+
+  const children = [sectionHeading('Strengths')];
+
+  // Part A: Initial assessment baseline
+  children.push(subHeading('Identified Strengths — Initial Assessment Baseline'));
+  if (skillGoals.length) {
+    children.push(bodyPara(
+      `${session.clientName ?? 'The client'} demonstrated the following strengths at initial assessment, ` +
+      `which continue to inform and support ABA programming:`
+    ));
+    for (const g of skillGoals) {
+      const baseline = parseInt(g.baselinePercent ?? '0');
+      const baselineText = baseline > 0
+        ? `demonstrated ${g.baselinePercent}% accuracy independently at baseline`
+        : 'skill was emerging with support at initial assessment';
+      children.push(bullet(
+        `**${g.domain} — ${g.targetSkill}:** Client ${baselineText}.` +
+        (g.generalizationNotes ? ` ${g.generalizationNotes}` : '')
+      ));
+    }
+    const reinforcerSentence = notes.split(/[.\n]/).find(s => /reinforc|prefer|reward|motivat|favorite/i.test(s));
+    if (reinforcerSentence) {
+      children.push(empty(80));
+      children.push(bodyPara(reinforcerSentence.trim() + '.'));
+    }
+  } else {
+    children.push(bodyPara('[Document client strengths and identified reinforcers from initial assessment.]'));
+  }
+  children.push(empty(80));
+
+  // Part B: Gains this authorization period
+  const masteredSkills   = origSkills.filter(s => (s.sessionDerivedStatus ?? s.status) === 'mastered');
+  const masteredBehav    = origBehav.filter(b => (b.sessionDerivedStoStatus ?? b.stoStatus) === 'met');
+  const reducedBehav     = origBehav.filter(b =>
+    (b.percentReduction ?? 0) >= 50 && (b.sessionDerivedStoStatus ?? b.stoStatus) !== 'met'
+  );
+  const metCT            = ctSummary.filter(c => (c.sessionDerivedStoStatus ?? c.stoStatus) === 'met');
+  const hasGains         = masteredSkills.length || masteredBehav.length || reducedBehav.length || metCT.length;
+
+  children.push(subHeading('Gains This Authorization Period'));
+
+  if (hasGains) {
+    if (masteredBehav.length) {
+      children.push(bodyPara('**Behaviors Reduced to Mastery Criteria:**'));
+      for (const b of masteredBehav) {
+        children.push(bullet(
+          `**${b.behaviorName}** — reduced from ${b.baselineFrequency ?? '—'}×/day baseline ` +
+          `to average ${b.averageFrequency != null ? Number(b.averageFrequency).toFixed(1) : '—'}×/day ` +
+          `(${b.percentReduction != null ? Math.round(b.percentReduction) : '—'}% reduction). Target achieved. ✓`
+        ));
+      }
+      children.push(empty(60));
+    }
+    if (reducedBehav.length) {
+      children.push(bodyPara('**Significant Behavioral Reductions (≥50%):**'));
+      for (const b of reducedBehav) {
+        children.push(bullet(
+          `**${b.behaviorName}** — reduced from ${b.baselineFrequency ?? '—'}×/day to average ` +
+          `${b.averageFrequency != null ? Number(b.averageFrequency).toFixed(1) : '—'}×/day ` +
+          `(${b.percentReduction != null ? Math.round(b.percentReduction) : '—'}% reduction).`
+        ));
+      }
+      children.push(empty(60));
+    }
+    if (masteredSkills.length) {
+      children.push(bodyPara('**Skills Achieving Mastery:**'));
+      for (const s of masteredSkills) {
+        children.push(bullet(
+          `**${s.skillName}** (${s.domain ?? ''}) — progressed from ${s.baselinePercent ?? '—'}% baseline ` +
+          `to average accuracy of ${s.averageAccuracy != null ? Number(s.averageAccuracy).toFixed(1) : '—'}% ` +
+          `across ${s.sessionsLogged ?? '—'} sessions. Mastery criteria achieved. ✓`
+        ));
+      }
+      children.push(empty(60));
+    }
+    if (metCT.length) {
+      children.push(bodyPara('**Caregiver Training Goals Achieved:**'));
+      for (const c of metCT) {
+        children.push(bullet(
+          `**${c.goalName}** — progressed from ${c.baselinePercent ?? '—'}% baseline ` +
+          `to average ${c.averageSessionPercent != null ? Number(c.averageSessionPercent).toFixed(1) : '—'}% ` +
+          `implementation accuracy. Goal achieved. ✓`
+        ));
+      }
+      children.push(empty(60));
+    }
+  } else {
+    children.push(bodyPara(
+      'No formal mastery criteria have been achieved during this authorization period. ' +
+      'Continued services are recommended to meet established treatment targets as documented in the progress sections below.'
+    ));
+  }
+
+  children.push(empty(80));
+  return children;
+}
+
+// ── R6. Areas requiring continued & new intervention ─────────────────────────
+
+function reassessmentAreasSection(session) {
+  const origBehav  = session.originalBehaviorSummary ?? [];
+  const origSkills = session.originalSkillSummary    ?? [];
+  const newBehav   = session.newBehaviorSummary      ?? [];
+  const newSkills  = session.newSkillSummary         ?? [];
+
+  const activeBehav  = origBehav.filter(b => (b.sessionDerivedStoStatus ?? b.stoStatus) !== 'met');
+  const activeSkills = origSkills.filter(s => (s.sessionDerivedStatus ?? s.status) !== 'mastered');
+
+  const children = [sectionHeading('Areas Requiring Continued & New Intervention')];
+
+  if (activeBehav.length) {
+    children.push(subHeading('Active Behavior Reduction Targets'));
+    for (const b of activeBehav) {
+      children.push(bullet(
+        `**${b.behaviorName}** — Function: ${b.function ?? 'under review'}. ` +
+        `Baseline: ${b.baselineFrequency ?? '—'}×/day. ` +
+        `Current avg: ${b.averageFrequency != null ? Number(b.averageFrequency).toFixed(1) : '—'}×/day. ` +
+        `STO Status: ${b.sessionDerivedStoStatus === 'in_progress' ? 'In progress' : b.sessionDerivedStoStatus === 'not_yet_started' ? 'Not started' : b.sessionDerivedStoStatus ?? '—'}.`
+      ));
+    }
+    children.push(empty(80));
+  }
+
+  if (activeSkills.length) {
+    children.push(subHeading('Active Skill Acquisition Targets'));
+    for (const s of activeSkills) {
+      children.push(bullet(
+        `**${s.skillName}** (${s.domain ?? ''}) — ` +
+        `Baseline: ${s.baselinePercent ?? '—'}%. ` +
+        `Current avg accuracy: ${s.averageAccuracy != null ? Number(s.averageAccuracy).toFixed(1) : '—'}%. ` +
+        `Status: ${s.sessionDerivedStatus === 'in_progress' ? 'In progress' : s.sessionDerivedStatus === 'mastered' ? 'Mastered ✓' : 'New'}.`
+      ));
+    }
+    children.push(empty(80));
+  }
+
+  if (newBehav.length) {
+    children.push(subHeading('Newly Identified Behaviors'));
+    children.push(bodyPara(
+      'The following behaviors were identified during this authorization period and reviewed by the supervising BCBA. ' +
+      'Disposition for the new authorization cycle is noted for each.'
+    ));
+    for (const b of newBehav) {
+      const disp = b.includedInPlan === true
+        ? 'IN PLAN — formal plan target in new cycle'
+        : b.monitorOnly === true
+          ? 'MONITOR ONLY — observed but not a plan target'
+          : 'EXCLUDED from new plan';
+      children.push(bullet(
+        `**${b.behaviorName}** — Function: ${b.function ?? '—'}. Severity: ${b.severity ?? '—'}. ` +
+        `First observed: ${fmtDocDate(b.firstSeenDate)}. ` +
+        `Avg frequency: ${b.averageFrequency != null ? Number(b.averageFrequency).toFixed(1) : '—'}×/day. ` +
+        (b.rbtDefinitionDraft ? `RBT description: ${b.rbtDefinitionDraft} ` : '') +
+        `[${disp}]`
+      ));
+    }
+    children.push(empty(80));
+  }
+
+  if (newSkills.length) {
+    children.push(subHeading('Newly Identified Skill Areas'));
+    children.push(bodyPara(
+      'The following skill areas were identified during this authorization period.'
+    ));
+    for (const s of newSkills) {
+      const disp = s.includedInPlan === true
+        ? 'IN PLAN — included in new treatment plan'
+        : s.monitorOnly === true
+          ? 'MONITOR ONLY'
+          : 'EXCLUDED from new plan';
+      children.push(bullet(
+        `**${s.skillName ?? s.bcbaGoalName ?? '(unnamed)'}** (${s.bcbaDomain ?? '—'}) — ` +
+        `Baseline: ${s.baselinePercent != null ? `${s.baselinePercent}%` : '—'}. ` +
+        (s.rbtNotes ? `Notes: ${s.rbtNotes}. ` : '') +
+        `[${disp}]`
+      ));
+    }
+    children.push(empty(80));
+  }
+
+  if (!activeBehav.length && !activeSkills.length && !newBehav.length && !newSkills.length) {
+    children.push(bodyPara('[Document active treatment targets and newly identified areas requiring intervention.]'));
+  }
+
+  children.push(empty(80));
+  return children;
+}
+
+// ── R7. Maladaptive behavior progress section ─────────────────────────────────
+
+function behaviorProgressSection(session, graphs = {}) {
+  const origBehaviors = session.originalBehaviorSummary ?? [];
+  const behaviorDefs  = session.sections?.behavior_targets?.behaviorTargets ?? [];
+
+  const children = [sectionHeading('Maladaptive Behavior Progress — This Authorization Period')];
+
+  if (!origBehaviors.length) {
+    children.push(bodyPara('[No behavior progress data available for this authorization period.]'));
+    return children;
+  }
+
+  const active   = origBehaviors.filter(b => (b.sessionDerivedStoStatus ?? b.stoStatus) !== 'met');
+  const mastered = origBehaviors.filter(b => (b.sessionDerivedStoStatus ?? b.stoStatus) === 'met');
+
+  if (active.length) {
+    children.push(subHeading('Active Behavior Targets'));
+
+    for (const b of active) {
+      const def      = behaviorDefs.find(bt => bt.id === b.behaviorId);
+      const key      = normalize(b.behaviorName);
+      const trendStr = b.trend === 'improving' ? '↓ Reducing (improving)'
+        : b.trend === 'worsening' ? '↑ Increasing (concern)'
+        : '→ Stable';
+      const pctStr   = b.percentReduction != null
+        ? `${Math.round(b.percentReduction)}% reduction`
+        : '—';
+      const stoStr   = b.sessionDerivedStoStatus === 'met'          ? 'Met ✓'
+        : b.sessionDerivedStoStatus === 'in_progress'   ? 'In progress'
+        : b.sessionDerivedStoStatus === 'not_yet_started' ? 'Not started'
+        : '—';
+
+      children.push(new Paragraph({
+        children: [new TextRun({ text: b.behaviorName, bold: true, size: SZ, font: FONT, color: TEAL })],
+        spacing: { before: 180, after: 60 },
+      }));
+
+      if (def?.operationalDefinition?.trim()) {
+        children.push(new Paragraph({
+          children: [
+            new TextRun({ text: 'Operational Definition: ', bold: true, size: SZ_SM, font: FONT }),
+            new TextRun({ text: def.operationalDefinition, size: SZ_SM, font: FONT }),
+          ],
+          spacing: { after: 80 },
+        }));
+      }
+
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: PROGRESS_BORDERS,
+        rows: [
+          new TableRow({ children: [
+            progressCell('Baseline',       { header: true, width: 16 }),
+            progressCell('Avg This Period',{ header: true, width: 18 }),
+            progressCell('% Change',       { header: true, width: 15 }),
+            progressCell('Trend',          { header: true, width: 22 }),
+            progressCell('Sessions',       { header: true, width: 11 }),
+            progressCell('STO Status',     { header: true, width: 18 }),
+          ]}),
+          new TableRow({ children: [
+            progressCell(`${b.baselineFrequency ?? '—'}×/day`,                                   { width: 16 }),
+            progressCell(`${b.averageFrequency != null ? Number(b.averageFrequency).toFixed(1) : '—'}×/day`, { width: 18 }),
+            progressCell(pctStr,                                                                  { width: 15 }),
+            progressCell(trendStr,                                                                { width: 22 }),
+            progressCell(String(b.sessionsLogged ?? '—'),                                        { width: 11 }),
+            progressCell(stoStr,                                                                  { width: 18 }),
+          ]}),
+        ],
+      }));
+      children.push(empty(80));
+
+      // Actual session progress chart (chartImage returns a Paragraph — push directly)
+      const progressChart = graphs[`progress_behavior_${key}`];
+      if (progressChart) children.push(chartImage(progressChart, 520, 280));
+
+      // STO trajectory (planned path) chart
+      const stoChart = graphs[`sto_${key}`];
+      if (stoChart) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: 'Planned STO Reduction Trajectory:', bold: true, size: SZ_SM, font: FONT, color: SLATE })],
+          spacing: { after: 40 },
+        }));
+        children.push(chartImage(stoChart, 520, 240));
+      }
+    }
+  }
+
+  if (mastered.length) {
+    children.push(subHeading('Behaviors Achieving Mastery — Transferred to Maintenance Monitoring'));
+    children.push(new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: PROGRESS_BORDERS,
+      rows: [
+        new TableRow({ children: [
+          progressCell('Behavior',         { header: true, width: 28 }),
+          progressCell('Original Baseline',{ header: true, width: 17 }),
+          progressCell('Final Average',    { header: true, width: 17 }),
+          progressCell('% Reduction',      { header: true, width: 17 }),
+          progressCell('Sessions',         { header: true, width: 11 }),
+          progressCell('Status',           { header: true, width: 10 }),
+        ]}),
+        ...mastered.map(b => new TableRow({ children: [
+          progressCell(b.behaviorName,                                                                          { width: 28 }),
+          progressCell(`${b.baselineFrequency ?? '—'}×/day`,                                                   { width: 17 }),
+          progressCell(`${b.averageFrequency != null ? Number(b.averageFrequency).toFixed(1) : '—'}×/day`,     { width: 17 }),
+          progressCell(b.percentReduction != null ? `${Math.round(b.percentReduction)}%` : '—',               { width: 17 }),
+          progressCell(String(b.sessionsLogged ?? '—'),                                                        { width: 11 }),
+          progressCell('Met ✓',                                                                                { width: 10 }),
+        ]})),
+      ],
+    }));
+    children.push(bodyPara(
+      'Targets marked Met ✓ have achieved mastery criteria. They are transferred to maintenance monitoring in the new authorization cycle.'
+    ));
+    children.push(empty(80));
+  }
+
+  children.push(empty(80));
+  return children;
+}
+
+// ── R8. Skill acquisition progress section ────────────────────────────────────
+
+function skillProgressSection(session, graphs = {}) {
+  const origSkills = session.originalSkillSummary ?? [];
+
+  const children = [sectionHeading('Skill Acquisition Progress — This Authorization Period')];
+
+  if (!origSkills.length) {
+    children.push(bodyPara('[No skill progress data available for this authorization period.]'));
+    return children;
+  }
+
+  const active   = origSkills.filter(s => (s.sessionDerivedStatus ?? s.status) !== 'mastered');
+  const mastered = origSkills.filter(s => (s.sessionDerivedStatus ?? s.status) === 'mastered');
+
+  if (active.length) {
+    children.push(subHeading('Active Skill Targets'));
+
+    for (const s of active) {
+      const key       = normalize(s.skillName);
+      const trendStr  = s.trend === 'improving' ? '↑ Improving'
+        : s.trend === 'worsening' ? '↓ Declining'
+        : '→ Stable';
+      const pctChange = s.baselinePercent != null && s.averageAccuracy != null
+        ? `+${(Number(s.averageAccuracy) - Number(s.baselinePercent)).toFixed(1)}%`
+        : '—';
+      const status    = s.sessionDerivedStatus === 'mastered' ? 'Mastered ✓'
+        : s.sessionDerivedStatus === 'in_progress' ? 'In progress'
+        : 'New';
+
+      children.push(new Paragraph({
+        children: [new TextRun({
+          text: `${s.skillName}${s.domain ? ` (${s.domain})` : ''}`,
+          bold: true, size: SZ, font: FONT, color: TEAL,
+        })],
+        spacing: { before: 180, after: 80 },
+      }));
+
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: PROGRESS_BORDERS,
+        rows: [
+          new TableRow({ children: [
+            progressCell('Baseline %',    { header: true, width: 16 }),
+            progressCell('Avg Accuracy',  { header: true, width: 18 }),
+            progressCell('% Improvement', { header: true, width: 16 }),
+            progressCell('Trend',         { header: true, width: 18 }),
+            progressCell('Sessions',      { header: true, width: 12 }),
+            progressCell('Status',        { header: true, width: 20 }),
+          ]}),
+          new TableRow({ children: [
+            progressCell(`${s.baselinePercent ?? '—'}%`,                                                          { width: 16 }),
+            progressCell(`${s.averageAccuracy != null ? Number(s.averageAccuracy).toFixed(1) : '—'}%`,           { width: 18 }),
+            progressCell(pctChange,                                                                               { width: 16 }),
+            progressCell(trendStr,                                                                                { width: 18 }),
+            progressCell(String(s.sessionsLogged ?? '—'),                                                        { width: 12 }),
+            progressCell(status,                                                                                  { width: 20 }),
+          ]}),
+        ],
+      }));
+      children.push(empty(80));
+
+      // Actual progress chart (chartImage returns a Paragraph — push directly)
+      const progressChart = graphs[`progress_skill_${key}`];
+      if (progressChart) children.push(chartImage(progressChart, 520, 280));
+
+      // STO trajectory chart
+      const stoChart = graphs[`skill_sto_${key}`];
+      if (stoChart) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: 'Planned STO Trajectory:', bold: true, size: SZ_SM, font: FONT, color: SLATE })],
+          spacing: { after: 40 },
+        }));
+        children.push(chartImage(stoChart, 520, 240));
+      }
+    }
+  }
+
+  if (mastered.length) {
+    children.push(subHeading('Skills Achieving Mastery ✓'));
+    children.push(new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders: PROGRESS_BORDERS,
+      rows: [
+        new TableRow({ children: [
+          progressCell('Skill',       { header: true, width: 30 }),
+          progressCell('Domain',      { header: true, width: 20 }),
+          progressCell('Baseline %',  { header: true, width: 15 }),
+          progressCell('Final Avg %', { header: true, width: 15 }),
+          progressCell('Sessions',    { header: true, width: 10 }),
+          progressCell('Status',      { header: true, width: 10 }),
+        ]}),
+        ...mastered.map(s => new TableRow({ children: [
+          progressCell(s.skillName,                                                                               { width: 30 }),
+          progressCell(s.domain ?? '—',                                                                          { width: 20 }),
+          progressCell(`${s.baselinePercent ?? '—'}%`,                                                           { width: 15 }),
+          progressCell(`${s.averageAccuracy != null ? Number(s.averageAccuracy).toFixed(1) : '—'}%`,            { width: 15 }),
+          progressCell(String(s.sessionsLogged ?? '—'),                                                          { width: 10 }),
+          progressCell('Mastered ✓',                                                                             { width: 10 }),
+        ]})),
+      ],
+    }));
+    children.push(bodyPara('Mastery criteria achieved. Transferred to maintenance monitoring in the new authorization cycle.'));
+    children.push(empty(80));
+  }
+
+  children.push(empty(80));
+  return children;
+}
+
+// ── R9. Caregiver training progress section ───────────────────────────────────
+
+function caregiverProgressSection(session, graphs = {}) {
+  const ctSummary = session.caregiverTrainingSummary ?? [];
+
+  const children = [sectionHeading('Caregiver Training Progress — This Authorization Period')];
+
+  if (!ctSummary.length) {
+    children.push(bodyPara('[No caregiver training progress data available for this authorization period.]'));
+    return children;
+  }
+
+  const active = ctSummary.filter(c => (c.sessionDerivedStoStatus ?? c.stoStatus) !== 'met');
+  const met    = ctSummary.filter(c => (c.sessionDerivedStoStatus ?? c.stoStatus) === 'met');
+
+  if (active.length) {
+    children.push(subHeading('Active Caregiver Training Goals'));
+
+    for (const c of active) {
+      const key       = normalize(c.goalName);
+      const trendStr  = c.trend === 'improving' ? '↑ Improving'
+        : c.trend === 'worsening' ? '↓ Declining'
+        : '→ Stable';
+      const pctChange = c.baselinePercent != null && c.averageSessionPercent != null
+        ? `+${(Number(c.averageSessionPercent) - Number(c.baselinePercent)).toFixed(1)}%`
+        : '—';
+      const status    = c.sessionDerivedStoStatus === 'met'              ? 'Met ✓'
+        : c.sessionDerivedStoStatus === 'in_progress'      ? 'In progress'
+        : c.sessionDerivedStoStatus === 'not_yet_started'  ? 'Not started'
+        : '—';
+
+      children.push(new Paragraph({
+        children: [new TextRun({ text: c.goalName, bold: true, size: SZ, font: FONT, color: TEAL })],
+        spacing: { before: 180, after: 80 },
+      }));
+
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: PROGRESS_BORDERS,
+        rows: [
+          new TableRow({ children: [
+            progressCell('Baseline %',    { header: true, width: 16 }),
+            progressCell('Avg Session %', { header: true, width: 18 }),
+            progressCell('% Change',      { header: true, width: 16 }),
+            progressCell('Trend',         { header: true, width: 18 }),
+            progressCell('Sessions',      { header: true, width: 12 }),
+            progressCell('STO Status',    { header: true, width: 20 }),
+          ]}),
+          new TableRow({ children: [
+            progressCell(`${c.baselinePercent ?? '—'}%`,                                                                    { width: 16 }),
+            progressCell(`${c.averageSessionPercent != null ? Number(c.averageSessionPercent).toFixed(1) : '—'}%`,         { width: 18 }),
+            progressCell(pctChange,                                                                                         { width: 16 }),
+            progressCell(trendStr,                                                                                          { width: 18 }),
+            progressCell(String(c.sessionsLogged ?? '—'),                                                                   { width: 12 }),
+            progressCell(status,                                                                                            { width: 20 }),
+          ]}),
+        ],
+      }));
+      children.push(empty(80));
+
+      // Actual progress chart (chartImage returns a Paragraph — push directly)
+      const progressChart = graphs[`progress_ct_${key}`];
+      if (progressChart) children.push(chartImage(progressChart, 520, 280));
+    }
+  }
+
+  if (met.length) {
+    children.push(subHeading('Caregiver Training Goals Achieved ✓'));
+    for (const c of met) {
+      children.push(bullet(
+        `**${c.goalName}** — progressed from ${c.baselinePercent ?? '—'}% baseline ` +
+        `to average ${c.averageSessionPercent != null ? Number(c.averageSessionPercent).toFixed(1) : '—'}% ` +
+        `implementation accuracy across ${c.sessionsLogged ?? '—'} sessions. Goal achieved. ✓`
+      ));
+    }
+    children.push(empty(80));
+  }
+
+  children.push(empty(80));
+  return children;
+}
+
+// ─── Reassessment — New Authorization Cycle Plan Summary ─────────────────────
+//
+// Reads from the reassessment-specific data arrays on session:
+//   originalBehaviorSummary[], newBehaviorSummary[]
+//   originalSkillSummary[],    newSkillSummary[]
+//   caregiverTrainingSummary[], newCaregiverSummary[]
+//
+// Organises every item into four disposition buckets:
+//   IN PLAN  (active originals + new items w/ includedInPlan === true)
+//   MASTERED (original items that reached mastery — maintenance monitoring)
+//   MONITOR  (new items w/ monitorOnly === true — observed but not plan targets)
+//   EXCLUDED (new items explicitly excluded from the new plan)
+//
+// Charts come from the graphs map built by buildGraphsFromSession (Step 5 keys
+// use the `reauth_*` prefix for new-item charts).
+
+function reassessmentPlanSection(session, graphs = {}) {
+  if (session?.sessionType !== 'reassessment') return [];
+
+  const children = [
+    sectionHeading('New Authorization Cycle — Plan Summary'),
+  ];
+
+  // Auth period banner
+  const fmt = iso => {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return isNaN(d) ? iso : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+  if (session.authPeriodStart || session.authPeriodEnd) {
+    children.push(new Paragraph({
+      children: [
+        new TextRun({ text: 'Authorization Period: ', bold: true, size: SZ_SM, font: FONT, color: TEAL }),
+        new TextRun({ text: `${fmt(session.authPeriodStart)} — ${fmt(session.authPeriodEnd)}`, size: SZ_SM, font: FONT }),
+      ],
+      spacing: { after: 160 },
+    }));
+  }
+
+  // Shared table borders
+  const borders = {
+    top:     { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+    bottom:  { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+    left:    { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+    right:   { style: BorderStyle.SINGLE, size: 4, color: TEAL_BORDER },
+    insideH: { style: BorderStyle.SINGLE, size: 2, color: TEAL_BORDER },
+    insideV: { style: BorderStyle.SINGLE, size: 2, color: TEAL_BORDER },
+  };
+
+  const cell = (text, opts = {}) => new TableCell({
+    children: [new Paragraph({
+      children: parseBoldRuns(text ?? '—', { size: SZ_SM, font: FONT, bold: opts.header ?? false }),
+      spacing: { after: 0 },
+    })],
+    shading: opts.header ? { type: ShadingType.SOLID, color: TEAL_LIGHT } : undefined,
+    margins: { top: 60, bottom: 60, left: 100, right: 100 },
+    width: opts.width ? { size: opts.width, type: WidthType.PERCENTAGE } : undefined,
+    verticalAlign: opts.vAlign ?? 'top',
+  });
+
+  const headerRow = (labels, widths) => new TableRow({
+    children: labels.map((h, i) => cell(h, { header: true, width: widths[i] })),
+    tableHeader: true,
+  });
+
+  const dataRow = (values, widths) => new TableRow({
+    children: values.map((v, i) => cell(v ?? '—', { width: widths[i] })),
+  });
+
+  const dispositionLabel = (text, color = TEAL) => new Paragraph({
+    children: [new TextRun({ text, bold: true, size: SZ, font: FONT, color })],
+    spacing: { before: 240, after: 80 },
+  });
+
+  const milestoneCell = (text, opts = {}) => new TableCell({
+    children: [new Paragraph({
+      children: parseBoldRuns(text ?? '—', { size: SZ_SM, font: FONT, bold: opts.bold ?? false }),
+      spacing: { after: 0 },
+    })],
+    shading: opts.bgColor
+      ? { type: ShadingType.SOLID, color: opts.bgColor }
+      : opts.header
+        ? { type: ShadingType.SOLID, color: TEAL_LIGHT }
+        : undefined,
+    margins:  { top: 60, bottom: 60, left: 100, right: 100 },
+    width:    opts.width ? { size: opts.width, type: WidthType.PERCENTAGE } : undefined,
+    verticalAlign: 'top',
+  });
+
+  const milestoneTable = (steps, ltoRow) => {
+    const colW = [28, 24, 24, 24];
+    return new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      borders,
+      rows: [
+        new TableRow({
+          children: ['Milestone', 'Target', 'Timeline', 'Status'].map((h, i) =>
+            milestoneCell(h, { header: true, width: colW[i] })
+          ),
+          tableHeader: true,
+        }),
+        ...steps.map(s => new TableRow({
+          children: [
+            milestoneCell(s.label,    { width: colW[0], bgColor: s.isCurrent ? 'F0FDF4' : undefined }),
+            milestoneCell(s.target,   { width: colW[1] }),
+            milestoneCell(s.timeline, { width: colW[2] }),
+            milestoneCell(s.status,   { width: colW[3] }),
+          ],
+        })),
+        ...(ltoRow ? [new TableRow({
+          children: [
+            milestoneCell('LTO — Mastery Criteria', { width: colW[0], bgColor: 'EFF6FF' }),
+            milestoneCell(ltoRow.target,             { width: colW[1] }),
+            milestoneCell(ltoRow.timeline,           { width: colW[2] }),
+            milestoneCell('—',                       { width: colW[3] }),
+          ],
+        })] : []),
+      ],
+    });
+  };
+
+  // ─── BEHAVIOR REDUCTION TARGETS ─────────────────────────────────────────────
+
+  children.push(subHeading('Behavior Reduction Targets'));
+
+  const origBehaviors  = session.originalBehaviorSummary ?? [];
+  const newBehaviors   = session.newBehaviorSummary ?? [];
+  const btDefs         = session?.sections?.behavior_targets?.behaviorTargets ?? [];
+  const findBtDef      = id => btDefs.find(d => d.id === id) ?? {};
+
+  // Partition
+  const activeBehaviors   = origBehaviors.filter(b => (b.sessionDerivedStoStatus ?? b.stoStatus) !== 'met');
+  const masteredBehaviors = origBehaviors.filter(b => (b.sessionDerivedStoStatus ?? b.stoStatus) === 'met');
+  const inPlanBehaviors   = newBehaviors.filter(b => b.includedInPlan === true);
+  const monitorBehaviors  = newBehaviors.filter(b => b.monitorOnly === true);
+  const excludedBehaviors = newBehaviors.filter(b => b.includedInPlan !== true && b.monitorOnly !== true);
+
+  const hasBehaviors = activeBehaviors.length || masteredBehaviors.length || inPlanBehaviors.length || monitorBehaviors.length || excludedBehaviors.length;
+
+  if (!hasBehaviors) {
+    children.push(bodyPara('[No behavior data recorded for this reassessment period.]'));
+  } else {
+
+    // ── A. Continuing / In Plan ───────────────────────────────────────────────
+    if (activeBehaviors.length > 0 || inPlanBehaviors.length > 0) {
+      children.push(dispositionLabel('A. Continuing / Included in New Treatment Plan'));
+      const colW = [22, 14, 14, 25, 25];
+
+      // Original active behaviors — per-behavior two-table layout
+      if (activeBehaviors.length > 0) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: 'Behaviors continuing from the previous plan (updated baselines reflect this authorization period average):', italics: true, size: SZ_SM, font: FONT })],
+          spacing: { after: 80 },
+        }));
+
+        for (const b of activeBehaviors) {
+          const def     = findBtDef(b.behaviorId);
+          const unit    = def.frequencyUnit || 'day';
+          const totalStos    = (def.stoSteps ?? []).length;
+          const currentIdx   = Math.max(0, (b.currentStoNumber ?? 1) - 1);
+          const remainingSteps = totalStos > 0 ? def.stoSteps.slice(currentIdx) : [];
+
+          // Behavior name heading
+          children.push(new Paragraph({
+            children: [new TextRun({ text: b.behaviorName, bold: true, size: SZ, font: FONT, color: TEAL })],
+            spacing: { before: 160, after: 40 },
+          }));
+          if (def.operationalDefinition?.trim()) {
+            children.push(new Paragraph({
+              children: [
+                new TextRun({ text: 'Operational Definition: ', bold: true, size: SZ_SM, font: FONT }),
+                new TextRun({ text: def.operationalDefinition, size: SZ_SM, font: FONT }),
+              ],
+              spacing: { after: 80 },
+            }));
+          }
+
+          // Table 1: Progress This Period
+          const pctStr  = b.percentReduction != null ? `${Math.round(b.percentReduction)}% reduction` : '—';
+          const stoLabel = totalStos > 0
+            ? `STO ${b.currentStoNumber ?? 1} of ${totalStos}`
+            : (b.sessionDerivedStoStatus === 'in_progress' ? 'In progress' : '—');
+          children.push(new Paragraph({
+            children: [new TextRun({ text: 'Progress This Period', bold: true, size: SZ_SM, font: FONT })],
+            spacing: { before: 80, after: 40 },
+          }));
+          children.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+            rows: [
+              new TableRow({ children: [
+                cell('Baseline',        { header: true, width: 18 }),
+                cell('Avg This Period', { header: true, width: 18 }),
+                cell('% Change',        { header: true, width: 16 }),
+                cell('Sessions',        { header: true, width: 14 }),
+                cell('Function',        { header: true, width: 16 }),
+                cell('Current STO',     { header: true, width: 18 }),
+              ]}),
+              new TableRow({ children: [
+                cell(`${b.baselineFrequency ?? '—'}×/${unit}`,                                                                          { width: 18 }),
+                cell(`${b.averageFrequency != null ? Number(b.averageFrequency).toFixed(1) : '—'}×/${unit}`,                           { width: 18 }),
+                cell(pctStr,                                                                                                             { width: 16 }),
+                cell(String(b.sessionsLogged ?? '—'),                                                                                   { width: 14 }),
+                cell(def.hypothesizedFunction ?? b.function ?? '—',                                                                     { width: 16 }),
+                cell(stoLabel,                                                                                                           { width: 18 }),
+              ]}),
+            ],
+          }));
+          children.push(empty(80));
+
+          // Table 2: Remaining Treatment Milestones
+          children.push(new Paragraph({
+            children: [new TextRun({ text: 'Remaining Treatment Milestones', bold: true, size: SZ_SM, font: FONT })],
+            spacing: { before: 80, after: 40 },
+          }));
+          if (remainingSteps.length > 0) {
+            const milestoneSteps = remainingSteps.map((s, i) => ({
+              label:     i === 0
+                ? `STO ${currentIdx + i + 1} — Current`
+                : `STO ${currentIdx + i + 1}`,
+              target:    `≤${s.targetFrequency ?? '?'}×/${unit}`,
+              timeline:  s.durationWeeks ? `${s.durationWeeks} weeks` : '—',
+              status:    i === 0 ? 'In Progress' : 'Upcoming',
+              isCurrent: i === 0,
+            }));
+            const ltoTarget = computeBtLTO(def);
+            children.push(milestoneTable(milestoneSteps, { target: ltoTarget, timeline: '3 consecutive months' }));
+          } else {
+            const fallbackSTO = computeBtSTO(def);
+            const fallbackLTO = computeBtLTO(def);
+            children.push(new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+              rows: [
+                new TableRow({ children: [
+                  cell('Short-Term Objective', { header: true, width: 50 }),
+                  cell('Long-Term Objective',  { header: true, width: 50 }),
+                ]}),
+                new TableRow({ children: [
+                  cell(fallbackSTO, { width: 50 }),
+                  cell(fallbackLTO, { width: 50 }),
+                ]}),
+              ],
+            }));
+          }
+          children.push(empty(80));
+
+          // Charts
+          const key = normalize(b.behaviorName || '');
+          const progressChart = chartImage(graphs[`progress_behavior_${key}`], 480, 220);
+          const stoChart      = chartImage(graphs[`sto_${key}`],               480, 220);
+          if (progressChart) children.push(progressChart);
+          if (stoChart)      children.push(stoChart);
+          children.push(empty(120));
+        }
+      }
+
+      // New behaviors being added to the plan
+      if (inPlanBehaviors.length > 0) {
+        children.push(empty(120));
+        children.push(new Paragraph({
+          children: [new TextRun({ text: 'New behaviors identified during reassessment — added to new treatment plan:', italics: true, size: SZ_SM, font: FONT })],
+          spacing: { after: 80 },
+        }));
+        const colW2 = [22, 12, 12, 12, 22, 20];
+        children.push(new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+          rows: [
+            headerRow(['Behavior', 'Function', 'Severity', 'Baseline', 'Short-Term Objectives', 'Long-Term Objective'], colW2),
+            ...inPlanBehaviors.map(b => {
+              const stoText = (b.stoStructure ?? []).length > 0
+                ? b.stoStructure.map((s, i) => `STO ${i + 1}: ≤${s.targetFrequency ?? '?'}/${b.frequencyUnit || 'day'} for ${s.durationWeeks || '?'} wks.`).join('\n')
+                : '—';
+              const ltoText = b.masteryCriteriaFrequency != null
+                ? `≤${b.masteryCriteriaFrequency}/${b.frequencyUnit || 'day'}${b.masteryCriteriaWeeks ? ` for ${b.masteryCriteriaWeeks} weeks` : ''}`
+                : (b.bcbaLtoText ?? '—');
+              const base = b.baselineFrequency != null ? `${b.baselineFrequency}/${b.frequencyUnit || 'day'}` : '—';
+              return dataRow([b.behaviorName, b.function ?? '—', b.severity ?? '—', base, stoText, ltoText], colW2);
+            }),
+          ],
+        }));
+        // Definition notes + charts for new in-plan behaviors
+        for (const b of inPlanBehaviors) {
+          if (b.bcbaDefinitionFinal?.trim()) {
+            children.push(empty(60));
+            children.push(labelVal(`${b.behaviorName} — Definition`, b.bcbaDefinitionFinal));
+          }
+          const key = normalize(b.behaviorName || '');
+          const baseChart = chartImage(graphs[`reauth_behavior_${key}`], 480, 220);
+          const stoChart  = chartImage(graphs[`reauth_sto_${key}`],      480, 220);
+          if (baseChart || stoChart) {
+            children.push(empty(60));
+            if (baseChart) children.push(baseChart);
+            if (stoChart)  children.push(stoChart);
+          }
+        }
+      }
+    }
+
+    // ── B. Mastered — Maintenance Monitoring ─────────────────────────────────
+    if (masteredBehaviors.length > 0) {
+      children.push(dispositionLabel('B. Mastered — Maintenance Monitoring', '059669'));
+      children.push(new Paragraph({
+        children: [new TextRun({
+          text: 'The following behaviors reached mastery criteria during this authorization period. Formal reduction targets are discontinued; monitoring will continue in the new cycle to confirm maintenance and detect any regression.',
+          italics: true, size: SZ_SM, font: FONT,
+        })],
+        spacing: { after: 100 },
+      }));
+      const colW = [20, 13, 13, 12, 12, 16, 14];
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+        rows: [
+          headerRow(['Behavior', 'Baseline', 'Final Avg', '% Reduction', 'Sessions', 'Mastery Date', 'Status'], colW),
+          ...masteredBehaviors.map(b => {
+            const pct      = b.percentReduction != null ? `${Math.abs(b.percentReduction).toFixed(1)}% reduction` : '—';
+            const base     = b.baselineFrequency != null ? `${b.baselineFrequency}/day` : '—';
+            const avg      = b.averageFrequency  != null ? `${b.averageFrequency}/day`  : '—';
+            const mastDate = b.masteryDate ? fmtDocDate(b.masteryDate) : 'This auth period';
+            return dataRow([b.behaviorName, base, avg, pct, String(b.sessionsLogged ?? '—'), mastDate, 'Mastered ✓'], colW);
+          }),
+        ],
+      }));
+      for (const b of masteredBehaviors) {
+        const key = normalize(b.behaviorName || '');
+        const baseChart = chartImage(graphs[`behavior_${key}`], 480, 220);
+        const stoChart  = chartImage(graphs[`sto_${key}`],      480, 220);
+        if (baseChart || stoChart) {
+          children.push(empty(80));
+          children.push(new Paragraph({
+            children: [new TextRun({ text: `${b.behaviorName} — Progress to Mastery`, bold: true, size: SZ_SM, font: FONT, color: '059669' })],
+            spacing: { after: 40 },
+          }));
+          if (baseChart) children.push(baseChart);
+          if (stoChart)  children.push(stoChart);
+        }
+      }
+    }
+
+    // ── C. Monitor Only ───────────────────────────────────────────────────────
+    if (monitorBehaviors.length > 0) {
+      children.push(dispositionLabel('C. Monitor Only — Not Formal Plan Targets', '0369A1'));
+      children.push(new Paragraph({
+        children: [new TextRun({
+          text: 'The following emerging behaviors will be observed and tracked during the new authorization cycle but are not designated as formal behavior reduction targets.',
+          italics: true, size: SZ_SM, font: FONT,
+        })],
+        spacing: { after: 100 },
+      }));
+      const colW = [30, 20, 20, 30];
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+        rows: [
+          headerRow(['Behavior', 'Function', 'Severity', 'Notes'], colW),
+          ...monitorBehaviors.map(b => dataRow([b.behaviorName, b.function ?? '—', b.severity ?? '—', b.bcbaDefinitionFinal ?? '—'], colW)),
+        ],
+      }));
+    }
+
+    // ── D. Excluded ───────────────────────────────────────────────────────────
+    if (excludedBehaviors.length > 0) {
+      children.push(dispositionLabel('D. Excluded from New Plan', '64748B'));
+      children.push(new Paragraph({
+        children: [new TextRun({ text: 'The following behaviors were identified during reassessment but excluded from the new authorization cycle:', size: SZ_SM, font: FONT, italics: true })],
+        spacing: { after: 60 },
+      }));
+      for (const b of excludedBehaviors) {
+        children.push(bullet(`${b.behaviorName}${b.function ? ` — Function: ${b.function}` : ''}`));
+      }
+    }
+  }
+
+  children.push(empty(200));
+
+  // ─── SKILL ACQUISITION TARGETS ──────────────────────────────────────────────
+
+  children.push(subHeading('Skill Acquisition Targets'));
+
+  const origSkills  = session.originalSkillSummary ?? [];
+  const newSkills   = session.newSkillSummary ?? [];
+  const skillDefs   = session?.sections?.skill_acquisitions?.skillGoals ?? [];
+  const findSkillDef = id => skillDefs.find(d => d.id === id) ?? {};
+
+  const activeSkills   = origSkills.filter(s => (s.sessionDerivedStatus ?? s.status) !== 'mastered');
+  const masteredSkills = origSkills.filter(s => (s.sessionDerivedStatus ?? s.status) === 'mastered');
+  const inPlanSkills   = newSkills.filter(s => s.includedInPlan === true);
+  const monitorSkills  = newSkills.filter(s => s.monitorOnly === true);
+  const excludedSkills = newSkills.filter(s => s.includedInPlan !== true && s.monitorOnly !== true);
+
+  const hasSkills = activeSkills.length || masteredSkills.length || inPlanSkills.length || monitorSkills.length || excludedSkills.length;
+
+  if (!hasSkills) {
+    children.push(bodyPara('[No skill goal data recorded for this reassessment period.]'));
+  } else {
+
+    // ── A. Continuing / In Plan ───────────────────────────────────────────────
+    if (activeSkills.length > 0 || inPlanSkills.length > 0) {
+      children.push(dispositionLabel('A. Continuing / Included in New Treatment Plan'));
+      if (activeSkills.length > 0) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: 'Skills continuing from the previous plan:', italics: true, size: SZ_SM, font: FONT })],
+          spacing: { after: 80 },
+        }));
+
+        for (const s of activeSkills) {
+          const def       = findSkillDef(s.skillId);
+          const totalStos = (def.stoSteps ?? []).length;
+          const currentIdx = Math.max(0, (s.currentStoNumber ?? 1) - 1);
+          const remainingSteps = totalStos > 0 ? def.stoSteps.slice(currentIdx) : [];
+          const pctImprovement = s.baselinePercent != null && s.averageAccuracy != null
+            ? `+${(Number(s.averageAccuracy) - Number(s.baselinePercent)).toFixed(1)}%`
+            : '—';
+          const stoLabel = totalStos > 0
+            ? `STO ${s.currentStoNumber ?? 1} of ${totalStos}`
+            : (s.sessionDerivedStatus === 'in_progress' ? 'In progress' : '—');
+
+          // Skill name heading
+          children.push(new Paragraph({
+            children: [new TextRun({
+              text: `${s.skillName}${s.domain ? ` — ${s.domain}` : ''}`,
+              bold: true, size: SZ, font: FONT, color: TEAL,
+            })],
+            spacing: { before: 160, after: 80 },
+          }));
+
+          // Table 1: Progress This Period
+          children.push(new Paragraph({
+            children: [new TextRun({ text: 'Progress This Period', bold: true, size: SZ_SM, font: FONT })],
+            spacing: { before: 40, after: 40 },
+          }));
+          children.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+            rows: [
+              new TableRow({ children: [
+                cell('Baseline %',    { header: true, width: 18 }),
+                cell('Avg Accuracy',  { header: true, width: 18 }),
+                cell('% Improvement', { header: true, width: 16 }),
+                cell('Sessions',      { header: true, width: 14 }),
+                cell('Current STO',   { header: true, width: 34 }),
+              ]}),
+              new TableRow({ children: [
+                cell(`${s.baselinePercent ?? '—'}%`,                                                                { width: 18 }),
+                cell(`${s.averageAccuracy != null ? Number(s.averageAccuracy).toFixed(1) : '—'}%`,                 { width: 18 }),
+                cell(pctImprovement,                                                                                { width: 16 }),
+                cell(String(s.sessionsLogged ?? '—'),                                                               { width: 14 }),
+                cell(stoLabel,                                                                                       { width: 34 }),
+              ]}),
+            ],
+          }));
+          children.push(empty(80));
+
+          // Table 2: Remaining Treatment Milestones
+          children.push(new Paragraph({
+            children: [new TextRun({ text: 'Remaining Treatment Milestones', bold: true, size: SZ_SM, font: FONT })],
+            spacing: { before: 80, after: 40 },
+          }));
+          if (remainingSteps.length > 0) {
+            const milestoneSteps = remainingSteps.map((st, i) => ({
+              label:     i === 0 ? `STO ${currentIdx + i + 1} — Current` : `STO ${currentIdx + i + 1}`,
+              target:    `${st.targetPercent ?? '?'}% accuracy`,
+              timeline:  st.durationWeeks ? `${st.durationWeeks} weeks` : '—',
+              status:    i === 0 ? 'In Progress' : 'Upcoming',
+              isCurrent: i === 0,
+            }));
+            const masteryTarget   = def.masteryCriteriaPercent ? `${def.masteryCriteriaPercent}%` : '—';
+            const masteryCriteria = def.masteryCriteriaPercent
+              ? `${def.masteryCriteriaPercent}% across ${def.masteryCriteriaSessions ?? '3'} consecutive sessions`
+              : '—';
+            children.push(milestoneTable(milestoneSteps, { target: masteryTarget, timeline: masteryCriteria }));
+          } else {
+            const fallbackSTO = computeSkillSTO(def);
+            const mastery     = def.masteryCriteriaPercent
+              ? `${def.masteryCriteriaPercent}% across ${def.masteryCriteriaSessions ?? '3'} sessions`
+              : computeSkillMastery(def);
+            children.push(new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+              rows: [
+                new TableRow({ children: [
+                  cell('Short-Term Objective', { header: true, width: 50 }),
+                  cell('Mastery Criteria',     { header: true, width: 50 }),
+                ]}),
+                new TableRow({ children: [
+                  cell(fallbackSTO, { width: 50 }),
+                  cell(mastery,     { width: 50 }),
+                ]}),
+              ],
+            }));
+          }
+          children.push(empty(80));
+
+          // Charts
+          const key = normalize(s.skillName || '');
+          const progressChart = chartImage(graphs[`progress_skill_${key}`], 480, 220);
+          const stoChart      = chartImage(graphs[`skill_sto_${key}`],      480, 220);
+          if (progressChart) children.push(progressChart);
+          if (stoChart)      children.push(stoChart);
+          children.push(empty(120));
+        }
+      }
+
+      if (inPlanSkills.length > 0) {
+        children.push(empty(120));
+        children.push(new Paragraph({
+          children: [new TextRun({ text: 'New skills identified during reassessment — added to new treatment plan:', italics: true, size: SZ_SM, font: FONT })],
+          spacing: { after: 80 },
+        }));
+        const colW2 = [28, 14, 14, 22, 22];
+        children.push(new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+          rows: [
+            headerRow(['Skill Goal', 'Baseline', 'Mastery Target', 'Short-Term Objectives', 'Long-Term Objective'], colW2),
+            ...inPlanSkills.map(s => {
+              const name = s.skillName ?? s.bcbaGoalName ?? '—';
+              const stoText = (s.stoSteps ?? []).length > 0
+                ? s.stoSteps.map((st, i) => `STO ${i + 1}: ${st.targetPercent ?? '?'}% in ${st.durationWeeks || '?'} wks.`).join('\n')
+                : '—';
+              const ltoText = s.masteryCriteriaPercent != null ? `${s.masteryCriteriaPercent}%` : (s.bcbaLtoText ?? '—');
+              return dataRow([name, `${s.baselinePercent ?? '—'}%`, `${s.masteryCriteriaPercent ?? '—'}%`, stoText, ltoText], colW2);
+            }),
+          ],
+        }));
+        for (const s of inPlanSkills) {
+          const name = s.skillName ?? s.bcbaGoalName ?? '';
+          const chart = chartImage(graphs[`reauth_skill_sto_${normalize(name)}`], 480, 220);
+          if (chart) { children.push(empty(60)); children.push(chart); }
+        }
+      }
+    }
+
+    // ── B. Mastered — Maintenance Monitoring ─────────────────────────────────
+    if (masteredSkills.length > 0) {
+      children.push(dispositionLabel('B. Mastered — Maintenance Monitoring', '059669'));
+      children.push(new Paragraph({
+        children: [new TextRun({ text: 'The following skills reached mastery criteria this period. Goals are discontinued as active targets; accuracy will continue to be monitored to confirm maintenance.', italics: true, size: SZ_SM, font: FONT })],
+        spacing: { after: 100 },
+      }));
+      const colW = [22, 12, 12, 12, 10, 18, 14];
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+        rows: [
+          headerRow(['Skill Goal', 'Domain', 'Baseline', 'Final Avg %', 'Sessions', 'Mastery Date', 'Status'], colW),
+          ...masteredSkills.map(s => {
+            const mastDate = s.masteryDate ? fmtDocDate(s.masteryDate) : 'This auth period';
+            return dataRow([s.skillName, s.domain ?? '—', `${s.baselinePercent ?? '—'}%`, `${s.averageAccuracy != null ? Number(s.averageAccuracy).toFixed(1) : '—'}%`, String(s.sessionsLogged ?? '—'), mastDate, 'Mastered ✓'], colW);
+          }),
+        ],
+      }));
+      for (const s of masteredSkills) {
+        const key = normalize(s.skillName || '');
+        const chart = chartImage(graphs[`skill_sto_${key}`], 480, 220);
+        if (chart) { children.push(empty(60)); children.push(chart); }
+      }
+    }
+
+    // ── C. Monitor Only ───────────────────────────────────────────────────────
+    if (monitorSkills.length > 0) {
+      children.push(dispositionLabel('C. Monitor Only — Not Formal Plan Targets', '0369A1'));
+      const colW = [40, 16, 44];
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+        rows: [
+          headerRow(['Skill Goal', 'Baseline', 'Notes'], colW),
+          ...monitorSkills.map(s => {
+            const name = s.skillName ?? s.bcbaGoalName ?? '—';
+            return dataRow([name, `${s.baselinePercent ?? '—'}%`, s.bcbaLtoText ?? '—'], colW);
+          }),
+        ],
+      }));
+    }
+
+    // ── D. Excluded ───────────────────────────────────────────────────────────
+    if (excludedSkills.length > 0) {
+      children.push(dispositionLabel('D. Excluded from New Plan', '64748B'));
+      for (const s of excludedSkills) {
+        children.push(bullet(s.skillName ?? s.bcbaGoalName ?? '—'));
+      }
+    }
+  }
+
+  children.push(empty(200));
+
+  // ─── CAREGIVER TRAINING GOALS ────────────────────────────────────────────────
+
+  children.push(subHeading('Caregiver Training Goals'));
+
+  const ctSummary    = session.caregiverTrainingSummary ?? [];
+  const newCT        = session.newCaregiverSummary ?? [];
+  const inPlanCT     = newCT.filter(c => c.includedInPlan === true);
+  const monitorCT    = newCT.filter(c => c.monitorOnly === true);
+  const excludedCT   = newCT.filter(c => c.includedInPlan !== true && c.monitorOnly !== true);
+
+  const hasCT = ctSummary.length || inPlanCT.length || monitorCT.length || excludedCT.length;
+
+  if (!hasCT) {
+    children.push(bodyPara('[No caregiver training data recorded for this reassessment period.]'));
+  } else {
+
+    // ── A. Continuing + New In-Plan ───────────────────────────────────────────
+    if (ctSummary.length > 0 || inPlanCT.length > 0) {
+      children.push(dispositionLabel('A. Active / Included in New Treatment Plan'));
+
+      if (ctSummary.length > 0) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: 'Caregiver training goals continuing from the previous plan:', italics: true, size: SZ_SM, font: FONT })],
+          spacing: { after: 80 },
+        }));
+
+        for (const ct of ctSummary) {
+          const stoSteps   = ct.stoSteps ?? [];
+          const currentIdx = Math.max(0, (ct.currentStoNumber ?? 1) - 1);
+          const remaining  = stoSteps.length > 0 ? stoSteps.slice(currentIdx) : [];
+          const pctChange  = ct.baselinePercent != null && ct.averageSessionPercent != null
+            ? `+${(Number(ct.averageSessionPercent) - Number(ct.baselinePercent)).toFixed(1)}%`
+            : '—';
+          const trendStr   = ct.trend === 'improving' ? '↑ Improving' : ct.trend === 'worsening' ? '↓ Declining' : '→ Stable';
+          const stoLabel   = stoSteps.length > 0
+            ? `STO ${ct.currentStoNumber ?? 1} of ${stoSteps.length}`
+            : (ct.stoStatus === 'in_progress' ? 'In progress' : '—');
+
+          // Goal name heading
+          children.push(new Paragraph({
+            children: [new TextRun({ text: ct.goalName, bold: true, size: SZ, font: FONT, color: TEAL })],
+            spacing: { before: 160, after: 40 },
+          }));
+
+          // Table 1: Progress This Period
+          children.push(new Paragraph({
+            children: [new TextRun({ text: 'Progress This Period', bold: true, size: SZ_SM, font: FONT })],
+            spacing: { before: 40, after: 40 },
+          }));
+          children.push(new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+            rows: [
+              new TableRow({ children: [
+                cell('Baseline %',    { header: true, width: 18 }),
+                cell('Avg Session %', { header: true, width: 18 }),
+                cell('% Change',      { header: true, width: 16 }),
+                cell('Trend',         { header: true, width: 16 }),
+                cell('Sessions',      { header: true, width: 14 }),
+                cell('Current STO',   { header: true, width: 18 }),
+              ]}),
+              new TableRow({ children: [
+                cell(`${ct.baselinePercent ?? '—'}%`,                                                                              { width: 18 }),
+                cell(`${ct.averageSessionPercent != null ? Number(ct.averageSessionPercent).toFixed(1) : '—'}%`,                  { width: 18 }),
+                cell(pctChange,                                                                                                     { width: 16 }),
+                cell(trendStr,                                                                                                      { width: 16 }),
+                cell(String(ct.sessionsLogged ?? '—'),                                                                             { width: 14 }),
+                cell(stoLabel,                                                                                                      { width: 18 }),
+              ]}),
+            ],
+          }));
+          children.push(empty(80));
+
+          // Table 2: Remaining milestones
+          children.push(new Paragraph({
+            children: [new TextRun({ text: 'Remaining Treatment Milestones', bold: true, size: SZ_SM, font: FONT })],
+            spacing: { before: 80, after: 40 },
+          }));
+          if (remaining.length > 0) {
+            const milestoneSteps = remaining.map((st, i) => ({
+              label:     i === 0 ? `STO ${currentIdx + i + 1} — Current` : `STO ${currentIdx + i + 1}`,
+              target:    `${st.targetPercent ?? '?'}% accuracy`,
+              timeline:  st.durationWeeks ? `${st.durationWeeks} weeks` : '—',
+              status:    i === 0 ? 'In Progress' : 'Upcoming',
+              isCurrent: i === 0,
+            }));
+            const ltoTarget = ct.ltoData
+              ? `${ct.ltoData.percent}%`
+              : ct.lto ?? '—';
+            const ltoTimeline = ct.ltoData?.sessions
+              ? `${ct.ltoData.sessions} consecutive sessions`
+              : '—';
+            children.push(milestoneTable(milestoneSteps, { target: ltoTarget, timeline: ltoTimeline }));
+          } else {
+            // Fallback to pre-computed strings
+            children.push(new Table({
+              width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+              rows: [
+                new TableRow({ children: [
+                  cell('Short-Term Objective', { header: true, width: 50 }),
+                  cell('Long-Term Objective',  { header: true, width: 50 }),
+                ]}),
+                new TableRow({ children: [
+                  cell(ct.sto ?? '—', { width: 50 }),
+                  cell(ct.lto ?? '—', { width: 50 }),
+                ]}),
+              ],
+            }));
+          }
+          children.push(empty(80));
+
+          // Chart
+          const key = normalize(ct.goalName || '');
+          const chart = chartImage(graphs[`progress_ct_${key}`] ?? graphs[`caregiver_target_${key}`] ?? null, 480, 220);
+          if (chart) children.push(chart);
+          children.push(empty(120));
+        }
+      }
+
+      if (inPlanCT.length > 0) {
+        children.push(empty(120));
+        children.push(new Paragraph({
+          children: [new TextRun({ text: 'New caregiver training goals identified during reassessment:', italics: true, size: SZ_SM, font: FONT })],
+          spacing: { after: 80 },
+        }));
+        const colW2 = [30, 14, 16, 20, 20];
+        children.push(new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+          rows: [
+            headerRow(['Training Goal', 'Baseline %', 'Mastery Target', 'Short-Term Objective', 'Long-Term Objective'], colW2),
+            ...inPlanCT.map(ct => {
+              const stoText = (ct.stoStructure ?? []).length > 0
+                ? ct.stoStructure.map((s, i) => `STO ${i + 1}: ${s.targetPercent ?? '?'}%`).join('; ')
+                : '—';
+              const ltoText = ct.masteryCriteriaPercent != null ? `${ct.masteryCriteriaPercent}%` : (ct.bcbaLtoText ?? '—');
+              return dataRow([ct.goalName, `${ct.baselinePercent ?? '—'}%`, `${ct.masteryCriteriaPercent ?? '—'}%`, stoText, ltoText], colW2);
+            }),
+          ],
+        }));
+        for (const ct of inPlanCT) {
+          const key = normalize(ct.goalName || '');
+          const chart = chartImage(graphs[`reauth_ct_${key}`], 480, 220);
+          if (chart) { children.push(empty(60)); children.push(chart); }
+        }
+      }
+    }
+
+    // ── B. Monitor Only ───────────────────────────────────────────────────────
+    if (monitorCT.length > 0) {
+      children.push(dispositionLabel('B. Monitor Only — Not Formal Goals', '0369A1'));
+      const colW = [40, 16, 44];
+      children.push(new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE }, borders,
+        rows: [
+          headerRow(['Training Goal', 'Baseline %', 'Notes'], colW),
+          ...monitorCT.map(ct => dataRow([ct.goalName, `${ct.baselinePercent ?? '—'}%`, ct.bcbaLtoText ?? '—'], colW)),
+        ],
+      }));
+    }
+
+    // ── C. Excluded ───────────────────────────────────────────────────────────
+    if (excludedCT.length > 0) {
+      children.push(dispositionLabel('C. Excluded from New Plan', '64748B'));
+      for (const ct of excludedCT) {
+        children.push(bullet(ct.goalName ?? '—'));
+      }
+    }
+  }
+
+  children.push(empty(200));
+  return children;
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 /**
@@ -1704,7 +3208,12 @@ export async function generateAssessmentDoc(session, clientName = 'Client') {
     // 20. Crisis Plan (structured fields)
     ...crisisPlanSection(session),
 
-    // 21–23. Standardized assessment score placeholders (QABF, BASC-3, Vineland-3)
+    // 21. Reassessment — New Cycle Plan Summary (reassessment sessions only)
+    // Organises all behaviors/skills/caregiver training by disposition:
+    // In Plan (active + new includedInPlan) | Mastered–Maintenance | Monitor Only | Excluded
+    ...reassessmentPlanSection(session, graphs),
+
+    // 22–24. Standardized assessment score placeholders (QABF, BASC-3, Vineland-3)
     ...standardizedAssessmentPlaceholders(),
 
     // 24. Signature block
@@ -1727,6 +3236,135 @@ export async function generateAssessmentDoc(session, clientName = 'Client') {
       properties: {
         page: {
           // 0.75" left/right margins, 0.5" top/bottom
+          margin: { top: 720, bottom: 720, left: 1080, right: 1080 },
+        },
+      },
+      children,
+    }],
+  });
+
+  return Packer.toBlob(doc);
+}
+
+// ─── Alias for backwards compat (initial assessment unchanged) ────────────────
+export const generateInitialAssessmentDoc = generateAssessmentDoc;
+
+// ─── Reassessment document — purpose-built ────────────────────────────────────
+/**
+ * generateReassessmentDoc
+ *
+ * Generates the re-authorization / re-assessment DOCX report.
+ * Distinct from generateAssessmentDoc: this is a progress report + new cycle
+ * treatment plan, NOT a fresh diagnostic evaluation.
+ *
+ * Document structure (24 sections):
+ *   PART 1  IDENTIFICATION         — Title block, Client info
+ *   PART 2  EXECUTIVE SUMMARY      — BCBA narrative (progressNarrativeText)
+ *   PART 3  CLINICAL BACKGROUND    — Updated narrative w/ provenance notes
+ *   PART 4  MEDICAL NECESSITY      — Continued necessity re-evaluation
+ *   PART 5  CURRENT CLINICAL PIC   — Strengths + Areas requiring intervention
+ *   PART 6  AUTHORIZATION PERIOD   — Behavior / Skill / CT progress + charts
+ *   PART 7  INTERVENTION APPROACH  — Hypothesis + Techniques (clinic list)
+ *   PART 8  NEW CYCLE PLAN         — Reassessment plan (4 buckets × 3 domains)
+ *   PART 9  SUPPORTING DOCS        — Crisis plan, placeholders, signature
+ *
+ * @param {object} session     - reassessment session object
+ * @param {string} clientName  - display name for doc title
+ * @param {Array}  sessionLogs - service session log entries (for progress charts)
+ * @param {Array}  ctLogs      - caregiver training log entries (for progress charts)
+ */
+export async function generateReassessmentDoc(
+  session,
+  clientName  = 'Client',
+  sessionLogs = [],
+  ctLogs      = [],
+) {
+  // Build all graphs — progress charts (Step 6) need the log arrays
+  let graphs = {};
+  try {
+    graphs = await buildGraphsFromSession(session, { sessionLogs, ctLogs });
+  } catch (err) {
+    console.warn('Reassessment chart generation failed — exporting without charts:', err.message);
+  }
+
+  const children = [
+    // ── PART 1: IDENTIFICATION ──────────────────────────────────────────────
+    // Section 1: Title block (re-assessment specific heading)
+    ...reassessmentTitleBlock(session),
+
+    // Section 2: Client information table (reused)
+    clientInfoTable(session, clientName),
+    empty(200),
+
+    // ── PART 2: EXECUTIVE SUMMARY ───────────────────────────────────────────
+    // Section 3: Clinical progress summary (BCBA narrative)
+    ...executiveSummarySection(session),
+
+    // ── PART 3: CLINICAL BACKGROUND ─────────────────────────────────────────
+    // Sections 4–10: Prefilled narrative sections with provenance notes
+    ...reassessmentClinicalBackgroundSections(session),
+
+    // ── PART 4: MEDICAL NECESSITY ────────────────────────────────────────────
+    // Section 11a: Continued medical necessity statement
+    ...reassessmentMedicalSection(session),
+
+    // Section 11b: Medical conditions, diagnoses & medications (structured)
+    ...medicalConditionSection(session),
+
+    // ── PART 5: CURRENT CLINICAL PICTURE ────────────────────────────────────
+    // Section 12: Strengths — initial baseline + gains this auth period
+    ...reassessmentStrengthsSection(session),
+
+    // Section 13: Areas requiring continued & new intervention
+    ...reassessmentAreasSection(session),
+
+    // ── PART 6: AUTHORIZATION PERIOD PROGRESS ───────────────────────────────
+    // Section 14: Maladaptive behavior progress (tables + charts)
+    ...behaviorProgressSection(session, graphs),
+
+    // Section 15: Skill acquisition progress (tables + charts)
+    ...skillProgressSection(session, graphs),
+
+    // Section 16: Caregiver training progress (tables + charts)
+    ...caregiverProgressSection(session, graphs),
+
+    // ── PART 7: INTERVENTION APPROACH ───────────────────────────────────────
+    // Section 17: Hypothesis-based interventions (updated narrative)
+    ...hypothesisSection(session),
+
+    // Section 18: Intervention techniques (hardcoded clinic list, unchanged)
+    ...interventionsSection(),
+
+    // ── PART 8: NEW AUTHORIZATION CYCLE PLAN ────────────────────────────────
+    // Sections 19–21: Behavior / Skill / Caregiver — 4 buckets each
+    ...reassessmentPlanSection(session, graphs),
+
+    // ── PART 9: SUPPORTING DOCUMENTATION ────────────────────────────────────
+    // Section 22: Crisis plan (reviewed/updated at reassessment)
+    ...crisisPlanSection(session),
+
+    // Section 23: Standardized assessment score placeholders
+    ...standardizedAssessmentPlaceholders(),
+
+    // Section 24: Signature block
+    ...signatureSection(),
+  ].filter(Boolean);
+
+  const doc = new Document({
+    creator:     'ABA Shield',
+    title:       `ABA Re-Assessment — ${clientName}`,
+    description: 'Progress Report & New Authorization Cycle Treatment Plan',
+    styles: {
+      default: {
+        document: {
+          run:       { font: FONT, size: SZ },
+          paragraph: { spacing: { after: 120 } },
+        },
+      },
+    },
+    sections: [{
+      properties: {
+        page: {
           margin: { top: 720, bottom: 720, left: 1080, right: 1080 },
         },
       },

@@ -93,8 +93,9 @@ export default function App() {
           return {
             ...item,
             bcbaDefinitionFinal:      saved.bcbaDefinitionFinal ?? item.bcbaDefinitionFinal,
-            function:                 saved.includedInPlan != null ? (saved.function ?? item.function) : item.function,
+            function:                 saved.function ?? item.function,
             includedInPlan:           saved.includedInPlan,
+            monitorOnly:              saved.monitorOnly ?? item.monitorOnly,
             stoStructure:             saved.stoStructure ?? item.stoStructure,
             masteryCriteriaFrequency: saved.masteryCriteriaFrequency ?? item.masteryCriteriaFrequency,
             masteryCriteriaWeeks:     saved.masteryCriteriaWeeks ?? item.masteryCriteriaWeeks,
@@ -123,12 +124,13 @@ export default function App() {
             bcbaGoalName:          saved.bcbaGoalName ?? item.bcbaGoalName,
             bcbaDefinition:        saved.bcbaDefinition ?? item.bcbaDefinition,
             bcbaDomain:            saved.bcbaDomain ?? item.bcbaDomain,
-            includedInPlan:        saved.includedInPlan,
-            stoSteps:              saved.stoSteps ?? item.stoSteps,
+            includedInPlan:         saved.includedInPlan,
+            monitorOnly:            saved.monitorOnly ?? item.monitorOnly,
+            stoSteps:               saved.stoSteps ?? item.stoSteps,
             masteryCriteriaPercent: saved.masteryCriteriaPercent ?? item.masteryCriteriaPercent,
             masteryCriteriaWeeks:   saved.masteryCriteriaWeeks ?? item.masteryCriteriaWeeks,
             bcbaLtoText:            saved.bcbaLtoText ?? item.bcbaLtoText,
-            baselinePct:            saved.baselinePct ?? item.baselinePct,
+            baselinePercent:        saved.baselinePercent ?? item.baselinePercent,
           };
         });
 
@@ -154,6 +156,8 @@ export default function App() {
           return {
             ...item,
             includedInPlan:         saved.includedInPlan,
+            monitorOnly:            saved.monitorOnly ?? item.monitorOnly,
+            baselinePercent:        saved.baselinePercent ?? item.baselinePercent,
             stoSteps:               saved.stoSteps ?? item.stoSteps,
             masteryCriteriaPercent: saved.masteryCriteriaPercent ?? item.masteryCriteriaPercent,
             masteryCriteriaWeeks:   saved.masteryCriteriaWeeks ?? item.masteryCriteriaWeeks,
@@ -161,10 +165,64 @@ export default function App() {
           };
         });
 
+        // Merge caregiverTrainingSummary BCBA edits (averageSessionPercent per goal)
+        const bcbaCtEdits = Object.fromEntries(
+          (inProgress.caregiverTrainingSummary ?? []).map(item => [item.goalName, item]),
+        );
+        freshSession.caregiverTrainingSummary = (freshSession.caregiverTrainingSummary ?? []).map(item => {
+          const saved = bcbaCtEdits[item.goalName];
+          if (!saved) return item;
+          return {
+            ...item,
+            averageSessionPercent: saved.averageSessionPercent ?? item.averageSessionPercent,
+          };
+        });
+
         // Preserve session-level fields (BCBA-reviewed AI sections, status, etc.)
         freshSession.id     = inProgress.id;
         freshSession.status = inProgress.status;
         freshSession.sectionApprovalStatus = inProgress.sectionApprovalStatus ?? freshSession.sectionApprovalStatus;
+
+        // Restore BCBA-typed content that makeReassessmentSession can't regenerate:
+        // progress narrative and section notes/structured fields (medical_necessity, etc.)
+        freshSession.progressNarrativeText = inProgress.progressNarrativeText || freshSession.progressNarrativeText;
+        freshSession.cptHours = inProgress.cptHours ?? freshSession.cptHours;
+
+        for (const [key, storedSec] of Object.entries(inProgress.sections ?? {})) {
+          if (!freshSession.sections[key]) continue;
+          const hasNotes = storedSec.notes?.trim();
+          const hasTranscript = storedSec.transcript;
+          if (hasNotes || hasTranscript) {
+            freshSession.sections[key] = {
+              ...freshSession.sections[key],
+              notes:          storedSec.notes ?? freshSession.sections[key].notes,
+              transcript:     storedSec.transcript ?? freshSession.sections[key].transcript,
+              completionState: storedSec.completionState !== 'empty'
+                ? storedSec.completionState
+                : freshSession.sections[key].completionState,
+            };
+          }
+        }
+
+        // Restore medical_necessity structured fields (diagnoses, meds, hours, setting, etc.)
+        if (inProgress.sections?.medical_necessity) {
+          const s = inProgress.sections.medical_necessity;
+          const f = freshSession.sections.medical_necessity;
+          freshSession.sections.medical_necessity = {
+            ...f,
+            coOccurringDiagnoses:    s.coOccurringDiagnoses    ?? f.coOccurringDiagnoses,
+            medications:             s.medications             ?? f.medications,
+            hasPriorABA:             s.hasPriorABA             ?? f.hasPriorABA,
+            priorABAHistory:         s.priorABAHistory         ?? f.priorABAHistory,
+            recommendedHoursPerWeek: s.recommendedHoursPerWeek ?? f.recommendedHoursPerWeek,
+            recommendedSetting:      s.recommendedSetting      ?? f.recommendedSetting,
+            completionState:         s.completionState !== 'empty' ? s.completionState : f.completionState,
+          };
+        }
+
+        // Recompute sectionsWithData after merges
+        freshSession.sectionsWithData = Object.values(freshSession.sections)
+          .filter(s => s.completionState !== 'empty').length;
       }
 
       setClients(prev => prev.map(c => {

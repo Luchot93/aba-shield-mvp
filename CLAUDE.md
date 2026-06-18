@@ -318,6 +318,64 @@ Key payers in scope: BCBS (via Lucet/WebPass), Cigna/Evernorth, Sunshine Health 
 
 ## Completed Work (this branch)
 
+**feat/reassessment-workflow-part-3** — Purpose-built reassessment DOCX export + progress UI hardening
+
+### Track 1: Read-only average inputs in Reassessment Interview
+`AssessmentInterviewPage.jsx` — `OrigBehaviorRow`, `OrigSkillRow`, `CaregiverTrainingSummaryRow`:
+- Removed editable `<input>` fields for average frequency/accuracy/session % — these values are computed from session logs and must never be manually overridden
+- Replaced with plain read-only display: `averageFrequency`, `averageAccuracy`, `averageSessionPercent` rendered as static text
+- Removed `localAvg` / `localCurrent` useState + useEffect + blur handlers from all three components
+
+### Track 2: "Excluded" disposition shown in Reassessment Review Page
+`ReassessmentReviewPage.jsx` — new/emerging items sections for behaviors, skills, and caregiver training:
+- Added `ExcludedBehaviorRow`, `ExcludedSkillRow`, `ExcludedCaregiverRow` components with stone "EXCLUDED" badge
+- Items where neither `includedInPlan` nor `monitorOnly` is set now appear with muted styling for full transparency
+- Caregiver section IIFE guard fixed: `inPlanCT.length === 0 && monitorCT.length === 0` → `newCaregiverItems.length === 0` (prevented excluded-only items from hiding the section)
+
+### Track 3: Two separate DOCX export functions
+`generateAssessmentDoc.js`:
+- **`generateInitialAssessmentDoc`** — alias for the original `generateAssessmentDoc` (initial assessment doc fully unchanged)
+- **`generateReassessmentDoc(session, clientName, sessionLogs, ctLogs)`** — new purpose-built export for the reauthorization document
+- 24-section clinical structure: Identification → Executive Summary → Clinical Background (7 sections with provenance notes) → Medical Necessity → Strengths → Areas → Progress (behavior/skill/CT) → Interventions → New Cycle Plan (4 buckets × 3 domains) → Crisis Plan → Placeholders → Signature
+- `ReassessmentReviewPage.jsx` updated to import and call `generateReassessmentDoc` with `sessionLogs` and `ctLogs`
+
+### Track 4: Progress charts for reassessment (`graphBuilder.js`)
+- `buildGraphsFromSession` signature updated to accept `{ sessionLogs, ctLogs }` second arg (backwards-compatible default `{}`)
+- New Step 6: generates `progress_behavior_${key}`, `progress_skill_${key}`, `progress_ct_${key}` charts — session-by-session actual trend lines using `buildBehaviorTrendFromLogs` / `buildSkillTrendFromLogs`
+- `renderProgressLineChart(entries, baseline, title, opts)` helper: Chart.js line chart with green/red coloring based on direction of change, dashed baseline reference line, canvas → base64 PNG
+
+### Track 5: Reassessment DOCX — clinical section helpers
+Nine new helper functions added to `generateAssessmentDoc.js`:
+- `reassessmentTitleBlock` — "RE-ASSESSMENT REPORT / Progress Report & New Authorization Cycle Treatment Plan"
+- `executiveSummarySection` — BCBA narrative (`progressNarrativeText`) with action-required placeholder
+- `reassessmentClinicalBackgroundSections` — 7 background sections with provenance notes (green = reviewed at reassessment, purple = carried forward from initial)
+- `reassessmentMedicalSection` — continued medical necessity re-evaluation
+- `reassessmentStrengthsSection` — Part A: initial plan skill goals; Part B: gains this period (mastered skills/behaviors/CT)
+- `reassessmentAreasSection` — active targets + new emerging items with [IN PLAN] / [MONITOR ONLY] / [EXCLUDED] labels
+- `behaviorProgressSection`, `skillProgressSection`, `caregiverProgressSection` — data summary tables + actual trend chart + planned STO trajectory chart per item
+
+### Track 6: Two-table layout for active plan items in new cycle section
+`reassessmentPlanSection` rewritten for active behaviors, skills, and caregiver training goals:
+- **Table 1 — Progress This Period**: Baseline | Avg | % Change | Sessions | Function | Current STO (e.g. "STO 2 of 4")
+- **Table 2 — Remaining Treatment Milestones**: per-step rows sliced from `currentStoNumber` onwards; current step highlighted green (`F0FDF4`), LTO row highlighted blue (`EFF6FF`); falls back to 2-column STO/LTO table when no `stoSteps` defined
+- `milestoneCell` / `milestoneTable` helpers added inside `reassessmentPlanSection`
+
+### Track 7: Mastery date on mastered items
+- **`makeReassessmentSession`** (`seedData.js`): `origMap` now records `masteryDate` (first `log.sessionDate` where `stoStatus === 'met'`) for behaviors; `skillEntriesWithDate` flat-map attaches `_sessionDate` so `masteryDate` can be found for skills; both surfaces added to return objects
+- `caregiverTrainingSummary` gains `stoSteps[]` (filtered array), `ltoData` `{ percent, sessions }`, and `masteryDate: null`
+- **Mastered behaviors table** now 7 columns including "Mastery Date" (`fmtDocDate(b.masteryDate)` or `"This auth period"`)
+- **Mastered skills table** same — "Final Avg %" replaces "Current %" + mastery date column
+
+### Track 8: `makeReassessmentSession` — initial plan definitions propagated
+`seedData.js` — sections assembly for the reassessment session:
+- `finalSections.behavior_targets` now carries `behaviorTargets: initialSession.sections.behavior_targets.behaviorTargets` → doc generator can resolve `stoSteps`, `operationalDefinition`, `hypothesizedFunction` by `behaviorId`
+- `finalSections.skill_acquisitions` now carries `skillGoals: initialSession.sections.skill_acquisitions.skillGoals` → doc generator can resolve STO steps, mastery criteria, and domain; `reassessmentStrengthsSection` now has skill data to render
+- `originalSkillSummary` gains `currentStoNumber` (from last log entry) and `masteryDate`
+
+### Seed data
+- `makeReassessmentSession`: `originalSkillSummary` rebuilt with stable date-sorted `skillEntriesWithDate`; `currentStoNumber` and `masteryDate` added to skill summary items
+
+### Previous completed work (prior sessions on this branch)
 **feat/reassessment-workflow-part-2** — Met Goals visual treatment + session logging modals + reassessment partition fixes
 
 ### Track 1: Met Goals visual treatment in session logging modals

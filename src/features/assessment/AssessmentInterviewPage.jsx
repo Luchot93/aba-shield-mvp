@@ -201,23 +201,11 @@ function fmtDate(iso) {
 // ─── Part A: single row in the "from treatment plan" table ────────────────────
 
 function OrigBehaviorRow({ item, idx, patchOrigItem, sessionLogs }) {
-  const [localAvg, setLocalAvg] = useState(
-    item.averageFrequency != null ? String(item.averageFrequency) : '',
-  );
-
-  useEffect(() => {
-    setLocalAvg(item.averageFrequency != null ? String(item.averageFrequency) : '');
-  }, [item.averageFrequency]);
-
-  const parsedAvg = parseFloat(localAvg);
+  const avg       = item.averageFrequency;
   const base      = item.baselineFrequency;
-  const pctChange = (!isNaN(parsedAvg) && base && base !== 0)
-    ? ((base - parsedAvg) / base) * 100
+  const pctChange = (avg != null && base != null && base !== 0)
+    ? ((base - avg) / base) * 100
     : null;
-
-  const handleAvgBlur = () => {
-    if (!isNaN(parsedAvg)) patchOrigItem(idx, { averageFrequency: parsedAvg });
-  };
 
   // Build per-session rows for the detail table
   const sessionRows = (sessionLogs ?? [])
@@ -257,17 +245,9 @@ function OrigBehaviorRow({ item, idx, patchOrigItem, sessionLogs }) {
           {base ?? '—'}
         </td>
 
-        {/* Avg (editable) */}
-        <td className="py-2.5 px-2 text-center">
-          <input
-            type="number"
-            value={localAvg}
-            onChange={e => setLocalAvg(e.target.value)}
-            onBlur={handleAvgBlur}
-            min={0}
-            className="w-16 text-center text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
-            style={{ fontFamily: 'DM Mono, monospace' }}
-          />
+        {/* Avg this period — read-only, computed from session logs */}
+        <td className="py-2.5 px-2 text-sm font-semibold text-slate-700 text-center tabular-nums">
+          {avg != null ? Number(avg).toFixed(1) : '—'}
         </td>
 
         {/* % Change (live) */}
@@ -476,35 +456,39 @@ function NewBehaviorRow({ item, idx, patchNewItem }) {
             </div>
           </div>
 
-          {/* Include toggle */}
+          {/* 3-state disposition: Include / Monitor / Exclude */}
           <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Include in Treatment Plan</p>
-            <div className="flex gap-2">
-              <button type="button"
-                onClick={() => {
-                  const patch = { includedInPlan: true };
-                  // Seed one STO so BCBA doesn't miss defining steps
-                  if ((item.stoStructure ?? []).length === 0) {
-                    patch.stoStructure = [{ id: `new_sto_${Date.now()}`, targetFrequency: '', durationWeeks: '' }];
-                  }
-                  patchNewItem(idx, patch);
-                }}
-                className={`px-3 py-1 text-[12px] font-semibold rounded-lg border transition-all ${
-                  item.includedInPlan === true
-                    ? 'text-white border-teal-600 bg-teal-600'
-                    : 'text-slate-500 border-stone-200 bg-white hover:border-teal-300'
-                }`}>
-                Yes — add to plan
-              </button>
-              <button type="button"
-                onClick={() => patchNewItem(idx, { includedInPlan: false })}
-                className={`px-3 py-1 text-[12px] font-semibold rounded-lg border transition-all ${
-                  item.includedInPlan === false
-                    ? 'text-white border-slate-500 bg-slate-500'
-                    : 'text-slate-500 border-stone-200 bg-white hover:border-slate-300'
-                }`}>
-                No — monitor only
-              </button>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">New Cycle Disposition</p>
+            <div className="flex rounded-lg border border-stone-200 overflow-hidden w-fit">
+              {[
+                { label: 'Include in plan', value: 'include', activeClass: 'bg-teal-600 text-white border-teal-600' },
+                { label: 'Monitor', value: 'monitor', activeClass: 'bg-sky-600 text-white border-sky-600' },
+                { label: 'Exclude', value: 'exclude', activeClass: 'bg-slate-500 text-white border-slate-500' },
+              ].map(({ label, value, activeClass }, i) => {
+                const current = item.includedInPlan === true ? 'include' : item.monitorOnly === true ? 'monitor' : item.includedInPlan === false ? 'exclude' : null;
+                const isActive = current === value;
+                return (
+                  <button key={value} type="button"
+                    onClick={() => {
+                      if (value === 'include') {
+                        const patch = { includedInPlan: true, monitorOnly: false };
+                        if ((item.stoStructure ?? []).length === 0) {
+                          patch.stoStructure = [{ id: `new_sto_${Date.now()}`, targetFrequency: '', durationWeeks: '' }];
+                        }
+                        patchNewItem(idx, patch);
+                      } else if (value === 'monitor') {
+                        patchNewItem(idx, { includedInPlan: false, monitorOnly: true });
+                      } else {
+                        patchNewItem(idx, { includedInPlan: false, monitorOnly: false });
+                      }
+                    }}
+                    className={`px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                      i > 0 ? 'border-l border-stone-200' : ''
+                    } ${isActive ? activeClass : 'bg-white text-slate-500 hover:bg-stone-50'}`}>
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -783,18 +767,7 @@ function BehaviorTargetsReassessmentCard({
 
 
 function OrigSkillRow({ item, idx, patchOrigItem, sessionLogs }) {
-  const [localCurrent, setLocalCurrent] = useState(
-    item.currentPercent != null ? String(item.currentPercent) : '',
-  );
-
-  useEffect(() => {
-    setLocalCurrent(item.currentPercent != null ? String(item.currentPercent) : '');
-  }, [item.currentPercent]);
-
-  const handleCurrentBlur = () => {
-    const v = parseFloat(localCurrent);
-    if (!isNaN(v)) patchOrigItem(idx, { currentPercent: Math.min(100, Math.max(0, v)) });
-  };
+  const avgAccuracy = item.averageAccuracy ?? item.currentPercent;
 
   // Build per-session rows from skill log entries
   const sessionRows = (sessionLogs ?? [])
@@ -836,21 +809,9 @@ function OrigSkillRow({ item, idx, patchOrigItem, sessionLogs }) {
           {item.baselinePercent != null ? `${item.baselinePercent}%` : '—'}
         </td>
 
-        {/* Current % (editable) */}
-        <td className="py-2.5 px-2 text-center">
-          <div className="flex items-center justify-center gap-0.5">
-            <input
-              type="number"
-              value={localCurrent}
-              onChange={e => setLocalCurrent(e.target.value)}
-              onBlur={handleCurrentBlur}
-              min={0} max={100}
-              placeholder="—"
-              className="w-16 text-center text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
-              style={{ fontFamily: 'DM Mono, monospace' }}
-            />
-            <span className="text-xs text-slate-400">%</span>
-          </div>
+        {/* Avg accuracy this period — read-only, computed from session logs */}
+        <td className="py-2.5 px-2 text-sm font-semibold text-slate-700 text-center tabular-nums">
+          {avgAccuracy != null ? `${Number(avgAccuracy).toFixed(1)}%` : '—'}
         </td>
 
         {/* Status — read-only badge derived from session logs */}
@@ -1036,34 +997,39 @@ function NewSkillRow({ item, idx, patchNewItem }) {
 
           <div className="h-px bg-teal-100"/>
 
-          {/* Include in plan toggle — placed before STO so BCBA decides first */}
+          {/* 3-state disposition: Include / Monitor / Exclude */}
           <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Include in Treatment Plan</p>
-            <div className="flex gap-2">
-              <button type="button"
-                onClick={() => {
-                  const patch = { includedInPlan: true };
-                  if ((item.stoSteps ?? []).length === 0) {
-                    patch.stoSteps = [{ id: `nsksto_${Date.now()}`, targetPercent: '', durationWeeks: '' }];
-                  }
-                  patchNewItem(idx, patch);
-                }}
-                className={`px-3 py-1 text-[12px] font-semibold rounded-lg border transition-all ${
-                  item.includedInPlan === true
-                    ? 'text-white border-teal-600 bg-teal-600'
-                    : 'text-slate-500 border-stone-200 bg-white hover:border-teal-300'
-                }`}>
-                Yes — add to plan
-              </button>
-              <button type="button"
-                onClick={() => patchNewItem(idx, { includedInPlan: false })}
-                className={`px-3 py-1 text-[12px] font-semibold rounded-lg border transition-all ${
-                  item.includedInPlan === false
-                    ? 'text-white border-slate-500 bg-slate-500'
-                    : 'text-slate-500 border-stone-200 bg-white hover:border-slate-300'
-                }`}>
-                No — monitor only
-              </button>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">New Cycle Disposition</p>
+            <div className="flex rounded-lg border border-stone-200 overflow-hidden w-fit">
+              {[
+                { label: 'Include in plan', value: 'include', activeClass: 'bg-teal-600 text-white' },
+                { label: 'Monitor', value: 'monitor', activeClass: 'bg-sky-600 text-white' },
+                { label: 'Exclude', value: 'exclude', activeClass: 'bg-slate-500 text-white' },
+              ].map(({ label, value, activeClass }, i) => {
+                const current = item.includedInPlan === true ? 'include' : item.monitorOnly === true ? 'monitor' : item.includedInPlan === false ? 'exclude' : null;
+                const isActive = current === value;
+                return (
+                  <button key={value} type="button"
+                    onClick={() => {
+                      if (value === 'include') {
+                        const patch = { includedInPlan: true, monitorOnly: false };
+                        if ((item.stoSteps ?? []).length === 0) {
+                          patch.stoSteps = [{ id: `nsksto_${Date.now()}`, targetPercent: '', durationWeeks: '' }];
+                        }
+                        patchNewItem(idx, patch);
+                      } else if (value === 'monitor') {
+                        patchNewItem(idx, { includedInPlan: false, monitorOnly: true });
+                      } else {
+                        patchNewItem(idx, { includedInPlan: false, monitorOnly: false });
+                      }
+                    }}
+                    className={`px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                      i > 0 ? 'border-l border-stone-200' : ''
+                    } ${isActive ? activeClass : 'bg-white text-slate-500 hover:bg-stone-50'}`}>
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1338,24 +1304,12 @@ function SkillAcquisitionsReassessmentCard({
 // ─── Caregiver Training summary row (Part A) ─────────────────────────────────
 
 function CaregiverTrainingSummaryRow({ item, idx, patchItem, ctLogs }) {
-  const [localAvg, setLocalAvg] = useState(
-    item.averageSessionPercent != null ? String(item.averageSessionPercent) : '',
-  );
-
-  useEffect(() => {
-    setLocalAvg(item.averageSessionPercent != null ? String(item.averageSessionPercent) : '');
-  }, [item.averageSessionPercent]);
-
-  const parsedAvg  = parseFloat(localAvg);
+  const avg        = item.averageSessionPercent;
   const base       = item.baselinePercent;
   // For CT: positive pctChange = avg > baseline = improvement = good
-  const pctChange  = (!isNaN(parsedAvg) && base != null && base !== 0)
-    ? ((parsedAvg - base) / base) * 100
+  const pctChange  = (avg != null && base != null && base !== 0)
+    ? ((avg - base) / base) * 100
     : null;
-
-  const handleAvgBlur = () => {
-    if (!isNaN(parsedAvg)) patchItem(idx, { averageSessionPercent: parsedAvg });
-  };
 
   // trend icon: improving = ↑ green, worsening = ↓ red, flat = → gray
   const trendIcon  = item.trend === 'improving' ? '↑' : item.trend === 'worsening' ? '↓' : '→';
@@ -1397,21 +1351,9 @@ function CaregiverTrainingSummaryRow({ item, idx, patchItem, ctLogs }) {
           {base != null ? `${base}%` : '—'}
         </td>
 
-        {/* Avg this period (editable) */}
-        <td className="py-2.5 px-2 text-center">
-          <div className="flex items-center justify-center gap-0.5">
-            <input
-              type="number"
-              value={localAvg}
-              onChange={e => setLocalAvg(e.target.value)}
-              onBlur={handleAvgBlur}
-              min={0} max={100}
-              placeholder="—"
-              className="w-16 text-center text-sm font-semibold text-slate-700 bg-white border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
-              style={{ fontFamily: 'DM Mono, monospace' }}
-            />
-            <span className="text-xs text-slate-400">%</span>
-          </div>
+        {/* Avg this period — read-only, computed from session logs */}
+        <td className="py-2.5 px-2 text-sm font-semibold text-slate-700 text-center tabular-nums">
+          {avg != null ? `${Number(avg).toFixed(1)}%` : '—'}
         </td>
 
         {/* % Change (live) */}
@@ -1612,34 +1554,39 @@ function NewCaregiverRow({ item, idx, patchItem }) {
 
           <div className="h-px bg-teal-100"/>
 
-          {/* Include in plan toggle */}
+          {/* 3-state disposition: Include / Monitor / Exclude */}
           <div>
-            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Include in Treatment Plan</p>
-            <div className="flex gap-2">
-              <button type="button"
-                onClick={() => {
-                  const patch = { includedInPlan: true };
-                  if ((item.stoSteps ?? []).length === 0) {
-                    patch.stoSteps = [{ id: `cgsto_${Date.now()}`, targetPercent: '', durationWeeks: '' }];
-                  }
-                  patchItem(idx, patch);
-                }}
-                className={`px-3 py-1 text-[12px] font-semibold rounded-lg border transition-all ${
-                  item.includedInPlan === true
-                    ? 'text-white border-teal-600 bg-teal-600'
-                    : 'text-slate-500 border-stone-200 bg-white hover:border-teal-300'
-                }`}>
-                Yes — add to plan
-              </button>
-              <button type="button"
-                onClick={() => patchItem(idx, { includedInPlan: false })}
-                className={`px-3 py-1 text-[12px] font-semibold rounded-lg border transition-all ${
-                  item.includedInPlan === false
-                    ? 'text-white border-slate-500 bg-slate-500'
-                    : 'text-slate-500 border-stone-200 bg-white hover:border-slate-300'
-                }`}>
-                No — monitor only
-              </button>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">New Cycle Disposition</p>
+            <div className="flex rounded-lg border border-stone-200 overflow-hidden w-fit">
+              {[
+                { label: 'Include in plan', value: 'include', activeClass: 'bg-teal-600 text-white' },
+                { label: 'Monitor', value: 'monitor', activeClass: 'bg-sky-600 text-white' },
+                { label: 'Exclude', value: 'exclude', activeClass: 'bg-slate-500 text-white' },
+              ].map(({ label, value, activeClass }, i) => {
+                const current = item.includedInPlan === true ? 'include' : item.monitorOnly === true ? 'monitor' : item.includedInPlan === false ? 'exclude' : null;
+                const isActive = current === value;
+                return (
+                  <button key={value} type="button"
+                    onClick={() => {
+                      if (value === 'include') {
+                        const patch = { includedInPlan: true, monitorOnly: false };
+                        if ((item.stoSteps ?? []).length === 0) {
+                          patch.stoSteps = [{ id: `cgsto_${Date.now()}`, targetPercent: '', durationWeeks: '' }];
+                        }
+                        patchItem(idx, patch);
+                      } else if (value === 'monitor') {
+                        patchItem(idx, { includedInPlan: false, monitorOnly: true });
+                      } else {
+                        patchItem(idx, { includedInPlan: false, monitorOnly: false });
+                      }
+                    }}
+                    className={`px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                      i > 0 ? 'border-l border-stone-200' : ''
+                    } ${isActive ? activeClass : 'bg-white text-slate-500 hover:bg-stone-50'}`}>
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -1852,6 +1799,69 @@ function CaregiverTrainingSummaryHeader({ session, clientId, setClients, ctLogs 
   );
 }
 
+// ─── Lightweight markdown → JSX renderer (headings, bold, paragraphs) ────────
+
+function renderMarkdownBlock(text) {
+  const lines = text.split('\n');
+  const elements = [];
+  let paraLines = [];
+
+  const flushPara = () => {
+    if (!paraLines.length) return;
+    const joined = paraLines.join(' ').trim();
+    if (joined) {
+      elements.push(
+        <p key={elements.length} className="text-[12px] text-slate-600 leading-relaxed mb-2">
+          {renderInline(joined)}
+        </p>
+      );
+    }
+    paraLines = [];
+  };
+
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    if (line.startsWith('### ')) {
+      flushPara();
+      elements.push(
+        <p key={elements.length} className="text-[11px] font-bold text-slate-700 uppercase tracking-wide mt-3 mb-1">
+          {line.slice(4)}
+        </p>
+      );
+    } else if (line.startsWith('## ')) {
+      flushPara();
+      elements.push(
+        <p key={elements.length} className="text-[12px] font-bold text-slate-800 mt-3 mb-1">
+          {line.slice(3)}
+        </p>
+      );
+    } else if (line.startsWith('# ')) {
+      flushPara();
+      elements.push(
+        <p key={elements.length} className="text-[13px] font-bold text-slate-800 mt-2 mb-1">
+          {line.slice(2)}
+        </p>
+      );
+    } else if (line === '') {
+      flushPara();
+    } else {
+      paraLines.push(line);
+    }
+  }
+  flushPara();
+  return elements;
+}
+
+function renderInline(text) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i} className="font-semibold text-slate-700">{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
 // ─── Medical Necessity prior statement reference box ─────────────────────────
 
 function MedicalNecessityPriorStatementBox({ initialAssessment }) {
@@ -1859,21 +1869,21 @@ function MedicalNecessityPriorStatementBox({ initialAssessment }) {
   const text = initialAssessment?.sections?.medical_necessity?.draftContent;
   if (!text) return null;
 
-  const preview = text.length > 300 ? text.slice(0, 300) + '…' : text;
+  const PREVIEW_CHARS = 500;
+  const isLong = text.length > PREVIEW_CHARS;
+  const displayText = !expanded && isLong ? text.slice(0, PREVIEW_CHARS) + '…' : text;
 
   return (
-    <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
-      <p className="text-[9px] font-bold uppercase tracking-widest text-amber-600 mb-1.5">
+    <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+      <p className="text-[9px] font-bold uppercase tracking-widest text-amber-600 mb-3">
         Previous Statement (from initial assessment)
       </p>
-      <p className="text-[12px] text-slate-600 leading-relaxed whitespace-pre-wrap">
-        {expanded ? text : preview}
-      </p>
-      {text.length > 300 && (
+      <div>{renderMarkdownBlock(displayText)}</div>
+      {isLong && (
         <button
           type="button"
           onClick={() => setExpanded(v => !v)}
-          className="mt-1.5 text-[10px] font-semibold text-amber-600 hover:text-amber-800 transition-colors"
+          className="mt-2 text-[10px] font-semibold text-amber-600 hover:text-amber-800 transition-colors"
         >
           {expanded ? 'Show less' : 'Show more'}
         </button>
@@ -2036,7 +2046,7 @@ export default function AssessmentInterviewPage({
           )}
           <span className="text-[11px] font-semibold text-slate-400"
             style={{ fontFamily: 'DM Mono, monospace' }}>
-            {session.sectionsApproved ?? 0}/{effectiveSectionOrder.filter(k => k !== 'demographics').length} approved
+            {session.sectionsApproved ?? 0}/{effectiveSectionOrder.length} approved
           </span>
         </div>
       </div>

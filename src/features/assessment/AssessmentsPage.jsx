@@ -34,15 +34,11 @@ function fmtDate(d) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function progressPct(session, status) {
+function progressPct(session) {
   if (!session) return 0;
   const total = session.sections ? Object.keys(session.sections).length : 0;
   if (!total) return 0;
-  // Review + complete phases: show approval progress. Interview phase: show captured sections.
-  const done = (status === 'in_review' || status === 'ready_to_review' || status === 'complete')
-    ? (session.sectionsApproved ?? 0)
-    : (session.sectionsWithData ?? 0);
-  return Math.min(100, Math.round((done / total) * 100));
+  return Math.min(100, Math.round(((session.sectionsWithData ?? 0) / total) * 100));
 }
 
 function hasMicData(session) {
@@ -55,14 +51,13 @@ function hasNotes(session) {
   return Object.values(session.sections).some(s => s.notes?.trim());
 }
 
-function sectionCount(session, status) {
+function sectionCount(session) {
   if (!session) return { done: 0, total: 0, label: 'sections' };
   const total = session.sections ? Object.keys(session.sections).length : 0;
-  const isReviewPhase = status === 'in_review' || status === 'ready_to_review' || status === 'complete';
   return {
-    done:  isReviewPhase ? (session.sectionsApproved ?? 0) : (session.sectionsWithData ?? 0),
+    done:  session.sectionsWithData ?? 0,
     total,
-    label: isReviewPhase ? 'sections approved' : 'sections captured',
+    label: 'sections with data',
   };
 }
 
@@ -150,8 +145,8 @@ function GroupHeader({ group, expanded, onToggle }) {
 function ReassessmentCard({ client, reassessment, bcba, onOpen }) {
   const { session, status, cycleNumber } = reassessment;
   const meta  = STATUS_META[status] ?? STATUS_META.not_started;
-  const pct   = progressPct(session, status);
-  const count = sectionCount(session, status);
+  const pct   = progressPct(session);
+  const count = sectionCount(session);
   const mic   = hasMicData(session);
   const notes = hasNotes(session);
 
@@ -408,8 +403,8 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
             const expanded = expandedGroups.has(client.id);
 
             const meta  = STATUS_META[initialStatus] ?? STATUS_META.not_started;
-            const pct   = progressPct(initialSession, initialStatus);
-            const count = sectionCount(initialSession, initialStatus);
+            const pct   = progressPct(initialSession);
+            const count = sectionCount(initialSession);
             const mic   = hasMicData(initialSession);
             const notes = hasNotes(initialSession);
 

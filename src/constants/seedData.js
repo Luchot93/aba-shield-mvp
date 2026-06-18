@@ -169,7 +169,7 @@ function makeFilledSession(clientId, clientName, bcbaId, bcbaName, sectionData, 
   }
 
   const sectionsWithData = Object.values(sections).filter(
-    s => s.key !== 'demographics' && s.completionState !== 'empty',
+    s => s.completionState !== 'empty',
   ).length;
 
   return {
@@ -1827,8 +1827,12 @@ export const SEED_CLIENTS = () => [
         _intakeMissingFields: [],
       });
       // Mark session as fully complete — BCBA exported the assessment report
-      const sectionCount = Object.values(s.sections).filter(sec => sec.key !== 'demographics').length;
-      return { ...s, status: 'complete', sectionsApproved: sectionCount };
+      // All 12 sections count — demographics auto-confirmed, rest marked approved
+      const sectionCount = Object.values(s.sections).length;
+      const approvedSections = Object.fromEntries(
+        Object.entries(s.sections).map(([k, v]) => [k, { ...v, approvalState: 'approved' }])
+      );
+      return { ...s, sections: approvedSections, status: 'complete', sectionsApproved: sectionCount };
     })() :
     c.stage === 'assessment' ? makeAssessmentSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes', c) :
     null;
@@ -1922,8 +1926,12 @@ export const SEED_CLIENTS = () => [
         insurerName:'Cigna', memberId:'CIG-884432', groupNumber:'G-55023',
         referringProvider:'Dr. Ana Flores', referralDate:'2026-03-20',
       });
-      const sectionCount = Object.values(s.sections).filter(sec => sec.key !== 'demographics').length;
-      return { ...s, status:'complete', sectionsApproved: sectionCount };
+      // All 12 sections count — demographics auto-confirmed, rest marked approved
+      const sectionCount = Object.values(s.sections).length;
+      const approvedSections = Object.fromEntries(
+        Object.entries(s.sections).map(([k, v]) => [k, { ...v, approvalState: 'approved' }])
+      );
+      return { ...s, sections: approvedSections, status:'complete', sectionsApproved: sectionCount };
     })();
     const smart_session_id_diego = `sas_${c.id}_${Date.now()}`;
     return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_diego, checklist:cl, documents:DIEGO_DOCS, activity_log:DIEGO_LOG, case_notes:[], assessment_session: assessment_session_diego, service_session_logs: [], caregiver_training_session_logs: [] };
@@ -1951,8 +1959,12 @@ export const SEED_CLIENTS = () => [
         relationship: 'Mother', reasonForReferral: 'ABA evaluation for behavior reduction and skill development',
         _intakeMissingFields: [],
       });
-      const sectionCount = Object.values(s.sections).filter(sec => sec.key !== 'demographics').length;
-      return { ...s, status: 'complete', sectionsApproved: sectionCount };
+      // All 12 sections count — demographics auto-confirmed, rest marked approved
+      const sectionCount = Object.values(s.sections).length;
+      const approvedSections = Object.fromEntries(
+        Object.entries(s.sections).map(([k, v]) => [k, { ...v, approvalState: 'approved' }])
+      );
+      return { ...s, sections: approvedSections, status: 'complete', sectionsApproved: sectionCount };
     })();
 
     const C10_SERVICE_SESSION_LOGS = [
@@ -2205,15 +2217,67 @@ export const SEED_CLIENTS = () => [
 
     const smart_session_id_charlotte = assessment_session_charlotte.id;
 
+    const _charlotteReassessBase = makeReassessmentSession(
+      c,
+      assessment_session_charlotte,
+      C10_SERVICE_SESSION_LOGS,
+      '2026-01-20',
+      '2026-07-20',
+    );
+
     const reassessment_cycle1_charlotte = {
-      ...makeReassessmentSession(
-        c,
-        assessment_session_charlotte,
-        C10_SERVICE_SESSION_LOGS,
-        '2026-01-20',
-        '2026-07-20',
-      ),
+      ..._charlotteReassessBase,
       status: 'in_progress',
+
+      // ── Demo seed: progress narrative ────────────────────────────────────────
+      progressNarrativeText: `Charlotte completed 6 months of home-based ABA services (Jan 30 – Jul 30, 2026). Overall clinical response is strong across all three active behavior targets.
+
+Elopement has reduced from a baseline of 10 attempts/day to an average of 1.2 attempts/day over the final 30-day measurement window — an 88% reduction. All community-setting incidents have resolved; one low-intensity yard-boundary crossing was documented in June. Caregiver-implemented safety protocols (physical barriers, First-Then board) are in place and maintained with high fidelity.
+
+Aggression toward the caregiver has reduced from 5 incidents/day to 0.8/day (84% reduction). Remaining incidents occur exclusively during high-demand transitions; intensity has decreased from hitting/pushing to open-hand swipes with no physical contact documented in the past 8 weeks.
+
+Task refusal has improved from 25 instances/day to approximately 6/day (76% reduction). Morning routines and school preparation sequences are now completed with 1–2 verbal prompts in 8 of 10 sessions.
+
+Skill acquisition progress: PECS-based functional requesting mastered for 3 items (Break, Snack, Help) at ≥80% accuracy across 5 consecutive sessions. Social Greetings goal initiated in April — currently at 62% unprompted across settings.
+
+Caregiver training: Jennifer Davis implementing First-Then transition protocol at 91% fidelity per direct observation. Reinforcement delivery accuracy rated at 87% (target ≥80%). Both targets met for the authorization period.
+
+Tantrum behavior formally met (≤1×/day over 60-day window); transferred to maintenance monitoring.
+
+Continued ABA services are clinically indicated to sustain behavioral gains, complete generalization of elopement safety protocols to community settings without physical barriers, and address remaining active targets (Elopement and Aggression).`,
+
+      // ── Demo seed: section overrides ─────────────────────────────────────────
+      sections: (() => {
+        const base = _charlotteReassessBase.sections;
+        return {
+          ...base,
+          medical_necessity: {
+            ...base.medical_necessity,
+            completionState: 'complete',
+            notes: `Diagnosis: ASD Level 1 (F84.0), Dr. James Wilson, Jupiter Medical Center. Diagnostic evaluation current — no update required; last formal evaluation Oct 2024, within 24-month window per Cigna policy. No new co-occurring diagnoses. No current medications. Pediatrician Dr. Michelle Park, last visit Feb 2026, next scheduled Aug 2026. No medical contraindications.
+
+Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization period). Continued services are medically necessary: (1) elopement target has reached 88% reduction but has not met formal mastery criteria and community generalization is incomplete; (2) aggression is at 84% reduction with remaining incidents during high-demand transitions; (3) task refusal 76% reduction — morning routine and school prep sequences require continued behavioral support for full independence. (4) new skill goal (Social Greetings) initiated April 2026, currently at 62% — requires continued intervention to reach 80% mastery criterion. Caregiver training goals met; updated training targets recommended for the new auth period. Recommend 15 hrs/week home-based with continued parent training component.`,
+            coOccurringDiagnoses: [],
+            medications: [],
+            hasPriorABA: true,
+            priorABAHistory: [
+              { id: 'aba-hist-1', provider: 'ABA Shield — Current program', startDate: '2026-01-30', endDate: '', hoursPerWeek: '15', notes: 'Current authorization period Jan 30 – Jul 30, 2026. Home-based.' },
+            ],
+            recommendedHoursPerWeek: '15',
+            recommendedSetting: 'Home-based',
+          },
+          progress_note: {
+            ...base.progress_note,
+            completionState: 'complete',
+          },
+        };
+      })(),
+
+      // Recompute sectionsWithData to include the two newly-complete sections
+      sectionsWithData: _charlotteReassessBase.sectionsWithData + 2,
+
+      // Demo seed: CPT hours requested in this reassessment document
+      cptHours: { '97153': '80', '97155': '12', '97156': '8' },
     };
 
     return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_charlotte, checklist:cl, documents: C10_DOCS, activity_log: C10_LOG, case_notes: SEED_NOTES[c.id] || [], assessment_session: assessment_session_charlotte, service_session_logs: C10_SERVICE_SESSION_LOGS, caregiver_training_session_logs: C10_CAREGIVER_TRAINING_LOGS, reassessment_sessions: [reassessment_cycle1_charlotte] };
@@ -2241,8 +2305,12 @@ export const SEED_CLIENTS = () => [
         relationship: 'Mother', reasonForReferral: 'ABA evaluation for physical aggression, vocal disruption, and limited functional communication',
         _intakeMissingFields: [],
       });
-      const sectionCount = Object.values(s.sections).filter(sec => sec.key !== 'demographics').length;
-      return { ...s, status: 'complete', sectionsApproved: sectionCount };
+      // All 12 sections count — demographics auto-confirmed, rest marked approved
+      const sectionCount = Object.values(s.sections).length;
+      const approvedSections = Object.fromEntries(
+        Object.entries(s.sections).map(([k, v]) => [k, { ...v, approvalState: 'approved' }])
+      );
+      return { ...s, sections: approvedSections, status: 'complete', sectionsApproved: sectionCount };
     })();
 
     const C11_SERVICE_SESSION_LOGS = [
@@ -2424,11 +2492,16 @@ export const makeReassessmentSession = (
           baselineFrequency: entry.baselineFrequency,
           frequencies:       [],
           lastEntry:         null,
+          masteryDate:       null,
         });
       }
       const rec = origMap.get(key);
       rec.frequencies.push(entry.sessionFrequency);
       rec.lastEntry = entry;
+      // Capture the date when mastery was first achieved
+      if (entry.stoStatus === 'met' && !rec.masteryDate) {
+        rec.masteryDate = log.sessionDate;
+      }
     }
   }
 
@@ -2461,6 +2534,8 @@ export const makeReassessmentSession = (
       // It is NEVER overwritten by the BCBA-dropdown merge in App.jsx.
       // The Mastered/Active partition in AssessmentInterviewPage uses this field.
       sessionDerivedStoStatus: derivedStoStatus,
+      // Date (ISO string) when mastery was first achieved; null if not yet mastered.
+      masteryDate:             rec.masteryDate,
     };
   });
 
@@ -2547,24 +2622,24 @@ export const makeReassessmentSession = (
     initialSession?.sections?.skill_acquisitions?.skillGoals ?? [];
 
   const originalSkillSummary = initialSkillGoals.map(goal => {
-    const skillEntries = (sessionLogs ?? [])
-      .flatMap(log =>
-        (log.skillEntries ?? []).filter(se => !se.isNew && se.skillId === goal.id),
-      )
-      .sort((a, b) => {
-        const la = (sessionLogs ?? []).find(l => (l.skillEntries ?? []).includes(a));
-        const lb = (sessionLogs ?? []).find(l => (l.skillEntries ?? []).includes(b));
-        return new Date(la?.sessionDate ?? 0) - new Date(lb?.sessionDate ?? 0);
-      });
+    // Attach session date to each entry so we can track mastery date and sort stably
+    const skillEntriesWithDate = (sessionLogs ?? []).flatMap(log =>
+      (log.skillEntries ?? [])
+        .filter(se => !se.isNew && se.skillId === goal.id)
+        .map(se => ({ ...se, _sessionDate: log.sessionDate })),
+    ).sort((a, b) => new Date(a._sessionDate ?? 0) - new Date(b._sessionDate ?? 0));
 
-    const sessionsLogged = skillEntries.length;
-    const percents       = skillEntries.map(se => se.accuracyPercent ?? 0);
+    const sessionsLogged = skillEntriesWithDate.length;
+    const percents       = skillEntriesWithDate.map(se => se.accuracyPercent ?? 0);
     const average        = sessionsLogged > 0 ? percents.reduce((s, v) => s + v, 0) / sessionsLogged : null;
     const currentPercent = sessionsLogged > 0 ? percents[percents.length - 1] : null;
     const first          = percents[0] ?? 0;
     const trend          = average !== null && average > first + 5 ? 'improving'
       : average !== null && average < first - 5 ? 'worsening'
       : 'flat';
+
+    const lastEntry    = skillEntriesWithDate[skillEntriesWithDate.length - 1];
+    const masteryEntry = skillEntriesWithDate.find(se => se.stoStatus === 'met');
 
     return {
       skillId:        goal.id,
@@ -2575,13 +2650,16 @@ export const makeReassessmentSession = (
       sessionsLogged,
       averageAccuracy: average,
       trend,
-      // Read the most recent skill log's stoStatus so mastered skills surface correctly.
+      // Current STO number from the most recent log entry
+      currentStoNumber: lastEntry?.currentStoNumber ?? 1,
+      // Date when mastery was first achieved; null if not yet mastered
+      masteryDate: masteryEntry?._sessionDate ?? null,
       // sessionDerivedStatus is the immutable truth from session logs (never merged from BCBA edits).
       sessionDerivedStatus: sessionsLogged > 0
-        ? (skillEntries[skillEntries.length - 1]?.stoStatus ?? 'in_progress')
+        ? (lastEntry?.stoStatus ?? 'in_progress')
         : 'new',
       status: sessionsLogged > 0
-        ? (skillEntries[skillEntries.length - 1]?.stoStatus ?? 'in_progress')
+        ? (lastEntry?.stoStatus ?? 'in_progress')
         : 'new',
     };
   });
@@ -2708,6 +2786,12 @@ export const makeReassessmentSession = (
         lto:                  target.ltoPercent != null
           ? `${target.ltoPercent}% accuracy across ${target.ltoSessions} sessions`
           : (target.lto ?? ''),
+        // Individual step data for two-table doc display
+        stoSteps: (target.stoSteps ?? []).filter(s => s.targetPercent !== '' && s.targetPercent != null),
+        ltoData: target.ltoPercent != null
+          ? { percent: target.ltoPercent, sessions: target.ltoSessions }
+          : null,
+        masteryDate: null,
       };
     }
     const percents = entries.map(e => e.sessionPercent);
@@ -2747,6 +2831,12 @@ export const makeReassessmentSession = (
       lto:                  target.ltoPercent != null
         ? `${target.ltoPercent}% accuracy across ${target.ltoSessions} sessions`
         : (target.lto ?? ''),
+        // Individual step data for two-table doc display
+        stoSteps: (target.stoSteps ?? []).filter(s => s.targetPercent !== '' && s.targetPercent != null),
+        ltoData: target.ltoPercent != null
+          ? { percent: target.ltoPercent, sessions: target.ltoSessions }
+          : null,
+        masteryDate: null,
     };
   });
 
@@ -2844,17 +2934,79 @@ export const makeReassessmentSession = (
     const hasContent = !!(src.notes?.trim() || src.transcript);
     prefillSections[key] = {
       ...base.sections[key],
-      notes:           src.notes      ?? '',
-      transcript:      src.transcript ?? null,
+      ...src,               // carry forward ALL clinical fields (structured + narrative)
       completionState: hasContent ? 'complete' : 'empty',
       prefillSource:   'initial_assessment',
+      // reset review-phase meta so the BCBA reviews fresh in this cycle
+      approvalState:    'pending',
+      draftContent:     null,
+      aiOriginalContent: null,
+      draftState:       'blank',
+      lastSavedAt:      null,
     };
   }
 
   // ── assemble ───────────────────────────────────────────────────────────────
+  const finalSections = {
+    ...base.sections,
+    ...prefillSections,
+    // progress_note is reassessment-only (inserted into effectiveSectionOrder in the interview).
+    // Add it to sections so both the list card and the interview use the same denominator (13).
+    progress_note: {
+      key:            'progress_note',
+      title:          'Progress Note — Authorization Period',
+      completionState:'empty',
+      notes:          '',
+      transcript:     null,
+      draftContent:   null,
+      aiOriginalContent: null,
+      draftState:     'blank',
+      approvalState:  'pending',
+      recordingState: 'idle',
+      recordingDurationSeconds: 0,
+      transcriptFlagged: false,
+      hasConflict:    false,
+      indicators:     [],
+      skillGoals:     [],
+      behaviorTargets:[],
+      lastSavedAt:    null,
+    },
+  };
+
+  // Mark behavior/skill/caregiver sections as 'complete' when they have plan data.
+  // Also carry the initial plan's behaviorTargets and skillGoals into the reassessment
+  // sections so the DOCX generator can look up STO/LTO definitions and so the
+  // Strengths section can enumerate initial-plan skills.
+  if ((originalBehaviorSummary?.length ?? 0) + (newBehaviorSummary?.length ?? 0) > 0) {
+    finalSections.behavior_targets = {
+      ...finalSections.behavior_targets,
+      completionState: 'complete',
+      // Carry the initial plan's behaviour definitions (stoSteps, operationalDefinition,
+      // hypothesizedFunction, targetFrequency, etc.) so doc generation can look them up.
+      behaviorTargets: initialSession?.sections?.behavior_targets?.behaviorTargets ?? [],
+    };
+  }
+  if ((originalSkillSummary?.length ?? 0) + (newSkillSummary?.length ?? 0) > 0) {
+    finalSections.skill_acquisitions = {
+      ...finalSections.skill_acquisitions,
+      completionState: 'complete',
+      // Carry the initial plan's skill goals (stoSteps, masteryCriteriaPercent,
+      // targetSkill, domain, etc.) so doc generation can look them up.
+      skillGoals: initialSession?.sections?.skill_acquisitions?.skillGoals ?? [],
+    };
+  }
+  if ((caregiverTrainingSummary?.length ?? 0) + (newCaregiverSummary?.length ?? 0) > 0) {
+    finalSections.caregiver_training = { ...finalSections.caregiver_training, completionState: 'complete' };
+  }
+
+  const computedSectionsWithData = Object.values(finalSections).filter(
+    s => s.completionState !== 'empty',
+  ).length;
+
   return {
     ...base,
-    sections:               { ...base.sections, ...prefillSections },
+    sections:               finalSections,
+    sectionsWithData:       computedSectionsWithData,
     id: `session_${client.id}_reassessment_${Date.now()}`,
     sessionType:            'reassessment',
     authPeriodStart,

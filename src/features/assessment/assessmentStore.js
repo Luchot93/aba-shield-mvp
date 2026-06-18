@@ -14,13 +14,13 @@ import { makeReassessmentSession } from '../../constants/seedData.js';
 function _recomputeCounts(session) {
   const sections = Object.values(session.sections);
 
-  // Every section except demographics counts toward sectionsWithData
+  // Demographics counts toward capture progress — BCBA verifies/edits pre-filled data
   const sectionsWithData = sections.filter(
-    s => s.key !== 'demographics' && s.completionState !== 'empty'
+    s => s.completionState !== 'empty'
   ).length;
 
   const sectionsApproved = sections.filter(
-    s => s.key !== 'demographics' && (s.approvalState === 'approved' || s.approvalState === 'skipped')
+    s => s.approvalState === 'approved' || s.approvalState === 'skipped'
   ).length;
 
   // Never demote a completed session

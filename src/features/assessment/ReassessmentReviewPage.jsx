@@ -16,7 +16,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Chart from 'chart.js/auto';
 import { patchSession } from './assessmentStore.js';
-import { generateAssessmentDoc } from './lib/generateAssessmentDoc.js';
+import { generateReassessmentDoc } from './lib/generateAssessmentDoc.js';
 import { buildBehaviorTrendFromLogs, buildSkillTrendFromLogs } from './graphBuilder.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -27,6 +27,20 @@ function fmtDate(iso) {
   return isNaN(d) ? iso : d.toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric',
   });
+}
+
+/**
+ * Computes the new-cycle baseline from the current-period average.
+ * Floors the value UNLESS the decimal portion is ≥ 0.6, in which case rounds up.
+ * Preserves the original value untouched — this is purely a display/plan helper.
+ *
+ * Examples: 1.83 → 2 | 5.5 → 5 | 16.1 → 16 | 2.5 → 2 | 5.6 → 6
+ */
+function roundNewBaseline(val) {
+  if (val == null || isNaN(Number(val))) return null;
+  const n = Number(val);
+  const floor = Math.floor(n);
+  return (n - floor) >= 0.6 ? floor + 1 : floor;
 }
 
 // ─── Shared status option sets ────────────────────────────────────────────────
@@ -249,67 +263,61 @@ function BehaviorSessionTable({ behaviorId, sessionLogs }) {
   );
 }
 
-/** Card for one behavior — shows summary row + collapsible chart & session table. */
-function BehaviorCard({ item, onPatch, sessionLogs, behaviorTargets }) {
-  const [localAvg, setLocalAvg] = useState(
-    item.averageFrequency != null ? String(item.averageFrequency) : '',
-  );
+/**
+ * Card for one behavior — 3-level stacked layout:
+ *   L1 — full behavior name + status badge
+ *   L2 — metrics row (Base · Avg · Δ% · trend · Sessions toggle)
+ *   L3 — collapsible chart + session table
+ */
+function BehaviorCard({ item, sessionLogs, behaviorTargets }) {
   const [expanded, setExpanded] = useState(false);
 
-  useEffect(() => {
-    setLocalAvg(item.averageFrequency != null ? String(item.averageFrequency) : '');
-  }, [item.averageFrequency]);
-
-  const parsedAvg  = parseFloat(localAvg);
-  const base       = item.baselineFrequency;
-  const pctChange  = (!isNaN(parsedAvg) && base != null && base > 0) ? ((parsedAvg - base) / base) * 100 : null;
-  const handleBlur = () => { if (!isNaN(parsedAvg)) onPatch({ averageFrequency: parsedAvg }); };
+  const avg        = item.averageFrequency;   // computed from session logs — read-only
+  const base       = item.baselineFrequency;  // original plan baseline — preserved for history
+  const pctChange  = (avg != null && base != null && base > 0) ? ((avg - base) / base) * 100 : null;
+  const newBase    = roundNewBaseline(avg);   // new-cycle baseline (custom rounding)
 
   const trendIcon  = item.trend === 'improving' ? '↓' : item.trend === 'worsening' ? '↑' : '→';
   const trendColor = item.trend === 'improving' ? '#10B981' : item.trend === 'worsening' ? '#EF4444' : '#94A3B8';
-  const stoClass   = STO_STATUS_COLORS[item.stoStatus] ?? STO_STATUS_COLORS.in_progress;
+  const derivedStatus = item.sessionDerivedStoStatus ?? item.stoStatus ?? 'in_progress';
+  const stoClass = STO_STATUS_COLORS[derivedStatus] ?? STO_STATUS_COLORS.in_progress;
+  const stoLabel = derivedStatus === 'met' ? 'Met ✓' : derivedStatus === 'regressed' ? 'Regressed ↓' : derivedStatus === 'not_yet_started' ? 'Not started' : 'In progress';
 
   return (
     <div className="rounded-xl border border-stone-200 bg-white overflow-hidden">
-      {/* Summary row */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5">
-        <span className="text-sm font-semibold text-slate-700 truncate flex-1 min-w-0" title={item.behaviorName}>
-          {item.behaviorName}
-        </span>
-        <div className="flex-shrink-0 text-center">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Base</p>
-          <p className="text-sm font-semibold text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>{base ?? '—'}</p>
-        </div>
-        <div className="flex-shrink-0 text-center">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Avg</p>
-          <input
-            type="number" value={localAvg} onChange={e => setLocalAvg(e.target.value)} onBlur={handleBlur}
-            min={0} placeholder="—"
-            className="w-14 text-center text-sm font-semibold text-slate-700 bg-stone-50 border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
-            style={{ fontFamily: 'DM Mono, monospace' }}
-          />
-        </div>
-        <div className="flex-shrink-0 text-center min-w-[52px]">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Δ%</p>
-          {pctChange === null ? (
-            <span className="text-sm text-slate-300">—</span>
-          ) : pctChange <= 0 ? (
-            <span className="text-sm font-semibold tabular-nums text-emerald-600">{pctChange.toFixed(1)}%</span>
-          ) : (
-            <span className="text-sm font-semibold tabular-nums text-red-500">+{pctChange.toFixed(1)}%</span>
-          )}
-        </div>
-        <span className="flex-shrink-0 text-base font-bold" style={{ color: trendColor }}>{trendIcon}</span>
-        <select
-          value={item.stoStatus ?? 'in_progress'} onChange={e => onPatch({ stoStatus: e.target.value })}
-          className={`flex-shrink-0 text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${stoClass}`}
-          style={{ fontFamily: 'DM Sans, sans-serif' }}
+
+      {/* L1 — name + status */}
+      <div className="flex items-center justify-between gap-3 px-3.5 pt-3 pb-1.5">
+        <p className="text-[13px] font-bold text-slate-800 leading-snug">{item.behaviorName}</p>
+        <span
+          title="Status is automatically derived from session logs and cannot be overridden"
+          className={`flex-shrink-0 text-[11px] font-semibold border rounded-lg px-2 py-0.5 select-none ${stoClass}`}
         >
-          {STO_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+          {stoLabel}
+        </span>
+      </div>
+
+      {/* L2 — metrics row (all read-only — values come from session logs) */}
+      <div className="flex items-center gap-x-4 gap-y-1 px-3.5 pb-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Base</span>
+          <span className="text-[13px] font-semibold text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>{base ?? '—'}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Avg</span>
+          <span className="text-[13px] font-semibold text-slate-700 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>
+            {avg != null ? avg.toFixed !== undefined ? Number(avg).toFixed(1) : avg : '—'}
+          </span>
+        </div>
+        {pctChange !== null && (
+          <span className={`text-[13px] font-semibold tabular-nums ${pctChange <= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+            {pctChange <= 0 ? '' : '+'}{pctChange.toFixed(1)}%
+          </span>
+        )}
+        <span className="text-[15px] font-bold" style={{ color: trendColor }}>{trendIcon}</span>
         <button
           type="button" onClick={() => setExpanded(v => !v)}
-          className="flex-shrink-0 flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-teal-600 transition-colors"
+          className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-teal-600 transition-colors"
         >
           <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
             fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -319,7 +327,20 @@ function BehaviorCard({ item, onPatch, sessionLogs, behaviorTargets }) {
         </button>
       </div>
 
-      {/* Expanded: chart + session table */}
+      {/* New cycle baseline pill — only when we have session data */}
+      {newBase != null && (
+        <div className="px-3.5 pb-2.5">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-teal-50 border border-teal-200 px-2 py-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-teal-500">New cycle baseline</span>
+            <span className="text-[12px] font-bold text-teal-700 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>{newBase}×/day</span>
+            {avg != null && newBase !== Number(avg) && (
+              <span className="text-[9px] text-teal-400">(avg {Number(avg).toFixed(1)})</span>
+            )}
+          </span>
+        </div>
+      )}
+
+      {/* L3 — collapsible chart + session table */}
       {expanded && (
         <div className="border-t border-stone-100 px-3.5 py-3 bg-stone-50 space-y-3">
           <BehaviorProgressChart
@@ -342,46 +363,170 @@ const FN_CHIP_COLORS = {
   tangible:  'bg-rose-50   text-rose-700   border-rose-200',
 };
 
+/** Compact chips row for function + severity + first seen */
+function BehaviorChips({ item }) {
+  const fnClass = FN_CHIP_COLORS[item.function] ?? 'bg-slate-50 text-slate-500 border-slate-200';
+  return (
+    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+      {item.function && (
+        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${fnClass}`}>{item.function}</span>
+      )}
+      {item.severity && (
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-50 text-slate-500 border border-slate-200">{item.severity}</span>
+      )}
+      {item.firstSeenDate && (
+        <span className="text-[10px] text-slate-400">First: {fmtDate(item.firstSeenDate)}</span>
+      )}
+    </div>
+  );
+}
+
 /**
- * Read-only card for an emerging behavior — shows include/exclude decision badge
- * set during the reassessment interview, plus function and severity chips.
+ * INCLUDE card — shows behavior name + chips + expandable STOs/LTO.
+ * Collapsed by default; clicking "▾ N STOs" expands the milestone rail.
  */
-function EmergingBehaviorRow({ item }) {
-  const included = item.includedInPlan;
-  const fnClass  = FN_CHIP_COLORS[item.function] ?? 'bg-slate-50 text-slate-500 border-slate-200';
+function EmergingBehaviorPlanCard({ item }) {
+  const [open, setOpen] = useState(false);
+  const steps = item.stoStructure ?? [];
+  const hasSteps = steps.length > 0;
+  const hasMastery = item.masteryCriteriaFrequency != null;
 
   return (
-    <div className="flex items-start gap-2.5 py-2.5 border-b border-stone-100 last:border-0">
-      {/* Include/exclude badge */}
-      <span className={`flex-shrink-0 mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold border ${
-        included === true  ? 'bg-teal-50  text-teal-700  border-teal-200'  :
-        included === false ? 'bg-stone-100 text-stone-400 border-stone-200' :
-                             'bg-amber-50  text-amber-600 border-amber-200'
-      }`}>
-        {included === true ? 'INCLUDE' : included === false ? 'EXCLUDE' : 'PENDING'}
-      </span>
+    <div className="rounded-xl border border-teal-200 overflow-hidden" style={{ background: 'rgba(20,184,166,0.025)' }}>
+      <div className="flex items-start gap-2.5 px-3.5 py-2.5">
+        {/* INCLUDE badge */}
+        <span className="flex-shrink-0 mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold border bg-teal-50 text-teal-700 border-teal-200">
+          IN PLAN
+        </span>
+        {/* Name + chips */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-700">{item.behaviorName}</p>
+          <BehaviorChips item={item} />
+        </div>
+        {/* STO expand toggle */}
+        {(hasSteps || hasMastery) && (
+          <button type="button" onClick={() => setOpen(v => !v)}
+            className="flex-shrink-0 flex items-center gap-1 text-[10px] font-semibold text-teal-600 hover:text-teal-800 transition-colors mt-0.5">
+            <svg className={`w-3 h-3 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+              fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+            {hasSteps ? `${steps.length} STO${steps.length !== 1 ? 's' : ''}` : 'LTO'}
+          </button>
+        )}
+      </div>
 
-      {/* Name + chips */}
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-700 truncate">{item.behaviorName}</p>
-        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-          {item.function && (
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${fnClass}`}>
-              {item.function}
-            </span>
+      {/* Expandable STO/LTO rail */}
+      {open && (
+        <div className="border-t border-teal-100 px-3.5 pb-3 pt-2.5 space-y-2">
+          {/* STO milestone rail */}
+          {hasSteps && (
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-teal-600 mb-2">Short-Term Objectives</p>
+              <div className="flex items-center gap-0 overflow-x-auto pb-1">
+                {/* Baseline node */}
+                <div className="flex flex-col items-center flex-shrink-0">
+                  <div className="w-2 h-2 rounded-full bg-slate-300" />
+                  <p className="text-[9px] text-slate-400 mt-1 whitespace-nowrap">Baseline</p>
+                  <p className="text-[10px] font-semibold text-slate-500 tabular-nums">
+                    {item.baselineFrequency != null ? `${item.baselineFrequency}×` : '—'}
+                  </p>
+                </div>
+                {steps.map((step, i) => (
+                  <React.Fragment key={step.id}>
+                    <div className="flex-1 h-px bg-teal-200 min-w-[20px]" />
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-teal-400" />
+                      <p className="text-[9px] text-teal-600 font-semibold mt-1 whitespace-nowrap">STO {i + 1}</p>
+                      <p className="text-[10px] font-semibold text-slate-600 tabular-nums whitespace-nowrap">
+                        {step.targetFrequency != null && step.targetFrequency !== '' ? `≤${step.targetFrequency}×` : '—'}
+                      </p>
+                      {step.durationWeeks && (
+                        <p className="text-[9px] text-slate-400 whitespace-nowrap">{step.durationWeeks}wk</p>
+                      )}
+                    </div>
+                  </React.Fragment>
+                ))}
+                {/* LTO node */}
+                {hasMastery && (
+                  <>
+                    <div className="flex-1 h-px bg-teal-300 min-w-[20px]" />
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <div className="w-2.5 h-2.5 rounded-full bg-teal-600" />
+                      <p className="text-[9px] text-teal-700 font-bold mt-1 whitespace-nowrap">LTO</p>
+                      <p className="text-[10px] font-semibold text-teal-700 tabular-nums whitespace-nowrap">
+                        ≤{item.masteryCriteriaFrequency}×
+                      </p>
+                      {item.masteryCriteriaWeeks && (
+                        <p className="text-[9px] text-slate-400 whitespace-nowrap">{item.masteryCriteriaWeeks}wk</p>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           )}
-          {item.severity && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-50 text-slate-500 border border-slate-200">
-              {item.severity}
-            </span>
+          {/* LTO free text */}
+          {item.bcbaLtoText && (
+            <p className="text-[11px] text-slate-500 leading-relaxed italic">{item.bcbaLtoText}</p>
           )}
-          {item.firstSeenDate && (
-            <span className="text-[10px] text-slate-400">
-              First: {fmtDate(item.firstSeenDate)}
-            </span>
+          {/* Topographic definition */}
+          {item.bcbaDefinitionFinal && (
+            <div className="rounded-lg px-3 py-2 bg-white border border-stone-100">
+              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Definition</p>
+              <p className="text-[11px] text-slate-600 leading-relaxed">{item.bcbaDefinitionFinal}</p>
+            </div>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+/** MONITOR row — compact, sky-colored badge, no expansion needed */
+function EmergingBehaviorMonitorRow({ item }) {
+  return (
+    <div className="flex items-start gap-2.5 py-2.5 border-b border-stone-100 last:border-0">
+      <span className="flex-shrink-0 mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold border bg-sky-50 text-sky-700 border-sky-200">
+        MONITOR
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-600">{item.behaviorName}</p>
+        <BehaviorChips item={item} />
       </div>
+    </div>
+  );
+}
+
+/** EXCLUDED row — compact, stone-colored badge */
+function ExcludedBehaviorRow({ item }) {
+  return (
+    <div className="flex items-start gap-2.5 py-2.5 border-b border-stone-100 last:border-0">
+      <span className="flex-shrink-0 mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold border bg-stone-100 text-stone-400 border-stone-200">
+        EXCLUDED
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-400">{item.behaviorName}</p>
+        <BehaviorChips item={item} />
+      </div>
+    </div>
+  );
+}
+
+/** Maintenance row — for Met ✓ original plan behaviors */
+function MaintenanceBehaviorRow({ item }) {
+  return (
+    <div className="flex items-start gap-2.5 py-2.5 border-b border-stone-100 last:border-0">
+      <span className="flex-shrink-0 mt-0.5 px-2 py-0.5 rounded text-[10px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
+        MET ✓
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-600">{item.behaviorName}</p>
+        <p className="text-[10px] text-slate-400 mt-0.5">Transferred to maintenance monitoring in new cycle</p>
+      </div>
+      <span className="flex-shrink-0 text-[10px] text-emerald-600 font-semibold mt-0.5">
+        {item.averageFrequency != null ? `Avg ${item.averageFrequency}×/day` : ''}
+      </span>
     </div>
   );
 }
@@ -437,104 +582,340 @@ function SkillProgressRow({ item, onPatch }) {
       </td>
 
       <td className="py-2.5 pl-2">
-        <select
-          value={item.status ?? 'new'}
-          onChange={e => onPatch({ status: e.target.value })}
-          className={`text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${statusClass}`}
-          style={{ fontFamily: 'DM Sans, sans-serif' }}
-        >
-          {SKILL_STATUS_OPTIONS.map(o => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
+        {/* Status — read-only, derived from session logs */}
+        <span title="Status derived from session logs"
+          className={`text-[11px] font-semibold border rounded-lg px-2 py-1 select-none ${statusClass}`}>
+          {SKILL_STATUS_OPTIONS.find(o => o.value === (item.sessionDerivedStatus ?? item.status ?? 'new'))?.label ?? 'In progress'}
+        </span>
       </td>
     </tr>
   );
 }
 
-/** Card for one skill — summary row + Chart.js session accuracy chart. */
-function SkillCard({ item, onPatch, sessionLogs, skillGoal }) {
-  const [localPct, setLocalPct] = useState(
-    item.currentPercent != null ? String(item.currentPercent) : '',
-  );
+/**
+ * Card for one skill — 3-level stacked layout:
+ *   L1 — full skill name + domain tag + status badge
+ *   L2 — metrics row (Base · Current · Δ% · Sessions toggle)
+ *   L3 — collapsible accuracy chart
+ */
+function SkillCard({ item, sessionLogs, skillGoal }) {
+  const [expanded, setExpanded] = useState(false);
 
-  useEffect(() => {
-    setLocalPct(item.currentPercent != null ? String(item.currentPercent) : '');
-  }, [item.currentPercent]);
+  const avg      = item.averageAccuracy;    // computed from session logs — read-only
+  const base     = item.baselinePercent;    // original plan baseline — preserved for history
+  const pctChange = (avg != null && base != null) ? (avg - base) : null;
+  const newBase  = roundNewBaseline(avg);   // new-cycle baseline (custom rounding, as %)
 
-  const parsedPct  = parseFloat(localPct);
-  const handleBlur = () => {
-    const clamped = Math.min(100, Math.max(0, parsedPct));
-    if (!isNaN(clamped)) onPatch({ currentPercent: clamped });
-  };
-
-  const statusClass = SKILL_STATUS_COLORS[item.status] ?? SKILL_STATUS_COLORS.new;
+  const derivedSkillStatus = item.sessionDerivedStatus ?? item.status ?? 'new';
+  const statusClass = SKILL_STATUS_COLORS[derivedSkillStatus] ?? SKILL_STATUS_COLORS.new;
 
   return (
     <div className="rounded-xl border border-stone-200 bg-white overflow-hidden">
-      {/* Summary row */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-700 truncate">{item.skillName}</p>
-          {item.domain && <p className="text-[10px] text-slate-400">{item.domain}</p>}
+
+      {/* L1 — name + domain + status */}
+      <div className="flex items-start justify-between gap-3 px-3.5 pt-3 pb-1.5">
+        <div className="min-w-0">
+          <p className="text-[13px] font-bold text-slate-800 leading-snug">{item.skillName}</p>
+          {item.domain && <p className="text-[10px] text-slate-400 mt-0.5">{item.domain}</p>}
         </div>
-        <div className="flex-shrink-0 text-center">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Base</p>
-          <p className="text-sm text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>
-            {item.baselinePercent ?? '—'}%
-          </p>
-        </div>
-        <div className="flex-shrink-0 text-center">
-          <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Current</p>
-          <div className="flex items-center justify-center gap-0.5">
-            <input
-              type="number" value={localPct} onChange={e => setLocalPct(e.target.value)}
-              onBlur={handleBlur} min={0} max={100} placeholder="—"
-              className="w-14 text-center text-sm font-semibold text-slate-700 bg-stone-50 border border-stone-200 rounded-md px-1 py-0.5 focus:outline-none focus:border-teal-400 tabular-nums"
-              style={{ fontFamily: 'DM Mono, monospace' }}
-            />
-            <span className="text-xs text-slate-400">%</span>
-          </div>
-        </div>
-        <select
-          value={item.status ?? 'new'} onChange={e => onPatch({ status: e.target.value })}
-          className={`flex-shrink-0 text-[11px] font-semibold border rounded-lg px-2 py-1 focus:outline-none focus:border-teal-400 transition-colors ${statusClass}`}
-          style={{ fontFamily: 'DM Sans, sans-serif' }}
-        >
-          {SKILL_STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+        <span title="Status derived from session logs"
+          className={`flex-shrink-0 text-[11px] font-semibold border rounded-lg px-2 py-0.5 select-none ${statusClass}`}>
+          {SKILL_STATUS_OPTIONS.find(o => o.value === derivedSkillStatus)?.label ?? 'In progress'}
+        </span>
       </div>
 
-      {/* Session accuracy chart */}
-      <div className="border-t border-stone-100">
-        <SkillProgressChart
-          skillId={item.skillId}
-          skillName={item.skillName}
-          baselinePercent={item.baselinePercent ?? 0}
-          stoSteps={skillGoal?.stoSteps ?? []}
-          masteryCriteriaPercent={skillGoal?.masteryCriteriaPercent ?? 80}
-          sessionLogs={sessionLogs}
-        />
+      {/* L2 — metrics row (all read-only — values come from session logs) */}
+      <div className="flex items-center gap-x-4 gap-y-1 px-3.5 pb-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Base</span>
+          <span className="text-[13px] font-semibold text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>{base ?? '—'}%</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Avg</span>
+          <span className="text-[13px] font-semibold text-slate-700 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>
+            {avg != null ? `${Number(avg).toFixed(1)}%` : '—'}
+          </span>
+        </div>
+        {pctChange !== null && (
+          <span className={`text-[13px] font-semibold tabular-nums ${pctChange >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+            {pctChange >= 0 ? '+' : ''}{pctChange.toFixed(1)}%
+          </span>
+        )}
+        <button
+          type="button" onClick={() => setExpanded(v => !v)}
+          className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-teal-600 transition-colors"
+        >
+          <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+            fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+          </svg>
+          {expanded ? 'Hide' : 'Sessions'}
+        </button>
       </div>
+
+      {/* New cycle baseline pill */}
+      {newBase != null && (
+        <div className="px-3.5 pb-2.5">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-teal-50 border border-teal-200 px-2 py-0.5">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-teal-500">New cycle baseline</span>
+            <span className="text-[12px] font-bold text-teal-700 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>{newBase}%</span>
+            {avg != null && newBase !== Number(avg) && (
+              <span className="text-[9px] text-teal-400">(avg {Number(avg).toFixed(1)}%)</span>
+            )}
+          </span>
+        </div>
+      )}
+
+      {/* L3 — collapsible accuracy chart */}
+      {expanded && (
+        <div className="border-t border-stone-100 bg-stone-50">
+          <SkillProgressChart
+            skillId={item.skillId}
+            skillName={item.skillName}
+            baselinePercent={item.baselinePercent ?? 0}
+            stoSteps={skillGoal?.stoSteps ?? []}
+            masteryCriteriaPercent={skillGoal?.masteryCriteriaPercent ?? 80}
+            sessionLogs={sessionLogs}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-/** Read-only badge row for a newly identified skill goal. */
-function NewSkillRow({ item }) {
-  const included = item.includedInPlan;
+/** INCLUDE card for a new skill — expandable STOs/LTO rail */
+function NewSkillPlanCard({ item }) {
+  const [open, setOpen] = useState(false);
+  const steps = item.stoSteps ?? [];
+  const hasSteps = steps.length > 0;
+  const hasMastery = item.masteryCriteriaPercent != null;
+  const name = item.skillName ?? item.bcbaGoalName ?? '(unnamed)';
+
   return (
-    <div className="flex items-center gap-2.5 py-2 border-b border-stone-100 last:border-0">
-      <span className={`flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold border ${
-        included === true  ? 'bg-teal-50  text-teal-700  border-teal-200'  :
-        included === false ? 'bg-stone-100 text-stone-400 border-stone-200' :
-                             'bg-amber-50  text-amber-600 border-amber-200'
-      }`}>
-        {included === true ? 'INCLUDE' : included === false ? 'EXCLUDE' : 'PENDING'}
+    <div className="rounded-xl border border-teal-200 overflow-hidden" style={{ background: 'rgba(20,184,166,0.025)' }}>
+      <div className="flex items-center gap-2.5 px-3.5 py-2.5">
+        <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold border bg-teal-50 text-teal-700 border-teal-200">
+          IN PLAN
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-700 truncate">{name}</p>
+          {item.baselinePercent != null && (
+            <p className="text-[10px] text-slate-400">Baseline: {item.baselinePercent}%</p>
+          )}
+        </div>
+        {(hasSteps || hasMastery) && (
+          <button type="button" onClick={() => setOpen(v => !v)}
+            className="flex-shrink-0 flex items-center gap-1 text-[10px] font-semibold text-teal-600 hover:text-teal-800 transition-colors">
+            <svg className={`w-3 h-3 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+              fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+            {hasSteps ? `${steps.length} STO${steps.length !== 1 ? 's' : ''}` : 'LTO'}
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="border-t border-teal-100 px-3.5 pb-3 pt-2.5 space-y-2">
+          {hasSteps && (
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-teal-600 mb-2">Short-Term Objectives</p>
+              <div className="flex items-center gap-0 overflow-x-auto pb-1">
+                <div className="flex flex-col items-center flex-shrink-0">
+                  <div className="w-2 h-2 rounded-full bg-slate-300" />
+                  <p className="text-[9px] text-slate-400 mt-1">Baseline</p>
+                  <p className="text-[10px] font-semibold text-slate-500 tabular-nums">
+                    {item.baselinePercent != null ? `${item.baselinePercent}%` : '—'}
+                  </p>
+                </div>
+                {steps.map((step, i) => (
+                  <React.Fragment key={step.id}>
+                    <div className="flex-1 h-px bg-teal-200 min-w-[20px]" />
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-teal-400" />
+                      <p className="text-[9px] text-teal-600 font-semibold mt-1 whitespace-nowrap">STO {i + 1}</p>
+                      <p className="text-[10px] font-semibold text-slate-600 tabular-nums whitespace-nowrap">
+                        {step.targetPercent != null && step.targetPercent !== '' ? `${step.targetPercent}%` : '—'}
+                      </p>
+                      {step.durationWeeks && <p className="text-[9px] text-slate-400 whitespace-nowrap">{step.durationWeeks}wk</p>}
+                    </div>
+                  </React.Fragment>
+                ))}
+                {hasMastery && (
+                  <>
+                    <div className="flex-1 h-px bg-teal-300 min-w-[20px]" />
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <div className="w-2.5 h-2.5 rounded-full bg-teal-600" />
+                      <p className="text-[9px] text-teal-700 font-bold mt-1">LTO</p>
+                      <p className="text-[10px] font-semibold text-teal-700 tabular-nums">{item.masteryCriteriaPercent}%</p>
+                      {item.masteryCriteriaWeeks && <p className="text-[9px] text-slate-400 whitespace-nowrap">{item.masteryCriteriaWeeks}wk</p>}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          {item.bcbaLtoText && <p className="text-[11px] text-slate-500 leading-relaxed italic">{item.bcbaLtoText}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** MONITOR row for a new skill */
+function NewSkillMonitorRow({ item }) {
+  const name = item.skillName ?? item.bcbaGoalName ?? '(unnamed)';
+  return (
+    <div className="flex items-center gap-2.5 py-2.5 border-b border-stone-100 last:border-0">
+      <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold border bg-sky-50 text-sky-700 border-sky-200">
+        MONITOR
       </span>
-      <span className="text-sm font-medium text-slate-700 truncate flex-1">
-        {item.skillName ?? item.bcbaGoalName ?? '(unnamed)'}
+      <span className="text-sm font-medium text-slate-600 truncate flex-1">{name}</span>
+      {item.baselinePercent != null && (
+        <span className="text-[10px] text-slate-400 flex-shrink-0">Baseline: {item.baselinePercent}%</span>
+      )}
+    </div>
+  );
+}
+
+/** EXCLUDED row for a new skill */
+function ExcludedSkillRow({ item }) {
+  const name = item.skillName ?? item.bcbaGoalName ?? '(unnamed)';
+  return (
+    <div className="flex items-center gap-2.5 py-2.5 border-b border-stone-100 last:border-0">
+      <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold border bg-stone-100 text-stone-400 border-stone-200">
+        EXCLUDED
       </span>
+      <span className="text-sm font-medium text-slate-400 truncate flex-1">{name}</span>
+      {item.baselinePercent != null && (
+        <span className="text-[10px] text-slate-300 flex-shrink-0">Baseline: {item.baselinePercent}%</span>
+      )}
+    </div>
+  );
+}
+
+/** Maintenance row for a mastered skill from the original plan */
+function MaintenanceSkillRow({ item }) {
+  return (
+    <div className="flex items-center gap-2.5 py-2.5 border-b border-stone-100 last:border-0">
+      <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
+        MASTERED ✓
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-slate-600 truncate">{item.skillName}</p>
+        <p className="text-[10px] text-slate-400">Transferred to maintenance monitoring in new cycle</p>
+      </div>
+      {item.currentPercent != null && (
+        <span className="flex-shrink-0 text-[10px] text-emerald-600 font-semibold">{item.currentPercent}%</span>
+      )}
+    </div>
+  );
+}
+
+/** INCLUDE card for a new caregiver training goal — expandable STOs/LTO rail */
+function NewCaregiverPlanCard({ item }) {
+  const [open, setOpen] = useState(false);
+  const steps = item.stoStructure ?? [];
+  const hasSteps = steps.length > 0;
+  const hasMastery = item.masteryCriteriaPercent != null;
+  const name = item.goalName ?? '(unnamed)';
+
+  return (
+    <div className="rounded-xl border border-teal-200 overflow-hidden" style={{ background: 'rgba(20,184,166,0.025)' }}>
+      <div className="flex items-center gap-2.5 px-3.5 py-2.5">
+        <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold border bg-teal-50 text-teal-700 border-teal-200">
+          IN PLAN
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-700 truncate">{name}</p>
+          {item.baselinePercent != null && (
+            <p className="text-[10px] text-slate-400">Baseline: {item.baselinePercent}%</p>
+          )}
+        </div>
+        {(hasSteps || hasMastery) && (
+          <button type="button" onClick={() => setOpen(v => !v)}
+            className="flex-shrink-0 flex items-center gap-1 text-[10px] font-semibold text-teal-600 hover:text-teal-800 transition-colors">
+            <svg className={`w-3 h-3 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}
+              fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+            {hasSteps ? `${steps.length} STO${steps.length !== 1 ? 's' : ''}` : 'LTO'}
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="border-t border-teal-100 px-3.5 pb-3 pt-2.5 space-y-2">
+          {hasSteps && (
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-teal-600 mb-2">Short-Term Objectives</p>
+              <div className="flex items-center gap-0 overflow-x-auto pb-1">
+                <div className="flex flex-col items-center flex-shrink-0">
+                  <div className="w-2 h-2 rounded-full bg-slate-300" />
+                  <p className="text-[9px] text-slate-400 mt-1">Baseline</p>
+                  <p className="text-[10px] font-semibold text-slate-500 tabular-nums">
+                    {item.baselinePercent != null ? `${item.baselinePercent}%` : '—'}
+                  </p>
+                </div>
+                {steps.map((step, i) => (
+                  <React.Fragment key={step.id ?? i}>
+                    <div className="flex-1 h-px bg-teal-200 min-w-[20px]" />
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <div className="w-2 h-2 rounded-full bg-teal-400" />
+                      <p className="text-[9px] text-teal-600 font-semibold mt-1 whitespace-nowrap">STO {i + 1}</p>
+                      <p className="text-[10px] font-semibold text-slate-600 tabular-nums whitespace-nowrap">
+                        {step.targetPercent != null && step.targetPercent !== '' ? `${step.targetPercent}%` : '—'}
+                      </p>
+                      {step.durationWeeks && <p className="text-[9px] text-slate-400 whitespace-nowrap">{step.durationWeeks}wk</p>}
+                    </div>
+                  </React.Fragment>
+                ))}
+                {hasMastery && (
+                  <>
+                    <div className="flex-1 h-px bg-teal-300 min-w-[20px]" />
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <div className="w-2.5 h-2.5 rounded-full bg-teal-600" />
+                      <p className="text-[9px] text-teal-700 font-bold mt-1">LTO</p>
+                      <p className="text-[10px] font-semibold text-teal-700 tabular-nums">{item.masteryCriteriaPercent}%</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+          {item.bcbaLtoText && <p className="text-[11px] text-slate-500 leading-relaxed italic">{item.bcbaLtoText}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** MONITOR row for a new caregiver training goal */
+function NewCaregiverMonitorRow({ item }) {
+  const name = item.goalName ?? '(unnamed)';
+  return (
+    <div className="flex items-center gap-2.5 py-2.5 border-b border-stone-100 last:border-0">
+      <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold border bg-sky-50 text-sky-700 border-sky-200">
+        MONITOR
+      </span>
+      <span className="text-sm font-medium text-slate-600 truncate flex-1">{name}</span>
+      {item.baselinePercent != null && (
+        <span className="text-[10px] text-slate-400 flex-shrink-0">Baseline: {item.baselinePercent}%</span>
+      )}
+    </div>
+  );
+}
+
+/** EXCLUDED row for a new caregiver training goal */
+function ExcludedCaregiverRow({ item }) {
+  const name = item.goalName ?? '(unnamed)';
+  return (
+    <div className="flex items-center gap-2.5 py-2.5 border-b border-stone-100 last:border-0">
+      <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold border bg-stone-100 text-stone-400 border-stone-200">
+        EXCLUDED
+      </span>
+      <span className="text-sm font-medium text-slate-400 truncate flex-1">{name}</span>
+      {item.baselinePercent != null && (
+        <span className="text-[10px] text-slate-300 flex-shrink-0">Baseline: {item.baselinePercent}%</span>
+      )}
     </div>
   );
 }
@@ -844,12 +1225,91 @@ function CaregiverProgressChart({ summaryItem, ctLogs }) {
   );
 }
 
+/**
+ * Accordion card for one caregiver training target —
+ * compact summary row (goal name · baseline · avg · trend · sessions toggle)
+ * that expands to the full Chart.js chart, matching the BehaviorCard pattern.
+ */
+/**
+ * Card for one caregiver training goal — 3-level stacked layout:
+ *   L1 — full goal name + trend indicator
+ *   L2 — metrics row (Base · Avg · Δ% · Sessions toggle)
+ *   L3 — collapsible progress chart
+ */
+function CaregiverCard({ summaryItem, ctLogs }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const avg   = summaryItem.averageSessionPercent;
+  const base  = summaryItem.baselinePercent ?? null;
+  const trend = summaryItem.trend;
+  const trendIcon  = trend === 'improving' ? '↑' : trend === 'worsening' ? '↓' : '→';
+  const trendColor = trend === 'improving' ? '#10B981' : trend === 'worsening' ? '#EF4444' : '#94A3B8';
+  const pctChange  = (avg != null && base != null) ? (avg - base) : null;
+
+  return (
+    <div className="rounded-xl border border-stone-200 bg-white overflow-hidden">
+
+      {/* L1 — goal name + trend */}
+      <div className="flex items-center justify-between gap-3 px-3.5 pt-3 pb-1.5">
+        <p className="text-[13px] font-bold text-slate-800 leading-snug">{summaryItem.goalName}</p>
+        <span className="flex-shrink-0 text-[15px] font-bold" style={{ color: trendColor }}>{trendIcon}</span>
+      </div>
+
+      {/* L2 — metrics row */}
+      <div className="flex items-center gap-x-4 gap-y-1 px-3.5 pb-2.5 flex-wrap">
+        {base != null && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Base</span>
+            <span className="text-[13px] font-semibold text-slate-500 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>{base}%</span>
+          </div>
+        )}
+        {avg != null && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Avg</span>
+            <span className="text-[13px] font-semibold text-slate-700 tabular-nums" style={{ fontFamily: 'DM Mono, monospace' }}>{avg.toFixed(1)}%</span>
+          </div>
+        )}
+        {pctChange !== null && (
+          <span className={`text-[13px] font-semibold tabular-nums ${pctChange >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+            {pctChange >= 0 ? '+' : ''}{pctChange.toFixed(1)}%
+          </span>
+        )}
+        <button
+          type="button" onClick={() => setExpanded(v => !v)}
+          className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-teal-600 transition-colors"
+        >
+          <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
+            fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+          </svg>
+          {expanded ? 'Hide' : 'Sessions'}
+        </button>
+      </div>
+
+      {/* L3 — collapsible progress chart */}
+      {expanded && (
+        <div className="border-t border-stone-100 bg-stone-50">
+          <CaregiverProgressChart summaryItem={summaryItem} ctLogs={ctLogs} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── ReassessmentReviewPage ───────────────────────────────────────────────────
 
 export default function ReassessmentReviewPage({
   clientId, clients, setClients, currentUser, session, addNotif, onComplete,
 }) {
   const client = clients?.find(c => c.id === clientId) ?? null;
+
+  // Previous auth period CPT hours (from Plan Draft of initial assessment)
+  const prevPlanDraft = client?.checklist?.plan_draft ?? {};
+  const prevHours = {
+    '97153': prevPlanDraft.hours_97153 ?? '',
+    '97155': prevPlanDraft.hours_97155 ?? '',
+    '97156': prevPlanDraft.hours_97156 ?? '',
+  };
 
   // ── Panel C local state (blur-save pattern) ────────────────────────────────
   const [narrative, setNarrative] = useState(session?.progressNarrativeText ?? '');
@@ -869,12 +1329,13 @@ export default function ReassessmentReviewPage({
   if (!session) return null;
 
   // ── Data arrays from session ───────────────────────────────────────────────
-  const origBehaviors   = session.originalBehaviorSummary  ?? [];
-  const newBehaviors    = session.newBehaviorSummary        ?? [];
-  const origSkills      = session.originalSkillSummary      ?? [];
-  const newSkills       = session.newSkillSummary           ?? [];
-  const ctSummary       = session.caregiverTrainingSummary  ?? [];
-  const ctLogs          = client?.caregiver_training_session_logs ?? [];
+  const origBehaviors      = session.originalBehaviorSummary  ?? [];
+  const newBehaviors       = session.newBehaviorSummary        ?? [];
+  const origSkills         = session.originalSkillSummary      ?? [];
+  const newSkills          = session.newSkillSummary           ?? [];
+  const ctSummary          = session.caregiverTrainingSummary  ?? [];
+  const newCaregiverItems  = session.newCaregiverSummary       ?? [];
+  const ctLogs             = client?.caregiver_training_session_logs ?? [];
   const sessionLogs     = client?.service_session_logs ?? [];
   const behaviorTargets = session?.sections?.behavior_targets?.behaviorTargets ?? [];
   const skillGoalsDefs  = session?.sections?.skill_acquisitions?.skillGoals ?? [];
@@ -925,8 +1386,8 @@ export default function ReassessmentReviewPage({
       const dateStr    = new Date().toISOString().slice(0, 10);
       const fileName   = `${safeName}_Reassessment_${dateStr}.docx`;
 
-      // Generate .docx from existing pipeline (session.sessionType === 'reassessment')
-      const blob = await generateAssessmentDoc(session, clientName);
+      // Generate purpose-built reassessment document with progress charts
+      const blob = await generateReassessmentDoc(session, clientName, sessionLogs, ctLogs);
 
       // Trigger browser download
       const url = URL.createObjectURL(blob);
@@ -1028,11 +1489,27 @@ export default function ReassessmentReviewPage({
         <div className="max-w-[1440px] mx-auto px-6 py-6">
 
           {/* Page title */}
-          <div className="mb-5">
+          <div className="mb-4">
             <h2 className="text-[17px] font-bold text-slate-800">Reassessment Review</h2>
             <p className="text-[12px] text-slate-400 mt-0.5">
               Review session progress data, finalise the narrative, then generate the reassessment document.
             </p>
+          </div>
+
+          {/* Reused content info banner */}
+          <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3">
+            <svg className="w-4 h-4 text-sky-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <div>
+              <p className="text-[12px] font-semibold text-sky-800">Some content is carried over from the previous authorization period.</p>
+              <p className="text-[11px] text-sky-600 mt-0.5 leading-relaxed">
+                Demographics, medical necessity fields, and caregiver training baselines are pre-filled from the initial assessment.
+                Status badges are automatically derived from session logs and cannot be manually overridden.
+                Behaviors and skills marked <strong>IN PLAN</strong> will become formal targets in the next treatment plan.
+                Items marked <strong>MONITOR</strong> are observed but not added as plan targets.
+              </p>
+            </div>
           </div>
 
           {/* Three-panel grid — stacks vertically below lg breakpoint */}
@@ -1047,37 +1524,107 @@ export default function ReassessmentReviewPage({
                 </svg>
               }
             >
-              {/* Original behaviors — card layout with collapsible chart & session detail */}
-              <div>
-                <SubLabel label="From treatment plan" count={origBehaviors.length} />
-                {origBehaviors.length === 0 ? (
-                  <p className="text-sm text-slate-400 py-6 text-center">No behaviors from treatment plan.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {origBehaviors.map((item, i) => (
-                      <BehaviorCard
-                        key={item.behaviorId ?? item.behaviorName ?? i}
-                        item={item}
-                        onPatch={patch => patchOrigBehavior(i, patch)}
-                        sessionLogs={sessionLogs}
-                        behaviorTargets={behaviorTargets}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Emerging behaviors */}
-              {newBehaviors.length > 0 && (
-                <div>
-                  <SubLabel label="Emerging behaviors" count={newBehaviors.length} />
+              {/* Original behaviors — active (non-met) only; met move to Maintenance below */}
+              {(() => {
+                const activeBehaviors = origBehaviors.filter(
+                  b => (b.sessionDerivedStoStatus ?? b.stoStatus) !== 'met'
+                );
+                return (
                   <div>
-                    {newBehaviors.map((item, i) => (
-                      <EmergingBehaviorRow key={item.behaviorName ?? i} item={item} />
-                    ))}
+                    <SubLabel label="From treatment plan" count={activeBehaviors.length} />
+                    {activeBehaviors.length === 0 ? (
+                      <p className="text-sm text-slate-400 py-6 text-center">
+                        {origBehaviors.length > 0
+                          ? 'All plan behaviors have reached mastery — see Maintenance below.'
+                          : 'No behaviors from treatment plan.'}
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {activeBehaviors.map((item, i) => (
+                          <BehaviorCard
+                            key={item.behaviorId ?? item.behaviorName ?? i}
+                            item={item}
+                            sessionLogs={sessionLogs}
+                            behaviorTargets={behaviorTargets}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
+
+              {/* ── New Cycle section ──────────────────────────────────── */}
+              {(() => {
+                const masteredOriginals = origBehaviors.filter(
+                  b => (b.sessionDerivedStoStatus ?? b.stoStatus) === 'met'
+                );
+                const inPlanBehaviors    = newBehaviors.filter(b => b.includedInPlan === true);
+                const monitorBehaviors  = newBehaviors.filter(b => b.monitorOnly === true);
+                const excludedBehaviors = newBehaviors.filter(b => !b.includedInPlan && !b.monitorOnly);
+                if (masteredOriginals.length === 0 && newBehaviors.length === 0) return null;
+                return (
+                  <div className="space-y-4">
+                    <SubLabel label="New cycle" />
+
+                    {/* Maintenance — mastered originals */}
+                    {masteredOriginals.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-600 mb-1.5">
+                          Maintenance ({masteredOriginals.length})
+                        </p>
+                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 divide-y divide-emerald-100 px-3">
+                          {masteredOriginals.map((item, i) => (
+                            <MaintenanceBehaviorRow key={item.behaviorId ?? item.behaviorName ?? i} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* In plan — new behaviors included in next treatment plan */}
+                    {inPlanBehaviors.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-teal-600 mb-1.5">
+                          In plan ({inPlanBehaviors.length})
+                        </p>
+                        <div className="space-y-2">
+                          {inPlanBehaviors.map((item, i) => (
+                            <EmergingBehaviorPlanCard key={item.behaviorName ?? i} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Monitor — new behaviors being observed but not as plan targets */}
+                    {monitorBehaviors.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-sky-600 mb-1.5">
+                          Monitor ({monitorBehaviors.length})
+                        </p>
+                        <div className="rounded-xl border border-sky-100 bg-sky-50/30 divide-y divide-stone-100 px-3">
+                          {monitorBehaviors.map((item, i) => (
+                            <EmergingBehaviorMonitorRow key={item.behaviorName ?? i} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Excluded — new behaviors not being added to the plan */}
+                    {excludedBehaviors.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1.5">
+                          Excluded ({excludedBehaviors.length})
+                        </p>
+                        <div className="rounded-xl border border-stone-200 bg-stone-50/50 divide-y divide-stone-100 px-3">
+                          {excludedBehaviors.map((item, i) => (
+                            <ExcludedBehaviorRow key={item.behaviorName ?? i} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </Panel>
 
             {/* ── Panel B — Skill & Caregiver Training Progress ──────────── */}
@@ -1103,7 +1650,6 @@ export default function ReassessmentReviewPage({
                         <SkillCard
                           key={item.skillId ?? item.skillName ?? i}
                           item={item}
-                          onPatch={patch => patchOrigSkill(i, patch)}
                           sessionLogs={sessionLogs}
                           skillGoal={skillGoal}
                         />
@@ -1113,25 +1659,85 @@ export default function ReassessmentReviewPage({
                 )}
               </div>
 
-              {/* New skills */}
-              {newSkills.length > 0 && (
-                <div>
-                  <SubLabel label="New skills" count={newSkills.length} />
-                  <div>
-                    {newSkills.map((item, i) => (
-                      <NewSkillRow key={item.skillId ?? item.skillName ?? i} item={item} />
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* ── New Cycle — Skills ──────────────────────────────────── */}
+              {(() => {
+                const masteredOrigSkills = origSkills.filter(
+                  s => (s.sessionDerivedStatus ?? s.status) === 'mastered'
+                );
+                const inPlanSkills    = newSkills.filter(s => s.includedInPlan === true);
+                const monitorSkills  = newSkills.filter(s => s.monitorOnly === true);
+                const excludedSkills = newSkills.filter(s => !s.includedInPlan && !s.monitorOnly);
+                if (masteredOrigSkills.length === 0 && newSkills.length === 0) return null;
+                return (
+                  <div className="space-y-4">
+                    <SubLabel label="New cycle — skills" />
 
-              {/* Caregiver training charts */}
+                    {/* Maintenance — mastered originals */}
+                    {masteredOrigSkills.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-600 mb-1.5">
+                          Maintenance ({masteredOrigSkills.length})
+                        </p>
+                        <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 divide-y divide-emerald-100 px-3">
+                          {masteredOrigSkills.map((item, i) => (
+                            <MaintenanceSkillRow key={item.skillId ?? item.skillName ?? i} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* In plan — new skills included in next treatment plan */}
+                    {inPlanSkills.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-teal-600 mb-1.5">
+                          In plan ({inPlanSkills.length})
+                        </p>
+                        <div className="space-y-2">
+                          {inPlanSkills.map((item, i) => (
+                            <NewSkillPlanCard key={item.skillId ?? item.skillName ?? i} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Monitor — new skills being observed but not as plan targets */}
+                    {monitorSkills.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-sky-600 mb-1.5">
+                          Monitor ({monitorSkills.length})
+                        </p>
+                        <div className="rounded-xl border border-sky-100 bg-sky-50/30 divide-y divide-stone-100 px-3">
+                          {monitorSkills.map((item, i) => (
+                            <NewSkillMonitorRow key={item.skillId ?? item.skillName ?? i} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Excluded — new skills not being added to the plan */}
+                    {excludedSkills.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1.5">
+                          Excluded ({excludedSkills.length})
+                        </p>
+                        <div className="rounded-xl border border-stone-200 bg-stone-50/50 divide-y divide-stone-100 px-3">
+                          {excludedSkills.map((item, i) => (
+                            <ExcludedSkillRow key={item.skillId ?? item.skillName ?? i} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Caregiver training — accordion cards */}
               {ctSummary.length > 0 && (
                 <div>
                   <SubLabel label="Caregiver training" count={ctSummary.length} />
-                  <div className="space-y-4">
+                  <div className="space-y-2">
                     {ctSummary.map((entry, i) => (
-                      <CaregiverProgressChart
+                      <CaregiverCard
                         key={entry.targetId ?? i}
                         summaryItem={entry}
                         ctLogs={ctLogs}
@@ -1140,6 +1746,61 @@ export default function ReassessmentReviewPage({
                   </div>
                 </div>
               )}
+
+              {/* ── New Cycle — Caregiver Training ──────────────────────── */}
+              {(() => {
+                const inPlanCT    = newCaregiverItems.filter(c => c.includedInPlan === true);
+                const monitorCT   = newCaregiverItems.filter(c => c.monitorOnly === true);
+                const excludedCT  = newCaregiverItems.filter(c => !c.includedInPlan && !c.monitorOnly);
+                if (newCaregiverItems.length === 0) return null;
+                return (
+                  <div className="space-y-4">
+                    <SubLabel label="New cycle — caregiver training" />
+
+                    {/* In plan */}
+                    {inPlanCT.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-teal-600 mb-1.5">
+                          In plan ({inPlanCT.length})
+                        </p>
+                        <div className="space-y-2">
+                          {inPlanCT.map((item, i) => (
+                            <NewCaregiverPlanCard key={item.goalName ?? i} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Monitor */}
+                    {monitorCT.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-sky-600 mb-1.5">
+                          Monitor ({monitorCT.length})
+                        </p>
+                        <div className="rounded-xl border border-sky-100 bg-sky-50/30 divide-y divide-stone-100 px-3">
+                          {monitorCT.map((item, i) => (
+                            <NewCaregiverMonitorRow key={item.goalName ?? i} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Excluded — new caregiver goals not being added to the plan */}
+                    {excludedCT.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400 mb-1.5">
+                          Excluded ({excludedCT.length})
+                        </p>
+                        <div className="rounded-xl border border-stone-200 bg-stone-50/50 divide-y divide-stone-100 px-3">
+                          {excludedCT.map((item, i) => (
+                            <ExcludedCaregiverRow key={item.goalName ?? i} item={item} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </Panel>
 
             {/* ── Panel C — Narrative & Document ─────────────────────────── */}
@@ -1171,6 +1832,83 @@ export default function ReassessmentReviewPage({
                   Reassessment
                 </span>
               </div>
+
+              {/* Medical Necessity summary — read-only review of interview Section 8 */}
+              {(() => {
+                const mn = session?.sections?.medical_necessity ?? {};
+                const hasDx   = (mn.coOccurringDiagnoses ?? []).length > 0;
+                const hasMeds = (mn.medications ?? []).length > 0;
+                const hasABA  = mn.hasPriorABA && (mn.priorABAHistory ?? []).length > 0;
+                const hasAny  = mn.recommendedHoursPerWeek || mn.recommendedSetting || hasDx || hasMeds || hasABA || mn.notes?.trim();
+                if (!hasAny) return null;
+                return (
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
+                      Medical Necessity
+                    </p>
+                    <div className="rounded-xl border border-stone-200 bg-slate-50/60 px-3.5 py-3 space-y-3">
+                      {(mn.recommendedHoursPerWeek || mn.recommendedSetting) && (
+                        <div className="flex gap-5">
+                          {mn.recommendedHoursPerWeek && (
+                            <div>
+                              <p className="text-[9px] uppercase tracking-widest text-slate-400">Recommended</p>
+                              <p className="text-sm font-bold text-teal-700">{mn.recommendedHoursPerWeek}h/wk</p>
+                            </div>
+                          )}
+                          {mn.recommendedSetting && (
+                            <div>
+                              <p className="text-[9px] uppercase tracking-widest text-slate-400">Setting</p>
+                              <p className="text-sm font-semibold text-slate-700">{mn.recommendedSetting}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {hasDx && (
+                        <div>
+                          <p className="text-[9px] uppercase tracking-widest text-slate-400 mb-1">Co-occurring Diagnoses</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(mn.coOccurringDiagnoses ?? []).map((d, i) => (
+                              <span key={d.id ?? i} className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-white border border-stone-200 text-slate-600">
+                                {[d.diagnosis, d.icd10].filter(Boolean).join(' · ')}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {hasMeds && (
+                        <div>
+                          <p className="text-[9px] uppercase tracking-widest text-slate-400 mb-1">Medications</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(mn.medications ?? []).map((m, i) => (
+                              <span key={m.id ?? i} className="px-2 py-0.5 rounded-md text-[11px] font-medium bg-white border border-stone-200 text-slate-600">
+                                {[m.name, m.dose, m.frequency].filter(Boolean).join(' · ')}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {hasABA && (
+                        <div>
+                          <p className="text-[9px] uppercase tracking-widest text-slate-400 mb-1">Prior ABA History</p>
+                          <div className="space-y-1">
+                            {(mn.priorABAHistory ?? []).map((h, i) => (
+                              <p key={h.id ?? i} className="text-[11px] text-slate-600 leading-snug">
+                                {[h.provider, h.startDate && h.endDate ? `${h.startDate} – ${h.endDate}` : h.startDate, h.hoursPerWeek ? `${h.hoursPerWeek}h/wk` : '', h.setting].filter(Boolean).join(' · ')}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {mn.notes?.trim() && (
+                        <div>
+                          <p className="text-[9px] uppercase tracking-widest text-slate-400 mb-1">Clinical Notes</p>
+                          <p className="text-[11px] text-slate-600 leading-relaxed whitespace-pre-wrap">{mn.notes.trim()}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Progress note */}
               <div>
@@ -1214,6 +1952,11 @@ export default function ReassessmentReviewPage({
                       <div>
                         <p className="text-xs font-semibold text-slate-600">{code}</p>
                         <p className="text-[11px] text-slate-400">{label}</p>
+                        {prevHours[code] && (
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            Previous: <span className="font-semibold text-slate-500">{prevHours[code]}h/mo</span>
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1.5">
                         <input

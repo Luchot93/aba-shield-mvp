@@ -318,6 +318,40 @@ Key payers in scope: BCBS (via Lucet/WebPass), Cigna/Evernorth, Sunshine Health 
 
 ## Completed Work (this branch)
 
+**feat/reassessment-workflow-pt4-client-view** — Reassessment Cycle Summary Panel in Client Detail View
+
+### Track 1: ReassessmentCyclePanel.jsx — new component
+`src/features/detail/ReassessmentCyclePanel.jsx` — full read-only clinical summary panel rendered below each reassessment cycle card in the Reassessment tab:
+- **Section A — Maladaptive Behaviors**: Mastered (emerald row + mastery date), Continuing in new cycle (collapsible card with DualBaseline widget, STO milestone rail, progress chart), New/Emerging (IN PLAN / MONITOR ONLY / EXCLUDED badges)
+- **Section B — Skill Acquisitions**: same three-bucket structure; skill domain chip; STO rail reads `masteryCriteriaPercent` from plan skill goal as LTO
+- **Section C — Caregiver Training**: same structure; STO rail reads `ltoPercent`/`ltoSessions` from CT target as LTO
+- **STO Milestone Rail** (`ReassessmentStoRail`): horizontal node rail — Current STO (teal ring) → remaining STOs → LTO node (teal filled); shows "STO/LTO not defined" placeholder when empty
+- **Progress charts**: Recharts `LineChart` per item — actual session trend vs initial baseline (dashed) + new-cycle baseline (orange) + LTO target (teal); color-coded improving/declining footer
+- **Locked placeholder**: when `session.status !== 'complete'`, renders a lock icon panel instead of clinical data — BCBA must download the reassessment doc first
+- **Graph spinner**: teal pulse skeleton while `graphs` prop is still loading
+
+### Track 2: ClientDetailPage.jsx — wiring
+`src/features/detail/ClientDetailPage.jsx`:
+- Added `reassessmentGraphs` state + `useEffect` (triggered when `servicesTab === 'reassessment'`): calls `buildGraphsFromSession` with the most recent reassessment session and sets state
+- Renders `<ReassessmentCyclePanel>` below each cycle card, passing `session`, `client`, and `graphs`
+
+### Track 3: Sofia Ramirez (c15) — completed-reassessment demo client
+`src/constants/seedData.js`:
+- Added full `c15` client record (Sofia Ramirez, Florida Blue, In Services, 6-year-old)
+- `C15_BEHAVIOR_TARGETS` — 3 original behaviors (Aggression, Self-Injurious Behavior, Tantrum) with stoSteps; Property Destruction added as formal behavior target in `sections.behavior_targets.behaviorTargets` with 3 STOs and operational definition (data traceable to reassessment form, not hardcoded)
+- `C15_SKILL_GOALS` — 3 skill goals (Functional Communication/AAC, Motor Imitation, Self-Care: Handwashing) with `targetSkill` field (correct field name)
+- `C15_CT_TARGETS` — 2 CT goals (Reinforcement Delivery, Prompt Hierarchy Implementation) with `ltoPercent` + `ltoSessions` so `makeReassessmentSession` can build `ltoData`
+- `C15_SERVICE_LOGS` — 8 behavior sessions (14 entries each), 8 skill sessions, 6 CT sessions with `accuracyPercent` (correct field name)
+- `reassessment_cycle1_sofia` — status `'complete'` so the full clinical panel renders (vs Charlotte Davis which is `'in_progress'` and shows the locked placeholder)
+
+### Track 4: makeReassessmentSession — systemic data propagation fixes
+`src/constants/seedData.js` — `makeReassessmentSession()`:
+- **`includedInPlan` + `monitorOnly`** now propagated from the first `isNew: true` log entry into `newBehaviorSummary` and `newSkillSummary` (previously always hardcoded to `null`, causing all new items to show EXCLUDED)
+- **`monitorOnly`** added to `seenSkills.set()` record and `newSkillSummary` return object
+- These fixes apply to all clients, not just c15
+
+### Previous completed work (prior sessions on this branch)
+
 **feat/reassessment-workflow-part-3** — Purpose-built reassessment DOCX export + progress UI hardening
 
 ### Track 1: Read-only average inputs in Reassessment Interview

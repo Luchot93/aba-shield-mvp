@@ -332,7 +332,8 @@ test.describe('ABA Shield — Pipeline Kanban', () => {
     // Services stage now shows a 3-tab shell; reauth_active surfaces as a badge in the countdown banner
     await expect(page.locator('[data-testid="services-tab-panel"]')).toBeVisible();
     await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('Reauthorization cycle active');
-    await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('Jul 31, 2026');
+    // Banner shows checklist.submitted.auth_end_date (Jul 20, 2026), not auth_expiry_date (Jul 31, 2026)
+    await expect(page.locator('[data-testid="client-detail-modal"]')).toContainText('Jul 20, 2026');
   });
 
   test('denied resolution: clicking resolve closes modal and returns client', async ({ page }) => {
@@ -861,6 +862,157 @@ test.describe('ABA Shield — Login gate', () => {
     await page.fill('input[type="password"]', 'admin123');
     await page.click('button:has-text("Sign in")');
     await expect(page.locator('text=Testing as:')).toBeVisible();
+  });
+
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ABA Shield — Reassessment Tab (In Services — Charlotte Davis c10)
+//  c10 has 1 in-progress reassessment cycle (Cycle 1, Dr. Ana Reyes)
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('ABA Shield — Reassessment Tab (cycle present)', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.locator('.overflow-x-auto').evaluate(el => el.scrollLeft = 9999);
+    await page.locator('[data-testid="card-name-c10"]').click();
+    await page.waitForSelector('[data-testid="client-detail-modal"]');
+  });
+
+  // ── Tab structure ─────────────────────────────────────────────────────────
+  test('Reassessment tab is present in services-stage client detail', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await expect(panel).toBeVisible();
+    const reassessTab = panel.getByRole('button', { name: /Reassessment/ });
+    await expect(reassessTab).toBeVisible();
+  });
+
+  test('Reassessment tab badge shows cycle count of 1 for Charlotte Davis', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    // Tab button contains the count badge "1" next to the label
+    const reassessTab = panel.getByRole('button', { name: /Reassessment/ });
+    await expect(reassessTab).toContainText('1');
+  });
+
+  test('clicking Reassessment tab shows Reassessment Cycles header', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    await expect(panel).toContainText('Reassessment Cycles');
+  });
+
+  // ── Cycle card content ────────────────────────────────────────────────────
+  test('Reassessment tab shows Cycle 1 card with correct title', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    await expect(panel).toContainText('Reassessment · Cycle 1');
+  });
+
+  test('Cycle 1 card shows In progress status badge', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    await expect(panel).toContainText('In progress');
+  });
+
+  test('Cycle 1 card shows auth period label', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    await expect(panel).toContainText('Auth period:');
+  });
+
+  test('Cycle 1 card shows assigned BCBA name', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    // Charlotte Davis is assigned to Dr. Ana Reyes
+    await expect(panel).toContainText('Dr. Ana Reyes');
+  });
+
+  test('Cycle 1 card shows Continue CTA for in-progress session', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    await expect(panel).toContainText('Continue →');
+  });
+
+  test('Cycle 1 card shows section progress (done/total)', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    // Should show X/13 sections with data
+    await expect(panel).toContainText('/13 sections with data');
+  });
+
+  // ── Header button presence ────────────────────────────────────────────────
+  test('Continue Reassessment header button is always visible when active cycle exists', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    // hasActive=true so header shows "Continue Reassessment →" not "+ Start Reassessment"
+    await expect(panel.getByRole('button', { name: /Continue Reassessment/ })).toBeVisible();
+    await expect(panel.getByRole('button', { name: /\+ Start Reassessment/ })).not.toBeVisible();
+  });
+
+  // ── Legacy placeholder gone ───────────────────────────────────────────────
+  test('old placeholder text does not appear on Reassessment tab', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    await expect(panel).not.toContainText('will be available here in the next update');
+  });
+
+  // ── Navigation from cycle card ────────────────────────────────────────────
+  test('clicking cycle card closes detail and opens reassessment feature', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    // Click the card body (the title text acts as the click target)
+    await panel.getByText('Reassessment · Cycle 1').click();
+    // Client detail modal closes; assessment feature mounts
+    await expect(page.locator('[data-testid="client-detail-modal"]')).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Charlotte Davis').first()).toBeVisible({ timeout: 5000 });
+  });
+
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ABA Shield — Reassessment Tab (In Services — James Martinez c11)
+//  c11 has NO reassessment sessions → empty state
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('ABA Shield — Reassessment Tab (empty state)', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.locator('.overflow-x-auto').evaluate(el => el.scrollLeft = 9999);
+    await page.locator('[data-testid="card-name-c11"]').click();
+    await page.waitForSelector('[data-testid="client-detail-modal"]');
+  });
+
+  test('Reassessment tab has no count badge when no cycles exist', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    const reassessTab = panel.getByRole('button', { name: /^Reassessment$/ });
+    // Count badge only renders when count > 0; tab should just show the label
+    await expect(reassessTab).not.toContainText('0');
+  });
+
+  test('clicking Reassessment tab shows empty state message', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    await expect(panel).toContainText('No reassessment cycles yet');
+  });
+
+  test('empty state shows Start Reassessment button', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    await expect(panel).toContainText('Start Reassessment →');
+  });
+
+  test('empty state does not show Continue button', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    await expect(panel).not.toContainText('Continue →');
+  });
+
+  test('Start Reassessment from empty state opens assessment feature', async ({ page }) => {
+    const panel = page.locator('[data-testid="services-tab-panel"]');
+    await panel.getByRole('button', { name: /Reassessment/ }).click();
+    // Click the "Start Reassessment →" button in the empty state body
+    await panel.getByText('Start Reassessment →').click();
+    await expect(page.locator('[data-testid="client-detail-modal"]')).not.toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('James Martinez').first()).toBeVisible({ timeout: 5000 });
   });
 
 });

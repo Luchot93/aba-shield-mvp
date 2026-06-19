@@ -1727,6 +1727,7 @@ export const SEED_CLIENTS = () => [
   { id:'c12', name:'Amelia Wilson',   dob:'2020-02-14', phone:'(954) 555-0133', address:'2800 Hollywood Blvd, Hollywood, FL 33020', insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-112298', group_number:'G-12390', referring_provider:'Dr. Kevin Brown',    referring_provider_npi:'1316924875', referring_provider_phone:'(954) 555-0390', gender:'Female', diagnosis:'ASD Level 3', icd10:'F84.0', parent_name:'Thomas Wilson', parent_relationship:'Father', parent_email:'t.wilson@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-03-01', stage_entered_at:'2026-03-05T11:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'s2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
   { id:'c13', name:'Marcus Rivera',   dob:'2017-03-04', phone:'(305) 555-0302', address:'4820 SW 137th Ave, Miami, FL 33175',       insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-774421', group_number:'G-12390', referring_provider:'Dr. Adriana Costa',  referring_provider_npi:'1407536982', referring_provider_phone:'(305) 555-0410', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Daniela Rivera', parent_relationship:'Mother', parent_email:'d.rivera@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-05-01', stage_entered_at:'2026-05-02T08:00:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
   { id:'c14', name:'Diego Reyes',     dob:'2018-06-12', phone:'(786) 555-0211', address:'3450 NW 5th Ave, Miami, FL 33127',         insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-884432', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     referring_provider_npi:'1619028374', referring_provider_phone:'(305) 555-0220', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Ana Reyes', parent_relationship:'Mother', parent_email:'ana.reyes@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-03-20', stage_entered_at:'2026-05-28T10:00:00.000Z', stage:'plan_draft',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
+  { id:'c15', name:'Sofia Ramirez',   dob:'2019-03-14', phone:'(954) 555-0277', address:'4200 Stirling Rd, Hollywood, FL 33021',      insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-338821', group_number:'G-12390', referring_provider:'Dr. Patricia Lee',   referring_provider_npi:'1073619284', referring_provider_phone:'(305) 555-0960', gender:'Female', diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Elena Ramirez', parent_relationship:'Mother', parent_email:'e.ramirez@gmail.com', preferred_language:'Spanish', source:'crm_created', referral_date:'2025-05-10', stage_entered_at:'2025-07-01T09:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'s1', rbt_id:'s7', auth_expiry_date:'2026-09-01', reauth_active:false },
 ].map(c => {
   const cl = mkChecklist();
   // Pre-complete c7 (Ethan Williams) denied checklist so resolve button is enabled
@@ -2364,6 +2365,503 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
     return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_james, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session: assessment_session_james, service_session_logs: C11_SERVICE_SESSION_LOGS, caregiver_training_session_logs: [] };
   }
 
+  // ── c15 Sofia Ramirez — services (Florida Blue, completed reassessment) ──────
+  if (c.id === 'c15') {
+    // ── Stage checklists ──────────────────────────────────────────────────────
+    cl.intake          = { referral_form:true, insurance_card:true, cde:true, aba_prescription:true, consent_signed:true, demographics_confirmed:true, referral_source:'Dr. Patricia Lee · (305) 555-0960', insurance_plan:'Florida Blue Community Health Plan', member_id_verified:'FLB-338821 / G-12390', copay_deductible:'$0 copay, $0 deductible remaining', preferred_language:'Spanish', insurance_verified:true, benefits_verified:true };
+    cl.auth_assessment = { cde_confirmed:true, prescription_confirmed:true, referral_confirmed:true, prior_assessments:true, auth_submitted:true, submission_date:'2025-05-22', units_requested:'16', expected_response_date:'2025-06-05', auth_portal:'Availity', reference_number:'FLB-AUTH-2025-0522-3311', cpt_97151_received:true, bcba_assigned:true };
+    cl.assessment      = { bcba_confirmed:true, caregiver_interview:true, direct_observation:true, vineland3:true, vineland3_date:'2025-06-10', basc3:true, basc3_date:'2025-06-10', additional_assessments:false, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
+    cl.plan_draft      = { medical_necessity:true, skill_targets:true, behavior_goals:true, intervention_strategies:true, hours_97153:'80', hours_97155:'12', hours_97156:'8', data_methodology:'Event recording with daily frequency counts; Spanish-language data sheets', plan_start_date:'2025-07-01', plan_end_date:'2026-01-01', sessions_per_week:'10', session_duration_min:'120', baseline_graphs:true, ai_draft_approved:true, treatment_plan_finalized:true };
+    cl.submitted       = { plan_submitted:true, plan_submission_date:'2025-06-25', approval_uploaded:true, auth_reference_number:'FLB-AUT-2025-0625-5588', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-07-01', auth_end_date:'2026-01-01' };
+    cl.authorized      = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Wed/Fri 9am–1pm, Tue/Thu 10am–12pm', session_location:'Home-based', scheduled_hours_week:'20', scheduled_97155_week:'3', scheduled_97156_week:'2' };
+    cl.staffing        = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2025-07-01', first_session_time:'9:00 AM', session_location:'Home-based' };
+    cl.services_reauth = { progress_report:true, updated_graphs:true, vineland3_updated:true, basc3_updated:false, reauth_submitted:true, reauth_submission_date:'2025-12-10', hours_consumed_97153:'72', hours_consumed_97155:'11', hours_consumed_97156:'7' };
+
+    // ── Behavior targets from initial assessment plan ──────────────────────────
+    const C15_BEHAVIOR_TARGETS = [
+      {
+        id: 'bt-c15-1',
+        behaviorName: 'Aggression',
+        operationalDefinition: 'Any instance of hitting, biting, scratching, or kicking directed at another person resulting in or with potential for physical contact.',
+        hypothesizedFunction: 'Escape',
+        severity: 'Moderate',
+        baselineFrequency: 8,
+        targetFrequency: '0',
+        stoSteps: [
+          { id:'sto-c15-1-1', targetFrequency:'4', durationWeeks:'6', note:'Reduce to ≤4 incidents/day using FCT "break" card across demand contexts' },
+          { id:'sto-c15-1-2', targetFrequency:'2', durationWeeks:'6', note:'Reduce to ≤2 incidents/day; fading visual prompts for break requests' },
+          { id:'sto-c15-1-3', targetFrequency:'0', durationWeeks:'8', note:'Zero incidents for 3 consecutive weeks; FCT independent across all settings' },
+        ],
+      },
+      {
+        id: 'bt-c15-2',
+        behaviorName: 'Self-Injurious Behavior',
+        operationalDefinition: 'Any instance of head-banging against surfaces or self-hitting to the head/face with sufficient force to produce sound or redness.',
+        hypothesizedFunction: 'Automatic',
+        severity: 'Severe',
+        baselineFrequency: 5,
+        targetFrequency: '0',
+        stoSteps: [
+          { id:'sto-c15-2-1', targetFrequency:'3', durationWeeks:'4', note:'Reduce to ≤3 incidents/day with sensory diet and NCR schedule' },
+          { id:'sto-c15-2-2', targetFrequency:'1', durationWeeks:'4', note:'Reduce to ≤1 incident/day; NCR fading initiated' },
+          { id:'sto-c15-2-3', targetFrequency:'0', durationWeeks:'6', note:'Zero incidents across 3 consecutive weeks; NCR fully faded' },
+        ],
+      },
+      {
+        id: 'bt-c15-3',
+        behaviorName: 'Tantrum',
+        operationalDefinition: 'Crying, screaming, and/or dropping to the floor lasting ≥5 seconds in the absence of apparent pain or physical discomfort.',
+        hypothesizedFunction: 'Attention',
+        severity: 'Mild',
+        baselineFrequency: 6,
+        targetFrequency: '1',
+        stoSteps: [
+          { id:'sto-c15-3-1', targetFrequency:'4', durationWeeks:'6', note:'Reduce to ≤4 tantrums/day using planned ignoring and FCT for attention' },
+          { id:'sto-c15-3-2', targetFrequency:'2', durationWeeks:'6', note:'Reduce to ≤2 tantrums/day; planned ignoring with noncontingent attention schedule' },
+          { id:'sto-c15-3-3', targetFrequency:'1', durationWeeks:'4', note:'≤1 tantrum/day across home and community; caregiver-implemented independently' },
+        ],
+      },
+    ];
+
+    // ── Skill goals from initial assessment plan ───────────────────────────────
+    const C15_SKILL_GOALS = [
+      {
+        id: 'sg-c15-1',
+        targetSkill: 'Functional Communication (AAC Device)',
+        domain: 'Communication',
+        baselinePercent: 20,
+        masteryCriteriaPercent: 80,
+        stoSteps: [
+          { id:'sg-c15-1-s1', targetPercent:'40', skillDescription:'Independently selects icon for 3 core vocabulary items across 2 people', durationWeeks:'6' },
+          { id:'sg-c15-1-s2', targetPercent:'65', skillDescription:'Uses AAC to request across 5 categories with ≤1 prompt in 4/5 trials', durationWeeks:'6' },
+        ],
+      },
+      {
+        id: 'sg-c15-2',
+        targetSkill: 'Motor Imitation',
+        domain: 'Motor',
+        baselinePercent: 30,
+        masteryCriteriaPercent: 85,
+        stoSteps: [
+          { id:'sg-c15-2-s1', targetPercent:'55', skillDescription:'Imitates 10 gross-motor actions within 3s of model across 3 therapists', durationWeeks:'6' },
+          { id:'sg-c15-2-s2', targetPercent:'75', skillDescription:'Imitates 20 actions including fine-motor across novel people and settings', durationWeeks:'6' },
+        ],
+      },
+      {
+        id: 'sg-c15-3',
+        targetSkill: 'Self-Care: Handwashing',
+        domain: 'Self-Help',
+        baselinePercent: 25,
+        masteryCriteriaPercent: 80,
+        stoSteps: [
+          { id:'sg-c15-3-s1', targetPercent:'45', skillDescription:'Completes 4 of 8 handwashing steps independently with visual task analysis', durationWeeks:'6' },
+          { id:'sg-c15-3-s2', targetPercent:'65', skillDescription:'Completes 6 of 8 steps independently across home and school sinks', durationWeeks:'6' },
+        ],
+      },
+    ];
+
+    // ── Caregiver training targets ─────────────────────────────────────────────
+    const C15_CT_TARGETS = [
+      {
+        id: 'ctt-c15-1',
+        goalName: 'Reinforcement Delivery',
+        baselinePercent: 40,
+        targetPercent: 85,
+        ltoPercent:    85,
+        ltoSessions:   3,
+        stoSteps: [
+          { id:'ctt-c15-1-1', targetPercent:'60', durationWeeks:'6', note:'Behavior-specific praise within 3s; correct identification of reinforcing items' },
+          { id:'ctt-c15-1-2', targetPercent:'80', durationWeeks:'6', note:'Consistent delivery across routines; generalized to father per written guide' },
+        ],
+      },
+      {
+        id: 'ctt-c15-2',
+        goalName: 'Prompt Hierarchy Implementation',
+        baselinePercent: 25,
+        targetPercent: 80,
+        ltoPercent:    80,
+        ltoSessions:   3,
+        stoSteps: [
+          { id:'ctt-c15-2-1', targetPercent:'50', durationWeeks:'6', note:'Correctly applies least-to-most prompting during skill practice trials' },
+          { id:'ctt-c15-2-2', targetPercent:'70', durationWeeks:'6', note:'Independent implementation across all daily routines and skill programs' },
+        ],
+      },
+    ];
+
+    // ── Assessment session (initial, complete) ─────────────────────────────────
+    const assessment_session_sofia = {
+      id:         'sess_c15_initial',
+      clientId:   'c15',
+      clientName: 'Sofia Ramirez',
+      bcbaId:     's1',
+      bcbaName:   'Dr. Rachel Kim',
+      sessionType:'initial',
+      status:     'complete',
+      completedAt:'2025-06-25T14:00:00.000Z',
+      updatedAt:  '2025-06-25T14:00:00.000Z',
+      createdAt:  '2025-06-10T09:00:00.000Z',
+      sections: {
+        behavior_targets: {
+          completionState: 'complete',
+          approvalState:   'approved',
+          behaviorTargets: C15_BEHAVIOR_TARGETS,
+        },
+        skill_acquisitions: {
+          completionState: 'complete',
+          approvalState:   'approved',
+          skillGoals: C15_SKILL_GOALS,
+        },
+        caregiver_training: {
+          completionState: 'complete',
+          approvalState:   'approved',
+          caregiverTrainingTargets: C15_CT_TARGETS,
+        },
+        medical_necessity: { completionState:'complete', approvalState:'approved', notes:'Diagnosis: ASD Level 2 (F84.0). Continued ABA services medically necessary.' },
+        demographics:      { completionState:'complete', approvalState:'approved' },
+        presenting_concerns:{ completionState:'complete', approvalState:'approved' },
+        self_help_skills:  { completionState:'complete', approvalState:'approved' },
+        daily_living:      { completionState:'complete', approvalState:'approved' },
+        safety_concerns:   { completionState:'complete', approvalState:'approved' },
+        communication:     { completionState:'complete', approvalState:'approved' },
+        self_stim:         { completionState:'complete', approvalState:'approved' },
+        crisis_plan:       { completionState:'complete', approvalState:'approved' },
+      },
+    };
+
+    // ── Service session logs (8 sessions, Jul–Oct 2025) ────────────────────────
+    // Each session contains both behavior entries and skill entries.
+    // RBT: Aaliyah Foster (s7)
+    const C15_SERVICE_LOGS = [
+      {
+        id:'slog_c15_1', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-07-15', sessionNumber:1, sessionType:'behavior',
+        notes:'Baseline session. Sofia demonstrated high frequency of all three targets. AAC device trials initiated with full physical prompting.',
+        behaviorEntries:[
+          { behaviorId:'bt-c15-1', behaviorName:'Aggression',              isNew:false, isMonitoring:false, baselineFrequency:8, sessionFrequency:8,   currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-2', behaviorName:'Self-Injurious Behavior', isNew:false, isMonitoring:false, baselineFrequency:5, sessionFrequency:5,   currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:6,   currentStoNumber:1, stoStatus:'in_progress' },
+        ],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:20, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:30, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:25, currentStoNumber:1, stoStatus:'in_progress' },
+        ],
+        createdAt:'2025-07-15T10:00:00.000Z',
+      },
+      {
+        id:'slog_c15_2', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-07-29', sessionNumber:2, sessionType:'behavior',
+        notes:'FCT break card introduced for aggression. SIB slightly decreasing. AAC requesting emerging with gestural model.',
+        behaviorEntries:[
+          { behaviorId:'bt-c15-1', behaviorName:'Aggression',              isNew:false, isMonitoring:false, baselineFrequency:8, sessionFrequency:7,   currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-2', behaviorName:'Self-Injurious Behavior', isNew:false, isMonitoring:false, baselineFrequency:5, sessionFrequency:4,   currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:5,   currentStoNumber:1, stoStatus:'in_progress' },
+        ],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:28, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:35, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:30, currentStoNumber:1, stoStatus:'in_progress' },
+        ],
+        createdAt:'2025-07-29T10:00:00.000Z',
+      },
+      {
+        id:'slog_c15_3', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-08-12', sessionNumber:3, sessionType:'behavior',
+        notes:'New behavior observed: property destruction (throwing/breaking non-preferred items during demands). FCT break card use increasing. SIB dropped significantly.',
+        behaviorEntries:[
+          { behaviorId:'bt-c15-1', behaviorName:'Aggression',              isNew:false, isMonitoring:false, baselineFrequency:8, sessionFrequency:5,   currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-2', behaviorName:'Self-Injurious Behavior', isNew:false, isMonitoring:false, baselineFrequency:5, sessionFrequency:3,   currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:4.5, currentStoNumber:1, stoStatus:'in_progress' },
+          // New behavior observed this session
+          { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:true, isMonitoring:false,
+            sessionFrequency:2, newBehaviorFunction:'escape', newBehaviorSeverity:'mild',
+            newBehaviorDefinition:'Throwing or sweeping items off surfaces, tearing paper, or breaking pencils/crayons in response to non-preferred task demands.',
+            firstSeenDate:'2025-08-12', includedInPlan:true,
+            stoStructure:[
+              { targetFrequency:'1', durationWeeks:'6', note:'Reduce to ≤1 incident/day using FCT + antecedent modification' },
+              { targetFrequency:'0', durationWeeks:'8', note:'Zero incidents for 3 consecutive weeks across all demand contexts' },
+            ],
+            bcbaLtoText:'Zero incidents of property destruction across all settings for 3 consecutive weeks',
+          },
+        ],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:38, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:42, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:35, currentStoNumber:1, stoStatus:'in_progress' },
+          // New skill observed: peer play emerging during group activity
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:true,
+            accuracyPercent:28, firstSeenDate:'2025-08-12', monitorOnly:true,
+          },
+        ],
+        createdAt:'2025-08-12T10:00:00.000Z',
+      },
+      {
+        id:'slog_c15_4', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-08-26', sessionNumber:4, sessionType:'behavior',
+        notes:'Aggression at STO 1 target. SIB moved to STO 2. AAC requesting crossing 40% threshold — excellent progress. Property destruction monitoring continues.',
+        behaviorEntries:[
+          { behaviorId:'bt-c15-1', behaviorName:'Aggression',              isNew:false, isMonitoring:false, baselineFrequency:8, sessionFrequency:4,   currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-2', behaviorName:'Self-Injurious Behavior', isNew:false, isMonitoring:false, baselineFrequency:5, sessionFrequency:2,   currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:4,   currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:1.5, baselineFrequency:null },
+        ],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:48, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:50, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:40, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:32 },
+        ],
+        createdAt:'2025-08-26T10:00:00.000Z',
+      },
+      {
+        id:'slog_c15_5', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-09-09', sessionNumber:5, sessionType:'behavior',
+        notes:'All three primary behaviors trending down strongly. Tantrum moved to STO 2. Imitation and self-care crossing STO 1 targets. Great session.',
+        behaviorEntries:[
+          { behaviorId:'bt-c15-1', behaviorName:'Aggression',              isNew:false, isMonitoring:false, baselineFrequency:8, sessionFrequency:3,   currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-2', behaviorName:'Self-Injurious Behavior', isNew:false, isMonitoring:false, baselineFrequency:5, sessionFrequency:1,   currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:3.5, currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:1, baselineFrequency:null },
+        ],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:58, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:56, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:45, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:35 },
+        ],
+        createdAt:'2025-09-09T10:00:00.000Z',
+      },
+      {
+        id:'slog_c15_6', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-09-23', sessionNumber:6, sessionType:'behavior',
+        notes:'SIB nearing zero. AAC requesting above 65% — approaching STO 2 target. Property destruction nearly resolved.',
+        behaviorEntries:[
+          { behaviorId:'bt-c15-1', behaviorName:'Aggression',              isNew:false, isMonitoring:false, baselineFrequency:8, sessionFrequency:2.5, currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-2', behaviorName:'Self-Injurious Behavior', isNew:false, isMonitoring:false, baselineFrequency:5, sessionFrequency:0.5, currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:3,   currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:0.8, baselineFrequency:null },
+        ],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:66, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:60, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:50, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:38 },
+        ],
+        createdAt:'2025-09-23T10:00:00.000Z',
+      },
+      {
+        id:'slog_c15_7', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-09-30', sessionNumber:7, sessionType:'behavior',
+        notes:'SIB met mastery — zero incidents. This is a major milestone. Aggression continuing to decline. AAC above 75%.',
+        behaviorEntries:[
+          { behaviorId:'bt-c15-1', behaviorName:'Aggression',              isNew:false, isMonitoring:false, baselineFrequency:8, sessionFrequency:2,   currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-2', behaviorName:'Self-Injurious Behavior', isNew:false, isMonitoring:false, baselineFrequency:5, sessionFrequency:0,   currentStoNumber:3, stoStatus:'met' },
+          { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:2.5, currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:0.5, baselineFrequency:null },
+        ],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:75, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:65, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:55, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:40 },
+        ],
+        createdAt:'2025-09-30T10:00:00.000Z',
+      },
+      {
+        id:'slog_c15_8', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-10-14', sessionNumber:8, sessionType:'behavior',
+        notes:'AAC mastery met at 82% — Sofia is requesting independently across 5 categories. SIB maintenance confirmed (zero for second consecutive session). Property destruction very low.',
+        behaviorEntries:[
+          { behaviorId:'bt-c15-1', behaviorName:'Aggression',              isNew:false, isMonitoring:false, baselineFrequency:8, sessionFrequency:2,   currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-2', behaviorName:'Self-Injurious Behavior', isNew:false, isMonitoring:false, baselineFrequency:5, sessionFrequency:0,   currentStoNumber:3, stoStatus:'met' },
+          { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:2.2, currentStoNumber:3, stoStatus:'in_progress' },
+          { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:0.3, baselineFrequency:null },
+        ],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:82, currentStoNumber:2, stoStatus:'met' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:68, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:58, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:42 },
+        ],
+        createdAt:'2025-10-14T10:00:00.000Z',
+      },
+    ];
+
+    // ── Caregiver training session logs (6 sessions) ───────────────────────────
+    const C15_CT_LOGS = [
+      {
+        id:'ctlog_c15_1', clientId:'c15', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-07-22', sessionNumber:1, notes:'Baseline caregiver training. Elena engaged and motivated. Explaining reinforcement schedule.',
+        trainingEntries:[
+          { targetId:'ctt-c15-1', goalName:'Reinforcement Delivery',        baselinePercent:40, sessionPercent:40, stoStatus:'in_progress', currentStoNumber:1 },
+          { targetId:'ctt-c15-2', goalName:'Prompt Hierarchy Implementation', baselinePercent:25, sessionPercent:25, stoStatus:'in_progress', currentStoNumber:1 },
+        ],
+        createdAt:'2025-07-22T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c15_2', clientId:'c15', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-08-05', sessionNumber:2, notes:'Elena demonstrating improvement in behavior-specific praise. Prompt hierarchy still needs practice.',
+        trainingEntries:[
+          { targetId:'ctt-c15-1', goalName:'Reinforcement Delivery',        baselinePercent:40, sessionPercent:52, stoStatus:'in_progress', currentStoNumber:1 },
+          { targetId:'ctt-c15-2', goalName:'Prompt Hierarchy Implementation', baselinePercent:25, sessionPercent:38, stoStatus:'in_progress', currentStoNumber:1 },
+        ],
+        createdAt:'2025-08-05T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c15_3', clientId:'c15', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-08-19', sessionNumber:3, notes:'Reinforcement delivery crossing 60% target — excellent. Prompt hierarchy improving steadily.',
+        trainingEntries:[
+          { targetId:'ctt-c15-1', goalName:'Reinforcement Delivery',        baselinePercent:40, sessionPercent:62, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c15-2', goalName:'Prompt Hierarchy Implementation', baselinePercent:25, sessionPercent:50, stoStatus:'in_progress', currentStoNumber:2 },
+        ],
+        createdAt:'2025-08-19T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c15_4', clientId:'c15', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-09-02', sessionNumber:4, notes:'Both targets at STO 2. Elena implementing independently during breakfast and homework routines.',
+        trainingEntries:[
+          { targetId:'ctt-c15-1', goalName:'Reinforcement Delivery',        baselinePercent:40, sessionPercent:70, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c15-2', goalName:'Prompt Hierarchy Implementation', baselinePercent:25, sessionPercent:58, stoStatus:'in_progress', currentStoNumber:2 },
+        ],
+        createdAt:'2025-09-02T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c15_5', clientId:'c15', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-09-16', sessionNumber:5, notes:'Reinforcement delivery nearing 80% target. Father beginning to participate in training sessions.',
+        trainingEntries:[
+          { targetId:'ctt-c15-1', goalName:'Reinforcement Delivery',        baselinePercent:40, sessionPercent:76, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c15-2', goalName:'Prompt Hierarchy Implementation', baselinePercent:25, sessionPercent:64, stoStatus:'in_progress', currentStoNumber:2 },
+        ],
+        createdAt:'2025-09-16T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c15_6', clientId:'c15', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-10-07', sessionNumber:6, notes:'Reinforcement delivery at 80%. Prompt hierarchy at 70%. Both approaching mastery for the authorization period. Strong caregiver generalization.',
+        trainingEntries:[
+          { targetId:'ctt-c15-1', goalName:'Reinforcement Delivery',        baselinePercent:40, sessionPercent:80, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c15-2', goalName:'Prompt Hierarchy Implementation', baselinePercent:25, sessionPercent:70, stoStatus:'in_progress', currentStoNumber:2 },
+        ],
+        createdAt:'2025-10-07T11:00:00.000Z',
+      },
+    ];
+
+    // ── Build the reassessment session from logs ───────────────────────────────
+    // Enrich `c` with CT logs so makeReassessmentSession can compute CT averages
+    // (the function reads client.caregiver_training_session_logs internally)
+    const _sofiaReassessBase = makeReassessmentSession(
+      { ...c, caregiver_training_session_logs: C15_CT_LOGS },
+      assessment_session_sofia,
+      C15_SERVICE_LOGS,
+      '2025-07-01',
+      '2025-12-31',
+    );
+
+    const reassessment_cycle1_sofia = {
+      ..._sofiaReassessBase,
+      status: 'complete',
+      completedAt: '2025-11-15T14:00:00.000Z',
+
+      progressNarrativeText: `Sofia completed 6 months of home-based ABA services (Jul 1 – Dec 31, 2025) under Dr. Rachel Kim's clinical supervision with RBT Aaliyah Foster delivering direct therapy.
+
+Overall clinical response is strong. Self-Injurious Behavior (head-banging) formally met mastery criteria — zero incidents recorded over the final 3 weeks of the authorization period, representing a 100% reduction from the baseline of 5/day. This is a major safety milestone for the family.
+
+Aggression reduced from 8 incidents/day at baseline to a 6-month average of 4.2/day (47% reduction, currently at STO 2 of 3). Remaining incidents are almost exclusively escape-motivated and occur during high-demand academic tasks. FCT break-card use is well-established and consistent.
+
+Tantrum behavior reduced from 6/day to an average of 3.8/day (37% reduction, currently at STO 2 of 3). Morning routine transitions remain the primary trigger; caregiver-implemented planned ignoring is at approximately 72% fidelity.
+
+Functional communication (AAC device) formally met mastery at 82% in session 8 — Sofia independently requests across 5 core vocabulary categories with minimal prompting. Motor Imitation is progressing well at 68% (STO 2 of 2, target 85%). Self-Care handwashing at 58% (STO 2 of 2, target 80%).
+
+New behavior: Property Destruction observed beginning Aug 12 — escape-motivated, mild severity. BCBA recommends including in the new cycle treatment plan with FCT + antecedent modification.
+
+New skill: Peer Play (Sharing) emerging during structured group activities — recommend monitor-only status for the new cycle.
+
+Caregiver training: Reinforcement delivery at 80% (STO 2, approaching mastery). Prompt hierarchy at 70% (STO 2). Father has joined sessions since September and is implementing independently at home.
+
+Continued ABA services are medically necessary to maintain SIB mastery, complete reduction of aggression and tantrum to LTO targets, advance motor imitation and self-care to mastery, and implement the new property destruction plan.`,
+
+      cptHours: { '97153': '80', '97155': '12', '97156': '8' },
+
+      // ── Sections: original plan targets + newly approved targets for the next cycle
+      sections: {
+        ...(_sofiaReassessBase.sections ?? {}),
+        behavior_targets: {
+          completionState: 'complete',
+          approvalState:   'approved',
+          // Original 3 behaviors PLUS Property Destruction now approved for next cycle plan
+          behaviorTargets: [
+            ...C15_BEHAVIOR_TARGETS,
+            {
+              id:                   'bt-c15-new-1',
+              behaviorName:         'Property Destruction',
+              operationalDefinition:'Client intentionally throws, breaks, or destroys household objects (e.g., toys, dishes, furniture) when demands are placed or access to preferred items is removed. Escape-maintained.',
+              hypothesizedFunction: 'escape',
+              severity:             'mild',
+              baselineFrequency:    '1',
+              stoSteps: [
+                { id:'sto-c15-n1-1', targetFrequency:'3', durationWeeks:'6', note:'Reduce to ≤3 incidents/day using FCT "break" card across demand contexts; antecedent modification (pre-task choice board)' },
+                { id:'sto-c15-n1-2', targetFrequency:'1', durationWeeks:'6', note:'Reduce to ≤1 incident/day; graduated demand fading with token economy for task completion' },
+                { id:'sto-c15-n1-3', targetFrequency:'0', durationWeeks:'8', note:'Zero episodes for 3 consecutive weeks across home and school; FCT generalized to novel contexts' },
+              ],
+            },
+          ],
+        },
+        skill_acquisitions: {
+          completionState: 'complete',
+          approvalState:   'approved',
+          skillGoals: C15_SKILL_GOALS,
+        },
+        caregiver_training: {
+          completionState: 'complete',
+          approvalState:   'approved',
+          caregiverTrainingTargets: C15_CT_TARGETS,
+        },
+      },
+    };
+
+    const C15_DOCS = [
+      { id:'doc_c15_1', type:'referral_form',    label:'REFERRAL FORM — Sofia Ramirez',     uploaded_at:'2025-05-10T09:00:00.000Z', by:'Admin', stage:'intake'     },
+      { id:'doc_c15_2', type:'insurance_card',   label:'INSURANCE CARD — Florida Blue',     uploaded_at:'2025-05-10T09:15:00.000Z', by:'Admin', stage:'intake'     },
+      { id:'doc_c15_3', type:'cde',              label:'CDE — Sofia Ramirez (Mar 2025)',     uploaded_at:'2025-05-12T10:00:00.000Z', by:'Admin', stage:'intake'     },
+      { id:'doc_c15_4', type:'aba_prescription', label:'ABA SCRIPT — Dr. Patricia Lee',     uploaded_at:'2025-05-12T10:05:00.000Z', by:'Admin', stage:'intake'     },
+      { id:'doc_c15_5', type:'consent',          label:'CONSENT PACKET — signed',           uploaded_at:'2025-05-15T14:00:00.000Z', by:'Admin', stage:'intake'     },
+      { id:'doc_c15_6', type:'prior_assessment', label:'PRIOR ASSESSMENTS — attached',      uploaded_at:'2025-05-28T11:00:00.000Z', by:'Admin', stage:'auth_assessment' },
+      { id:'doc_c15_7', type:'assessment_final', label:'FINAL — Initial Assessment Report', uploaded_at:'2025-06-25T15:00:00.000Z', by:'Dr. Rachel Kim', stage:'assessment' },
+      { id:'doc_c15_8', type:'treatment_plan',   label:'FINAL — Signed Treatment Plan',     uploaded_at:'2025-06-28T09:00:00.000Z', by:'Dr. Rachel Kim', stage:'plan_draft' },
+      { id:'doc_c15_9', type:'auth_approval',    label:'AUTH APPROVAL — FLB Jul 2025',      uploaded_at:'2025-07-01T08:00:00.000Z', by:'Admin', stage:'submitted'  },
+      { id:'doc_c15_10', type:'progress_report', label:'DRAFT — Reassessment_Sofia_Ramirez_2025-11-15.docx', uploaded_at:'2025-11-15T14:00:00.000Z', by:'Dr. Rachel Kim', stage:'services' },
+    ];
+
+    const C15_LOG = [
+      { id:'log_c15_1', action:'Client created and intake documents uploaded', ts:'2025-05-10T09:00:00.000Z', by:'Admin' },
+      { id:'log_c15_2', action:'Authorization submitted to Florida Blue for 97151', ts:'2025-05-22T10:00:00.000Z', by:'Admin' },
+      { id:'log_c15_3', action:'Assessment authorization received. BCBA Dr. Rachel Kim assigned.', ts:'2025-06-05T09:00:00.000Z', by:'Admin' },
+      { id:'log_c15_4', action:'Smart Assessment interview completed by Dr. Rachel Kim', ts:'2025-06-25T14:00:00.000Z', by:'Dr. Rachel Kim' },
+      { id:'log_c15_5', action:'Treatment plan submitted to Florida Blue', ts:'2025-06-25T16:00:00.000Z', by:'Admin' },
+      { id:'log_c15_6', action:'Services authorization received. RBT Aaliyah Foster assigned.', ts:'2025-07-01T08:00:00.000Z', by:'Admin' },
+      { id:'log_c15_7', action:'First ABA therapy session completed', ts:'2025-07-15T10:00:00.000Z', by:'Aaliyah Foster' },
+      { id:'log_c15_8', action:'Property Destruction observed for first time — logged as new behavior', ts:'2025-08-12T10:30:00.000Z', by:'Aaliyah Foster' },
+      { id:'log_c15_9', action:'SIB mastery achieved — zero incidents for two consecutive sessions', ts:'2025-10-14T10:00:00.000Z', by:'Aaliyah Foster' },
+      { id:'log_c15_10', action:'AAC Functional Communication mastery met at 82%', ts:'2025-10-14T10:30:00.000Z', by:'Aaliyah Foster' },
+      { id:'log_c15_11', action:'Reassessment document generated and downloaded by Dr. Rachel Kim', ts:'2025-11-15T14:00:00.000Z', by:'Dr. Rachel Kim' },
+      { id:'log_c15_12', action:'Reauthorization submitted to Florida Blue for new cycle Jan–Sep 2026', ts:'2025-12-10T09:00:00.000Z', by:'Admin' },
+      { id:'log_c15_13', action:'New authorization received. Auth period: Jan 2, 2026 – Sep 1, 2026', ts:'2026-01-02T08:00:00.000Z', by:'Admin' },
+    ];
+
+    return {
+      ...c,
+      pipeline_entry: true,
+      smart_assessment_session_id: assessment_session_sofia.id,
+      checklist: cl,
+      documents: C15_DOCS,
+      activity_log: C15_LOG,
+      case_notes: [],
+      assessment_session: assessment_session_sofia,
+      service_session_logs: C15_SERVICE_LOGS,
+      caregiver_training_session_logs: C15_CT_LOGS,
+      reassessment_sessions: [reassessment_cycle1_sofia],
+    };
+  }
+
   return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session, service_session_logs: [], caregiver_training_session_logs: [] };
 });
 
@@ -2556,6 +3054,8 @@ export const makeReassessmentSession = (
           firstFrequency:     entry.sessionFrequency,
           frequencies:        [],
           sessionHistory:     [],
+          includedInPlan:     entry.includedInPlan ?? null,
+          monitorOnly:        entry.monitorOnly    ?? null,
         });
       }
       newMap.get(key).frequencies.push(entry.sessionFrequency);
@@ -2609,7 +3109,8 @@ export const makeReassessmentSession = (
       trend:               computeTrend(avg, baseline),
       sessionHistory,
       bcbaDefinitionFinal:       '',
-      includedInPlan:            null,
+      includedInPlan:            rec.includedInPlan ?? null,
+      monitorOnly:               rec.monitorOnly    ?? null,
       stoStructure:              [],
       masteryCriteriaFrequency:  null,
       masteryCriteriaWeeks:      null,
@@ -2680,7 +3181,8 @@ export const makeReassessmentSession = (
           bcbaGoalName:           '',
           bcbaDefinition:         '',
           bcbaDomain:             '',
-          includedInPlan:         null,
+          includedInPlan:         entry.includedInPlan ?? null,
+          monitorOnly:            entry.monitorOnly    ?? null,
           stoSteps:               [],
           masteryCriteriaPercent: null,
           masteryCriteriaWeeks:   null,
@@ -2737,6 +3239,7 @@ export const makeReassessmentSession = (
       bcbaDefinition:         rec.bcbaDefinition,
       bcbaDomain:             rec.bcbaDomain,
       includedInPlan:         rec.includedInPlan,
+      monitorOnly:            rec.monitorOnly ?? null,
       stoSteps:               rec.stoSteps,
       masteryCriteriaPercent: rec.masteryCriteriaPercent,
       masteryCriteriaWeeks:   rec.masteryCriteriaWeeks,

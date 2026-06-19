@@ -18,8 +18,9 @@ import BehaviorSessionModal    from './BehaviorSessionModal.jsx';
 import SkillSessionModal       from './SkillSessionModal.jsx';
 import CaregiverTrainingLogPanel from './CaregiverTrainingLogPanel.jsx';
 import CaregiverTrainingLogModal from './CaregiverTrainingLogModal.jsx';
+import ReassessmentCyclePanel    from './ReassessmentCyclePanel.jsx';
 
-export default function ClientDetailPage({ clientId, clients, staff, setClients, onBack, backLabel, currentUser, addNotif, onClientAdvanced, onOpenAssessment }) {
+export default function ClientDetailPage({ clientId, clients, staff, setClients, onBack, backLabel, currentUser, addNotif, onClientAdvanced, onOpenAssessment, initialServicesTab }) {
   useBodyScrollLock();
   const client = clients.find(c => c.id === clientId);
   const [confirmAdvance, setConfirmAdvance] = useState(null);
@@ -37,7 +38,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [logSessionModalOpen,          setLogSessionModalOpen]          = useState(false);
   const [logSkillSessionModalOpen,     setLogSkillSessionModalOpen]     = useState(false);
   const [logCaregiverSessionModalOpen, setLogCaregiverSessionModalOpen] = useState(false);
-  const [servicesTab,                  setServicesTab]                  = useState('sessions');
+  const [servicesTab,                  setServicesTab]                  = useState(initialServicesTab ?? 'sessions');
   const pickerRef = useRef(null);
   const saveTimers = useRef({});
 
@@ -55,6 +56,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     hasPlanSession ? new Set(ALL_PLAN_ITEMS) : new Set()
   );
   const [planGraphs, setPlanGraphs] = useState(null);
+  const [reassessmentGraphs, setReassessmentGraphs] = useState(null);
 
   // When the stage advances to plan_draft within the same mounted session,
   // expand all panels and start graph generation.
@@ -67,6 +69,22 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
       .catch(err => { console.error('Graph generation failed:', err); if (!cancelled) setPlanGraphs({}); });
     return () => { cancelled = true; };
   }, [hasPlanSession, client.assessment_session?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reassessment graphs — build when the Reassessment tab is active and a session exists.
+  useEffect(() => {
+    if (servicesTab !== 'reassessment') return;
+    const activeSession = (client?.reassessment_sessions ?? []).at(-1);
+    if (!activeSession) return;
+    let cancelled = false;
+    setReassessmentGraphs(null);
+    buildGraphsFromSession(activeSession, {
+      sessionLogs: client?.service_session_logs ?? [],
+      ctLogs:      client?.caregiver_training_session_logs ?? [],
+    })
+      .then(g => { if (!cancelled) setReassessmentGraphs(g); })
+      .catch(err => { console.error('Reassessment graph generation failed:', err); if (!cancelled) setReassessmentGraphs({}); });
+    return () => { cancelled = true; };
+  }, [servicesTab, (client?.reassessment_sessions ?? []).length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!openPicker) return;
@@ -1390,7 +1408,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         (client.caregiver_training_session_logs?.length ?? 0);
                       const tabs = [
                         { key: 'sessions',      label: 'Session Logs',     count: totalSessions, badge: null },
-                        { key: 'reassessment',  label: 'Reassessment',     count: 0, badge: null },
+                        { key: 'reassessment',  label: 'Reassessment',     count: (client.reassessment_sessions ?? []).length, badge: null },
                         { key: 'reauth',        label: 'Reauthorization',  count: 0, badge: isReauthSvc ? 'Active' : null },
                       ];
                       return tabs.map(tab => (
@@ -1492,15 +1510,219 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 )}
 
                 {/* ── Tab 3: Reassessment ── */}
-                {servicesTab === 'reassessment' && (
-                  <div className="px-5 py-12 text-center">
-                    <p className="text-3xl mb-3">📊</p>
-                    <p className="text-sm font-semibold text-slate-700 mb-1">Reassessment</p>
-                    <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
-                      Progress charts, goal evolution, and reassessment initiation will be available here in the next update.
-                    </p>
-                  </div>
-                )}
+                {servicesTab === 'reassessment' && (() => {
+                  const cycles = client.reassessment_sessions ?? [];
+                  const hasActive = cycles.some(s => s.status !== 'complete');
+
+                  const fmtRDate = (d) => {
+                    if (!d) return '';
+                    return new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
+                      month: 'short', day: 'numeric', year: 'numeric',
+                    });
+                  };
+
+                  const relRTime = (ts) => {
+                    if (!ts) return '';
+                    const diff = Date.now() - new Date(ts).getTime();
+                    const mins = Math.floor(diff / 60000);
+                    if (mins < 2)  return 'just now';
+                    if (mins < 60) return `${mins}m ago`;
+                    const hrs = Math.floor(mins / 60);
+                    if (hrs < 24)  return `${hrs}h ago`;
+                    const days = Math.floor(hrs / 24);
+                    return `${days}d ago`;
+                  };
+
+                  const rSectionsDone = (session) => {
+                    if (!session?.sections) return { done: 0, total: 13 };
+                    const done = Object.values(session.sections)
+                      .filter(s => s.completionState !== 'empty').length;
+                    return { done, total: 13 };
+                  };
+
+                  // ── Reauth urgency: days until auth expires ────────────────
+                  const authEndRaw = client.checklist?.submitted?.auth_end_date ?? client.auth_expiry_date;
+                  const daysUntilExpiry = authEndRaw
+                    ? Math.ceil((new Date(authEndRaw + 'T00:00:00').getTime() - Date.now()) / 86_400_000)
+                    : null;
+                  // Clinical norm: start reassessment 60 days before auth expires
+                  const reauthWindowOpen = daysUntilExpiry !== null && daysUntilExpiry <= 60;
+
+                  return (
+                    <div className="px-5 py-4">
+                      {/* Header row — CTA always visible */}
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                          Reassessment Cycles
+                        </p>
+                        <button
+                          onClick={() => onOpenAssessment?.({ type: 'reassessment', clientId: client.id })}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                          style={{ background: '#0D9488' }}
+                        >
+                          {hasActive ? 'Continue Reassessment →' : '+ Start Reassessment'}
+                        </button>
+                      </div>
+
+                      {/* 60-day reauth window notice */}
+                      {reauthWindowOpen && !hasActive && (
+                        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 flex items-start gap-2">
+                          <span className="text-sm leading-none mt-0.5">⚠️</span>
+                          <p className="text-xs text-amber-800 leading-relaxed">
+                            <span className="font-semibold">
+                              {daysUntilExpiry <= 0 ? 'Authorization expired.' : 'Reassessment recommended.'}
+                            </span>{' '}
+                            {daysUntilExpiry <= 0
+                              ? `Auth period ended ${Math.abs(daysUntilExpiry)} day${Math.abs(daysUntilExpiry) !== 1 ? 's' : ''} ago — start reassessment to support reauthorization.`
+                              : `Authorization expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}. Start the reassessment at least 60 days before expiry to allow time for submission and approval.`
+                            }
+                          </p>
+                        </div>
+                      )}
+
+                      {cycles.length === 0 ? (
+                        /* ── Empty state ── */
+                        <div className="py-10 text-center">
+                          <p className="text-2xl mb-2">📊</p>
+                          <p className="text-sm font-semibold text-slate-700 mb-1">No reassessment cycles yet</p>
+                          <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto mb-5">
+                            Start a reassessment when the authorization period is approaching renewal.
+                          </p>
+                          <button
+                            onClick={() => onOpenAssessment?.({ type: 'reassessment', clientId: client.id })}
+                            className="px-4 py-2 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                            style={{ background: '#0D9488' }}
+                          >
+                            Start Reassessment →
+                          </button>
+                        </div>
+                      ) : (
+                        /* ── Cycle cards ── */
+                        <div className="space-y-4">
+                          {[...cycles].reverse().map((session, idx) => {
+                            const cycleNumber = cycles.length - idx;
+                            const isComplete  = session.status === 'complete';
+                            const authFrom    = fmtRDate(session.authPeriodStart);
+                            const authTo      = fmtRDate(session.authPeriodEnd);
+                            const authLine    = authFrom || authTo ? `${authFrom} – ${authTo}` : null;
+                            const { done, total } = rSectionsDone(session);
+                            const pct = Math.round((done / total) * 100);
+
+                            return (
+                              <div
+                                key={session.id ?? idx}
+                                className="ml-1"
+                                style={{ borderLeft: '2px solid #14B8A6', paddingLeft: '12px' }}
+                              >
+                                {/* Connector row */}
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="text-teal-400 font-bold text-sm select-none">›</span>
+                                  <span
+                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold text-white"
+                                    style={{ background: '#0D9488' }}
+                                  >
+                                    Reassessment
+                                  </span>
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-100 text-slate-500 border border-stone-200">
+                                    Cycle {cycleNumber}
+                                  </span>
+                                </div>
+
+                                {/* Card — clicking opens the reassessment interview */}
+                                <div
+                                  onClick={() => onOpenAssessment?.({ type: 'reassessment', clientId: client.id })}
+                                  className="bg-white border border-stone-200 rounded-xl p-4 cursor-pointer hover:shadow-md hover:-translate-y-px transition-all duration-150"
+                                >
+                                  {/* Row 1: title + status badge */}
+                                  <div className="flex items-center justify-between gap-3 mb-1">
+                                    <span className="text-sm font-semibold text-slate-700">
+                                      Reassessment · Cycle {cycleNumber}
+                                    </span>
+                                    <span
+                                      className={`flex-shrink-0 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                                        isComplete
+                                          ? 'bg-emerald-100 text-emerald-700'
+                                          : 'bg-amber-100 text-amber-700'
+                                      }`}
+                                    >
+                                      {!isComplete && (
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse flex-shrink-0" />
+                                      )}
+                                      {isComplete ? 'Completed' : 'In progress'}
+                                    </span>
+                                  </div>
+
+                                  {/* Row 2: auth period */}
+                                  {authLine && (
+                                    <div
+                                      className="text-xs text-slate-400 mb-1"
+                                      style={{ fontFamily: 'DM Mono, monospace' }}
+                                    >
+                                      Auth period: {authLine}
+                                    </div>
+                                  )}
+
+                                  {/* Row 3: BCBA + relative time */}
+                                  <div className="flex items-center justify-between gap-2 mb-3">
+                                    <span className="text-sm text-slate-500 truncate">
+                                      {bcba?.name ?? 'Unassigned'}
+                                    </span>
+                                    <span
+                                      className="text-xs text-slate-400 flex-shrink-0"
+                                      style={{ fontFamily: 'DM Mono, monospace' }}
+                                    >
+                                      {relRTime(session.updatedAt)}
+                                    </span>
+                                  </div>
+
+                                  {/* Row 4: progress bar */}
+                                  <div
+                                    className="w-full rounded-full mb-3 overflow-hidden"
+                                    style={{ height: '4px', background: '#E7E5E4' }}
+                                  >
+                                    <div
+                                      className="h-full rounded-full transition-all duration-500"
+                                      style={{ width: `${pct}%`, background: '#14B8A6' }}
+                                    />
+                                  </div>
+
+                                  {/* Row 5: section count + CTA */}
+                                  <div className="flex items-center gap-3">
+                                    <span
+                                      className="text-xs text-slate-400 flex-1"
+                                      style={{ fontFamily: 'DM Mono, monospace' }}
+                                    >
+                                      {done}/{total} sections with data
+                                    </span>
+                                    {isComplete ? (
+                                      <span className="text-xs font-semibold text-slate-500 border border-slate-200 rounded-lg px-3 py-1">
+                                        View
+                                      </span>
+                                    ) : (
+                                      <span
+                                        className="text-xs font-semibold text-white rounded-lg px-3 py-1"
+                                        style={{ background: '#0D9488' }}
+                                      >
+                                        Continue →
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* ── Reassessment Cycle Summary Panel ── */}
+                                <ReassessmentCyclePanel
+                                  session={session}
+                                  client={client}
+                                  graphs={reassessmentGraphs}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
               </div>
             )}

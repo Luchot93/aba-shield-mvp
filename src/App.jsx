@@ -20,7 +20,8 @@ export default function App() {
   const [clients,         setClients]        = useState(SEED_CLIENTS);
   const [staff,           setStaff]          = useState(SEED_STAFF);
   const [notifications,   setNotifications]  = useState([]);
-  const [selectedClient,  setSelectedClient] = useState(null);
+  const [selectedClient,         setSelectedClient]        = useState(null);
+  const [selectedClientInitTab,  setSelectedClientInitTab] = useState(null);
   const [recentlyMovedId, setRecentlyMovedId]= useState(null);
   const [assessmentClientId, setAssessmentClientId] = useState(null);
   const [profileClient,      setProfileClient]     = useState(null);
@@ -390,9 +391,10 @@ export default function App() {
             addNotif={addNotif}
             onBack={() => { setPage('assessments'); setAssessmentClientId(null); }}
             onReassessmentComplete={(clientId) => {
-              // After reassessment doc is generated: go back to client detail page
+              // After reassessment doc is generated: go back to client detail page, Reassessment tab
               setAssessmentClientId(null);
               setPage('pipeline');
+              setSelectedClientInitTab('reassessment');
               setSelectedClient(clients.find(c => c.id === clientId) ?? null);
             }}
           />
@@ -425,13 +427,15 @@ export default function App() {
           clients={clients}
           staff={enrichedStaff}
           setClients={setClients}
-          onBack={() => setSelectedClient(null)}
+          onBack={() => { setSelectedClient(null); setSelectedClientInitTab(null); }}
           backLabel="Back to pipeline"
           currentUser={currentUser}
           addNotif={addNotif}
           onClientAdvanced={handleClientAdvanced}
+          initialServicesTab={selectedClientInitTab}
           onOpenAssessment={(arg) => {
             setSelectedClient(null);
+            setSelectedClientInitTab(null);
             handleOpenAssessment(arg); // handleOpenAssessment normalises string or object
           }}
         />

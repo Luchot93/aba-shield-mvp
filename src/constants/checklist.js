@@ -52,47 +52,7 @@ export const mkChecklist = () => ({
     first_session_date:'', first_session_time:'', session_location:'',
     schedule_template:'',
   },
-  services_reauth: {
-    progress_report:false, updated_graphs:false, vineland3_updated:false,
-    basc3_updated:false, reauth_submitted:false,
-    reauth_submission_date:'', reauth_submission_method:'', reauth_reference_number:'',
-    hours_consumed_97153:'', hours_consumed_97155:'', hours_consumed_97156:'',
-    reauth_outcome:'',
-    new_auth_start_date:'', new_auth_end_date:'',
-    new_authorized_97153:'', new_authorized_97155:'', new_authorized_97156:'',
-  },
 });
-
-export const REAUTH_ITEMS = [
-  // ── Section A: Utilization Summary ──────────────────────────────────────────
-  { type:'section_label', key:'_util_header', label:'Utilization Summary' },
-  { type:'form_field', key:'hours_consumed_97153', label:'Direct therapy (97153) — hours this period',      clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 72' },
-  { type:'form_field', key:'hours_consumed_97155', label:'BCBA supervision (97155) — hours this period',    clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 10' },
-  { type:'form_field', key:'hours_consumed_97156', label:'Caregiver training (97156) — hours this period',  clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 6'  },
-
-  // ── Section B: Clinical Documentation ───────────────────────────────────────
-  { type:'section_label', key:'_docs_header', label:'Clinical Documentation' },
-  { type:'file_upload', key:'progress_report',    label:'Progress report',            clSec:'services_reauth', accept:'.pdf,.docx',     docType:'progress_report', autoComplete:true, completionSource:'reassessment_doc_generated' },
-  { type:'file_upload', key:'updated_graphs',     label:'Updated behavioral graphs',  clSec:'services_reauth', accept:'.pdf,.png,.jpg', docType:'updated_graphs' },
-  { type:'checkbox',    key:'vineland3_updated',  label:'Vineland-3 updated',         clSec:'services_reauth' },
-  { type:'checkbox',    key:'basc3_updated',      label:'BASC-3 updated',             clSec:'services_reauth' },
-
-  // ── Section C: Submission ────────────────────────────────────────────────────
-  { type:'section_label', key:'_submit_header', label:'Submission' },
-  { type:'checkbox',   key:'reauth_submitted',          label:'Reauth submitted to insurer',          clSec:'services_reauth' },
-  { type:'form_field', key:'reauth_submission_date',    label:'Submission date',                      clSec:'services_reauth', fieldType:'date',   optional:true },
-  { type:'form_field', key:'reauth_submission_method',  label:'Submission method / portal',           clSec:'services_reauth', fieldType:'text',   optional:true, placeholder:'e.g. Availity, fax, phone' },
-  { type:'form_field', key:'reauth_reference_number',   label:'Submission reference number',          clSec:'services_reauth', fieldType:'text',   optional:true },
-
-  // ── Section D: Authorization Outcome ────────────────────────────────────────
-  { type:'section_label', key:'_outcome_header', label:'Authorization Outcome' },
-  { type:'form_field', key:'reauth_outcome',         label:'Outcome',                       clSec:'services_reauth', fieldType:'text',   optional:true, placeholder:'Approved / Denied / Pending' },
-  { type:'form_field', key:'new_auth_start_date',    label:'New auth period start',         clSec:'services_reauth', fieldType:'date',   optional:true },
-  { type:'form_field', key:'new_auth_end_date',      label:'New auth period end',           clSec:'services_reauth', fieldType:'date',   optional:true },
-  { type:'form_field', key:'new_authorized_97153',   label:'New 97153 authorized hours',    clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 80' },
-  { type:'form_field', key:'new_authorized_97155',   label:'New 97155 authorized hours',    clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 12' },
-  { type:'form_field', key:'new_authorized_97156',   label:'New 97156 authorized hours',    clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 8'  },
-];
 
 export function getStageItems(stage) {
   switch (stage) {
@@ -108,22 +68,22 @@ export function getStageItems(stage) {
       { type:'form_field',  key:'member_id_verified', label:'Member ID / Group #',        clSec:'intake', fieldType:'text', optional:true, placeholder:'MBR-0000000',                                       clientFields:['member_id','group_number'],                clientFieldSep:' / '       },
       { type:'form_field',  key:'copay_deductible',   label:'Copay / deductible details', clSec:'intake', fieldType:'text', optional:true, placeholder:'$0 copay, $500 deductible remaining'                                                                                                    },
       { type:'form_field',  key:'preferred_language', label:'Preferred language',         clSec:'intake', fieldType:'text', optional:true, placeholder:'e.g. English, Spanish',                             clientFields:['preferred_language']                                                 },
-      { type:'checkbox',    key:'insurance_verified', label:'Insurance information verified',  clSec:'intake' },
-      { type:'checkbox',    key:'benefits_verified',  label:'Benefits verification completed', clSec:'intake' },
+      { type:'checkbox',    key:'insurance_verified', label:'Insurance information verified',  clSec:'intake', sublabel:'Confirm member ID, group number, and plan name match the insurance card on file.' },
+      { type:'checkbox',    key:'benefits_verified',  label:'Benefits verification completed', clSec:'intake', sublabel:'Verify ABA coverage, session limits, copay/deductible, and any prior auth requirements.' },
     ];
     case 'auth_assessment': return [
       { type:'auto',       key:'cde_confirmed',          label:'CDE confirmed',                          clSec:'auth_assessment', intakeKey:'cde' },
       { type:'auto',       key:'prescription_confirmed', label:'ABA prescription confirmed',             clSec:'auth_assessment', intakeKey:'aba_prescription' },
       { type:'auto',       key:'referral_confirmed',     label:'Referral form confirmed',                clSec:'auth_assessment', intakeKey:'referral_form' },
       { type:'file_upload',key:'prior_assessments',      label:'Prior assessments attached',             clSec:'auth_assessment', accept:'.pdf,.docx', docType:'prior_assessments' },
-      { type:'checkbox',   key:'auth_submitted',         label:'Authorization submitted to insurer',     clSec:'auth_assessment' },
+      { type:'checkbox',   key:'auth_submitted',         label:'Authorization submitted to insurer',     clSec:'auth_assessment', sublabel:'CPT 97151 authorization request submitted via Availity, fax, or phone. Record the reference number below.' },
       { type:'section_label', key:'_submission_header',  label:'Submission Details' },
       { type:'form_field', key:'submission_date',        label:'Submission date',                        clSec:'auth_assessment', fieldType:'date',   optional:true },
       { type:'form_field', key:'units_requested',        label:'CPT 97151 units requested',              clSec:'auth_assessment', fieldType:'number', optional:true, placeholder:'e.g. 16' },
       { type:'form_field', key:'expected_response_date', label:'Expected response date',                 clSec:'auth_assessment', fieldType:'date',   optional:true },
       { type:'form_field', key:'auth_portal',            label:'Submission method / portal',             clSec:'auth_assessment', fieldType:'text',   optional:true, placeholder:'e.g. Availity, fax, phone' },
       { type:'form_field', key:'reference_number',       label:'Submission reference number',            clSec:'auth_assessment', fieldType:'text',   optional:true },
-      { type:'checkbox',   key:'cpt_97151_received',     label:'CPT 97151 authorization received',       clSec:'auth_assessment' },
+      { type:'checkbox',   key:'cpt_97151_received',     label:'CPT 97151 authorization received',       clSec:'auth_assessment', sublabel:'Written authorization for the behavioral assessment received from the insurer. Upload the approval document.' },
       { type:'assign',     key:'bcba_assigned',          label:'BCBA assigned to case',                  clSec:'auth_assessment', role:'bcba' },
     ];
     case 'assessment': return [
@@ -134,7 +94,7 @@ export function getStageItems(stage) {
       { type:'form_field', key:'observation_date',             label:'Observation session date',                 clSec:'assessment', fieldType:'date', optional:true },
       { type:'dated',      key:'vineland3',                    label:'Vineland-3 administered within 12 months', clSec:'assessment', dateKey:'vineland3_date' },
       { type:'dated',      key:'basc3',                        label:'BASC-3 administered within 12 months',     clSec:'assessment', dateKey:'basc3_date' },
-      { type:'checkbox',   key:'additional_assessments',       label:'Additional assessments completed',         clSec:'assessment' },
+      { type:'checkbox',   key:'additional_assessments',       label:'Additional assessments completed',         clSec:'assessment', sublabel:'Any supplemental tools administered (e.g. ABLLS-R, VB-MAPP, AFLS). List them in the field below.' },
       { type:'form_field', key:'additional_assessments_detail',label:'Additional tools used',                    clSec:'assessment', fieldType:'text', optional:true, placeholder:'e.g. ABLLS-R, AFLS, VB-MAPP' },
       { type:'auto',       key:'behaviors_identified',         label:'Behaviors identified',                     clSec:'assessment', sessionKey:'behaviors_any' },
       { type:'auto',       key:'baseline_data',                label:'Baseline behavioral data recorded',        clSec:'assessment', sessionKey:'behaviors_baseline' },
@@ -155,11 +115,11 @@ export function getStageItems(stage) {
       { type:'form_field', key:'sessions_per_week',    label:'Sessions per week',                       clSec:'plan_draft', fieldType:'number', optional:true, placeholder:'e.g. 10' },
       { type:'form_field', key:'session_duration_min', label:'Session duration (minutes)',               clSec:'plan_draft', fieldType:'number', optional:true, placeholder:'e.g. 120' },
       { type:'smart_auto', key:'baseline_graphs',         label:'Baseline graphs',                        clSec:'plan_draft' },
-      { type:'checkbox',   key:'ai_draft_approved',       label:'AI draft reviewed and approved by BCBA', clSec:'plan_draft', mandatory:true },
+      { type:'checkbox',   key:'ai_draft_approved',       label:'AI draft reviewed and approved by BCBA', clSec:'plan_draft', mandatory:true, sublabel:'BCBA has reviewed all AI-generated content — goals, behaviors, CPT hours, and graphs — and confirmed clinical accuracy before signing.' },
       { type:'file_upload',key:'treatment_plan_finalized',label:'Signed treatment plan uploaded',          clSec:'plan_draft', accept:'.pdf,.docx', docType:'treatment_plan' },
     ];
     case 'submitted': return [
-      { type:'checkbox',   key:'plan_submitted',         label:'Treatment plan submitted',              clSec:'submitted' },
+      { type:'checkbox',   key:'plan_submitted',         label:'Treatment plan submitted',              clSec:'submitted', sublabel:'The signed treatment plan and CPT unit request have been submitted to the insurer.' },
       { type:'form_field', key:'plan_submission_date',   label:'Plan submission date',                  clSec:'submitted', fieldType:'date',   optional:true },
       { type:'auto',       key:'cpt_units_requested',    label:'CPT units included in submission',      clSec:'submitted', planDraftHours:true },
       { type:'section_label', key:'_auth_received',      label:'Authorization Received' },
@@ -176,14 +136,14 @@ export function getStageItems(stage) {
       { type:'form_field', key:'denial_code',             label:'Denial code',                                  clSec:'denied', fieldType:'text', optional:true, placeholder:'e.g. AUTH-051, CO-97' },
       { type:'form_field', key:'appeal_deadline',         label:'Appeal deadline',                              clSec:'denied', fieldType:'date', optional:true, suggestFromField:'denial_date', suggestOffsetDays:30 },
       { type:'form_field', key:'denial_reason',           label:'Denial reason logged',                         clSec:'denied', fieldType:'text', optional:true, clientField:'denial_reason' },
-      { type:'checkbox',   key:'peer_to_peer_scheduled',  label:'Peer-to-peer scheduled within 2 days',         clSec:'denied', note:'Call: 1-844-477-8313 Ext. 6032912' },
+      { type:'checkbox',   key:'peer_to_peer_scheduled',  label:'Peer-to-peer scheduled within 2 days',         clSec:'denied', sublabel:'Request a peer-to-peer review with the insurer\'s medical director within 2 business days of denial.', note:'Call: 1-844-477-8313 Ext. 6032912' },
       { type:'file_upload',key:'supporting_docs',         label:'Supporting documentation',                     clSec:'denied', accept:'.pdf,.docx', docType:'appeal_docs' },
-      { type:'checkbox',   key:'peer_to_peer_completed',  label:'Peer-to-peer completed or appeal submitted',   clSec:'denied' },
+      { type:'checkbox',   key:'peer_to_peer_completed',  label:'Peer-to-peer completed or appeal submitted',   clSec:'denied', sublabel:'Peer-to-peer call with insurer completed, or a formal written appeal has been submitted with supporting documentation.' },
       { type:'form_field', key:'appeal_outcome',          label:'Appeal outcome',                               clSec:'denied', fieldType:'text', optional:true, placeholder:'Approved / Upheld / Pending' },
     ];
     case 'authorized': return [
-      { type:'checkbox',   key:'bcba_matches_auth',        label:'BCBA matches insurance authorization', clSec:'authorized' },
-      { type:'checkbox',   key:'bcba_credentials_verified',label:'BCBA credentials verified',            clSec:'authorized' },
+      { type:'checkbox',   key:'bcba_matches_auth',        label:'BCBA matches insurance authorization', clSec:'authorized', sublabel:'BCBA name and NPI on the authorization letter match the assigned BCBA in the system.' },
+      { type:'checkbox',   key:'bcba_credentials_verified',label:'BCBA credentials verified',            clSec:'authorized', sublabel:'BCBA certification, NPI, and state license are current and match insurer credentialing requirements.' },
       { type:'assign',     key:'rbt_assigned',             label:'RBT assigned',                         clSec:'authorized', role:'rbt' },
       { type:'auto',       key:'rbt_cert_valid',           label:'RBT certification valid',              clSec:'authorized', rbtCert:true },
       { type:'auto',       key:'rbt_credentials_attached', label:'RBT credentials attached',             clSec:'authorized', rbtCreds:true },
@@ -195,8 +155,8 @@ export function getStageItems(stage) {
       { type:'form_field', key:'session_location',        label:'Session location',                     clSec:'authorized', fieldType:'text',   optional:true, placeholder:"Client's home / Clinic / School" },
     ];
     case 'staffing': return [
-      { type:'checkbox',   key:'caregiver_availability',  label:'Caregiver availability confirmed', clSec:'staffing' },
-      { type:'checkbox',   key:'schedule_coordinated',    label:'Staff schedule coordinated',       clSec:'staffing' },
+      { type:'checkbox',   key:'caregiver_availability',  label:'Caregiver availability confirmed', clSec:'staffing', sublabel:'Caregiver has confirmed availability for all scheduled session days and times.' },
+      { type:'checkbox',   key:'schedule_coordinated',    label:'Staff schedule coordinated',       clSec:'staffing', sublabel:'RBT and BCBA schedules are aligned with authorized hours and caregiver availability.' },
       { type:'form_field', key:'first_session_date',      label:'First session date',               clSec:'staffing', fieldType:'date' },
       { type:'form_field', key:'first_session_time',      label:'First session time',               clSec:'staffing', fieldType:'time',   optional:true },
       { type:'form_field', key:'session_location',        label:'Session location',                 clSec:'staffing', fieldType:'text',   optional:true, placeholder:"Client's home / Clinic / School", authorizedKey:'session_location' },

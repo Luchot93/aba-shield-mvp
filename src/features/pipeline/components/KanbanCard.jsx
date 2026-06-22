@@ -13,14 +13,12 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
   const denialCount   = client.denial_count ?? 0;
   const showDenialTag = denialCount > 0 && !isDenied; // only on non-denied cards (denied stage has its own banner)
 
-  // Auth expiry banner for Services
-  // Show for all reauth_active clients (cycle is running); otherwise threshold-gated
+  // Auth expiry banner for Services — date-threshold driven
   let authBanner = null;
   if (client.stage === 'services' && client.auth_expiry_date) {
     const days = daysUntil(client.auth_expiry_date);
-    if (client.reauth_active)  authBanner = { days, urgent: days <= 14 };
-    else if (days <= 14)       authBanner = { days, urgent: true };
-    else if (days <= 30)       authBanner = { days, urgent: false };
+    if (days <= 14)      authBanner = { days, urgent: true };
+    else if (days <= 30) authBanner = { days, urgent: false };
   }
 
   // RBT cert expiry warning — shown when RBT is assigned and cert expires within 30 days
@@ -55,10 +53,12 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
         </div>
       )}
 
-      {/* Services reauth label */}
-      {client.stage === 'services' && client.reauth_active && (
+      {/* Reauth cycle badge — shown on any stage when client is in a reauth cycle */}
+      {(client.reauth_cycle ?? 0) > 0 && (
         <div className="px-3 pt-2.5 pb-0">
-          <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">Services · Reauth</span>
+          <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 border border-teal-100 px-1.5 py-0.5 rounded">
+            ↻ Reauth Cycle {client.reauth_cycle}
+          </span>
         </div>
       )}
 

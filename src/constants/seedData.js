@@ -1713,21 +1713,21 @@ Applied Behavior Analysis is clinically indicated and medically necessary for Ch
 };
 
 export const SEED_CLIENTS = () => [
-  { id:'c1',  name:'Liam Rodriguez',  dob:'2018-03-15', phone:'(786) 555-0121', address:'1432 SW 8th St, Miami, FL 33135',          insurer_name:'Aetna',        health_plan_name:'Aetna Better Health of Florida',              member_id:'AET-884421', group_number:'G-44210', referring_provider:'Dr. Maria Santos',  referring_provider_npi:'1245319599', referring_provider_phone:'(786) 555-0300', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Maria Rodriguez', parent_relationship:'Mother', parent_email:'m.rodriguez@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-04-10', stage_entered_at:'2026-04-10T09:00:00.000Z', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c2',  name:'Sophia Kim',      dob:'2019-07-22', phone:'(305) 555-0198', address:'7821 N Kendall Dr, Miami, FL 33156',        insurer_name:'UnitedHealth', health_plan_name:'UnitedHealthcare Community Plan of Florida',   member_id:'UHC-229934', group_number:'G-77811', referring_provider:'Dr. John Park',      referring_provider_npi:'1497758544', referring_provider_phone:'(305) 555-0410', gender:'Female', diagnosis:'ASD Level 1', icd10:'F84.0', parent_name:'James Kim', parent_relationship:'Father', parent_email:'j.kim@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-04-15', stage_entered_at:'2026-04-15T10:30:00.000Z', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c3',  name:'Noah Carter',     dob:'2017-11-08', phone:'(954) 555-0143', address:'3201 Coral Way, Coral Gables, FL 33134',   insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-558871', group_number:'G-12390', referring_provider:'Dr. Elaine Torres',  referring_provider_npi:'1083712934', referring_provider_phone:'(954) 555-0520', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Rachel Carter', parent_relationship:'Mother', parent_email:'r.carter@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-03-28', stage_entered_at:'2026-04-01T08:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c4',  name:'Emma Thompson',   dob:'2020-01-30', phone:'(561) 555-0167', address:'9400 Glades Rd, Boca Raton, FL 33434',     insurer_name:'Humana',       health_plan_name:'Humana Healthy Horizons in Florida',          member_id:'HUM-334490', group_number:'G-98712', referring_provider:'Dr. Robert Chen',    referring_provider_npi:'1336198450', referring_provider_phone:'(561) 555-0200', gender:'Female', diagnosis:'ASD Level 3', icd10:'F84.0', parent_name:'Linda Thompson', parent_relationship:'Mother', parent_email:'linda.thompson@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-04-02', stage_entered_at:'2026-04-22T09:15:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c5',  name:'Oliver Patel',    dob:'2018-06-12', phone:'(786) 555-0134', address:'2100 Biscayne Blvd, Miami, FL 33137',      insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-778823', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     referring_provider_npi:'1619028374', referring_provider_phone:'(305) 555-0220', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Priya Patel', parent_relationship:'Mother', parent_email:'priya.patel@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-03-15', stage_entered_at:'2026-06-04T09:00:00.000Z', stage:'submitted',       denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c6',  name:'Ava Nguyen',      dob:'2019-09-05', phone:'(305) 555-0189', address:'5540 NW 7th Ave, Miami, FL 33127',         insurer_name:'Aetna',        health_plan_name:'Aetna Better Health of Florida',              member_id:'AET-991102', group_number:'G-44210', referring_provider:'Dr. Luis Mendez',    referring_provider_npi:'1750892013', referring_provider_phone:'(305) 555-0630', gender:'Female', diagnosis:'ASD Level 1', icd10:'F84.0', parent_name:'Trang Nguyen', parent_relationship:'Mother', parent_email:'trang.nguyen@gmail.com', preferred_language:'Vietnamese', source:'crm_created', referral_date:'2026-02-28', stage_entered_at:'2026-05-19T14:00:00.000Z', stage:'submitted',       denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c7',  name:'Ethan Williams',  dob:'2017-04-18', phone:'(954) 555-0156', address:'800 E Broward Blvd, Ft. Lauderdale, FL',   insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-447721', group_number:'G-12390', referring_provider:'Dr. Sarah Johnson',  referring_provider_npi:'1821934056', referring_provider_phone:'(954) 555-0740', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Michael Williams', parent_relationship:'Father', parent_email:'m.williams@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-02-10', stage_entered_at:'2026-04-05T10:00:00.000Z', stage:'denied',          denial_reason:'Medical necessity not established', bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c8',  name:'Isabella Moore',  dob:'2018-12-25', phone:'(786) 555-0177', address:'6100 SW 57th Ave, South Miami, FL 33143',  insurer_name:'UnitedHealth', health_plan_name:'UnitedHealthcare Community Plan of Florida',   member_id:'UHC-883312', group_number:'G-77811', referring_provider:'Dr. Mark Davis',     referring_provider_npi:'1902847123', referring_provider_phone:'(786) 555-0850', gender:'Female', diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Sarah Moore', parent_relationship:'Mother', parent_email:'s.moore@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-01-20', stage_entered_at:'2026-03-10T09:00:00.000Z', stage:'authorized',      denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-31', reauth_active:false },
-  { id:'c9',  name:'Mason Garcia',    dob:'2019-03-14', phone:'(305) 555-0145', address:'11200 SW 8th St, Miami, FL 33174',         insurer_name:'Humana',       health_plan_name:'Humana Healthy Horizons in Florida',          member_id:'HUM-229908', group_number:'G-98712', referring_provider:'Dr. Patricia Lee',   referring_provider_npi:'1073619284', referring_provider_phone:'(305) 555-0960', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Carmen Garcia', parent_relationship:'Mother', parent_email:'carmen.garcia@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-01-05', stage_entered_at:'2026-03-25T08:30:00.000Z', stage:'staffing',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-15', reauth_active:false },
-  { id:'c10', name:'Charlotte Davis', dob:'2018-08-22', phone:'(561) 555-0122', address:'3400 PGA Blvd, Palm Beach Gardens, FL',    insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-556634', group_number:'G-55023', referring_provider:'Dr. James Wilson',   referring_provider_npi:'1154728390', referring_provider_phone:'(561) 555-0170', gender:'Female', diagnosis:'ASD Level 1', icd10:'F84.0', parent_name:'Jennifer Davis', parent_relationship:'Mother', parent_email:'j.davis@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2025-11-12', stage_entered_at:'2026-01-20T10:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-07-31', reauth_active:true  },
-  { id:'c11', name:'James Martinez',  dob:'2017-05-30', phone:'(786) 555-0190', address:'1800 Coral Way, Miami, FL 33145',          insurer_name:'Aetna',        health_plan_name:'Aetna Better Health of Florida',              member_id:'AET-664433', group_number:'G-44210', referring_provider:'Dr. Angela Rivera',  referring_provider_npi:'1235816047', referring_provider_phone:'(786) 555-0280', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Rosa Martinez', parent_relationship:'Mother', parent_email:'r.martinez@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2025-10-08', stage_entered_at:'2025-12-15T09:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'s1', rbt_id:'s5', auth_expiry_date:'2026-05-20', reauth_active:true  },
-  { id:'c12', name:'Amelia Wilson',   dob:'2020-02-14', phone:'(954) 555-0133', address:'2800 Hollywood Blvd, Hollywood, FL 33020', insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-112298', group_number:'G-12390', referring_provider:'Dr. Kevin Brown',    referring_provider_npi:'1316924875', referring_provider_phone:'(954) 555-0390', gender:'Female', diagnosis:'ASD Level 3', icd10:'F84.0', parent_name:'Thomas Wilson', parent_relationship:'Father', parent_email:'t.wilson@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-03-01', stage_entered_at:'2026-03-05T11:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'s2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c13', name:'Marcus Rivera',   dob:'2017-03-04', phone:'(305) 555-0302', address:'4820 SW 137th Ave, Miami, FL 33175',       insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-774421', group_number:'G-12390', referring_provider:'Dr. Adriana Costa',  referring_provider_npi:'1407536982', referring_provider_phone:'(305) 555-0410', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Daniela Rivera', parent_relationship:'Mother', parent_email:'d.rivera@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-05-01', stage_entered_at:'2026-05-02T08:00:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c14', name:'Diego Reyes',     dob:'2018-06-12', phone:'(786) 555-0211', address:'3450 NW 5th Ave, Miami, FL 33127',         insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-884432', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     referring_provider_npi:'1619028374', referring_provider_phone:'(305) 555-0220', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Ana Reyes', parent_relationship:'Mother', parent_email:'ana.reyes@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-03-20', stage_entered_at:'2026-05-28T10:00:00.000Z', stage:'plan_draft',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_active:false },
-  { id:'c15', name:'Sofia Ramirez',   dob:'2019-03-14', phone:'(954) 555-0277', address:'4200 Stirling Rd, Hollywood, FL 33021',      insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-338821', group_number:'G-12390', referring_provider:'Dr. Patricia Lee',   referring_provider_npi:'1073619284', referring_provider_phone:'(305) 555-0960', gender:'Female', diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Elena Ramirez', parent_relationship:'Mother', parent_email:'e.ramirez@gmail.com', preferred_language:'Spanish', source:'crm_created', referral_date:'2025-05-10', stage_entered_at:'2025-07-01T09:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'s1', rbt_id:'s7', auth_expiry_date:'2026-09-01', reauth_active:false },
+  { id:'c1',  name:'Liam Rodriguez',  dob:'2018-03-15', phone:'(786) 555-0121', address:'1432 SW 8th St, Miami, FL 33135',          insurer_name:'Aetna',        health_plan_name:'Aetna Better Health of Florida',              member_id:'AET-884421', group_number:'G-44210', referring_provider:'Dr. Maria Santos',  referring_provider_npi:'1245319599', referring_provider_phone:'(786) 555-0300', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Maria Rodriguez', parent_relationship:'Mother', parent_email:'m.rodriguez@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-04-10', stage_entered_at:'2026-04-10T09:00:00.000Z', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c2',  name:'Sophia Kim',      dob:'2019-07-22', phone:'(305) 555-0198', address:'7821 N Kendall Dr, Miami, FL 33156',        insurer_name:'UnitedHealth', health_plan_name:'UnitedHealthcare Community Plan of Florida',   member_id:'UHC-229934', group_number:'G-77811', referring_provider:'Dr. John Park',      referring_provider_npi:'1497758544', referring_provider_phone:'(305) 555-0410', gender:'Female', diagnosis:'ASD Level 1', icd10:'F84.0', parent_name:'James Kim', parent_relationship:'Father', parent_email:'j.kim@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-04-15', stage_entered_at:'2026-04-15T10:30:00.000Z', stage:'intake',          denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c3',  name:'Noah Carter',     dob:'2017-11-08', phone:'(954) 555-0143', address:'3201 Coral Way, Coral Gables, FL 33134',   insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-558871', group_number:'G-12390', referring_provider:'Dr. Elaine Torres',  referring_provider_npi:'1083712934', referring_provider_phone:'(954) 555-0520', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Rachel Carter', parent_relationship:'Mother', parent_email:'r.carter@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-03-28', stage_entered_at:'2026-04-01T08:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c4',  name:'Emma Thompson',   dob:'2020-01-30', phone:'(561) 555-0167', address:'9400 Glades Rd, Boca Raton, FL 33434',     insurer_name:'Humana',       health_plan_name:'Humana Healthy Horizons in Florida',          member_id:'HUM-334490', group_number:'G-98712', referring_provider:'Dr. Robert Chen',    referring_provider_npi:'1336198450', referring_provider_phone:'(561) 555-0200', gender:'Female', diagnosis:'ASD Level 3', icd10:'F84.0', parent_name:'Linda Thompson', parent_relationship:'Mother', parent_email:'linda.thompson@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-04-02', stage_entered_at:'2026-04-22T09:15:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c5',  name:'Oliver Patel',    dob:'2018-06-12', phone:'(786) 555-0134', address:'2100 Biscayne Blvd, Miami, FL 33137',      insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-778823', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     referring_provider_npi:'1619028374', referring_provider_phone:'(305) 555-0220', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Priya Patel', parent_relationship:'Mother', parent_email:'priya.patel@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-03-15', stage_entered_at:'2026-06-04T09:00:00.000Z', stage:'submitted',       denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c6',  name:'Ava Nguyen',      dob:'2019-09-05', phone:'(305) 555-0189', address:'5540 NW 7th Ave, Miami, FL 33127',         insurer_name:'Aetna',        health_plan_name:'Aetna Better Health of Florida',              member_id:'AET-991102', group_number:'G-44210', referring_provider:'Dr. Luis Mendez',    referring_provider_npi:'1750892013', referring_provider_phone:'(305) 555-0630', gender:'Female', diagnosis:'ASD Level 1', icd10:'F84.0', parent_name:'Trang Nguyen', parent_relationship:'Mother', parent_email:'trang.nguyen@gmail.com', preferred_language:'Vietnamese', source:'crm_created', referral_date:'2026-02-28', stage_entered_at:'2026-05-19T14:00:00.000Z', stage:'submitted',       denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c7',  name:'Ethan Williams',  dob:'2017-04-18', phone:'(954) 555-0156', address:'800 E Broward Blvd, Ft. Lauderdale, FL',   insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-447721', group_number:'G-12390', referring_provider:'Dr. Sarah Johnson',  referring_provider_npi:'1821934056', referring_provider_phone:'(954) 555-0740', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Michael Williams', parent_relationship:'Father', parent_email:'m.williams@gmail.com', preferred_language:'English', source:'imported',    referral_date:'2026-02-10', stage_entered_at:'2026-04-05T10:00:00.000Z', stage:'denied',          denial_reason:'Medical necessity not established', bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c8',  name:'Isabella Moore',  dob:'2018-12-25', phone:'(786) 555-0177', address:'6100 SW 57th Ave, South Miami, FL 33143',  insurer_name:'UnitedHealth', health_plan_name:'UnitedHealthcare Community Plan of Florida',   member_id:'UHC-883312', group_number:'G-77811', referring_provider:'Dr. Mark Davis',     referring_provider_npi:'1902847123', referring_provider_phone:'(786) 555-0850', gender:'Female', diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Sarah Moore', parent_relationship:'Mother', parent_email:'s.moore@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-01-20', stage_entered_at:'2026-03-10T09:00:00.000Z', stage:'authorized',      denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-31', reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c9',  name:'Mason Garcia',    dob:'2019-03-14', phone:'(305) 555-0145', address:'11200 SW 8th St, Miami, FL 33174',         insurer_name:'Humana',       health_plan_name:'Humana Healthy Horizons in Florida',          member_id:'HUM-229908', group_number:'G-98712', referring_provider:'Dr. Patricia Lee',   referring_provider_npi:'1073619284', referring_provider_phone:'(305) 555-0960', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Carmen Garcia', parent_relationship:'Mother', parent_email:'carmen.garcia@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-01-05', stage_entered_at:'2026-03-25T08:30:00.000Z', stage:'staffing',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-12-15', reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c10', name:'Charlotte Davis', dob:'2018-08-22', phone:'(561) 555-0122', address:'3400 PGA Blvd, Palm Beach Gardens, FL',    insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-556634', group_number:'G-55023', referring_provider:'Dr. James Wilson',   referring_provider_npi:'1154728390', referring_provider_phone:'(561) 555-0170', gender:'Female', diagnosis:'ASD Level 1', icd10:'F84.0', parent_name:'Jennifer Davis', parent_relationship:'Mother', parent_email:'j.davis@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2025-11-12', stage_entered_at:'2026-01-20T10:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'u2', rbt_id:'u4', auth_expiry_date:'2026-07-31', reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c11', name:'James Martinez',  dob:'2017-05-30', phone:'(786) 555-0190', address:'1800 Coral Way, Miami, FL 33145',          insurer_name:'Aetna',        health_plan_name:'Aetna Better Health of Florida',              member_id:'AET-664433', group_number:'G-44210', referring_provider:'Dr. Angela Rivera',  referring_provider_npi:'1235816047', referring_provider_phone:'(786) 555-0280', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Rosa Martinez', parent_relationship:'Mother', parent_email:'r.martinez@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2025-10-08', stage_entered_at:'2025-12-15T09:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'s1', rbt_id:'s5', auth_expiry_date:'2026-05-20', reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c12', name:'Amelia Wilson',   dob:'2020-02-14', phone:'(954) 555-0133', address:'2800 Hollywood Blvd, Hollywood, FL 33020', insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-112298', group_number:'G-12390', referring_provider:'Dr. Kevin Brown',    referring_provider_npi:'1316924875', referring_provider_phone:'(954) 555-0390', gender:'Female', diagnosis:'ASD Level 3', icd10:'F84.0', parent_name:'Thomas Wilson', parent_relationship:'Father', parent_email:'t.wilson@gmail.com', preferred_language:'English', source:'crm_created', referral_date:'2026-03-01', stage_entered_at:'2026-03-05T11:00:00.000Z', stage:'auth_assessment', denial_reason:null,                         bcba_id:'s2', rbt_id:null, auth_expiry_date:null,        reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c13', name:'Marcus Rivera',   dob:'2017-03-04', phone:'(305) 555-0302', address:'4820 SW 137th Ave, Miami, FL 33175',       insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-774421', group_number:'G-12390', referring_provider:'Dr. Adriana Costa',  referring_provider_npi:'1407536982', referring_provider_phone:'(305) 555-0410', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Daniela Rivera', parent_relationship:'Mother', parent_email:'d.rivera@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-05-01', stage_entered_at:'2026-05-02T08:00:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c14', name:'Diego Reyes',     dob:'2018-06-12', phone:'(786) 555-0211', address:'3450 NW 5th Ave, Miami, FL 33127',         insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-884432', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     referring_provider_npi:'1619028374', referring_provider_phone:'(305) 555-0220', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Ana Reyes', parent_relationship:'Mother', parent_email:'ana.reyes@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-03-20', stage_entered_at:'2026-05-28T10:00:00.000Z', stage:'plan_draft',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c15', name:'Sofia Ramirez',   dob:'2019-03-14', phone:'(954) 555-0277', address:'4200 Stirling Rd, Hollywood, FL 33021',      insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-338821', group_number:'G-12390', referring_provider:'Dr. Patricia Lee',   referring_provider_npi:'1073619284', referring_provider_phone:'(305) 555-0960', gender:'Female', diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Elena Ramirez', parent_relationship:'Mother', parent_email:'e.ramirez@gmail.com', preferred_language:'Spanish', source:'crm_created', referral_date:'2025-05-10', stage_entered_at:'2025-07-01T09:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'s1', rbt_id:'s7', auth_expiry_date:'2026-09-01', reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
 ].map(c => {
   const cl = mkChecklist();
   // Pre-complete c7 (Ethan Williams) denied checklist so resolve button is enabled
@@ -1947,7 +1947,6 @@ export const SEED_CLIENTS = () => [
     cl.submitted      = { plan_submitted:true, plan_submission_date:'2026-01-05', approval_uploaded:true, auth_reference_number:'CIG-AUT-2026-0105-9901', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2026-01-20', auth_end_date:'2026-07-20' };
     cl.authorized     = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Wed/Fri 9am–1pm, Tue/Thu 10am–12pm', session_location:'Center-based', scheduled_hours_week:'19', scheduled_97155_week:'3', scheduled_97156_week:'2' };
     cl.staffing       = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2026-01-20', first_session_time:'9:00 AM', session_location:'Center-based' };
-    cl.services_reauth = { progress_report:true, updated_graphs:true, vineland3_updated:true, basc3_updated:false, reauth_submitted:false, reauth_submission_date:'', hours_consumed_97153:'72', hours_consumed_97155:'11', hours_consumed_97156:'7' };
 
     const assessment_session_charlotte = (() => {
       const s = makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes', CHARLOTTE_INTERVIEW_DATA, {
@@ -2293,7 +2292,6 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
     cl.submitted      = { plan_submitted:true, plan_submission_date:'2025-12-01', approval_uploaded:true, auth_reference_number:'AET-AUT-2025-1201-7742', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-12-15', auth_end_date:'2026-06-15' };
     cl.authorized     = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Wed/Fri 10am–2pm, Tue/Thu 9am–11am', session_location:'Center-based', scheduled_hours_week:'19', scheduled_97155_week:'3', scheduled_97156_week:'2' };
     cl.staffing       = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2025-12-15', first_session_time:'10:00 AM', session_location:'Center-based' };
-    cl.services_reauth = { progress_report:false, updated_graphs:false, vineland3_updated:false, basc3_updated:false, reauth_submitted:false, reauth_submission_date:'', hours_consumed_97153:'', hours_consumed_97155:'', hours_consumed_97156:'' };
 
     const assessment_session_james = (() => {
       const s = makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Rachel Kim', JAMES_INTERVIEW_DATA, {
@@ -2361,8 +2359,98 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
       },
     ];
 
+    const C11_SKILL_SESSION_LOGS = [
+      {
+        id: 'slog_c11_sk1', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
+        sessionDate: '2025-12-22', sessionNumber: 1, sessionType: 'skill',
+        notes: 'Baseline skill session. James required full verbal prompt for all mand opportunities. 2-step instructions required gestural support for step 2 in every trial. FCT break card introduced.',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c11-1', skillName: 'Functional Communication (Mand Training)', domain: 'Communication', isNew: false, baselinePercent: 20, accuracyPercent: 20, currentStoNumber: 1, stoStatus: 'in_progress' },
+          { skillId: 'sg-c11-2', skillName: 'Following 2-Step Instructions',           domain: 'Academic',       isNew: false, baselinePercent: 15, accuracyPercent: 15, currentStoNumber: 1, stoStatus: 'in_progress' },
+        ],
+        createdAt: '2025-12-22T13:00:00.000Z',
+      },
+      {
+        id: 'slog_c11_sk2', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
+        sessionDate: '2026-01-26', sessionNumber: 2, sessionType: 'skill',
+        notes: 'Mand training improving — gestural model faded to indirect verbal prompt on 3 trials. James initiated "break" request once independently during a demand. 2-step instructions: step 1 completing well; step 2 still needs gestural support.',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c11-1', skillName: 'Functional Communication (Mand Training)', domain: 'Communication', isNew: false, baselinePercent: 20, accuracyPercent: 32, currentStoNumber: 1, stoStatus: 'in_progress' },
+          { skillId: 'sg-c11-2', skillName: 'Following 2-Step Instructions',           domain: 'Academic',       isNew: false, baselinePercent: 15, accuracyPercent: 24, currentStoNumber: 1, stoStatus: 'in_progress' },
+        ],
+        createdAt: '2026-01-26T13:00:00.000Z',
+      },
+      {
+        id: 'slog_c11_sk3', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
+        sessionDate: '2026-03-02', sessionNumber: 3, sessionType: 'skill',
+        notes: 'Strong session. Mand training hitting STO 1 threshold — James independently requesting preferred items and break with gestural model only. 2-step instructions advancing; step 2 gestural support faded in preferred-material trials.',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c11-1', skillName: 'Functional Communication (Mand Training)', domain: 'Communication', isNew: false, baselinePercent: 20, accuracyPercent: 46, currentStoNumber: 1, stoStatus: 'in_progress' },
+          { skillId: 'sg-c11-2', skillName: 'Following 2-Step Instructions',           domain: 'Academic',       isNew: false, baselinePercent: 15, accuracyPercent: 38, currentStoNumber: 1, stoStatus: 'in_progress' },
+        ],
+        createdAt: '2026-03-02T13:00:00.000Z',
+      },
+      {
+        id: 'slog_c11_sk4', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
+        sessionDate: '2026-04-06', sessionNumber: 4, sessionType: 'skill',
+        notes: 'Mand Training advanced to STO 2 — requesting across item, activity, and break categories. Notable: spontaneous "help" mand observed during a difficult task. 2-step instructions at STO 1 target with preferred materials; advancing toward STO 2.',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c11-1', skillName: 'Functional Communication (Mand Training)', domain: 'Communication', isNew: false, baselinePercent: 20, accuracyPercent: 58, currentStoNumber: 2, stoStatus: 'in_progress' },
+          { skillId: 'sg-c11-2', skillName: 'Following 2-Step Instructions',           domain: 'Academic',       isNew: false, baselinePercent: 15, accuracyPercent: 42, currentStoNumber: 1, stoStatus: 'in_progress' },
+        ],
+        createdAt: '2026-04-06T13:00:00.000Z',
+      },
+    ];
+
+    const C11_CT_LOGS = [
+      {
+        id: 'ctlog_c11_1', clientId: 'c11', bcbaId: 's1', bcbaName: 'Dr. Rachel Kim',
+        sessionDate: '2026-01-15', sessionNumber: 1,
+        notes: 'First caregiver training session with Rosa Martinez (via Spanish interpreter). Explained NET framework using visual examples. Role-played embedding mand trials during snack. Rosa highly engaged and asked great questions. Behavior-specific praise introduced with modeling.',
+        trainingEntries: [
+          { targetId: 'ctgt_jm_1', goalName: 'Natural environment teaching',  baselinePercent: 30, sessionPercent: 30, stoStatus: 'in_progress', currentStoNumber: 1 },
+          { targetId: 'ctgt_jm_2', goalName: 'Behavior-specific praise',       baselinePercent: 40, sessionPercent: 40, stoStatus: 'in_progress', currentStoNumber: 1 },
+        ],
+        createdAt: '2026-01-15T11:00:00.000Z',
+      },
+      {
+        id: 'ctlog_c11_2', clientId: 'c11', bcbaId: 's1', bcbaName: 'Dr. Rachel Kim',
+        sessionDate: '2026-02-19', sessionNumber: 2,
+        notes: 'Rosa demonstrated NET during play with Legos — paused activity and waited for James to mand for "more." Delivered behavior-specific praise 4 of 6 observed opportunities (improving from baseline). Written cue card in use. Reviewed video of home session she recorded.',
+        trainingEntries: [
+          { targetId: 'ctgt_jm_1', goalName: 'Natural environment teaching',  baselinePercent: 30, sessionPercent: 44, stoStatus: 'in_progress', currentStoNumber: 1 },
+          { targetId: 'ctgt_jm_2', goalName: 'Behavior-specific praise',       baselinePercent: 40, sessionPercent: 56, stoStatus: 'in_progress', currentStoNumber: 1 },
+        ],
+        createdAt: '2026-02-19T11:00:00.000Z',
+      },
+      {
+        id: 'ctlog_c11_3', clientId: 'c11', bcbaId: 's1', bcbaName: 'Dr. Rachel Kim',
+        sessionDate: '2026-03-19', sessionNumber: 3,
+        notes: 'Rosa meeting STO 1 for NET — embedding at least 3 trials per observed routine independently with cue card. Praise now highly specific and immediate. Moving toward STO 2: fading written cue card to self-monitoring checklist.',
+        trainingEntries: [
+          { targetId: 'ctgt_jm_1', goalName: 'Natural environment teaching',  baselinePercent: 30, sessionPercent: 58, stoStatus: 'in_progress', currentStoNumber: 2 },
+          { targetId: 'ctgt_jm_2', goalName: 'Behavior-specific praise',       baselinePercent: 40, sessionPercent: 68, stoStatus: 'in_progress', currentStoNumber: 2 },
+        ],
+        createdAt: '2026-03-19T11:00:00.000Z',
+      },
+      {
+        id: 'ctlog_c11_4', clientId: 'c11', bcbaId: 's1', bcbaName: 'Dr. Rachel Kim',
+        sessionDate: '2026-04-16', sessionNumber: 4,
+        notes: 'Excellent session. NET delivery independent across meals and play without cue card. Behavior-specific praise generalized — Rosa coaching James\'s older sibling during observed interaction. STO 2 approaching for both targets. Discussed home carry-over plan.',
+        trainingEntries: [
+          { targetId: 'ctgt_jm_1', goalName: 'Natural environment teaching',  baselinePercent: 30, sessionPercent: 66, stoStatus: 'in_progress', currentStoNumber: 2 },
+          { targetId: 'ctgt_jm_2', goalName: 'Behavior-specific praise',       baselinePercent: 40, sessionPercent: 74, stoStatus: 'in_progress', currentStoNumber: 2 },
+        ],
+        createdAt: '2026-04-16T11:00:00.000Z',
+      },
+    ];
+
     const smart_session_id_james = assessment_session_james.id;
-    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_james, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session: assessment_session_james, service_session_logs: C11_SERVICE_SESSION_LOGS, caregiver_training_session_logs: [] };
+    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_james, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session: assessment_session_james, service_session_logs: [...C11_SERVICE_SESSION_LOGS, ...C11_SKILL_SESSION_LOGS], caregiver_training_session_logs: C11_CT_LOGS };
   }
 
   // ── c15 Sofia Ramirez — services (Florida Blue, completed reassessment) ──────
@@ -2375,7 +2463,10 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
     cl.submitted       = { plan_submitted:true, plan_submission_date:'2025-06-25', approval_uploaded:true, auth_reference_number:'FLB-AUT-2025-0625-5588', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-07-01', auth_end_date:'2026-01-01' };
     cl.authorized      = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Wed/Fri 9am–1pm, Tue/Thu 10am–12pm', session_location:'Home-based', scheduled_hours_week:'20', scheduled_97155_week:'3', scheduled_97156_week:'2' };
     cl.staffing        = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2025-07-01', first_session_time:'9:00 AM', session_location:'Home-based' };
-    cl.services_reauth = { progress_report:true, updated_graphs:true, vineland3_updated:true, basc3_updated:false, reauth_submitted:true, reauth_submission_date:'2025-12-10', hours_consumed_97153:'72', hours_consumed_97155:'11', hours_consumed_97156:'7' };
+    // Sofia's initial authorization — shown in the "Past Authorizations" history panel
+    c.auth_cycles_history = [
+      { cycle:0, label:'Initial Authorization', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-07-01', auth_end_date:'2026-01-01', auth_reference_number:'FLB-AUT-2025-0625-5588', closed_at:'2026-01-15T09:00:00.000Z' },
+    ];
 
     // ── Behavior targets from initial assessment plan ──────────────────────────
     const C15_BEHAVIOR_TARGETS = [
@@ -2541,11 +2632,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-2', behaviorName:'Self-Injurious Behavior', isNew:false, isMonitoring:false, baselineFrequency:5, sessionFrequency:5,   currentStoNumber:1, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:6,   currentStoNumber:1, stoStatus:'in_progress' },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:20, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:30, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:25, currentStoNumber:1, stoStatus:'in_progress' },
-        ],
+        skillEntries:[],
         createdAt:'2025-07-15T10:00:00.000Z',
       },
       {
@@ -2557,11 +2644,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-2', behaviorName:'Self-Injurious Behavior', isNew:false, isMonitoring:false, baselineFrequency:5, sessionFrequency:4,   currentStoNumber:1, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:5,   currentStoNumber:1, stoStatus:'in_progress' },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:28, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:35, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:30, currentStoNumber:1, stoStatus:'in_progress' },
-        ],
+        skillEntries:[],
         createdAt:'2025-07-29T10:00:00.000Z',
       },
       {
@@ -2584,15 +2667,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
             bcbaLtoText:'Zero incidents of property destruction across all settings for 3 consecutive weeks',
           },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:38, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:42, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:35, currentStoNumber:1, stoStatus:'in_progress' },
-          // New skill observed: peer play emerging during group activity
-          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:true,
-            accuracyPercent:28, firstSeenDate:'2025-08-12', monitorOnly:true,
-          },
-        ],
+        skillEntries:[],
         createdAt:'2025-08-12T10:00:00.000Z',
       },
       {
@@ -2605,12 +2680,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:4,   currentStoNumber:1, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:1.5, baselineFrequency:null },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:48, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:50, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:40, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:32 },
-        ],
+        skillEntries:[],
         createdAt:'2025-08-26T10:00:00.000Z',
       },
       {
@@ -2623,12 +2693,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:3.5, currentStoNumber:2, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:1, baselineFrequency:null },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:58, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:56, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:45, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:35 },
-        ],
+        skillEntries:[],
         createdAt:'2025-09-09T10:00:00.000Z',
       },
       {
@@ -2641,12 +2706,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:3,   currentStoNumber:2, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:0.8, baselineFrequency:null },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:66, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:60, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:50, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:38 },
-        ],
+        skillEntries:[],
         createdAt:'2025-09-23T10:00:00.000Z',
       },
       {
@@ -2659,12 +2719,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:2.5, currentStoNumber:2, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:0.5, baselineFrequency:null },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:75, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:65, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:55, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:40 },
-        ],
+        skillEntries:[],
         createdAt:'2025-09-30T10:00:00.000Z',
       },
       {
@@ -2677,13 +2732,114 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:2.2, currentStoNumber:3, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:0.3, baselineFrequency:null },
         ],
+        skillEntries:[],
+        createdAt:'2025-10-14T10:00:00.000Z',
+      },
+
+      // ── Skill sessions (separate from behavior sessions, same progression) ──
+      {
+        id:'slog_c15_sk1', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-07-15', sessionNumber:1, sessionType:'skill',
+        notes:'Baseline skill session. AAC initiated with full physical prompting — Sofia activating device with hand-over-hand. Motor imitation responding to gross-motor model with 1-step delay. Handwashing task analysis initiated.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:20, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:30, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:25, currentStoNumber:1, stoStatus:'in_progress' },
+        ],
+        createdAt:'2025-07-15T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk2', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-07-29', sessionNumber:2, sessionType:'skill',
+        notes:'AAC requesting with gestural model — partial physical prompt faded to gestural. Motor imitation improving, now initiating within 2s of model. Handwashing step completion improving with visual task analysis.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:28, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:35, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:30, currentStoNumber:1, stoStatus:'in_progress' },
+        ],
+        createdAt:'2025-07-29T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk3', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-08-12', sessionNumber:3, sessionType:'skill',
+        notes:'Strong AAC progress — independently navigating core vocabulary screen. Peer play (sharing) spontaneously observed during group activity — will monitor. Handwashing crossing 3/8 steps independently.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:38, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:42, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:35, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:true,
+            accuracyPercent:28, firstSeenDate:'2025-08-12', monitorOnly:true,
+          },
+        ],
+        createdAt:'2025-08-12T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk4', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-08-26', sessionNumber:4, sessionType:'skill',
+        notes:'AAC crossing 40% — moved to STO 2 (requesting across 5 categories). Motor imitation at STO 1 target. Handwashing 4/8 steps. Peer play monitoring: spontaneous sharing observed twice.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:48, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:50, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:40, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:32 },
+        ],
+        createdAt:'2025-08-26T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk5', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-09-09', sessionNumber:5, sessionType:'skill',
+        notes:'Excellent session across all three programs. Imitation and handwashing both advance to STO 2. AAC above 55% with independent requests across food, activities, and people.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:58, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:56, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:45, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:35 },
+        ],
+        createdAt:'2025-09-09T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk6', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-09-23', sessionNumber:6, sessionType:'skill',
+        notes:'AAC approaching STO 2 target — requesting across 4 of 5 categories. Motor imitation generalizing to novel RBT. Handwashing completing 5/8 steps independently.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:66, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:60, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:50, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:38 },
+        ],
+        createdAt:'2025-09-23T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk7', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-09-30', sessionNumber:7, sessionType:'skill',
+        notes:'Strong continued progress. AAC at 75% — Sofia consistently selecting icons across breakfast, play, and transition contexts. Imitation generalizing to fine-motor actions. Handwashing 5/8 steps with minimal verbal prompts.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:75, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:65, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:55, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:40 },
+        ],
+        createdAt:'2025-09-30T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk8', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-10-14', sessionNumber:8, sessionType:'skill',
+        notes:'AAC mastery achieved — 82% accuracy requesting independently across 5 core categories with ≤1 prompt in 4/5 trials. STO 2 met. Motor imitation and handwashing continuing strong progress toward STO 2 targets.',
+        behaviorEntries:[],
         skillEntries:[
           { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:82, currentStoNumber:2, stoStatus:'met' },
           { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:68, currentStoNumber:2, stoStatus:'in_progress' },
           { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:58, currentStoNumber:2, stoStatus:'in_progress' },
           { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:42 },
         ],
-        createdAt:'2025-10-14T10:00:00.000Z',
+        createdAt:'2025-10-14T13:00:00.000Z',
       },
     ];
 

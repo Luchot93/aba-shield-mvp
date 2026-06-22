@@ -318,6 +318,53 @@ Key payers in scope: BCBS (via Lucet/WebPass), Cigna/Evernorth, Sunshine Health 
 
 ## Completed Work (this branch)
 
+**feat/reauth-pipeline-cycle** — Full Reauthorization Pipeline Cycle (replaces old Reauth tab)
+
+### Architecture change: Reauth tab → Pipeline cycle
+
+The old "Reauthorization" tab in the Services stage has been removed entirely. Reauthorization now works as a proper pipeline re-entry: clicking "Start Reauthorization →" moves the client card back to the **Submitted** stage with cycle tracking, CPT hours from the reassessment, and a full history of past authorizations.
+
+### New data fields on clients
+
+```js
+reauth_cycle: 0,               // 0 = initial auth, 1 = first reauth, etc.
+reauth_requested_hours: {      // CPT hours from the completed reassessment (requested, not yet approved)
+  '97153': '', '97155': '', '97156': ''
+},
+auth_cycles_history: [],       // snapshot array of each completed authorization cycle
+```
+
+`auth_cycles_history` entry shape: `{ cycle, label, authorized_97153/155/156, auth_start_date, auth_end_date, auth_reference_number, closed_at }`.
+
+**Removed field:** `reauth_active` — deprecated and removed from all logic across the codebase.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `src/constants/checklist.js` | Removed `services_reauth` section from `mkChecklist()` and removed `REAUTH_ITEMS` export |
+| `src/constants/seedData.js` | All 15 clients: `reauth_active` → `reauth_cycle/reauth_requested_hours/auth_cycles_history`; Sofia (c15) gets demo `auth_cycles_history` entry |
+| `src/features/pipeline/components/KanbanCard.jsx` | Removed "Services · Reauth" badge; added "↻ Reauth Cycle N" teal badge; simplified auth expiry banner to date-only logic |
+| `src/features/pipeline/PipelinePage.jsx` | New client template uses new fields instead of `reauth_active` |
+| `src/features/clients/ClientsPage.jsx` | Same |
+| `src/features/clients/components/ImportPanel.jsx` | Same |
+| `src/App.jsx` | Removed `reauth_active` from notification logic; date-based expiry logic only |
+| `src/features/metrics/MetricsPage.jsx` | "Reauth in progress" KPI: `reauth_active` → `reauth_cycle > 0 && stage in [submitted/authorized/staffing]` |
+| `src/features/assessment/ReassessmentReviewPage.jsx` | Removed `services_reauth.progress_report` auto-complete from export handler |
+| `src/features/detail/ClientDetailPage.jsx` | Removed Reauth tab; added "↻ Reauth Cycle N" badge in header; added teal CPT box in Submitted stage; added "Past Authorizations" collapsible; rewrote `onStartReauth` handler; `doAdvance` → Authorized auto-copies `auth_end_date` to `auth_expiry_date` |
+| `src/features/detail/ReassessmentCyclePanel.jsx` | Added `submissionChecklist`, `onSubmissionChecklistChange`, `submissionReady` props; `ReauthSubmissionChecklist` now renders inline above the CTA; "Start Reauthorization →" button gated on `submissionReady` |
+
+### Key behaviors
+
+- **"Start Reauthorization →" gate**: button disabled until `submissionChecklist.vineland && .basc && .finalUploaded` are all true
+- **Pipeline re-entry**: clicking the button snapshots current auth into `auth_cycles_history` (deduped by `cycle` number to prevent double-entry), increments `reauth_cycle`, sets `reauth_requested_hours` from the reassessment's `cptHours`, resets the submitted checklist, and moves the client to `stage: 'submitted'`
+- **Teal CPT box**: shown in the Submitted stage checklist when `reauth_cycle > 0`, reads `reauth_requested_hours` — replaces the plan-draft CPT display which is filtered out for reauth cycles
+- **Past Authorizations collapsible**: shown in the checklist panel for any client with `auth_cycles_history.length > 0`; entries shown in reverse chronological order
+- **Cycle badge**: "↻ Reauth Cycle N" shown on Kanban card and client detail header when `reauth_cycle > 0`
+- **Submitted → Authorized**: `doAdvance` auto-copies `checklist.submitted.auth_end_date` → `client.auth_expiry_date` when advancing to Authorized
+
+---
+
 **feat/reassessment-workflow-pt4-client-view** — Reassessment Cycle Summary Panel in Client Detail View
 
 ### Track 1: ReassessmentCyclePanel.jsx — new component

@@ -153,9 +153,10 @@ export default function MetricsPage({ clients, staff }) {
      ROW 2 — Operational alert cards
   ════════════════════════════════════════ */
 
-  // Reauth in progress
+  // Reauth in progress — clients actively cycling through the reauth pipeline
   const reauthActiveCount = clients.filter(c =>
-    c.stage === 'services' && c.reauth_active === true
+    (c.reauth_cycle ?? 0) > 0 &&
+    ['submitted', 'authorized', 'staffing'].includes(c.stage)
   ).length;
   const reauthActiveColor = reauthActiveCount > 0 ? '#D97706' : '#6B7280';
 

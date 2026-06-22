@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { STAGES, SM, NEXT_STAGE } from '../../constants/stages.js';
-import { REAUTH_ITEMS, getStageItems } from '../../constants/checklist.js';
+import { getStageItems } from '../../constants/checklist.js';
 import { itemComplete, itemBlocks } from '../../utils/checklist.js';
 import { mkNotif } from '../../utils/notifications.js';
 import { isAdmin, canEdit } from '../../utils/permissions.js';
@@ -18,7 +18,7 @@ import BehaviorSessionModal    from './BehaviorSessionModal.jsx';
 import SkillSessionModal       from './SkillSessionModal.jsx';
 import CaregiverTrainingLogPanel from './CaregiverTrainingLogPanel.jsx';
 import CaregiverTrainingLogModal from './CaregiverTrainingLogModal.jsx';
-import ReassessmentCyclePanel    from './ReassessmentCyclePanel.jsx';
+import ReassessmentCyclePanel, { ReauthSubmissionChecklist } from './ReassessmentCyclePanel.jsx';
 
 export default function ClientDetailPage({ clientId, clients, staff, setClients, onBack, backLabel, currentUser, addNotif, onClientAdvanced, onOpenAssessment, initialServicesTab }) {
   useBodyScrollLock();
@@ -39,6 +39,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [logSkillSessionModalOpen,     setLogSkillSessionModalOpen]     = useState(false);
   const [logCaregiverSessionModalOpen, setLogCaregiverSessionModalOpen] = useState(false);
   const [servicesTab,                  setServicesTab]                  = useState(initialServicesTab ?? 'sessions');
+  const [historyOpen,                  setHistoryOpen]                  = useState(false);
   const pickerRef = useRef(null);
   const saveTimers = useRef({});
 
@@ -113,9 +114,17 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const isReadOnly   = viewStage !== null;
   const stageToShow  = isReadOnly ? viewStage : client.stage;
   const nextStage    = NEXT_STAGE[client.stage];
-  const isReauthSvc  = !isReadOnly && client.stage === 'services' && client.reauth_active;
   const serviceTabsActive = client.stage === 'services' && !isReadOnly;
-  const displayItems = isReauthSvc ? REAUTH_ITEMS : getStageItems(stageToShow);
+  const isReauthCycle = (client.reauth_cycle ?? 0) > 0;
+  const displayItems = (() => {
+    const items = getStageItems(stageToShow);
+    // For reauth cycles in submitted stage: hide the planDraftHours auto row
+    // (the teal CPT box above the checklist shows the correct reassessment-requested hours)
+    if (isReauthCycle && stageToShow === 'submitted') {
+      return items.filter(it => it.key !== 'cpt_units_requested');
+    }
+    return items;
+  })();
   const completeCount = displayItems.filter(it => itemComplete(it, client, staff)).length;
   const allDone   = displayItems.length > 0 && completeCount === displayItems.length;
   const hasBlock  = displayItems.some(it => itemBlocks(it, client, staff));
@@ -181,7 +190,13 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   };
 
   const doAdvance = toStage => {
-    patchClient({ stage: toStage, stage_entered_at: new Date().toISOString() });
+    // When advancing to authorized (reauth cycle): update auth_expiry_date from the new auth period
+    const extraPatch = {};
+    if (toStage === 'authorized') {
+      const newAuthEnd = client.checklist?.submitted?.auth_end_date;
+      if (newAuthEnd) extraPatch.auth_expiry_date = newAuthEnd;
+    }
+    patchClient({ stage: toStage, stage_entered_at: new Date().toISOString(), ...extraPatch });
     pushLog(`Moved to ${SM[toStage].label}`);
     const isAuth = toStage === 'authorized';
     addNotif(mkNotif(
@@ -316,67 +331,92 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
       </div>
     );
 
-    return (
-      <div className={`py-3.5 border-b border-stone-100 last:border-0 ${blocks ? 'bg-red-50/40 -mx-5 px-5 rounded' : ''}`}>
-          <div className="flex-1 min-w-0">
-            {item.type === 'checkbox' && (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  {readOnly
-                    ? <span className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${complete ? 'border-teal-500 bg-teal-500' : 'border-slate-300 bg-white'}`}>
-                        {complete && <span style={{ color:'#fff', fontSize:'9px', fontWeight:700 }}>✓</span>}
-                      </span>
-                    : <input type="checkbox" checked={!!clVal}
-                        onChange={e => { patchCL(item.clSec, item.key, e.target.checked); if (e.target.checked) pushLog(`Checked: ${item.label}`); }}
-                        className="w-4 h-4 rounded accent-teal-600 cursor-pointer flex-shrink-0"/>
-                  }
-                  <div className="min-w-0">
-                    <span className={`text-sm leading-snug ${complete ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{item.label}</span>
-                    {!readOnly && item.mandatory && !complete && <span className="text-[10px] font-bold text-red-600 px-1.5 py-0.5 bg-red-50 border border-red-200 rounded ml-1 flex-shrink-0">MANDATORY</span>}
-                  </div>
-                </div>
-                {complete && (
-                  <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0" style={{ background:'#14B8A6' }}>
-                    <span style={{ color:'#fff', fontSize:'11px', fontWeight:700 }}>✓</span>
-                  </div>
-                )}
-              </div>
+    // ── Card-style checkbox ────────────────────────────────────────────────
+    if (item.type === 'checkbox') {
+      const assignedBcba = item.key === 'bcba_matches_auth' ? staff.find(s => s.id === client.bcba_id) : null;
+      return (
+        <div
+          className={`mb-2 flex items-start gap-3 px-4 py-3 rounded-lg border transition-colors select-none
+            ${complete
+              ? 'bg-emerald-50 border-emerald-200'
+              : blocks
+                ? 'bg-red-50/60 border-red-200'
+                : 'bg-white border-stone-200 hover:border-teal-200 hover:bg-teal-50/30'
+            } ${!readOnly ? 'cursor-pointer' : ''}`}
+          onClick={!readOnly ? () => {
+            const newVal = !clVal;
+            patchCL(item.clSec, item.key, newVal);
+            if (newVal) pushLog(`Checked: ${item.label}`);
+          } : undefined}
+        >
+          <div className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded flex items-center justify-center border transition-colors
+            ${complete ? 'bg-teal-600 border-teal-600' : 'border-stone-300 bg-white'}`}>
+            {complete && (
+              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 10">
+                <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             )}
-
-            {/* BCBA verification helper — shows assigned BCBA name + NPI under the bcba_matches_auth checkbox */}
-            {item.type === 'checkbox' && item.key === 'bcba_matches_auth' && (() => {
-              const assignedBcba = staff.find(s => s.id === client.bcba_id);
-              if (!assignedBcba) return (
-                <p className="mt-1.5 text-[11px] text-amber-600 pl-6">No BCBA assigned — assign one first</p>
-              );
-              return (
-                <p className="mt-1.5 text-[11px] text-slate-400 pl-6">
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={`text-sm font-semibold leading-snug ${complete ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+              {item.label}
+            </p>
+            {item.sublabel && (
+              <p className="mt-0.5 text-[11px] text-slate-400 leading-snug">{item.sublabel}</p>
+            )}
+            {item.note && (
+              <p className="mt-1 text-[11px] font-medium text-teal-700 bg-teal-50 border border-teal-100 rounded px-2 py-0.5 inline-block">{item.note}</p>
+            )}
+            {!readOnly && item.mandatory && !complete && (
+              <span className="inline-block mt-1 text-[10px] font-bold text-red-600 px-1.5 py-0.5 bg-red-50 border border-red-200 rounded">MANDATORY</span>
+            )}
+            {item.key === 'bcba_matches_auth' && (
+              assignedBcba ? (
+                <p className="mt-1 text-[11px] text-slate-400">
                   Assigned: <span className="font-semibold text-slate-600">{assignedBcba.name}</span>
                   {assignedBcba.npi
                     ? <> · NPI <span style={{ fontFamily:'DM Mono, monospace' }} className="text-slate-500">{assignedBcba.npi}</span> — verify both match the authorization letter</>
                     : <> — verify name matches the authorization letter</>
                   }
                 </p>
-              );
-            })()}
-
-            {item.type === 'upload' && (
-              <div className="flex items-center justify-between gap-3">
-                <span className={`text-sm ${complete ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{item.label}</span>
-                {complete
-                  ? <span className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-lg flex-shrink-0">
-                      <span style={{ fontSize:'11px' }}>✓</span> Uploaded
-                    </span>
-                  : readOnly
-                    ? <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-400 bg-stone-50 border border-stone-200 rounded-lg flex-shrink-0">Not uploaded</span>
-                    : <button data-testid={`upload-${item.key}`}
-                        onClick={() => { patchCL(item.clSec, item.key, true); pushDoc(item.key, item.label); pushLog(`Uploaded: ${item.label}`); }}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-teal-700 border border-teal-200 bg-teal-50 rounded-lg hover:bg-teal-100 flex-shrink-0">
-                        <Ico.Upload/> Upload
-                      </button>
-                }
-              </div>
+              ) : (
+                <p className="mt-1 text-[11px] text-amber-600">No BCBA assigned — assign one first</p>
+              )
             )}
+          </div>
+        </div>
+      );
+    }
+
+    // ── Card-style upload ──────────────────────────────────────────────────
+    if (item.type === 'upload') {
+      return (
+        <div className={`mb-2 flex items-center justify-between gap-3 px-4 py-3 rounded-lg border transition-colors
+          ${complete ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-stone-200'}`}>
+          <p className={`text-sm font-semibold ${complete ? 'line-through text-slate-400' : 'text-slate-700'}`}>{item.label}</p>
+          {complete
+            ? <span className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-lg flex-shrink-0">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                  <path d="M2 6l2.5 2.5L10 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                Uploaded
+              </span>
+            : readOnly
+              ? <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-400 bg-stone-50 border border-stone-200 rounded-lg flex-shrink-0">Not uploaded</span>
+              : <button data-testid={`upload-${item.key}`}
+                  onClick={e => { e.stopPropagation(); patchCL(item.clSec, item.key, true); pushDoc(item.key, item.label); pushLog(`Uploaded: ${item.label}`); }}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-teal-700 border border-teal-300 bg-white hover:bg-teal-50 rounded-lg flex-shrink-0 transition-colors">
+                  <Ico.Upload/> Upload
+                </button>
+          }
+        </div>
+      );
+    }
+
+    return (
+      <div className={`py-3.5 border-b border-stone-100 last:border-0 ${blocks ? 'bg-red-50/40 -mx-5 px-5 rounded' : ''}`}>
+          <div className="flex-1 min-w-0">
+            {/* placeholder — checkbox and upload now handled above */}
 
             {item.type === 'file_upload' && (
               <div className="flex items-center justify-between gap-3">
@@ -951,7 +991,14 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 </div>
               </div>
             </div>
-            <StagePill stage={client.stage}/>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <StagePill stage={client.stage}/>
+              {isReauthCycle && (
+                <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+                  ↻ Reauth Cycle {client.reauth_cycle}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* staff row */}
@@ -1027,10 +1074,10 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               </div>
             )}
 
-            {isReauthSvc && !serviceTabsActive && (
+            {isReauthCycle && !serviceTabsActive && (
               <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-2 mb-3 flex items-center gap-2">
                 <span className="text-teal-600 text-base leading-none">↻</span>
-                <span className="text-sm font-semibold text-teal-700">Reauthorization cycle active</span>
+                <span className="text-sm font-semibold text-teal-700">Reauth Cycle {client.reauth_cycle}</span>
                 {client.auth_expiry_date && (
                   <span className="ml-auto text-xs text-teal-600">Auth expires {client.auth_expiry_date}</span>
                 )}
@@ -1046,7 +1093,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                       ? `${SM[viewStage]?.label} checklist`
                       : client.stage === 'denied'
                       ? 'Resolution checklist'
-                      : isReauthSvc
+                      : isReauthCycle && client.stage === 'services'
                       ? 'Reauthorization cycle'
                       : nextStage
                       ? `To advance to ${SM[nextStage].label}`
@@ -1297,9 +1344,77 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
               {/* Scrollable checklist items */}
               <div className="flex-1 overflow-y-auto px-5">
+                {/* Teal CPT box — reauth cycles only, in submitted stage */}
+                {isReauthCycle && stageToShow === 'submitted' && (() => {
+                  const rh = client.reauth_requested_hours ?? {};
+                  if (!Object.values(rh).some(v => v)) return null;
+                  return (
+                    <div className="mb-4 mt-4 rounded-xl border border-teal-100 bg-teal-50/50 px-4 py-3">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-teal-600 mb-2">
+                        Hours Requested in Reassessment
+                      </p>
+                      <div className="flex gap-6">
+                        {[{ code: '97153', label: 'Direct' }, { code: '97155', label: 'BCBA' }, { code: '97156', label: 'Caregiver' }]
+                          .map(({ code, label }) => rh[code] ? (
+                            <div key={code} className="text-center">
+                              <p className="text-[13px] font-bold text-slate-700 tabular-nums">{rh[code]}h/mo</p>
+                              <p className="text-[9px] text-slate-400 uppercase tracking-wide mt-0.5">{code}</p>
+                              <p className="text-[9px] text-slate-400">{label}</p>
+                            </div>
+                          ) : null)}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 {displayItems.length === 0
                   ? <p className="py-6 text-sm text-center text-slate-400">No checklist items.</p>
                   : displayItems.map(item => <React.Fragment key={item.key}>{CheckRow({ item, readOnly: isReadOnly || !userCanEdit })}</React.Fragment>)}
+
+                {/* Past Authorizations — collapsible, shown whenever history exists */}
+                {(client.auth_cycles_history ?? []).length > 0 && (
+                  <div className="mt-4 mb-2 border border-stone-200 rounded-xl overflow-hidden">
+                    <button
+                      onClick={() => setHistoryOpen(h => !h)}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-stone-50 hover:bg-stone-100 transition-colors text-left">
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">
+                        Past Authorizations
+                      </span>
+                      <span className="text-slate-400 text-xs">{historyOpen ? '▴' : '▾'}</span>
+                    </button>
+                    {historyOpen && (
+                      <div className="divide-y divide-stone-100">
+                        {[...client.auth_cycles_history].reverse().map((entry, i) => {
+                          const fmtHistDate = d => d
+                            ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+                            : '';
+                          return (
+                            <div key={i} className="px-4 py-3">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[12px] font-semibold text-slate-700">{entry.label}</span>
+                                {entry.auth_start_date && entry.auth_end_date && (
+                                  <span className="text-[10px] text-slate-400">
+                                    {fmtHistDate(entry.auth_start_date)} – {fmtHistDate(entry.auth_end_date)}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-500 font-mono">
+                                {[
+                                  entry.authorized_97153 && `97153: ${entry.authorized_97153}h`,
+                                  entry.authorized_97155 && `97155: ${entry.authorized_97155}h`,
+                                  entry.authorized_97156 && `97156: ${entry.authorized_97156}h`,
+                                ].filter(Boolean).join(' · ')}
+                              </p>
+                              {entry.auth_reference_number && (
+                                <p className="text-[10px] text-slate-400 mt-0.5">Ref: {entry.auth_reference_number}</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Pinned advance / resolution footer — hidden in read-only mode or for non-editors */}
@@ -1391,9 +1506,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         <p className="text-xs font-semibold flex-1" style={{ color: c.text }}>
                           {daysText} ({fmtEnd})
                         </p>
-                        {isReauthSvc && (
+                        {isReauthCycle && client.stage === 'services' && (
                           <span className="flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-teal-100 text-teal-700">
-                            Reauthorization cycle active
+                            Reassessment due
                           </span>
                         )}
                       </div>
@@ -1409,7 +1524,6 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                       const tabs = [
                         { key: 'sessions',      label: 'Session Logs',     count: totalSessions, badge: null },
                         { key: 'reassessment',  label: 'Reassessment',     count: (client.reassessment_sessions ?? []).length, badge: null },
-                        { key: 'reauth',        label: 'Reauthorization',  count: 0, badge: isReauthSvc ? 'Active' : null },
                       ];
                       return tabs.map(tab => (
                         <button
@@ -1462,57 +1576,16 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   </div>
                 )}
 
-                {/* ── Tab 2: Reauthorization ── */}
-                {servicesTab === 'reauth' && (
-                  isReauthSvc ? (
-                    <div className="flex-1 overflow-y-auto px-5 py-3">
-                      {/* Reassessment CPT hours requested — read-only reference from the reassessment doc */}
-                      {(() => {
-                        const reSession = (client.reassessment_sessions ?? []).find(s => s.status !== 'complete');
-                        const rh = reSession?.cptHours;
-                        if (!rh || !Object.values(rh).some(v => v)) return null;
-                        return (
-                          <div className="mb-4 rounded-xl border border-teal-100 bg-teal-50/50 px-4 py-3">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-teal-600 mb-2">
-                              Hours Requested in Reassessment
-                            </p>
-                            <div className="flex gap-4">
-                              {[
-                                { code: '97153', label: 'Direct' },
-                                { code: '97155', label: 'BCBA' },
-                                { code: '97156', label: 'Caregiver' },
-                              ].map(({ code, label }) => rh[code] ? (
-                                <div key={code} className="text-center">
-                                  <p className="text-[11px] font-bold text-slate-700 tabular-nums">{rh[code]}h/mo</p>
-                                  <p className="text-[9px] text-slate-400 uppercase tracking-wide">{code}</p>
-                                  <p className="text-[9px] text-slate-400">{label}</p>
-                                </div>
-                              ) : null)}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                      {REAUTH_ITEMS.map(item => (
-                        <React.Fragment key={item.key ?? item.id}>
-                          {CheckRow({ item, readOnly: !userCanEdit })}
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="px-5 py-12 text-center">
-                      <p className="text-3xl mb-3">↻</p>
-                      <p className="text-sm font-semibold text-slate-700 mb-1">No active reauthorization cycle</p>
-                      <p className="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
-                        The reauthorization cycle activates automatically when the current authorization is approaching its expiration date.
-                      </p>
-                    </div>
-                  )
-                )}
-
-                {/* ── Tab 3: Reassessment ── */}
+                {/* ── Tab 2: Reassessment ── */}
                 {servicesTab === 'reassessment' && (() => {
                   const cycles = client.reassessment_sessions ?? [];
                   const hasActive = cycles.some(s => s.status !== 'complete');
+                  // A new reassessment can only start when no cycles exist yet.
+                  // Once any cycle is completed, the next cycle is gated behind
+                  // a new reauthorization + fresh session data — it cannot be
+                  // started manually from this tab.
+                  const allComplete = cycles.length > 0 && !hasActive;
+                  const canStartNew = cycles.length === 0;
 
                   const fmtRDate = (d) => {
                     if (!d) return '';
@@ -1550,22 +1623,36 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
                   return (
                     <div className="px-5 py-4">
-                      {/* Header row — CTA always visible */}
+                      {/* Header row */}
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
                           Reassessment Cycles
                         </p>
-                        <button
-                          onClick={() => onOpenAssessment?.({ type: 'reassessment', clientId: client.id })}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
-                          style={{ background: '#0D9488' }}
-                        >
-                          {hasActive ? 'Continue Reassessment →' : '+ Start Reassessment'}
-                        </button>
+                        {/* Show "Continue" only for an active in-progress cycle.
+                            Once all cycles are complete, no new cycle can be started
+                            manually — the next cycle is triggered by reauthorization. */}
+                        {hasActive && (
+                          <button
+                            onClick={() => onOpenAssessment?.({ type: 'reassessment', clientId: client.id })}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                            style={{ background: '#0D9488' }}
+                          >
+                            Continue Reassessment →
+                          </button>
+                        )}
+                        {canStartNew && (
+                          <button
+                            onClick={() => onOpenAssessment?.({ type: 'reassessment', clientId: client.id })}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                            style={{ background: '#0D9488' }}
+                          >
+                            + Start Reassessment
+                          </button>
+                        )}
                       </div>
 
-                      {/* 60-day reauth window notice */}
-                      {reauthWindowOpen && !hasActive && (
+                      {/* 60-day reauth window notice — only relevant before any cycle exists */}
+                      {reauthWindowOpen && canStartNew && (
                         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 flex items-start gap-2">
                           <span className="text-sm leading-none mt-0.5">⚠️</span>
                           <p className="text-xs text-amber-800 leading-relaxed">
@@ -1576,6 +1663,17 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                               ? `Auth period ended ${Math.abs(daysUntilExpiry)} day${Math.abs(daysUntilExpiry) !== 1 ? 's' : ''} ago — start reassessment to support reauthorization.`
                               : `Authorization expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}. Start the reassessment at least 60 days before expiry to allow time for submission and approval.`
                             }
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Completed-cycle notice — next cycle gated behind reauth */}
+                      {allComplete && (
+                        <div className="mb-4 rounded-lg border border-teal-100 bg-teal-50/60 px-3 py-2 flex items-start gap-2">
+                          <span className="text-sm leading-none mt-0.5">✓</span>
+                          <p className="text-xs text-teal-800 leading-relaxed">
+                            <span className="font-semibold">Reassessment complete.</span>{' '}
+                            The next reassessment cycle will begin after the client is reauthorized and new session data has been collected for the new authorization period.
                           </p>
                         </div>
                       )}
@@ -1628,10 +1726,12 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                                   </span>
                                 </div>
 
-                                {/* Card — clicking opens the reassessment interview */}
+                                {/* Card — only clickable when the cycle is still in progress */}
                                 <div
-                                  onClick={() => onOpenAssessment?.({ type: 'reassessment', clientId: client.id })}
-                                  className="bg-white border border-stone-200 rounded-xl p-4 cursor-pointer hover:shadow-md hover:-translate-y-px transition-all duration-150"
+                                  onClick={!isComplete ? () => onOpenAssessment?.({ type: 'reassessment', clientId: client.id }) : undefined}
+                                  className={`bg-white border border-stone-200 rounded-xl p-4 transition-all duration-150 ${
+                                    !isComplete ? 'cursor-pointer hover:shadow-md hover:-translate-y-px' : 'cursor-default'
+                                  }`}
                                 >
                                   {/* Row 1: title + status badge */}
                                   <div className="flex items-center justify-between gap-3 mb-1">
@@ -1710,11 +1810,90 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                                 </div>
 
                                 {/* ── Reassessment Cycle Summary Panel ── */}
-                                <ReassessmentCyclePanel
-                                  session={session}
-                                  client={client}
-                                  graphs={reassessmentGraphs}
-                                />
+                                {(() => {
+                                  // Build updateSubmissionChecklist and submissionReady for this session
+                                  const updateSubmissionChecklist = (field, value) => setClients(prev => prev.map(c => {
+                                    if (c.id !== client.id) return c;
+                                    return {
+                                      ...c,
+                                      reassessment_sessions: (c.reassessment_sessions ?? []).map(s =>
+                                        s.id !== session.id ? s : {
+                                          ...s,
+                                          submissionChecklist: { ...(s.submissionChecklist ?? {}), [field]: value },
+                                        }
+                                      ),
+                                    };
+                                  }));
+                                  const sc = session.submissionChecklist ?? {};
+                                  const submissionReady = !!(sc.vineland && sc.basc && sc.finalUploaded);
+
+                                  // Always a function when isComplete — the panel gates via submissionReady
+                                  const handleStartReauth = () => {
+                                    if (!submissionReady) return;
+                                    const cptHours = session.cptHours ?? {};
+                                    const currentCycle = client.reauth_cycle ?? 0;
+                                    // Snapshot current auth data into history
+                                    const sub = client.checklist?.submitted ?? {};
+                                    const historyEntry = {
+                                      cycle: currentCycle,
+                                      label: currentCycle === 0 ? 'Initial Authorization' : `Reauth Cycle ${currentCycle}`,
+                                      authorized_97153: sub.authorized_97153 ?? '',
+                                      authorized_97155: sub.authorized_97155 ?? '',
+                                      authorized_97156: sub.authorized_97156 ?? '',
+                                      auth_start_date: sub.auth_start_date ?? '',
+                                      auth_end_date: sub.auth_end_date ?? '',
+                                      auth_reference_number: sub.auth_reference_number ?? '',
+                                      closed_at: new Date().toISOString(),
+                                    };
+                                    // Fresh submitted checklist for the new submission
+                                    const freshSubmitted = {
+                                      plan_submitted: false,
+                                      plan_submission_date: '',
+                                      auth_reference_number: '',
+                                      authorized_97153: '',
+                                      authorized_97155: '',
+                                      authorized_97156: '',
+                                      auth_start_date: '',
+                                      auth_end_date: '',
+                                      approval_uploaded: false,
+                                    };
+                                    setClients(prev => prev.map(c => {
+                                      if (c.id !== client.id) return c;
+                                      return {
+                                        ...c,
+                                        stage: 'submitted',
+                                        stage_entered_at: new Date().toISOString(),
+                                        reauth_cycle: currentCycle + 1,
+                                        reauth_requested_hours: {
+                                          '97153': cptHours['97153'] ?? '',
+                                          '97155': cptHours['97155'] ?? '',
+                                          '97156': cptHours['97156'] ?? '',
+                                        },
+                                        // Only add history entry if this cycle isn't already recorded (prevents duplicate when seed data pre-populates it)
+                                        auth_cycles_history: (c.auth_cycles_history ?? []).some(e => e.cycle === currentCycle)
+                                          ? c.auth_cycles_history
+                                          : [...(c.auth_cycles_history ?? []), historyEntry],
+                                        checklist: { ...c.checklist, submitted: freshSubmitted },
+                                      };
+                                    }));
+                                    pushLog(`Reauth Cycle ${currentCycle + 1} started — submitted for new authorization`);
+                                    addNotif(mkNotif(`${client.name} — Reauth Cycle ${currentCycle + 1} submitted for new authorization`, client.name, 'normal'));
+                                    if (onClientAdvanced) onClientAdvanced(client.id);
+                                    onBack?.();
+                                  };
+
+                                  return (
+                                    <ReassessmentCyclePanel
+                                      session={session}
+                                      client={client}
+                                      graphs={reassessmentGraphs}
+                                      submissionChecklist={sc}
+                                      onSubmissionChecklistChange={updateSubmissionChecklist}
+                                      submissionReady={submissionReady}
+                                      onStartReauth={isComplete ? handleStartReauth : undefined}
+                                    />
+                                  );
+                                })()}
                               </div>
                             );
                           })}

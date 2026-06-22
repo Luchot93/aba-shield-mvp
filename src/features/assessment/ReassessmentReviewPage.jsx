@@ -1425,9 +1425,8 @@ export default function ReassessmentReviewPage({
 
       // Batch all side effects in one setClients call:
       //  1. Mark reassessment session complete
-      //  2. Auto-complete progress_report checklist item (services_reauth)
-      //  3. Push doc to client.documents
-      //  4. Prepend activity log entry
+      //  2. Push doc to client.documents
+      //  3. Prepend activity log entry
       setClients(prev => prev.map(c => {
         if (c.id !== clientId) return c;
         return {
@@ -1440,13 +1439,6 @@ export default function ReassessmentReviewPage({
           },
           documents:    [...(c.documents ?? []), doc],
           activity_log: [logEntry, ...(c.activity_log ?? [])],
-          checklist: {
-            ...c.checklist,
-            services_reauth: {
-              ...(c.checklist?.services_reauth ?? {}),
-              progress_report: true,
-            },
-          },
         };
       }));
 

@@ -177,7 +177,7 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
         ? (r.referral_date ? new Date(r.referral_date).toISOString() : now)
         : null,
       denial_reason:null, bcba_id:null, rbt_id:null,
-      auth_expiry_date:null, reauth_active:false,
+      auth_expiry_date:null, reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[],
       smart_assessment_session_id:null,
       checklist:mkChecklist(), documents:[], activity_log:[],
     })));

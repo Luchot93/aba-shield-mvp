@@ -442,7 +442,7 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
               stage_entered_at: createPipelineEntry ? now : null,
               pipeline_entry: createPipelineEntry ?? false,
               denial_reason:null, bcba_id:null, rbt_id:null,
-              auth_expiry_date:null, reauth_active:false,
+              auth_expiry_date:null, reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[],
               smart_assessment_session_id:null,
               checklist:mkChecklist(), documents:[], activity_log:[],
             };

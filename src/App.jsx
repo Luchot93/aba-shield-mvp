@@ -283,18 +283,11 @@ export default function App() {
     SEED_CLIENTS().forEach(c => {
       if (!c.auth_expiry_date) return;
       const diff = Math.ceil((new Date(c.auth_expiry_date) - today) / 86400000);
-      if (c.reauth_active) {
-        // Reauth cycle is actively running — always surface a notification
-        const label = diff <= 0
-          ? `URGENT — ${c.name} authorization expired ${Math.abs(diff)} day${Math.abs(diff) !== 1 ? 's' : ''} ago`
-          : diff <= 14
-          ? `URGENT — ${c.name} authorization expires in ${diff} day${diff !== 1 ? 's' : ''}`
-          : `${c.name} — Reauthorization in progress (expires in ${diff} days)`;
-        const level = diff <= 14 ? 'urgent' : 'warning';
-        seedNotifs.push(mkNotif(label, c.name, level));
-      } else if (diff <= 14 && diff > 0) {
+      if (diff <= 0) {
+        seedNotifs.push(mkNotif(`URGENT — ${c.name} authorization expired ${Math.abs(diff)} day${Math.abs(diff) !== 1 ? 's' : ''} ago`, c.name, 'urgent'));
+      } else if (diff <= 14) {
         seedNotifs.push(mkNotif(`URGENT — ${c.name} reauthorization due in ${diff} day${diff !== 1 ? 's' : ''}`, c.name, 'urgent'));
-      } else if (diff <= 30 && diff > 0) {
+      } else if (diff <= 30) {
         seedNotifs.push(mkNotif(`${c.name} — Reauthorization due in ${diff} days`, c.name, 'warning'));
       }
     });

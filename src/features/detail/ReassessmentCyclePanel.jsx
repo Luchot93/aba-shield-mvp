@@ -1211,7 +1211,7 @@ export function ReauthSubmissionChecklist({ checklist, onChange, onUpload }) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export default function ReassessmentCyclePanel({ session, client, graphs, onStartReauth }) {
+export default function ReassessmentCyclePanel({ session, client, graphs, onStartReauth, submissionChecklist, onSubmissionChecklistChange, submissionReady }) {
   if (!session) return null;
 
   // ── Locked state: show placeholder until BCBA downloads the reassessment doc ──
@@ -1245,19 +1245,37 @@ export default function ReassessmentCyclePanel({ session, client, graphs, onStar
       <CTSection session={session} client={client} />
 
       {/* ── Start Reauthorization CTA ── */}
-      {onStartReauth && (
+      {onStartReauth !== undefined && (
         <div className="mt-6 pt-5 border-t border-stone-100">
-          <div className="rounded-xl border border-teal-100 bg-teal-50/60 px-5 py-4 flex items-center justify-between gap-4">
+          {/* Submission checklist — gates the Start Reauthorization button */}
+          {onSubmissionChecklistChange && (
+            <ReauthSubmissionChecklist
+              checklist={submissionChecklist ?? {}}
+              onChange={onSubmissionChecklistChange}
+              onUpload={e => { if (e.target.files?.length) onSubmissionChecklistChange('finalUploaded', true); }}
+            />
+          )}
+          <div className={`rounded-xl border px-5 py-4 flex items-center justify-between gap-4 ${submissionReady ? 'border-teal-100 bg-teal-50/60' : 'border-stone-200 bg-stone-50/70'}`}>
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-slate-700 leading-snug">Ready to reauthorize?</p>
+              <p className="text-[13px] font-semibold text-slate-700 leading-snug">
+                {submissionReady ? 'Ready to reauthorize?' : 'Complete submission checklist first'}
+              </p>
               <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
-                Clinical summary reviewed. Proceed to the Reauthorization tab to submit the new authorization request.
+                {submissionReady
+                  ? 'Vineland, BASC, and final document are confirmed. Click to move the client to the Submitted stage for the new authorization cycle.'
+                  : 'Check off Vineland-3, BASC-3, and upload the final signed document above before starting reauthorization.'}
               </p>
             </div>
             <button
-              onClick={onStartReauth}
-              className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-80"
-              style={{ background: '#0D9488' }}
+              onClick={submissionReady ? onStartReauth : undefined}
+              disabled={!submissionReady}
+              title={submissionReady ? undefined : 'Complete the submission checklist above first'}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold transition-opacity ${
+                submissionReady
+                  ? 'text-white hover:opacity-90 active:opacity-80'
+                  : 'text-slate-400 bg-stone-200 cursor-not-allowed'
+              }`}
+              style={submissionReady ? { background: '#0D9488' } : undefined}
             >
               Start Reauthorization →
             </button>

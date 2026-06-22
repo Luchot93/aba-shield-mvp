@@ -52,47 +52,7 @@ export const mkChecklist = () => ({
     first_session_date:'', first_session_time:'', session_location:'',
     schedule_template:'',
   },
-  services_reauth: {
-    progress_report:false, updated_graphs:false, vineland3_updated:false,
-    basc3_updated:false, reauth_submitted:false,
-    reauth_submission_date:'', reauth_submission_method:'', reauth_reference_number:'',
-    hours_consumed_97153:'', hours_consumed_97155:'', hours_consumed_97156:'',
-    reauth_outcome:'',
-    new_auth_start_date:'', new_auth_end_date:'',
-    new_authorized_97153:'', new_authorized_97155:'', new_authorized_97156:'',
-  },
 });
-
-export const REAUTH_ITEMS = [
-  // ── Section A: Utilization Summary ──────────────────────────────────────────
-  { type:'section_label', key:'_util_header', label:'Utilization Summary' },
-  { type:'form_field', key:'hours_consumed_97153', label:'Direct therapy (97153) — hours this period',      clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 72' },
-  { type:'form_field', key:'hours_consumed_97155', label:'BCBA supervision (97155) — hours this period',    clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 10' },
-  { type:'form_field', key:'hours_consumed_97156', label:'Caregiver training (97156) — hours this period',  clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 6'  },
-
-  // ── Section B: Clinical Documentation ───────────────────────────────────────
-  { type:'section_label', key:'_docs_header', label:'Clinical Documentation' },
-  { type:'file_upload', key:'progress_report',    label:'Progress report',            clSec:'services_reauth', accept:'.pdf,.docx',     docType:'progress_report', autoComplete:true, completionSource:'reassessment_doc_generated' },
-  { type:'file_upload', key:'updated_graphs',     label:'Updated behavioral graphs',  clSec:'services_reauth', accept:'.pdf,.png,.jpg', docType:'updated_graphs' },
-  { type:'checkbox',    key:'vineland3_updated',  label:'Vineland-3 updated',         clSec:'services_reauth', sublabel:'Administer or review the Vineland-3 adaptive behavior scale and update scores for the new authorization period.' },
-  { type:'checkbox',    key:'basc3_updated',      label:'BASC-3 updated',             clSec:'services_reauth', sublabel:'Administer or review the BASC-3 behavioral assessment and update scores for the new authorization period.' },
-
-  // ── Section C: Submission ────────────────────────────────────────────────────
-  { type:'section_label', key:'_submit_header', label:'Submission' },
-  { type:'checkbox',   key:'reauth_submitted',          label:'Reauth submitted to insurer',          clSec:'services_reauth', sublabel:'Reauthorization package (progress report, updated graphs, CPT hours) submitted to the insurer.' },
-  { type:'form_field', key:'reauth_submission_date',    label:'Submission date',                      clSec:'services_reauth', fieldType:'date',   optional:true },
-  { type:'form_field', key:'reauth_submission_method',  label:'Submission method / portal',           clSec:'services_reauth', fieldType:'text',   optional:true, placeholder:'e.g. Availity, fax, phone' },
-  { type:'form_field', key:'reauth_reference_number',   label:'Submission reference number',          clSec:'services_reauth', fieldType:'text',   optional:true },
-
-  // ── Section D: Authorization Outcome ────────────────────────────────────────
-  { type:'section_label', key:'_outcome_header', label:'Authorization Outcome' },
-  { type:'form_field', key:'reauth_outcome',         label:'Outcome',                       clSec:'services_reauth', fieldType:'text',   optional:true, placeholder:'Approved / Denied / Pending' },
-  { type:'form_field', key:'new_auth_start_date',    label:'New auth period start',         clSec:'services_reauth', fieldType:'date',   optional:true },
-  { type:'form_field', key:'new_auth_end_date',      label:'New auth period end',           clSec:'services_reauth', fieldType:'date',   optional:true },
-  { type:'form_field', key:'new_authorized_97153',   label:'New 97153 authorized hours',    clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 80' },
-  { type:'form_field', key:'new_authorized_97155',   label:'New 97155 authorized hours',    clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 12' },
-  { type:'form_field', key:'new_authorized_97156',   label:'New 97156 authorized hours',    clSec:'services_reauth', fieldType:'number', optional:true, placeholder:'e.g. 8'  },
-];
 
 export function getStageItems(stage) {
   switch (stage) {

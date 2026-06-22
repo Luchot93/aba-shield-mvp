@@ -1564,6 +1564,12 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 {servicesTab === 'reassessment' && (() => {
                   const cycles = client.reassessment_sessions ?? [];
                   const hasActive = cycles.some(s => s.status !== 'complete');
+                  // A new reassessment can only start when no cycles exist yet.
+                  // Once any cycle is completed, the next cycle is gated behind
+                  // a new reauthorization + fresh session data — it cannot be
+                  // started manually from this tab.
+                  const allComplete = cycles.length > 0 && !hasActive;
+                  const canStartNew = cycles.length === 0;
 
                   const fmtRDate = (d) => {
                     if (!d) return '';
@@ -1601,22 +1607,36 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
                   return (
                     <div className="px-5 py-4">
-                      {/* Header row — CTA always visible */}
+                      {/* Header row */}
                       <div className="flex items-center justify-between mb-3">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
                           Reassessment Cycles
                         </p>
-                        <button
-                          onClick={() => onOpenAssessment?.({ type: 'reassessment', clientId: client.id })}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
-                          style={{ background: '#0D9488' }}
-                        >
-                          {hasActive ? 'Continue Reassessment →' : '+ Start Reassessment'}
-                        </button>
+                        {/* Show "Continue" only for an active in-progress cycle.
+                            Once all cycles are complete, no new cycle can be started
+                            manually — the next cycle is triggered by reauthorization. */}
+                        {hasActive && (
+                          <button
+                            onClick={() => onOpenAssessment?.({ type: 'reassessment', clientId: client.id })}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                            style={{ background: '#0D9488' }}
+                          >
+                            Continue Reassessment →
+                          </button>
+                        )}
+                        {canStartNew && (
+                          <button
+                            onClick={() => onOpenAssessment?.({ type: 'reassessment', clientId: client.id })}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90"
+                            style={{ background: '#0D9488' }}
+                          >
+                            + Start Reassessment
+                          </button>
+                        )}
                       </div>
 
-                      {/* 60-day reauth window notice */}
-                      {reauthWindowOpen && !hasActive && (
+                      {/* 60-day reauth window notice — only relevant before any cycle exists */}
+                      {reauthWindowOpen && canStartNew && (
                         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 flex items-start gap-2">
                           <span className="text-sm leading-none mt-0.5">⚠️</span>
                           <p className="text-xs text-amber-800 leading-relaxed">
@@ -1627,6 +1647,17 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                               ? `Auth period ended ${Math.abs(daysUntilExpiry)} day${Math.abs(daysUntilExpiry) !== 1 ? 's' : ''} ago — start reassessment to support reauthorization.`
                               : `Authorization expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''}. Start the reassessment at least 60 days before expiry to allow time for submission and approval.`
                             }
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Completed-cycle notice — next cycle gated behind reauth */}
+                      {allComplete && (
+                        <div className="mb-4 rounded-lg border border-teal-100 bg-teal-50/60 px-3 py-2 flex items-start gap-2">
+                          <span className="text-sm leading-none mt-0.5">✓</span>
+                          <p className="text-xs text-teal-800 leading-relaxed">
+                            <span className="font-semibold">Reassessment complete.</span>{' '}
+                            The next reassessment cycle will begin after the client is reauthorized and new session data has been collected for the new authorization period.
                           </p>
                         </div>
                       )}
@@ -1679,10 +1710,12 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                                   </span>
                                 </div>
 
-                                {/* Card — clicking opens the reassessment interview */}
+                                {/* Card — only clickable when the cycle is still in progress */}
                                 <div
-                                  onClick={() => onOpenAssessment?.({ type: 'reassessment', clientId: client.id })}
-                                  className="bg-white border border-stone-200 rounded-xl p-4 cursor-pointer hover:shadow-md hover:-translate-y-px transition-all duration-150"
+                                  onClick={!isComplete ? () => onOpenAssessment?.({ type: 'reassessment', clientId: client.id }) : undefined}
+                                  className={`bg-white border border-stone-200 rounded-xl p-4 transition-all duration-150 ${
+                                    !isComplete ? 'cursor-pointer hover:shadow-md hover:-translate-y-px' : 'cursor-default'
+                                  }`}
                                 >
                                   {/* Row 1: title + status badge */}
                                   <div className="flex items-center justify-between gap-3 mb-1">

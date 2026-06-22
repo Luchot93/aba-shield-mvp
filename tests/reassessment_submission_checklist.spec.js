@@ -105,4 +105,22 @@ test.describe('Reassessment — Submission Checklist (Reauth tab)', () => {
     await expect(cards.first()).toBeVisible();
   });
 
+  // ── Reassessment cycle gate ──────────────────────────────────────────────
+
+  test('Sofia Ramirez: no "+ Start Reassessment" button after completed cycle', async ({ page }) => {
+    await openClientTab(page, 'Sofia Ramirez', 'Reassessment');
+    // Sofia has a completed reassessment — "+ Start Reassessment" must NOT appear
+    await expect(page.getByRole('button', { name: '+ Start Reassessment' })).not.toBeVisible();
+  });
+
+  test('Sofia Ramirez: completed reassessment shows "Reassessment complete" notice instead', async ({ page }) => {
+    await openClientTab(page, 'Sofia Ramirez', 'Reassessment');
+    await expect(page.getByText('Reassessment complete.')).toBeVisible();
+  });
+
+  test('Charlotte Davis: "Continue Reassessment →" shown while cycle is in progress', async ({ page }) => {
+    await openClientTab(page, 'Charlotte Davis', 'Reassessment');
+    await expect(page.getByRole('button', { name: 'Continue Reassessment →' })).toBeVisible();
+  });
+
 });

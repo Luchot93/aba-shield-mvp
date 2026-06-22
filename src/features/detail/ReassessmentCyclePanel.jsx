@@ -1211,7 +1211,7 @@ export function ReauthSubmissionChecklist({ checklist, onChange, onUpload }) {
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export default function ReassessmentCyclePanel({ session, client, graphs }) {
+export default function ReassessmentCyclePanel({ session, client, graphs, onStartReauth }) {
   if (!session) return null;
 
   // ── Locked state: show placeholder until BCBA downloads the reassessment doc ──
@@ -1243,6 +1243,27 @@ export default function ReassessmentCyclePanel({ session, client, graphs }) {
       <BehaviorSection session={session} client={client} />
       <SkillSection session={session} client={client} />
       <CTSection session={session} client={client} />
+
+      {/* ── Start Reauthorization CTA ── */}
+      {onStartReauth && (
+        <div className="mt-6 pt-5 border-t border-stone-100">
+          <div className="rounded-xl border border-teal-100 bg-teal-50/60 px-5 py-4 flex items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold text-slate-700 leading-snug">Ready to reauthorize?</p>
+              <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                Clinical summary reviewed. Proceed to the Reauthorization tab to submit the new authorization request.
+              </p>
+            </div>
+            <button
+              onClick={onStartReauth}
+              className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg text-[12px] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-80"
+              style={{ background: '#0D9488' }}
+            >
+              Start Reauthorization →
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

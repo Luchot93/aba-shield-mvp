@@ -1798,6 +1798,13 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                                   session={session}
                                   client={client}
                                   graphs={reassessmentGraphs}
+                                  onStartReauth={isComplete ? () => {
+                                    // Mark reauth active on the client and jump to Reauth tab
+                                    setClients(prev => prev.map(c =>
+                                      c.id === client.id ? { ...c, reauth_active: true } : c,
+                                    ));
+                                    setServicesTab('reauth');
+                                  } : undefined}
                                 />
                               </div>
                             );

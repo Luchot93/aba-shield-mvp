@@ -1108,26 +1108,124 @@ function HeaderStrip({ session }) {
   );
 }
 
+// ─── Reauthorization Submission Checklist ────────────────────────────────────
+
+function CheckItem({ checked, onChange, label, sublabel }) {
+  return (
+    <div
+      className={`flex items-start gap-3 px-4 py-3 rounded-lg border transition-colors cursor-pointer select-none
+        ${checked
+          ? 'bg-emerald-50 border-emerald-200'
+          : 'bg-white border-stone-200 hover:border-teal-200 hover:bg-teal-50/30'
+        }`}
+      onClick={() => onChange(!checked)}
+    >
+      <div className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded flex items-center justify-center border transition-colors
+        ${checked ? 'bg-teal-600 border-teal-600' : 'border-stone-300 bg-white'}`}>
+        {checked && (
+          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 10">
+            <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </div>
+      <div>
+        <p className={`text-[12px] font-semibold leading-tight ${checked ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+          {label}
+        </p>
+        {sublabel && (
+          <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{sublabel}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function ReauthSubmissionChecklist({ checklist, onChange, onUpload }) {
+  const { vineland = false, basc = false, finalUploaded = false } = checklist ?? {};
+
+  const allDone = vineland && basc && finalUploaded;
+
+  return (
+    <div className="mt-6 pt-5 border-t border-stone-100">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">
+        Reauthorization Submission
+      </p>
+
+      {allDone && (
+        <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <svg className="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" viewBox="0 0 16 16">
+            <path d="M3 8l3.5 3.5 6.5-6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <p className="text-[12px] font-semibold text-emerald-700">Ready for reauthorization submission</p>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        <CheckItem
+          checked={vineland}
+          onChange={v => onChange('vineland', v)}
+          label="Vineland-3 graphs manually added to report"
+          sublabel="Download the draft, add Vineland-3 graphs from your third-party tool, then upload the final below."
+        />
+        <CheckItem
+          checked={basc}
+          onChange={v => onChange('basc', v)}
+          label="BASC-3 graphs manually added to report"
+          sublabel="Ensure BASC-3 graphs are included before uploading the final signed document."
+        />
+      </div>
+
+      {/* Upload final signed report */}
+      <div className={`mt-3 flex items-center justify-between px-4 py-3 rounded-lg border transition-colors
+        ${finalUploaded ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-stone-200'}`}>
+        <div>
+          <p className={`text-[12px] font-semibold ${finalUploaded ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+            Final signed progress report uploaded
+          </p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            {finalUploaded ? 'Document saved to the Documents tab.' : 'Upload the completed, signed report to send for reauthorization.'}
+          </p>
+        </div>
+        {finalUploaded ? (
+          <span className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-lg flex-shrink-0 ml-3">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+              <path d="M2 6l2.5 2.5L10 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Uploaded
+          </span>
+        ) : (
+          <label className="flex-shrink-0 ml-3 cursor-pointer">
+            <input type="file" accept=".pdf,.docx" className="hidden" onChange={onUpload} />
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-teal-700 bg-white border border-teal-300 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
+                <path d="M6 1v7M3 5l3-3 3 3M1 10h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Upload
+            </span>
+          </label>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
-export default function ReassessmentCyclePanel({ session, client }) {
+export default function ReassessmentCyclePanel({ session, client, graphs }) {
   if (!session) return null;
 
   // ── Locked state: show placeholder until BCBA downloads the reassessment doc ──
   if (session.status !== 'complete') {
     return (
       <div className="mt-3 pt-3 border-t border-stone-100">
-        {/* Show header strip so the BCBA can still see auth period / CPT / narrative */}
-        <HeaderStrip session={session} />
-        {/* Locked clinical summary placeholder */}
-        <div className="mt-4 rounded-xl border border-dashed border-stone-200 bg-stone-50/70 px-6 py-8 text-center">
+        <div className="rounded-xl border border-dashed border-stone-200 bg-stone-50/70 px-6 py-8 text-center">
           <div className="flex flex-col items-center gap-2.5">
             <span className="text-[28px] leading-none select-none">🔒</span>
             <p className="text-[13px] font-semibold text-slate-600" style={{ fontFamily: 'Syne, sans-serif' }}>
               Clinical summary locked
             </p>
             <p className="text-[12px] text-slate-400 leading-relaxed max-w-xs">
-              Complete and download the reassessment document to unlock the full clinical summary — behaviors, skills, caregiver training, STO rails, and progress charts.
+              Complete and download the reassessment document to unlock the full clinical summary — auth period, progress narrative, behaviors, skills, caregiver training, STO rails, and progress charts.
             </p>
             <div className="mt-1 flex items-center gap-1.5 text-[11px] text-teal-600 font-semibold">
               <span>Continue in Reassessment →</span>

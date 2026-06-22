@@ -2361,8 +2361,98 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
       },
     ];
 
+    const C11_SKILL_SESSION_LOGS = [
+      {
+        id: 'slog_c11_sk1', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
+        sessionDate: '2025-12-22', sessionNumber: 1, sessionType: 'skill',
+        notes: 'Baseline skill session. James required full verbal prompt for all mand opportunities. 2-step instructions required gestural support for step 2 in every trial. FCT break card introduced.',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c11-1', skillName: 'Functional Communication (Mand Training)', domain: 'Communication', isNew: false, baselinePercent: 20, accuracyPercent: 20, currentStoNumber: 1, stoStatus: 'in_progress' },
+          { skillId: 'sg-c11-2', skillName: 'Following 2-Step Instructions',           domain: 'Academic',       isNew: false, baselinePercent: 15, accuracyPercent: 15, currentStoNumber: 1, stoStatus: 'in_progress' },
+        ],
+        createdAt: '2025-12-22T13:00:00.000Z',
+      },
+      {
+        id: 'slog_c11_sk2', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
+        sessionDate: '2026-01-26', sessionNumber: 2, sessionType: 'skill',
+        notes: 'Mand training improving — gestural model faded to indirect verbal prompt on 3 trials. James initiated "break" request once independently during a demand. 2-step instructions: step 1 completing well; step 2 still needs gestural support.',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c11-1', skillName: 'Functional Communication (Mand Training)', domain: 'Communication', isNew: false, baselinePercent: 20, accuracyPercent: 32, currentStoNumber: 1, stoStatus: 'in_progress' },
+          { skillId: 'sg-c11-2', skillName: 'Following 2-Step Instructions',           domain: 'Academic',       isNew: false, baselinePercent: 15, accuracyPercent: 24, currentStoNumber: 1, stoStatus: 'in_progress' },
+        ],
+        createdAt: '2026-01-26T13:00:00.000Z',
+      },
+      {
+        id: 'slog_c11_sk3', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
+        sessionDate: '2026-03-02', sessionNumber: 3, sessionType: 'skill',
+        notes: 'Strong session. Mand training hitting STO 1 threshold — James independently requesting preferred items and break with gestural model only. 2-step instructions advancing; step 2 gestural support faded in preferred-material trials.',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c11-1', skillName: 'Functional Communication (Mand Training)', domain: 'Communication', isNew: false, baselinePercent: 20, accuracyPercent: 46, currentStoNumber: 1, stoStatus: 'in_progress' },
+          { skillId: 'sg-c11-2', skillName: 'Following 2-Step Instructions',           domain: 'Academic',       isNew: false, baselinePercent: 15, accuracyPercent: 38, currentStoNumber: 1, stoStatus: 'in_progress' },
+        ],
+        createdAt: '2026-03-02T13:00:00.000Z',
+      },
+      {
+        id: 'slog_c11_sk4', clientId: 'c11', rbtId: 's5', rbtName: 'Tanya Reyes',
+        sessionDate: '2026-04-06', sessionNumber: 4, sessionType: 'skill',
+        notes: 'Mand Training advanced to STO 2 — requesting across item, activity, and break categories. Notable: spontaneous "help" mand observed during a difficult task. 2-step instructions at STO 1 target with preferred materials; advancing toward STO 2.',
+        behaviorEntries: [],
+        skillEntries: [
+          { skillId: 'sg-c11-1', skillName: 'Functional Communication (Mand Training)', domain: 'Communication', isNew: false, baselinePercent: 20, accuracyPercent: 58, currentStoNumber: 2, stoStatus: 'in_progress' },
+          { skillId: 'sg-c11-2', skillName: 'Following 2-Step Instructions',           domain: 'Academic',       isNew: false, baselinePercent: 15, accuracyPercent: 42, currentStoNumber: 1, stoStatus: 'in_progress' },
+        ],
+        createdAt: '2026-04-06T13:00:00.000Z',
+      },
+    ];
+
+    const C11_CT_LOGS = [
+      {
+        id: 'ctlog_c11_1', clientId: 'c11', bcbaId: 's1', bcbaName: 'Dr. Rachel Kim',
+        sessionDate: '2026-01-15', sessionNumber: 1,
+        notes: 'First caregiver training session with Rosa Martinez (via Spanish interpreter). Explained NET framework using visual examples. Role-played embedding mand trials during snack. Rosa highly engaged and asked great questions. Behavior-specific praise introduced with modeling.',
+        trainingEntries: [
+          { targetId: 'ctgt_jm_1', goalName: 'Natural environment teaching',  baselinePercent: 30, sessionPercent: 30, stoStatus: 'in_progress', currentStoNumber: 1 },
+          { targetId: 'ctgt_jm_2', goalName: 'Behavior-specific praise',       baselinePercent: 40, sessionPercent: 40, stoStatus: 'in_progress', currentStoNumber: 1 },
+        ],
+        createdAt: '2026-01-15T11:00:00.000Z',
+      },
+      {
+        id: 'ctlog_c11_2', clientId: 'c11', bcbaId: 's1', bcbaName: 'Dr. Rachel Kim',
+        sessionDate: '2026-02-19', sessionNumber: 2,
+        notes: 'Rosa demonstrated NET during play with Legos — paused activity and waited for James to mand for "more." Delivered behavior-specific praise 4 of 6 observed opportunities (improving from baseline). Written cue card in use. Reviewed video of home session she recorded.',
+        trainingEntries: [
+          { targetId: 'ctgt_jm_1', goalName: 'Natural environment teaching',  baselinePercent: 30, sessionPercent: 44, stoStatus: 'in_progress', currentStoNumber: 1 },
+          { targetId: 'ctgt_jm_2', goalName: 'Behavior-specific praise',       baselinePercent: 40, sessionPercent: 56, stoStatus: 'in_progress', currentStoNumber: 1 },
+        ],
+        createdAt: '2026-02-19T11:00:00.000Z',
+      },
+      {
+        id: 'ctlog_c11_3', clientId: 'c11', bcbaId: 's1', bcbaName: 'Dr. Rachel Kim',
+        sessionDate: '2026-03-19', sessionNumber: 3,
+        notes: 'Rosa meeting STO 1 for NET — embedding at least 3 trials per observed routine independently with cue card. Praise now highly specific and immediate. Moving toward STO 2: fading written cue card to self-monitoring checklist.',
+        trainingEntries: [
+          { targetId: 'ctgt_jm_1', goalName: 'Natural environment teaching',  baselinePercent: 30, sessionPercent: 58, stoStatus: 'in_progress', currentStoNumber: 2 },
+          { targetId: 'ctgt_jm_2', goalName: 'Behavior-specific praise',       baselinePercent: 40, sessionPercent: 68, stoStatus: 'in_progress', currentStoNumber: 2 },
+        ],
+        createdAt: '2026-03-19T11:00:00.000Z',
+      },
+      {
+        id: 'ctlog_c11_4', clientId: 'c11', bcbaId: 's1', bcbaName: 'Dr. Rachel Kim',
+        sessionDate: '2026-04-16', sessionNumber: 4,
+        notes: 'Excellent session. NET delivery independent across meals and play without cue card. Behavior-specific praise generalized — Rosa coaching James\'s older sibling during observed interaction. STO 2 approaching for both targets. Discussed home carry-over plan.',
+        trainingEntries: [
+          { targetId: 'ctgt_jm_1', goalName: 'Natural environment teaching',  baselinePercent: 30, sessionPercent: 66, stoStatus: 'in_progress', currentStoNumber: 2 },
+          { targetId: 'ctgt_jm_2', goalName: 'Behavior-specific praise',       baselinePercent: 40, sessionPercent: 74, stoStatus: 'in_progress', currentStoNumber: 2 },
+        ],
+        createdAt: '2026-04-16T11:00:00.000Z',
+      },
+    ];
+
     const smart_session_id_james = assessment_session_james.id;
-    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_james, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session: assessment_session_james, service_session_logs: C11_SERVICE_SESSION_LOGS, caregiver_training_session_logs: [] };
+    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_james, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session: assessment_session_james, service_session_logs: [...C11_SERVICE_SESSION_LOGS, ...C11_SKILL_SESSION_LOGS], caregiver_training_session_logs: C11_CT_LOGS };
   }
 
   // ── c15 Sofia Ramirez — services (Florida Blue, completed reassessment) ──────
@@ -2541,11 +2631,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-2', behaviorName:'Self-Injurious Behavior', isNew:false, isMonitoring:false, baselineFrequency:5, sessionFrequency:5,   currentStoNumber:1, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:6,   currentStoNumber:1, stoStatus:'in_progress' },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:20, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:30, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:25, currentStoNumber:1, stoStatus:'in_progress' },
-        ],
+        skillEntries:[],
         createdAt:'2025-07-15T10:00:00.000Z',
       },
       {
@@ -2557,11 +2643,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-2', behaviorName:'Self-Injurious Behavior', isNew:false, isMonitoring:false, baselineFrequency:5, sessionFrequency:4,   currentStoNumber:1, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:5,   currentStoNumber:1, stoStatus:'in_progress' },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:28, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:35, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:30, currentStoNumber:1, stoStatus:'in_progress' },
-        ],
+        skillEntries:[],
         createdAt:'2025-07-29T10:00:00.000Z',
       },
       {
@@ -2584,15 +2666,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
             bcbaLtoText:'Zero incidents of property destruction across all settings for 3 consecutive weeks',
           },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:38, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:42, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:35, currentStoNumber:1, stoStatus:'in_progress' },
-          // New skill observed: peer play emerging during group activity
-          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:true,
-            accuracyPercent:28, firstSeenDate:'2025-08-12', monitorOnly:true,
-          },
-        ],
+        skillEntries:[],
         createdAt:'2025-08-12T10:00:00.000Z',
       },
       {
@@ -2605,12 +2679,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:4,   currentStoNumber:1, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:1.5, baselineFrequency:null },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:48, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:50, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:40, currentStoNumber:1, stoStatus:'in_progress' },
-          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:32 },
-        ],
+        skillEntries:[],
         createdAt:'2025-08-26T10:00:00.000Z',
       },
       {
@@ -2623,12 +2692,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:3.5, currentStoNumber:2, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:1, baselineFrequency:null },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:58, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:56, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:45, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:35 },
-        ],
+        skillEntries:[],
         createdAt:'2025-09-09T10:00:00.000Z',
       },
       {
@@ -2641,12 +2705,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:3,   currentStoNumber:2, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:0.8, baselineFrequency:null },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:66, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:60, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:50, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:38 },
-        ],
+        skillEntries:[],
         createdAt:'2025-09-23T10:00:00.000Z',
       },
       {
@@ -2659,12 +2718,7 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:2.5, currentStoNumber:2, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:0.5, baselineFrequency:null },
         ],
-        skillEntries:[
-          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:75, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:65, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:55, currentStoNumber:2, stoStatus:'in_progress' },
-          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:40 },
-        ],
+        skillEntries:[],
         createdAt:'2025-09-30T10:00:00.000Z',
       },
       {
@@ -2677,13 +2731,114 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
           { behaviorId:'bt-c15-3', behaviorName:'Tantrum',                 isNew:false, isMonitoring:false, baselineFrequency:6, sessionFrequency:2.2, currentStoNumber:3, stoStatus:'in_progress' },
           { behaviorId:'bt-c15-new-1', behaviorName:'Property Destruction', isNew:false, isMonitoring:true, sessionFrequency:0.3, baselineFrequency:null },
         ],
+        skillEntries:[],
+        createdAt:'2025-10-14T10:00:00.000Z',
+      },
+
+      // ── Skill sessions (separate from behavior sessions, same progression) ──
+      {
+        id:'slog_c15_sk1', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-07-15', sessionNumber:1, sessionType:'skill',
+        notes:'Baseline skill session. AAC initiated with full physical prompting — Sofia activating device with hand-over-hand. Motor imitation responding to gross-motor model with 1-step delay. Handwashing task analysis initiated.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:20, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:30, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:25, currentStoNumber:1, stoStatus:'in_progress' },
+        ],
+        createdAt:'2025-07-15T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk2', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-07-29', sessionNumber:2, sessionType:'skill',
+        notes:'AAC requesting with gestural model — partial physical prompt faded to gestural. Motor imitation improving, now initiating within 2s of model. Handwashing step completion improving with visual task analysis.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:28, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:35, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:30, currentStoNumber:1, stoStatus:'in_progress' },
+        ],
+        createdAt:'2025-07-29T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk3', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-08-12', sessionNumber:3, sessionType:'skill',
+        notes:'Strong AAC progress — independently navigating core vocabulary screen. Peer play (sharing) spontaneously observed during group activity — will monitor. Handwashing crossing 3/8 steps independently.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:38, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:42, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:35, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:true,
+            accuracyPercent:28, firstSeenDate:'2025-08-12', monitorOnly:true,
+          },
+        ],
+        createdAt:'2025-08-12T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk4', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-08-26', sessionNumber:4, sessionType:'skill',
+        notes:'AAC crossing 40% — moved to STO 2 (requesting across 5 categories). Motor imitation at STO 1 target. Handwashing 4/8 steps. Peer play monitoring: spontaneous sharing observed twice.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:48, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:50, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:40, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:32 },
+        ],
+        createdAt:'2025-08-26T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk5', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-09-09', sessionNumber:5, sessionType:'skill',
+        notes:'Excellent session across all three programs. Imitation and handwashing both advance to STO 2. AAC above 55% with independent requests across food, activities, and people.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:58, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:56, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:45, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:35 },
+        ],
+        createdAt:'2025-09-09T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk6', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-09-23', sessionNumber:6, sessionType:'skill',
+        notes:'AAC approaching STO 2 target — requesting across 4 of 5 categories. Motor imitation generalizing to novel RBT. Handwashing completing 5/8 steps independently.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:66, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:60, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:50, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:38 },
+        ],
+        createdAt:'2025-09-23T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk7', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-09-30', sessionNumber:7, sessionType:'skill',
+        notes:'Strong continued progress. AAC at 75% — Sofia consistently selecting icons across breakfast, play, and transition contexts. Imitation generalizing to fine-motor actions. Handwashing 5/8 steps with minimal verbal prompts.',
+        behaviorEntries:[],
+        skillEntries:[
+          { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:75, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:65, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:55, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:40 },
+        ],
+        createdAt:'2025-09-30T13:00:00.000Z',
+      },
+      {
+        id:'slog_c15_sk8', clientId:'c15', rbtId:'s7', rbtName:'Aaliyah Foster',
+        sessionDate:'2025-10-14', sessionNumber:8, sessionType:'skill',
+        notes:'AAC mastery achieved — 82% accuracy requesting independently across 5 core categories with ≤1 prompt in 4/5 trials. STO 2 met. Motor imitation and handwashing continuing strong progress toward STO 2 targets.',
+        behaviorEntries:[],
         skillEntries:[
           { skillId:'sg-c15-1', skillName:'Functional Communication (AAC Device)', domain:'Communication', isNew:false, baselinePercent:20, accuracyPercent:82, currentStoNumber:2, stoStatus:'met' },
           { skillId:'sg-c15-2', skillName:'Motor Imitation',                       domain:'Motor',         isNew:false, baselinePercent:30, accuracyPercent:68, currentStoNumber:2, stoStatus:'in_progress' },
           { skillId:'sg-c15-3', skillName:'Self-Care: Handwashing',                domain:'Self-Help',     isNew:false, baselinePercent:25, accuracyPercent:58, currentStoNumber:2, stoStatus:'in_progress' },
           { skillId:'sg-c15-new-1', skillName:'Peer Play (Sharing)', domain:'Social', isNew:false, isMonitoring:true, accuracyPercent:42 },
         ],
-        createdAt:'2025-10-14T10:00:00.000Z',
+        createdAt:'2025-10-14T13:00:00.000Z',
       },
     ];
 

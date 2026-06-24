@@ -514,28 +514,38 @@ function NewBehaviorRow({ item, idx, patchNewItem }) {
                   <div className="space-y-2">
                     {(item.stoStructure ?? []).map((step, si) => (
                       <div key={step.id}
-                        className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600 rounded-lg px-3 py-2"
+                        className="rounded-lg px-3 py-2"
                         style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                        <span className="text-[11px] font-bold text-amber-600 mr-0.5">STO {si + 1}</span>
-                        <span>{item.behaviorName || 'Behavior'} will reduce to</span>
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600">
+                          <span className="text-[11px] font-bold text-amber-600 mr-0.5">STO {si + 1}</span>
+                          <span>{item.behaviorName || 'Behavior'} will reduce to</span>
+                          <input
+                            type="number" min={0}
+                            value={step.targetFrequency ?? ''}
+                            onChange={e => patchStoStep(step.id, 'targetFrequency', e.target.value)}
+                            className="inline-block w-12 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                          />
+                          <span>per day for</span>
+                          <input
+                            type="number" min={1}
+                            value={step.durationWeeks ?? ''}
+                            onChange={e => patchStoStep(step.id, 'durationWeeks', e.target.value)}
+                            className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                          />
+                          <span>consecutive weeks.</span>
+                          <button type="button" onClick={() => removeStoStep(step.id)}
+                            className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none">
+                            ×
+                          </button>
+                        </div>
                         <input
-                          type="number" min={0}
-                          value={step.targetFrequency ?? ''}
-                          onChange={e => patchStoStep(step.id, 'targetFrequency', e.target.value)}
-                          className="inline-block w-12 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                          type="text"
+                          value={step.note ?? ''}
+                          onChange={e => patchStoStep(step.id, 'note', e.target.value)}
+                          placeholder="Describe the intervention strategy for this milestone (optional)"
+                          className="mt-1.5 w-full text-[11px] text-slate-500 bg-transparent border-b border-slate-200 focus:border-teal-400 outline-none transition-colors placeholder:text-slate-300 pb-0.5"
+                          style={{ fontFamily: 'DM Sans, sans-serif' }}
                         />
-                        <span>per day for</span>
-                        <input
-                          type="number" min={1}
-                          value={step.durationWeeks ?? ''}
-                          onChange={e => patchStoStep(step.id, 'durationWeeks', e.target.value)}
-                          className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
-                        />
-                        <span>consecutive weeks.</span>
-                        <button type="button" onClick={() => removeStoStep(step.id)}
-                          className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none">
-                          ×
-                        </button>
                       </div>
                     ))}
                   </div>
@@ -1054,28 +1064,38 @@ function NewSkillRow({ item, idx, patchNewItem }) {
                   <div className="space-y-2">
                     {(item.stoSteps ?? []).map((step, si) => (
                       <div key={step.id}
-                        className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600 rounded-lg px-3 py-2"
+                        className="rounded-lg px-3 py-2"
                         style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                        <span className="text-[11px] font-bold text-teal-600 mr-0.5">STO {si + 1}</span>
-                        <span>{item.skillName || 'Skill'} at</span>
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600">
+                          <span className="text-[11px] font-bold text-teal-600 mr-0.5">STO {si + 1}</span>
+                          <span>{item.skillName || 'Skill'} at</span>
+                          <input
+                            type="number" min={0} max={100}
+                            value={step.targetPercent ?? ''}
+                            onChange={e => patchStoStep(step.id, 'targetPercent', e.target.value)}
+                            className="inline-block w-12 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                          />
+                          <span>% accuracy for</span>
+                          <input
+                            type="number" min={1}
+                            value={step.durationWeeks ?? ''}
+                            onChange={e => patchStoStep(step.id, 'durationWeeks', e.target.value)}
+                            className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                          />
+                          <span>consecutive weeks.</span>
+                          <button type="button" onClick={() => removeStoStep(step.id)}
+                            className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none">
+                            ×
+                          </button>
+                        </div>
                         <input
-                          type="number" min={0} max={100}
-                          value={step.targetPercent ?? ''}
-                          onChange={e => patchStoStep(step.id, 'targetPercent', e.target.value)}
-                          className="inline-block w-12 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                          type="text"
+                          value={step.note ?? ''}
+                          onChange={e => patchStoStep(step.id, 'note', e.target.value)}
+                          placeholder="Describe the teaching strategy for this milestone (optional)"
+                          className="mt-1.5 w-full text-[11px] text-slate-500 bg-transparent border-b border-slate-200 focus:border-teal-400 outline-none transition-colors placeholder:text-slate-300 pb-0.5"
+                          style={{ fontFamily: 'DM Sans, sans-serif' }}
                         />
-                        <span>% accuracy for</span>
-                        <input
-                          type="number" min={1}
-                          value={step.durationWeeks ?? ''}
-                          onChange={e => patchStoStep(step.id, 'durationWeeks', e.target.value)}
-                          className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
-                        />
-                        <span>consecutive weeks.</span>
-                        <button type="button" onClick={() => removeStoStep(step.id)}
-                          className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none">
-                          ×
-                        </button>
                       </div>
                     ))}
                   </div>
@@ -1408,6 +1428,9 @@ function NewCaregiverRow({ item, idx, patchItem }) {
   const [baselinePct, setBaselinePct] = useState(
     item.baselinePercent != null ? String(item.baselinePercent) : '',
   );
+  // Local state for STO step values so typing is responsive (same pattern as LTO fields above).
+  // Committed to global state on blur so we avoid the headerContent re-render path resetting inputs.
+  const [localSteps, setLocalSteps] = useState(item.stoSteps ?? []);
 
   useEffect(() => { setLtoText(item.bcbaLtoText ?? ''); }, [item.bcbaLtoText]);
   useEffect(() => {
@@ -1416,13 +1439,15 @@ function NewCaregiverRow({ item, idx, patchItem }) {
   useEffect(() => {
     setBaselinePct(item.baselinePercent != null ? String(item.baselinePercent) : '');
   }, [item.baselinePercent]);
+  // Sync local steps when external state changes (e.g. step added/removed via buttons)
+  useEffect(() => { setLocalSteps(item.stoSteps ?? []); }, [item.stoSteps]);
 
   const clampPct = (v) => Math.min(100, Math.max(0, parseFloat(v)));
 
   const addStoStep = () => {
     const next = [
       ...(item.stoSteps ?? []),
-      { id: `cgsto_${Date.now()}`, targetPercent: '', durationWeeks: '' },
+      { id: `cgsto_${Date.now()}`, targetPercent: '', durationWeeks: '', note: '' },
     ];
     patchItem(idx, { stoSteps: next });
   };
@@ -1571,7 +1596,7 @@ function NewCaregiverRow({ item, idx, patchItem }) {
                       if (value === 'include') {
                         const patch = { includedInPlan: true, monitorOnly: false };
                         if ((item.stoSteps ?? []).length === 0) {
-                          patch.stoSteps = [{ id: `cgsto_${Date.now()}`, targetPercent: '', durationWeeks: '' }];
+                          patch.stoSteps = [{ id: `cgsto_${Date.now()}`, targetPercent: '', durationWeeks: '', note: '' }];
                         }
                         patchItem(idx, patch);
                       } else if (value === 'monitor') {
@@ -1605,34 +1630,56 @@ function NewCaregiverRow({ item, idx, patchItem }) {
                     Add STO
                   </button>
                 </div>
-                {(item.stoSteps ?? []).length === 0 ? (
+                {localSteps.length === 0 ? (
                   <p className="text-[11px] text-slate-400 italic">No steps defined yet — click Add STO to build milestones</p>
                 ) : (
                   <div className="space-y-2">
-                    {(item.stoSteps ?? []).map((step, si) => (
+                    {localSteps.map((step, si) => (
                       <div key={step.id}
-                        className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600 rounded-lg px-3 py-2"
+                        className="rounded-lg px-3 py-2"
                         style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                        <span className="text-[11px] font-bold text-teal-600 mr-0.5">STO {si + 1}</span>
-                        <span>At</span>
+                        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600">
+                          <span className="text-[11px] font-bold text-teal-600 mr-0.5">STO {si + 1}</span>
+                          <span>At</span>
+                          <input
+                            type="number" min={0} max={100}
+                            value={step.targetPercent ?? ''}
+                            onChange={e => {
+                              const v = e.target.value;
+                              setLocalSteps(prev => prev.map(s => s.id === step.id ? { ...s, targetPercent: v } : s));
+                            }}
+                            onBlur={() => patchItem(idx, { stoSteps: localSteps })}
+                            className="inline-block w-12 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                          />
+                          <span>% accuracy for</span>
+                          <input
+                            type="number" min={1}
+                            value={step.durationWeeks ?? ''}
+                            onChange={e => {
+                              const v = e.target.value;
+                              setLocalSteps(prev => prev.map(s => s.id === step.id ? { ...s, durationWeeks: v } : s));
+                            }}
+                            onBlur={() => patchItem(idx, { stoSteps: localSteps })}
+                            className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                          />
+                          <span>consecutive weeks.</span>
+                          <button type="button" onClick={() => removeStoStep(step.id)}
+                            className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none">
+                            ×
+                          </button>
+                        </div>
                         <input
-                          type="number" min={0} max={100}
-                          value={step.targetPercent ?? ''}
-                          onChange={e => patchStoStep(step.id, 'targetPercent', e.target.value)}
-                          className="inline-block w-12 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
+                          type="text"
+                          value={step.note ?? ''}
+                          onChange={e => {
+                            const v = e.target.value;
+                            setLocalSteps(prev => prev.map(s => s.id === step.id ? { ...s, note: v } : s));
+                          }}
+                          onBlur={() => patchItem(idx, { stoSteps: localSteps })}
+                          placeholder="Describe the intervention strategy for this milestone (optional)"
+                          className="mt-1.5 w-full text-[11px] text-slate-500 bg-transparent border-b border-slate-200 focus:border-teal-400 outline-none transition-colors placeholder:text-slate-300 pb-0.5"
+                          style={{ fontFamily: 'DM Sans, sans-serif' }}
                         />
-                        <span>% accuracy for</span>
-                        <input
-                          type="number" min={1}
-                          value={step.durationWeeks ?? ''}
-                          onChange={e => patchStoStep(step.id, 'durationWeeks', e.target.value)}
-                          className="inline-block w-10 text-center text-[14px] font-semibold text-teal-700 bg-transparent border-b-2 border-teal-300 focus:border-teal-500 outline-none transition-colors mx-0.5"
-                        />
-                        <span>consecutive weeks.</span>
-                        <button type="button" onClick={() => removeStoStep(step.id)}
-                          className="ml-auto text-slate-300 hover:text-red-400 transition-colors text-base leading-none">
-                          ×
-                        </button>
                       </div>
                     ))}
                   </div>

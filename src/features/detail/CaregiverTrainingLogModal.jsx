@@ -40,7 +40,9 @@ export default function CaregiverTrainingLogModal({ client, onSave, onClose, cur
 
   // Build a map from the latest existing log for default STO number per target
   const latestEntryMap = useMemo(() => {
-    const logs = client?.caregiver_training_session_logs ?? [];
+    const currentCycle = client?.reauth_cycle ?? 0;
+    const logs = (client?.caregiver_training_session_logs ?? [])
+      .filter(l => (l.reauth_cycle ?? 0) === currentCycle);
     if (logs.length === 0) return {};
     const latest = [...logs].sort((a, b) => b.sessionNumber - a.sessionNumber)[0];
     return Object.fromEntries(
@@ -75,9 +77,10 @@ export default function CaregiverTrainingLogModal({ client, onSave, onClose, cur
 
   // ── SECTION 3 — Currently Monitoring (goals flagged in previous sessions) ──
   const monitoringGoals = useMemo(() => {
+    const currentCycle = client?.reauth_cycle ?? 0;
     const planNames = new Set((caregiverTargets ?? []).map(t => t.goalName?.toLowerCase()));
     const seen = new Map();
-    for (const log of (client?.caregiver_training_session_logs ?? [])) {
+    for (const log of (client?.caregiver_training_session_logs ?? []).filter(l => (l.reauth_cycle ?? 0) === currentCycle)) {
       for (const entry of (log.trainingEntries ?? [])) {
         if (!entry.isNew) continue;
         if (entry.targetId) continue; // formal plan target flag — skip
@@ -164,7 +167,9 @@ export default function CaregiverTrainingLogModal({ client, onSave, onClose, cur
       }] : []),
     ];
 
-    const sessionNumber = (client?.caregiver_training_session_logs?.length ?? 0) + 1;
+    const currentCycle = client?.reauth_cycle ?? 0;
+    const sessionNumber = (client?.caregiver_training_session_logs ?? [])
+      .filter(l => (l.reauth_cycle ?? 0) === currentCycle).length + 1;
 
     const newLog = {
       ...makeCaregiverTrainingSessionLog(
@@ -176,6 +181,7 @@ export default function CaregiverTrainingLogModal({ client, onSave, onClose, cur
         notes.trim(),
       ),
       sessionNumber,
+      reauth_cycle: client.reauth_cycle ?? 0,
     };
 
     onSave(newLog);

@@ -204,8 +204,11 @@ function TrainingLogCard({ log, prevLog, defaultOpen }) {
 
 // ── CaregiverTrainingLogPanel ─────────────────────────────────────────────────
 
-export default function CaregiverTrainingLogPanel({ client, onLogSession }) {
-  const logs               = client?.caregiver_training_session_logs ?? [];
+export default function CaregiverTrainingLogPanel({ client, onLogSession, selectedCycle }) {
+  const allLogs            = client?.caregiver_training_session_logs ?? [];
+  const logs               = selectedCycle != null
+    ? allLogs.filter(l => (l.reauth_cycle ?? 0) === selectedCycle)
+    : allLogs;
   const caregiverTargets   =
     client?.assessment_session?.sections?.caregiver_training?.caregiverTrainingTargets ?? [];
   const hasTargets         = caregiverTargets.length > 0;
@@ -301,7 +304,7 @@ export default function CaregiverTrainingLogPanel({ client, onLogSession }) {
           )}
         </div>
       ) : view === 'progress' ? (
-        <CaregiverTrainingProgressPanel client={client} />
+        <CaregiverTrainingProgressPanel client={client} selectedCycle={selectedCycle} />
       ) : (
         <div>
           {sortedLogs.map((log, idx) => {

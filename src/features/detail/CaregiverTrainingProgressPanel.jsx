@@ -280,8 +280,10 @@ function CaregiverProgressCard({ data }) {
 
 // ── CaregiverTrainingProgressPanel (default export) ───────────────────────────
 
-export default function CaregiverTrainingProgressPanel({ client }) {
-  const sessionLogs = client?.caregiver_training_session_logs ?? [];
+export default function CaregiverTrainingProgressPanel({ client, selectedCycle }) {
+  const sessionLogs = (client?.caregiver_training_session_logs ?? []).filter(
+    l => selectedCycle == null || (l.reauth_cycle ?? 0) === selectedCycle,
+  );
   const caregiverTargets =
     client?.assessment_session?.sections?.caregiver_training?.caregiverTrainingTargets ?? [];
 

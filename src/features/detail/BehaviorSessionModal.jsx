@@ -35,10 +35,27 @@ export default function BehaviorSessionModal({ client, onSave, onClose, currentU
     [client],
   );
 
+  // ── STO fallback: promoted behaviors may have stoSteps:[] if promoted before the
+  //    stoStructure→stoSteps fix. Look up stoStructure from the completed reassessment.
+  const reassessmentStoMap = useMemo(() => {
+    const completed = (client?.reassessment_sessions ?? []).filter(s => s.status === 'complete').at(-1);
+    if (!completed) return {};
+    return Object.fromEntries(
+      (completed.newBehaviorSummary ?? []).map(item => [
+        item.behaviorName?.toLowerCase(),
+        item.stoStructure ?? item.stoSteps ?? [],
+      ]),
+    );
+  }, [client]);
+
   // ── Latest log entry per official plan behavior (for pre-fill context) ────────
   const latestLogEntryMap = useMemo(() => {
+    const currentCycle = client?.reauth_cycle ?? 0;
     const logs = (client?.service_session_logs ?? [])
-      .filter(l => l.sessionType === 'behavior' || (!l.sessionType && (l.behaviorEntries ?? []).length > 0));
+      .filter(l =>
+        (l.sessionType === 'behavior' || (!l.sessionType && (l.behaviorEntries ?? []).length > 0)) &&
+        (l.reauth_cycle ?? 0) === currentCycle,
+      );
     if (logs.length === 0) return {};
     const latest = [...logs].sort((a, b) => b.sessionNumber - a.sessionNumber)[0];
     return Object.fromEntries(
@@ -51,9 +68,13 @@ export default function BehaviorSessionModal({ client, onSave, onClose, currentU
   // ── Behaviors flagged as new in past logs but NOT yet in the official plan ────
   // These are shown in a "Currently monitoring" section so RBTs can keep tracking them.
   const monitoringBehaviors = useMemo(() => {
+    const currentCycle = client?.reauth_cycle ?? 0;
     const planNames = new Set(behaviorTargets.map(bt => bt.behaviorName?.toLowerCase()));
     const allLogs = (client?.service_session_logs ?? [])
-      .filter(l => l.sessionType === 'behavior' || (!l.sessionType && (l.behaviorEntries ?? []).length > 0))
+      .filter(l =>
+        (l.sessionType === 'behavior' || (!l.sessionType && (l.behaviorEntries ?? []).length > 0)) &&
+        (l.reauth_cycle ?? 0) === currentCycle,
+      )
       .sort((a, b) => a.sessionNumber - b.sessionNumber);
 
     const seen = new Map(); // behaviorName → { firstSeenDate, function, severity, lastFrequency }
@@ -95,10 +116,11 @@ export default function BehaviorSessionModal({ client, onSave, onClose, currentU
   const [entries, setEntries] = useState(() =>
     behaviorTargets.map(bt => {
       const prev = latestLogEntryMap[bt.id];
+
       return {
         behaviorId:            bt.id,
         behaviorName:          bt.behaviorName,
-        baselineFrequency:     parseFloat(bt.baselineFrequency) || null,
+        baselineFrequency:     (() => { const v = parseFloat(bt.baselineFrequency); return !isNaN(v) ? Math.round(v) : null; })(),
         sessionFrequency:      '',
         currentStoNumber:      prev?.currentStoNumber ?? 1,
         stoStatus:             prev?.stoStatus ?? 'in_progress',
@@ -156,20 +178,42 @@ export default function BehaviorSessionModal({ client, onSave, onClose, currentU
       // Official plan targets
       ...entries
         .filter(e => e.sessionFrequency !== '' && !isNaN(parseFloat(e.sessionFrequency)))
-        .map(e => ({
-          behaviorId:            e.behaviorId,
-          behaviorName:          e.behaviorName,
-          isNew:                 false,
-          isMonitoring:          false,
-          baselineFrequency:     e.baselineFrequency,
-          sessionFrequency:      parseFloat(e.sessionFrequency),
-          currentStoNumber:      e.currentStoNumber,
-          stoStatus:             e.stoStatus,
-          newBehaviorDefinition: '',
-          newBehaviorFunction:   '',
-          newBehaviorSeverity:   '',
-          firstSeenDate:         null,
-        })),
+        .map(e => {
+          // Resolve STO list (same fallback as display)
+          const bt = behaviorTargets.find(b => b.id === e.behaviorId);
+          const stoList = (bt?.stoSteps?.length > 0)
+            ? bt.stoSteps
+            : (reassessmentStoMap[e.behaviorName?.toLowerCase()] ?? []);
+          const currentStoIdx = (e.currentStoNumber ?? 1) - 1;
+          const currentSto    = stoList[currentStoIdx];
+          const sessionFreq   = parseFloat(e.sessionFrequency);
+          const stoTarget     = currentSto ? parseFloat(currentSto.targetFrequency) : null;
+
+          // Auto-advance to next STO when session frequency meets current STO target
+          // (frequency-based, independent of the "Met ✓" radio which is for LTO mastery only)
+          const savedStoNumber = (
+            stoTarget != null && !isNaN(stoTarget) && !isNaN(sessionFreq) &&
+            sessionFreq <= stoTarget &&
+            (e.currentStoNumber ?? 1) < stoList.length
+          )
+            ? (e.currentStoNumber ?? 1) + 1
+            : (e.currentStoNumber ?? 1);
+
+          return {
+            behaviorId:            e.behaviorId,
+            behaviorName:          e.behaviorName,
+            isNew:                 false,
+            isMonitoring:          false,
+            baselineFrequency:     e.baselineFrequency,
+            sessionFrequency:      sessionFreq,
+            currentStoNumber:      savedStoNumber,
+            stoStatus:             e.stoStatus,
+            newBehaviorDefinition: '',
+            newBehaviorFunction:   '',
+            newBehaviorSeverity:   '',
+            firstSeenDate:         null,
+          };
+        }),
       // Monitoring behaviors (flagged, not yet in plan)
       ...monitoringEntries
         .filter(e => e.sessionFrequency !== '' && !isNaN(parseFloat(e.sessionFrequency)))
@@ -206,8 +250,12 @@ export default function BehaviorSessionModal({ client, onSave, onClose, currentU
         : []),
     ];
 
+    const currentCycle = client?.reauth_cycle ?? 0;
     const behaviorLogs = (client?.service_session_logs ?? [])
-      .filter(l => l.sessionType === 'behavior' || (!l.sessionType && (l.behaviorEntries ?? []).length > 0));
+      .filter(l =>
+        (l.sessionType === 'behavior' || (!l.sessionType && (l.behaviorEntries ?? []).length > 0)) &&
+        (l.reauth_cycle ?? 0) === currentCycle,
+      );
     const sessionNumber = behaviorLogs.length + 1;
 
     const newLog = {
@@ -221,6 +269,7 @@ export default function BehaviorSessionModal({ client, onSave, onClose, currentU
       notes:          notes.trim(),
       behaviorEntries,
       skillEntries:   [],
+      reauth_cycle:   client.reauth_cycle ?? 0,
       createdAt:      new Date().toISOString(),
     };
 
@@ -318,7 +367,12 @@ export default function BehaviorSessionModal({ client, onSave, onClose, currentU
                     })()}
                     {!mastered && (() => {
                       const stoIdx = (entry.currentStoNumber ?? 1) - 1;
-                      const step = bt?.stoSteps?.[stoIdx];
+                      // Promoted behaviors may have stoSteps:[] if promoted before the fix —
+                      // fall back to the completed reassessment's stoStructure for that behavior.
+                      const stoList = (bt?.stoSteps?.length > 0)
+                        ? bt.stoSteps
+                        : (reassessmentStoMap[entry.behaviorName?.toLowerCase()] ?? []);
+                      const step = stoList[stoIdx];
                       if (!step || step.targetFrequency == null || step.targetFrequency === '') return null;
                       return (
                         <>

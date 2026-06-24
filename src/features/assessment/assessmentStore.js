@@ -47,13 +47,21 @@ function _recomputeCounts(session) {
 export function patchSession(setClients, clientId, patch) {
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
+    const updatedSession = {
+      ...c.assessment_session,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    };
+    // Keep reassessment_sessions in sync so ReassessmentCyclePanel always
+    // sees the latest BCBA edits (patchSession is the write path for the
+    // interview; reassessment_sessions is the read path for the detail view).
+    const updatedReassessmentSessions = (c.reassessment_sessions ?? []).map(s =>
+      s.id === updatedSession.id ? updatedSession : s,
+    );
     return {
       ...c,
-      assessment_session: {
-        ...c.assessment_session,
-        ...patch,
-        updatedAt: new Date().toISOString(),
-      },
+      assessment_session: updatedSession,
+      reassessment_sessions: updatedReassessmentSessions,
     };
   }));
 }
@@ -79,13 +87,16 @@ export function patchSection(setClients, clientId, sectionKey, sectionPatch) {
     };
 
     const counts = _recomputeCounts(updatedSession);
+    const finalSession = { ...updatedSession, ...counts };
+
+    const updatedReassessmentSessions = (c.reassessment_sessions ?? []).map(s =>
+      s.id === finalSession.id ? finalSession : s,
+    );
 
     return {
       ...c,
-      assessment_session: {
-        ...updatedSession,
-        ...counts,
-      },
+      assessment_session: finalSession,
+      reassessment_sessions: updatedReassessmentSessions,
     };
   }));
 }

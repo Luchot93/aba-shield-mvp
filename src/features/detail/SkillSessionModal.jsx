@@ -16,10 +16,14 @@ export default function SkillSessionModal({ client, onSave, onClose, currentUser
     [client],
   );
 
-  // Pre-fill STO state from most recent skill-type log per skill
+  // Pre-fill STO state from most recent skill-type log per skill — current cycle only
   const latestSkillLogMap = useMemo(() => {
+    const currentCycle = client?.reauth_cycle ?? 0;
     const logs = (client?.service_session_logs ?? [])
-      .filter(l => l.sessionType === 'skill' || (!l.sessionType && (l.skillEntries ?? []).some(s => !s.isNew)));
+      .filter(l =>
+        (l.sessionType === 'skill' || (!l.sessionType && (l.skillEntries ?? []).some(s => !s.isNew))) &&
+        (l.reauth_cycle ?? 0) === currentCycle,
+      );
     const sorted = [...logs].sort((a, b) => b.sessionNumber - a.sessionNumber);
     const result = {};
     for (const log of sorted) {
@@ -32,11 +36,12 @@ export default function SkillSessionModal({ client, onSave, onClose, currentUser
     return result;
   }, [client]);
 
-  // Previously-flagged skills not yet in the formal plan — tracked session by session
+  // Previously-flagged skills not yet in the formal plan — current cycle only
   const monitoringSkills = useMemo(() => {
+    const currentCycle = client?.reauth_cycle ?? 0;
     const planSkillNames = new Set((skillGoals ?? []).map(g => g.targetSkill?.toLowerCase()));
     const seen = new Map();
-    for (const log of (client?.service_session_logs ?? [])) {
+    for (const log of (client?.service_session_logs ?? []).filter(l => (l.reauth_cycle ?? 0) === currentCycle)) {
       for (const entry of (log.skillEntries ?? [])) {
         if (!entry.isNew) continue;
         if (planSkillNames.has(entry.skillName?.toLowerCase())) continue;
@@ -140,8 +145,12 @@ export default function SkillSessionModal({ client, onSave, onClose, currentUser
         : []),
     ];
 
+    const currentCycle = client?.reauth_cycle ?? 0;
     const skillLogs = (client?.service_session_logs ?? [])
-      .filter(l => l.sessionType === 'skill' || (!l.sessionType && (l.skillEntries ?? []).some(s => !s.isNew)));
+      .filter(l =>
+        (l.sessionType === 'skill' || (!l.sessionType && (l.skillEntries ?? []).some(s => !s.isNew))) &&
+        (l.reauth_cycle ?? 0) === currentCycle,
+      );
     const sessionNumber = skillLogs.length + 1;
 
     const newLog = {
@@ -155,6 +164,7 @@ export default function SkillSessionModal({ client, onSave, onClose, currentUser
       notes:          notes.trim(),
       behaviorEntries: [],
       skillEntries,
+      reauth_cycle:   client.reauth_cycle ?? 0,
       createdAt:      new Date().toISOString(),
     };
 
@@ -229,11 +239,11 @@ export default function SkillSessionModal({ client, onSave, onClose, currentUser
 
                   <div className="flex items-center gap-2 flex-wrap text-[11px] text-slate-400">
                     {g?.baselinePercent != null && (
-                      <span>Baseline <span className="font-medium text-slate-500">{g.baselinePercent}%</span></span>
+                      <span>Baseline <span className="font-medium text-slate-500">{Math.round(Number(g.baselinePercent))}%</span></span>
                     )}
                     {prevEntry?.accuracyPercent != null && (() => {
                       const prev  = prevEntry.accuracyPercent;
-                      const base  = Number(g?.baselinePercent ?? 0);
+                      const base  = Math.round(Number(g?.baselinePercent ?? 0));
                       const color = prev > base ? 'text-emerald-600' : prev < base ? 'text-rose-500' : 'text-slate-500';
                       const arrow = prev > base ? ' ↑' : prev < base ? ' ↓' : ' →';
                       return (

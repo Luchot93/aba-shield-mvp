@@ -318,6 +318,56 @@ Key payers in scope: BCBS (via Lucet/WebPass), Cigna/Evernorth, Sunshine Health 
 
 ## Completed Work (this branch)
 
+**feat/client-view-detail-pt2** — Multi-Cycle Reauthorization Workflow (cycle stamping, STO auto-advance, per-cycle charts)
+
+### Track 1 — reauth_cycle stamped on every session log
+All three logging modals (`BehaviorSessionModal`, `SkillSessionModal`, `CaregiverTrainingLogModal`) now add `reauth_cycle: client.reauth_cycle ?? 0` to every new log entry. All existing seed logs have `reauth_cycle: 0`. Missing field treated as `0` everywhere (backwards compatible).
+
+### Track 2 — Reassessment graph filtering
+`ClientDetailPage.jsx` — `buildGraphsFromSession` for the Reassessment tab now filters `sessionLogs` and `ctLogs` to `activeSession.cycle_number` before passing them in, so progress charts only show data from the current auth period.
+
+### Track 3 — Promote completed reassessment plan into assessment_session on reauth start
+`ClientDetailPage.jsx` — new `buildPromotedSections(originalAssessment, completedReassessment)` helper:
+- `behavior_targets`: original plan behaviors + `newBehaviorSummary` items where `includedInPlan === true`; STOs read from `item.stoStructure ?? item.stoSteps`; baselines `Math.round()`-ed
+- `skill_acquisitions`: original plan skills + `newSkillSummary` items where `includedInPlan === true`; baselines rounded
+- `caregiver_training`: original CT targets + `newCaregiverSummary` items where `includedInPlan === true`; baselines rounded
+- `handleStartReauth` calls `buildPromotedSections` and patches `assessment_session`; `_initialAssessment` is never overwritten
+
+### Track 4 — Per-cycle progress charts in Session Logs tab
+- `selectedLogCycle` state in `ClientDetailPage` defaults to `client.reauth_cycle` and re-syncs via `useEffect` when `client.reauth_cycle` changes
+- `BehaviorSessionLogPanel`, `SkillSessionLogPanel`, `CaregiverTrainingLogPanel`: pass `selectedCycle` down to their nested progress panel
+- `ServiceSessionProgressPanel`, `SkillSessionProgressPanel`, `CaregiverTrainingProgressPanel`: accept `selectedCycle` prop and filter log arrays to that cycle before building chart data
+
+### Session logging improvements
+- **BehaviorSessionModal**: entries initializer bug fixed (bare `currentStoNumber`/`stoStatus` variable references → `prev?.currentStoNumber ?? 1` / `prev?.stoStatus ?? 'in_progress'`); `reassessmentStoMap` fallback resolves STOs for promoted behaviors whose `stoSteps` was empty at promotion time; **STO auto-advance at save time** — when `sessionFrequency <= stoTarget` AND more STOs remain, `currentStoNumber + 1` is saved so the next modal opens on the correct next STO (frequency-based, independent of the "Met ✓" radio which is for LTO mastery only)
+- **BehaviorSessionModal**, **SkillSessionModal**, **CaregiverTrainingLogModal**: session numbering counts only logs with matching `reauth_cycle` so numbering resets to `#1` each new cycle
+- **SkillSessionModal**: baselines displayed as `Math.round()`-ed integers (no decimals)
+
+### Reassessment review / panel fixes
+- `ReassessmentReviewPage.jsx` — `NewCaregiverPlanCard`: was reading `item.stoStructure` (behavior field) for CT STOs; fixed to `item.stoSteps`
+- `ReassessmentCyclePanel.jsx` — `NewCTRow`: filters empty `stoSteps` before deciding whether to show the expand chevron
+
+### Files changed
+| File | Change |
+|---|---|
+| `src/App.jsx` | Cycle filter for `makeReassessmentSession` calls |
+| `src/constants/seedData.js` | `reauth_cycle: 0` on all seed logs; `makeReassessmentSession` 6th `ctLogs` param + `cycle_number` on returned session |
+| `src/features/assessment/ReassessmentReviewPage.jsx` | CT STO field fix (`stoSteps` not `stoStructure`) |
+| `src/features/assessment/AssessmentInterviewPage.jsx` | Read-only average inputs; status badge fixes |
+| `src/features/detail/BehaviorSessionModal.jsx` | Entries initializer fix; `reassessmentStoMap` fallback; STO auto-advance at save; cycle-filtered session numbering; baseline rounding |
+| `src/features/detail/SkillSessionModal.jsx` | Cycle-filtered session numbering; baseline integer display |
+| `src/features/detail/CaregiverTrainingLogModal.jsx` | `reauth_cycle` stamp; cycle-filtered session numbering |
+| `src/features/detail/ClientDetailPage.jsx` | `selectedLogCycle` state + sync effect; `buildPromotedSections` helper; `handleStartReauth` wired; reassessment graph cycle filter |
+| `src/features/detail/ReassessmentCyclePanel.jsx` | `NewCTRow` empty-STO guard |
+| `src/features/detail/BehaviorSessionLogPanel.jsx` | Pass `selectedCycle` to `ServiceSessionProgressPanel` |
+| `src/features/detail/SkillSessionLogPanel.jsx` | Pass `selectedCycle` to `SkillSessionProgressPanel` |
+| `src/features/detail/CaregiverTrainingLogPanel.jsx` | Pass `selectedCycle` to `CaregiverTrainingProgressPanel` |
+| `src/features/detail/ServiceSessionProgressPanel.jsx` | Accept + apply `selectedCycle` filter |
+| `src/features/detail/SkillSessionProgressPanel.jsx` | Accept + apply `selectedCycle` filter |
+| `src/features/detail/CaregiverTrainingProgressPanel.jsx` | Accept + apply `selectedCycle` filter |
+
+---
+
 **feat/reauth-pipeline-cycle** — Full Reauthorization Pipeline Cycle (replaces old Reauth tab)
 
 ### Architecture change: Reauth tab → Pipeline cycle

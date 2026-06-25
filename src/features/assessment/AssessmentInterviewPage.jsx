@@ -1956,8 +1956,15 @@ export default function AssessmentInterviewPage({
   const session = client?.assessment_session;
 
   const isReassessment     = session?.sessionType === 'reassessment';
-  const sessionLogs        = client?.service_session_logs ?? [];
-  const ctLogs             = client?.caregiver_training_session_logs ?? [];
+  // For reassessments, only show logs from the cycle being assessed so the session
+  // detail dropdown ("Show N sessions") reflects only this auth period, not all cycles.
+  const cycleFilter = isReassessment ? (session?.cycle_number ?? 0) : null;
+  const sessionLogs = (client?.service_session_logs ?? []).filter(
+    l => cycleFilter === null || (l.reauth_cycle ?? 0) === cycleFilter,
+  );
+  const ctLogs = (client?.caregiver_training_session_logs ?? []).filter(
+    l => cycleFilter === null || (l.reauth_cycle ?? 0) === cycleFilter,
+  );
   const initialAssessment  = client?._initialAssessment;
   const effectiveSectionOrder = useMemo(() => {
     if (!isReassessment) return SECTION_ORDER;

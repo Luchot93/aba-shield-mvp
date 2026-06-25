@@ -107,13 +107,18 @@ function buildPromotedSections(originalAssessment, completedReassessment) {
   const newCTInPlan = (completedReassessment?.newCaregiverSummary ?? [])
     .filter(item => item.includedInPlan === true)
     .map((item, idx) => {
-      const rawPct = parseFloat(item.averageSessionPercent ?? item.baselinePercent);
+      // avgAccuracy = average of session log values in this cycle (field used by newCaregiverSummary).
+      // averageSessionPercent = field used by caregiverTrainingSummary (original plan items). Fall back
+      // to baselinePercent when neither is available.
+      const rawPct = parseFloat(item.avgAccuracy ?? item.averageSessionPercent ?? item.baselinePercent);
+      // ltoPercent: prefer BCBA-entered masteryCriteriaPercent, fall back to ltoData from continuing targets
+      const ltoRaw = item.masteryCriteriaPercent ?? item.ltoData?.percent;
       return {
-        id:                     `ct-promoted-${now}-${idx}`,
-        goalName:               item.goalName,
-        baselinePercent:        !isNaN(rawPct) ? String(Math.round(rawPct)) : '',
-        stoSteps:               item.stoSteps ?? [],
-        masteryCriteriaPercent: item.ltoData?.percent != null ? String(item.ltoData.percent) : '',
+        id:          `ct-promoted-${now}-${idx}`,
+        goalName:    item.goalName,
+        baselinePercent: !isNaN(rawPct) ? String(Math.round(rawPct)) : '',
+        stoSteps:    item.stoSteps ?? [],
+        ltoPercent:  ltoRaw != null ? String(ltoRaw) : '',
       };
     });
 
@@ -2035,10 +2040,59 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                                       .filter(s => s.status === 'complete' && (s.cycle_number ?? 0) === currentCycle)
                                       .at(-1)
                                       ?? (client.reassessment_sessions ?? []).filter(s => s.status === 'complete').at(-1);
-                                    const originalAssessment = client._initialAssessment ?? client.assessment_session;
+                                    // Use the current cycle's promoted assessment as the base for promotion.
+                    // This ensures goals added in cycle N's reassessment are treated as
+                    // continuing goals in cycle N+1, with their updated baselines.
+                    const originalAssessment = client.assessment_session;
                                     const promotedAssessmentSession = completedReassessment
                                       ? { ...originalAssessment, sections: buildPromotedSections(originalAssessment, completedReassessment) }
                                       : originalAssessment;
+
+                                    // Extract monitor-only items from the completed reassessment and store
+                                    // them as monitoring_goals for the new cycle. Session logging modals
+                                    // merge these into the "Currently Monitoring" section so the RBT can
+                                    // keep tracking them across cycles without formally including them in
+                                    // the treatment plan.
+                                    const _mgNow = Date.now();
+                                    const monitoringGoals = completedReassessment ? {
+                                      behaviors: (completedReassessment.newBehaviorSummary ?? [])
+                                        .filter(b => b.monitorOnly === true)
+                                        .map((b, idx) => ({
+                                          id:                    `monitor-b-${_mgNow}-${idx}`,
+                                          behaviorName:          b.behaviorName,
+                                          // Rolling-average baseline: use the cycle-avg frequency as the
+                                          // "new baseline" carried forward. Fall back to first-observed if no logs.
+                                          baselineFrequency:     b.averageFrequency != null
+                                            ? String(Math.round(b.averageFrequency))
+                                            : (b.baselineFrequency != null ? String(b.baselineFrequency) : null),
+                                          firstSeenDate:         b.firstSeenDate ?? null,
+                                          newBehaviorFunction:   b.function ?? '',
+                                          newBehaviorSeverity:   b.severity ?? '',
+                                          newBehaviorDefinition: b.bcbaDefinitionFinal || b.rbtDefinitionDraft || '',
+                                        })),
+                                      skills: (completedReassessment.newSkillSummary ?? [])
+                                        .filter(s => s.monitorOnly === true)
+                                        .map((s, idx) => ({
+                                          id:              `monitor-s-${_mgNow}-${idx}`,
+                                          skillName:       s.skillName,
+                                          baselinePercent: s.avgAccuracy != null
+                                            ? String(Math.round(s.avgAccuracy))
+                                            : (s.baselinePercent != null ? String(s.baselinePercent) : null),
+                                          firstSeenDate:   s.firstSeenDate ?? null,
+                                          domain:          s.bcbaDomain ?? s.domain ?? '',
+                                        })),
+                                      ct: (completedReassessment.newCaregiverSummary ?? [])
+                                        .filter(t => t.monitorOnly === true)
+                                        .map((t, idx) => ({
+                                          id:              `monitor-ct-${_mgNow}-${idx}`,
+                                          goalName:        t.goalName,
+                                          baselinePercent: t.avgAccuracy != null
+                                            ? String(Math.round(t.avgAccuracy))
+                                            : (t.baselinePercent != null ? String(t.baselinePercent) : null),
+                                          firstSeenDate:   t.firstSeenDate ?? null,
+                                        })),
+                                    } : (client.monitoring_goals ?? { behaviors: [], skills: [], ct: [] });
+
                                     // Snapshot current auth data into history
                                     const sub = client.checklist?.submitted ?? {};
                                     const historyEntry = {
@@ -2080,6 +2134,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                                         assessment_session: promotedAssessmentSession,
                                         // Preserve original first assessment — never overwritten
                                         _initialAssessment: c._initialAssessment ?? c.assessment_session,
+                                        // Monitor-only items from the completed reassessment carried forward
+                                        // so session logging modals can show them under "Currently Monitoring"
+                                        monitoring_goals: monitoringGoals,
                                         // Only add history entry if this cycle isn't already recorded (prevents duplicate when seed data pre-populates it)
                                         auth_cycles_history: (c.auth_cycles_history ?? []).some(e => e.cycle === currentCycle)
                                           ? c.auth_cycles_history

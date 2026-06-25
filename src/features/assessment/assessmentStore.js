@@ -815,14 +815,20 @@ export function createReassessmentSession(clientId, clients, setClients, bcbaId,
   if (!client) return null;
 
   const initialSession    = client.assessment_session;
-  const sessionLogs       = client.service_session_logs ?? [];
+  const cycleFilter       = client.reauth_cycle ?? 0;
+  const sessionLogs       = (client.service_session_logs ?? []).filter(
+    l => (l.reauth_cycle ?? 0) === cycleFilter,
+  );
+  const ctLogs            = (client.caregiver_training_session_logs ?? []).filter(
+    l => (l.reauth_cycle ?? 0) === cycleFilter,
+  );
   const authPeriodStart   = client.checklist?.submitted?.auth_start_date ?? null;
   const authPeriodEnd     = client.checklist?.submitted?.auth_end_date
     ?? client.auth_expiry_date
     ?? null;
 
   const newSession = makeReassessmentSession(
-    client, initialSession, sessionLogs, authPeriodStart, authPeriodEnd,
+    client, initialSession, sessionLogs, authPeriodStart, authPeriodEnd, ctLogs,
   );
 
   setClients(prev => prev.map(c => {

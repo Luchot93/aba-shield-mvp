@@ -60,13 +60,28 @@ export default function CaregiverTrainingLogModal({ client, onSave, onClose, cur
   const [entries, setEntries] = useState(() =>
     caregiverTargets.map(target => {
       const prev = latestEntryMap[target.id];
+
+      // When no previous log exists for this cycle, advance past any STOs the new
+      // baseline already satisfies (acquisition goal: met when baseline >= targetPercent).
+      const computedStoNumber = (() => {
+        if (prev?.currentStoNumber != null) return prev.currentStoNumber;
+        const stoList = target?.stoSteps ?? [];
+        if (!stoList.length) return 1;
+        const baseline = parseFloat(target.baselinePercent);
+        if (isNaN(baseline)) return 1;
+        const firstUncompleted = stoList.findIndex(
+          step => baseline < parseFloat(step.targetPercent),
+        );
+        return firstUncompleted === -1 ? stoList.length : firstUncompleted + 1;
+      })();
+
       return {
-        targetId:        target.id,
-        goalName:        target.goalName ?? '',
-        baselinePercent: target.baselinePercent ?? null,
-        sessionPercent:  '',
-        stoStatus:       prev?.stoStatus ?? 'in_progress',
-        currentStoNumber: prev?.currentStoNumber ?? 1,
+        targetId:         target.id,
+        goalName:         target.goalName ?? '',
+        baselinePercent:  target.baselinePercent ?? null,
+        sessionPercent:   '',
+        stoStatus:        prev?.stoStatus ?? 'in_progress',
+        currentStoNumber: computedStoNumber,
       };
     }),
   );
@@ -75,18 +90,35 @@ export default function CaregiverTrainingLogModal({ client, onSave, onClose, cur
     setEntries(prev => prev.map((e, i) => (i === idx ? { ...e, [field]: value } : e)));
   }
 
-  // ── SECTION 3 — Currently Monitoring (goals flagged in previous sessions) ──
+  // ── SECTION 3 — Currently Monitoring (goals carried forward from previous cycle
+  //    reassessment as "Monitor Only", OR newly flagged in this cycle's sessions) ──
   const monitoringGoals = useMemo(() => {
     const currentCycle = client?.reauth_cycle ?? 0;
     const planNames = new Set((caregiverTargets ?? []).map(t => t.goalName?.toLowerCase()));
-    const seen = new Map();
+    const seen = new Map(); // lowercase goalName → entry
+
+    // Pre-seed from monitoring_goals (set at "Start Reauthorization" time by the BCBA
+    // selecting "Monitor Only" for these items in the reassessment review).
+    for (const mg of (client?.monitoring_goals?.ct ?? [])) {
+      const key = mg.goalName?.toLowerCase();
+      if (!key || planNames.has(key)) continue;
+      seen.set(key, {
+        goalName:        mg.goalName,
+        firstSeenDate:   mg.firstSeenDate,
+        baselinePercent: mg.baselinePercent,
+        notes:           '',
+      });
+    }
+
+    // Layer on any newly-flagged goals from this cycle's session logs
     for (const log of (client?.caregiver_training_session_logs ?? []).filter(l => (l.reauth_cycle ?? 0) === currentCycle)) {
       for (const entry of (log.trainingEntries ?? [])) {
         if (!entry.isNew) continue;
         if (entry.targetId) continue; // formal plan target flag — skip
-        if (planNames.has(entry.goalName?.toLowerCase())) continue;
-        if (!seen.has(entry.goalName)) {
-          seen.set(entry.goalName, {
+        const key = entry.goalName?.toLowerCase();
+        if (!key || planNames.has(key)) continue;
+        if (!seen.has(key)) {
+          seen.set(key, {
             goalName:        entry.goalName,
             firstSeenDate:   entry.firstSeenDate ?? log.sessionDate,
             baselinePercent: entry.baselinePercent,

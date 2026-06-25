@@ -318,6 +318,78 @@ Key payers in scope: BCBS (via Lucet/WebPass), Cigna/Evernorth, Sunshine Health 
 
 ## Completed Work (this branch)
 
+**feat/client-view-detail-pt3** — Monitor-Only Goals Workflow + Multi-Cycle Demo Clients (c16, c17)
+
+### Track 1 — `monitoring_goals` field — monitor-only items persist across reauth cycles
+Items the BCBA marks "Monitor Only" during a reassessment now appear in the next cycle's session logging modals under "Currently Monitoring."
+
+**Architecture:** `client.monitoring_goals: { behaviors[], skills[], ct[] }` — populated at `handleStartReauth` from `monitorOnly: true` items in the completed reassessment with rolling-average baselines. Pre-seeds `makeReassessmentSession`'s internal maps so items appear in the reassessment form without requiring new-cycle `isNew` log entries.
+
+**`ClientDetailPage.jsx` — `handleStartReauth`:**
+- Extracts `monitorOnly: true` items from the completed reassessment
+- Stores rolling-average baseline: `averageFrequency` / `avgAccuracy` from the cycle's logs
+- Adds `monitoring_goals: monitoringGoals` to the `setClients` call
+
+**`BehaviorSessionModal.jsx` — `monitoringBehaviors` useMemo:**
+- Pre-seeds from `client.monitoring_goals.behaviors` before scanning session logs
+- Monitoring items appear in "Currently Monitoring" section even before any new-cycle logs exist
+
+**`SkillSessionModal.jsx` — `monitoringSkills` useMemo:**
+- Pre-seeds from `client.monitoring_goals.skills` (lowercase key map, consistent with behavior pattern)
+
+**`CaregiverTrainingLogModal.jsx` — `monitoringGoals` useMemo:**
+- Pre-seeds from `client.monitoring_goals.ct`
+
+**`seedData.js` — `makeReassessmentSession`:**
+- Pre-seeded from `client.monitoring_goals` before processing session logs so monitor items from previous cycles show up in `newBehaviorSummary`/`newSkillSummary`/`newCaregiverSummary`
+
+**`seedData.js` — Charlotte (c10) seed:**
+- Added `charlotte_monitoring_goals` with "Waiting for preferred item" (skill, baseline 25%) and "Visual schedule implementation" (CT, baseline 35%) as legacy monitor-only items demonstrating the feature
+
+**Bug fix — `buildPromotedSections` CT baseline:** `item.averageSessionPercent` → `item.avgAccuracy ?? item.averageSessionPercent ?? item.baselinePercent` (correct field name for `newCaregiverSummary` items)
+
+### Track 2 — Reassessment session dropdown cycle filter
+The "Show N sessions" detail dropdown in the reassessment interview now only shows sessions from the current reassessment cycle (not all cycles combined).
+
+**`AssessmentInterviewPage.jsx`:**
+- Detect `isReassessment = session?.sessionType === 'reassessment'`
+- Compute `cycleFilter = isReassessment ? (session?.cycle_number ?? 0) : null`
+- Filter `sessionLogs` and `ctLogs` to `cycleFilter` before passing to `OrigBehaviorRow`, `OrigSkillRow`, `CaregiverTrainingSummaryRow`
+
+### Track 3 — Two new multi-cycle demo seed clients
+
+**c16 — Ethan Clarke** (reauth cycle 1, Cigna/Evernorth, ASD Level 1, BCBA: Marcus Webb / RBT: Devon Clark)
+- 17 service session logs (7 behavior + 6 skill cycle 0; 2 behavior + 2 skill cycle 1)
+- 7 CT logs (5 cycle 0, 2 cycle 1)
+- 1 completed cycle-0 reassessment: Throwing objects → monitorOnly, Turn-taking → monitorOnly
+- Promoted cycle-1 assessment with cycle-averaged baselines (Elopement: 4, Vocal Disruption: 10, Following: 49%, Ind. Play: 40%)
+- `monitoring_goals`: Throwing objects (behavior, baseline '3') + Turn-taking (skill, baseline '35%)
+- 1 `auth_cycles_history` entry, 11 documents, 16 activity log entries
+
+**c17 — Maya Chen** (reauth cycle 3, Sunshine Health, ASD Level 2, BCBA: Dr. Rachel Kim / RBT: Tanya Reyes)
+- 36 service session logs across 4 cycles (6+5+5+2 behavior, 6+5+5+2 skill)
+- 14 CT logs (4+4+4+2)
+- 3 completed reassessments (cycle_number: 0, 1, 2), each built via `makeReassessmentSession` with cycle-filtered logs
+- Clinical evolution across cycles: PECS mastered (cycle 0), SIB mastered (cycle 1), Elopement mastered (cycle 2), Social Initiation promoted from monitor→plan (cycle 1→2)
+- Intermediate promoted assessments: `C17_ASSESSMENT_C1`, `C17_ASSESSMENT_C2` built as local consts with manually computed cycle-averages; passed via `{ ...c, assessment_session: C17_ASSESSMENT_Cn }` temp client
+- Active cycle-3 `assessment_session` (`sess_c17_cycle3`) contains only Physical Aggression (no Elopement/SIB)
+- `monitoring_goals`: Scripting + Noncompliance (behaviors) + Self-Regulation (skill)
+- 3 `auth_cycles_history` entries, 14 documents, 24 activity log entries
+
+### Files changed
+| File | Change |
+|---|---|
+| `src/App.jsx` | `monitoring_goals` pass-through in client merge after reassessment regeneration |
+| `src/constants/seedData.js` | `makeReassessmentSession` pre-seeded from `client.monitoring_goals`; Charlotte `monitoring_goals`; c16 Ethan Clarke full block; c17 Maya Chen full block |
+| `src/features/assessment/AssessmentInterviewPage.jsx` | Cycle filter for `sessionLogs`/`ctLogs` in reassessment interview |
+| `src/features/assessment/assessmentStore.js` | `monitoring_goals` preserved in session save/load helpers |
+| `src/features/detail/BehaviorSessionModal.jsx` | `monitoringBehaviors` pre-seeded from `client.monitoring_goals.behaviors` |
+| `src/features/detail/SkillSessionModal.jsx` | `monitoringSkills` pre-seeded from `client.monitoring_goals.skills` |
+| `src/features/detail/CaregiverTrainingLogModal.jsx` | `monitoringGoals` pre-seeded from `client.monitoring_goals.ct` |
+| `src/features/detail/ClientDetailPage.jsx` | `handleStartReauth` extracts + stores `monitoring_goals`; `buildPromotedSections` CT baseline fix |
+
+---
+
 **feat/client-view-detail-pt2** — Multi-Cycle Reauthorization Workflow (cycle stamping, STO auto-advance, per-cycle charts)
 
 ### Track 1 — reauth_cycle stamped on every session log

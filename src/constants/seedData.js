@@ -1728,6 +1728,8 @@ export const SEED_CLIENTS = () => [
   { id:'c13', name:'Marcus Rivera',   dob:'2017-03-04', phone:'(305) 555-0302', address:'4820 SW 137th Ave, Miami, FL 33175',       insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-774421', group_number:'G-12390', referring_provider:'Dr. Adriana Costa',  referring_provider_npi:'1407536982', referring_provider_phone:'(305) 555-0410', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Daniela Rivera', parent_relationship:'Mother', parent_email:'d.rivera@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-05-01', stage_entered_at:'2026-05-02T08:00:00.000Z', stage:'assessment',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
   { id:'c14', name:'Diego Reyes',     dob:'2018-06-12', phone:'(786) 555-0211', address:'3450 NW 5th Ave, Miami, FL 33127',         insurer_name:'Cigna',        health_plan_name:'Cigna Healthspring Florida',                   member_id:'CIG-884432', group_number:'G-55023', referring_provider:'Dr. Ana Flores',     referring_provider_npi:'1619028374', referring_provider_phone:'(305) 555-0220', gender:'Male',   diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Ana Reyes', parent_relationship:'Mother', parent_email:'ana.reyes@gmail.com', preferred_language:'Spanish', source:'imported',    referral_date:'2026-03-20', stage_entered_at:'2026-05-28T10:00:00.000Z', stage:'plan_draft',      denial_reason:null,                         bcba_id:'u2', rbt_id:null, auth_expiry_date:null,        reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
   { id:'c15', name:'Sofia Ramirez',   dob:'2019-03-14', phone:'(954) 555-0277', address:'4200 Stirling Rd, Hollywood, FL 33021',      insurer_name:'Florida Blue', health_plan_name:'Florida Blue Community Health Plan',          member_id:'FLB-338821', group_number:'G-12390', referring_provider:'Dr. Patricia Lee',   referring_provider_npi:'1073619284', referring_provider_phone:'(305) 555-0960', gender:'Female', diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Elena Ramirez', parent_relationship:'Mother', parent_email:'e.ramirez@gmail.com', preferred_language:'Spanish', source:'crm_created', referral_date:'2025-05-10', stage_entered_at:'2025-07-01T09:00:00.000Z', stage:'services',        denial_reason:null,                         bcba_id:'s1', rbt_id:'s7', auth_expiry_date:'2026-09-01', reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[] },
+  { id:'c16', name:'Ethan Clarke',  dob:'2017-04-22', phone:'(561) 555-0184', address:'381 Cypress Creek Rd, Pompano Beach, FL 33064', insurer_name:'Cigna/Evernorth', health_plan_name:'Cigna Behavioral Health', member_id:'CIG-447812', group_number:'G-88201', referring_provider:'Dr. Sandra Walsh', referring_provider_npi:'1023456789', referring_provider_phone:'(561) 555-0190', gender:'Male', diagnosis:'ASD Level 1', icd10:'F84.0', parent_name:'Lisa Clarke', parent_relationship:'Mother', parent_email:'lisa.clarke@email.com', preferred_language:'English', source:'crm_created', referral_date:'2025-01-08', stage_entered_at:'2025-10-05T09:00:00.000Z', stage:'services', denial_reason:null, bcba_id:'s2', rbt_id:'s6', auth_expiry_date:'2026-04-05', reauth_cycle:1, reauth_requested_hours:{'97153':'80','97155':'12','97156':'8'}, auth_cycles_history:[{ cycle:0, label:'Initial Authorization', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-04-01', auth_end_date:'2025-10-01', auth_reference_number:'CIG-AUT-2025-0320-4412', closed_at:'2025-10-05T09:00:00.000Z' }] },
+  { id:'c17', name:'Maya Chen',     dob:'2018-08-15', phone:'(305) 555-0291', address:'1540 NW 7th Ave, Miami, FL 33136', insurer_name:'Sunshine Health', health_plan_name:'Sunshine Health Medicaid', member_id:'SSH-229441', group_number:'G-55320', referring_provider:'Dr. Andrew Park', referring_provider_npi:'1087654321', referring_provider_phone:'(305) 555-0295', gender:'Female', diagnosis:'ASD Level 2', icd10:'F84.0', parent_name:'Wei Chen', parent_relationship:'Father', parent_email:'wei.chen@email.com', preferred_language:'English', source:'crm_created', referral_date:'2024-06-05', stage_entered_at:'2026-03-01T09:00:00.000Z', stage:'services', denial_reason:null, bcba_id:'s1', rbt_id:'s5', auth_expiry_date:'2026-08-25', reauth_cycle:3, reauth_requested_hours:{'97153':'80','97155':'12','97156':'8'}, auth_cycles_history:[{ cycle:0, label:'Initial Authorization', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2024-08-25', auth_end_date:'2025-02-25', auth_reference_number:'SSH-AUT-2024-0820-7712', closed_at:'2025-03-01T09:00:00.000Z' },{ cycle:1, label:'Reauth Cycle 1', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-03-01', auth_end_date:'2025-09-01', auth_reference_number:'SSH-AUT-2025-0225-8834', closed_at:'2025-09-05T09:00:00.000Z' },{ cycle:2, label:'Reauth Cycle 2', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-09-05', auth_end_date:'2026-02-25', auth_reference_number:'SSH-AUT-2025-0901-3351', closed_at:'2026-02-25T09:00:00.000Z' }] },
 ].map(c => {
   const cl = mkChecklist();
   // Pre-complete c7 (Ethan Williams) denied checklist so resolve button is enabled
@@ -2281,7 +2283,33 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
       cptHours: { '97153': '80', '97155': '12', '97156': '8' },
     };
 
-    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_charlotte, checklist:cl, documents: C10_DOCS, activity_log: C10_LOG, case_notes: SEED_NOTES[c.id] || [], assessment_session: assessment_session_charlotte, service_session_logs: C10_SERVICE_SESSION_LOGS, caregiver_training_session_logs: C10_CAREGIVER_TRAINING_LOGS, reassessment_sessions: [reassessment_cycle1_charlotte] };
+    // Charlotte is already in reauth_cycle 1. Populate monitoring_goals with the items
+    // that would have been extracted from her cycle-0 reassessment had this feature existed:
+    //   - "Waiting for preferred item" (skill): first seen at 20%, observed at 30% → rolling avg 25%
+    //   - "Visual schedule implementation" (CT): first seen at 25%, observed at 45% → rolling avg 35%
+    //   - "Throwing objects" (behavior) was included in the formal plan, so it is NOT here.
+    const charlotte_monitoring_goals = {
+      behaviors: [],
+      skills: [
+        {
+          id:              'monitor-s-c10-legacy-1',
+          skillName:       'Waiting for preferred item',
+          baselinePercent: '25',   // average([20, 30]) = 25
+          firstSeenDate:   '2026-03-10',
+          domain:          '',
+        },
+      ],
+      ct: [
+        {
+          id:              'monitor-ct-c10-legacy-1',
+          goalName:        'Visual schedule implementation',
+          baselinePercent: '35',   // average([25, 45]) = 35
+          firstSeenDate:   '2026-03-03',
+        },
+      ],
+    };
+
+    return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id_charlotte, checklist:cl, documents: C10_DOCS, activity_log: C10_LOG, case_notes: SEED_NOTES[c.id] || [], assessment_session: assessment_session_charlotte, service_session_logs: C10_SERVICE_SESSION_LOGS, caregiver_training_session_logs: C10_CAREGIVER_TRAINING_LOGS, reassessment_sessions: [reassessment_cycle1_charlotte], monitoring_goals: charlotte_monitoring_goals };
   }
 
   // ── c11 James Martinez — services (Aetna, reauth active) ───────────────────
@@ -3021,6 +3049,1520 @@ Continued ABA services are medically necessary to maintain SIB mastery, complete
     };
   }
 
+  if (c.id === 'c16') {
+    // ── Stage checklists ──────────────────────────────────────────────────────
+    cl.intake          = { referral_form:true, insurance_card:true, cde:true, aba_prescription:true, consent_signed:true, demographics_confirmed:true, referral_source:'Dr. Sandra Walsh · (561) 555-0190', insurance_plan:'Cigna Behavioral Health', member_id_verified:'CIG-447812 / G-88201', copay_deductible:'$20 copay, $500 deductible', preferred_language:'English', insurance_verified:true, benefits_verified:true };
+    cl.auth_assessment = { cde_confirmed:true, prescription_confirmed:true, referral_confirmed:true, prior_assessments:true, auth_submitted:true, submission_date:'2025-01-22', units_requested:'16', expected_response_date:'2025-02-10', auth_portal:'Cigna provider portal', reference_number:'CIG-AUTH-2025-0122-7741', cpt_97151_received:true, bcba_assigned:true };
+    cl.assessment      = { bcba_confirmed:true, caregiver_interview:true, direct_observation:true, vineland3:true, vineland3_date:'2025-03-01', basc3:true, basc3_date:'2025-03-01', additional_assessments:false, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
+    cl.plan_draft      = { medical_necessity:true, skill_targets:true, behavior_goals:true, intervention_strategies:true, hours_97153:'80', hours_97155:'12', hours_97156:'8', data_methodology:'Event recording with daily frequency counts', plan_start_date:'2025-04-01', plan_end_date:'2026-04-01', sessions_per_week:'10', session_duration_min:'90', baseline_graphs:true, ai_draft_approved:true, treatment_plan_finalized:true };
+    cl.submitted       = { plan_submitted:true, plan_submission_date:'2025-10-05', approval_uploaded:true, auth_reference_number:'CIG-AUT-2025-1003-8891', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-10-05', auth_end_date:'2026-04-05' };
+    cl.authorized      = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Wed/Fri 3pm–5:30pm, Sat 9am–11am', session_location:'Home-based', scheduled_hours_week:'12', scheduled_97155_week:'2', scheduled_97156_week:'1' };
+    cl.staffing        = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2025-04-10', first_session_time:'3:00 PM', session_location:'Home-based' };
+
+    // ── Behavior targets (initial plan) ───────────────────────────────────────
+    const C16_BEHAVIOR_TARGETS = [
+      {
+        id: 'bt-c16-1',
+        behaviorName: 'Elopement',
+        operationalDefinition: 'Any instance of leaving a designated area without permission, including running away from a caregiver or leaving a room without being released.',
+        hypothesizedFunction: 'Escape',
+        severity: 'Severe',
+        baselineFrequency: 8,
+        targetFrequency: '0',
+        stoSteps: [
+          { id:'sto-c16-1-1', targetFrequency:'5', durationWeeks:'6', note:'Reduce to ≤5 elopement attempts/session using environmental modification and FCT for "break"' },
+          { id:'sto-c16-1-2', targetFrequency:'2', durationWeeks:'6', note:'Reduce to ≤2 attempts; graduated exposure to demand contexts with visual schedule' },
+          { id:'sto-c16-1-3', targetFrequency:'0', durationWeeks:'8', note:'Zero elopement for 3 consecutive weeks across home and community settings' },
+        ],
+      },
+      {
+        id: 'bt-c16-2',
+        behaviorName: 'Vocal Disruption',
+        operationalDefinition: 'Any instance of yelling, screaming, or repetitive vocalizations at a volume that disrupts ongoing activities, lasting ≥3 seconds.',
+        hypothesizedFunction: 'Attention',
+        severity: 'Moderate',
+        baselineFrequency: 15,
+        targetFrequency: '2',
+        stoSteps: [
+          { id:'sto-c16-2-1', targetFrequency:'10', durationWeeks:'6', note:'Reduce to ≤10 incidents/session using noncontingent attention schedule' },
+          { id:'sto-c16-2-2', targetFrequency:'5', durationWeeks:'6', note:'Reduce to ≤5 incidents; differential reinforcement of quiet behavior (DRQ)' },
+          { id:'sto-c16-2-3', targetFrequency:'2', durationWeeks:'8', note:'≤2 incidents/session; caregiver-implemented across all daily routines' },
+        ],
+      },
+    ];
+
+    // ── Skill goals (initial plan) ─────────────────────────────────────────────
+    const C16_SKILL_GOALS = [
+      {
+        id: 'sg-c16-1',
+        targetSkill: 'Following 2-Step Instructions',
+        domain: 'Academic',
+        baselinePercent: 20,
+        masteryCriteriaPercent: 80,
+        stoSteps: [
+          { id:'sg-c16-1-s1', targetPercent:'40', skillDescription:'Follows 2-step instructions with visual cue across 3 familiar routines', durationWeeks:'6' },
+          { id:'sg-c16-1-s2', targetPercent:'60', skillDescription:'Follows 2-step instructions without visual cue across 5 instructors/settings', durationWeeks:'6' },
+        ],
+      },
+      {
+        id: 'sg-c16-2',
+        targetSkill: 'Independent Play Skills',
+        domain: 'Adaptive',
+        baselinePercent: 15,
+        masteryCriteriaPercent: 75,
+        stoSteps: [
+          { id:'sg-c16-2-s1', targetPercent:'35', skillDescription:'Engages with preferred activity independently for ≥5 minutes with minimal prompting', durationWeeks:'6' },
+          { id:'sg-c16-2-s2', targetPercent:'60', skillDescription:'Independently selects and plays with age-appropriate toys for ≥10 minutes across 3 settings', durationWeeks:'6' },
+        ],
+      },
+    ];
+
+    // ── Caregiver training targets ─────────────────────────────────────────────
+    const C16_CT_TARGETS = [
+      {
+        id: 'ctt-c16-1',
+        goalName: 'FCT Caregiver Implementation',
+        baselinePercent: 35,
+        targetPercent: 85,
+        ltoPercent: 85,
+        ltoSessions: 3,
+        stoSteps: [
+          { id:'ctt-c16-1-1', targetPercent:'60', durationWeeks:'6', note:'Caregiver correctly prompts FCT "break" request during demand contexts in 60% of trials' },
+          { id:'ctt-c16-1-2', targetPercent:'80', durationWeeks:'6', note:'Caregiver independently implements FCT across all routines; generalized to 2 caregivers' },
+        ],
+      },
+      {
+        id: 'ctt-c16-2',
+        goalName: 'Extinction Procedure Fidelity',
+        baselinePercent: 20,
+        targetPercent: 80,
+        ltoPercent: 80,
+        ltoSessions: 3,
+        stoSteps: [
+          { id:'ctt-c16-2-1', targetPercent:'50', durationWeeks:'6', note:'Caregiver maintains planned ignoring ≥50% of trials without providing attention during vocal disruption' },
+          { id:'ctt-c16-2-2', targetPercent:'70', durationWeeks:'6', note:'Caregiver independently implements extinction across vocal disruption episodes in home routines' },
+        ],
+      },
+    ];
+
+    // ── Initial assessment session ─────────────────────────────────────────────
+    const assessment_session_c16_initial = {
+      id:          'sess_c16_initial',
+      clientId:    'c16',
+      clientName:  'Ethan Clarke',
+      bcbaId:      's2',
+      bcbaName:    'Marcus Webb',
+      sessionType: 'initial',
+      status:      'complete',
+      completedAt: '2025-03-15T14:00:00.000Z',
+      updatedAt:   '2025-03-15T14:00:00.000Z',
+      createdAt:   '2025-03-01T09:00:00.000Z',
+      sections: {
+        behavior_targets: { completionState:'complete', approvalState:'approved', behaviorTargets: C16_BEHAVIOR_TARGETS },
+        skill_acquisitions: { completionState:'complete', approvalState:'approved', skillGoals: C16_SKILL_GOALS },
+        caregiver_training: { completionState:'complete', approvalState:'approved', caregiverTrainingTargets: C16_CT_TARGETS },
+        medical_necessity: { completionState:'complete', approvalState:'approved', notes:'Diagnosis: ASD Level 1 (F84.0). ABA services medically necessary to address elopement and vocal disruption behaviors.' },
+        demographics:       { completionState:'complete', approvalState:'approved' },
+        presenting_concerns:{ completionState:'complete', approvalState:'approved' },
+        self_help_skills:   { completionState:'complete', approvalState:'approved' },
+        daily_living:       { completionState:'complete', approvalState:'approved' },
+        safety_concerns:    { completionState:'complete', approvalState:'approved' },
+        communication:      { completionState:'complete', approvalState:'approved' },
+        self_stim:          { completionState:'complete', approvalState:'approved' },
+        crisis_plan:        { completionState:'complete', approvalState:'approved' },
+      },
+    };
+
+    // ── Cycle 0 behavior + skill session logs (Apr–Sep 2025) ──────────────────
+    const C16_SERVICE_LOGS_C0 = [
+      // Behavior sessions
+      {
+        id:'slog_c16_c0_b1', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-04-10', sessionNumber:1, sessionType:'behavior', reauth_cycle:0,
+        notes:'Baseline session. Elopement 7 attempts. Vocal disruption 14 incidents. FCT break card introduced.',
+        behaviorEntries:[
+          { behaviorId:'bt-c16-1', behaviorName:'Elopement',         isNew:false, isMonitoring:false, baselineFrequency:8,  sessionFrequency:7,  currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-2', behaviorName:'Vocal Disruption',  isNew:false, isMonitoring:false, baselineFrequency:15, sessionFrequency:14, currentStoNumber:1, stoStatus:'in_progress' },
+        ],
+        skillEntries:[], createdAt:'2025-04-10T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c0_b2', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-05-08', sessionNumber:2, sessionType:'behavior', reauth_cycle:0,
+        notes:'Elopement at STO 1 target. Vocal disruption slowly reducing. FCT use increasing.',
+        behaviorEntries:[
+          { behaviorId:'bt-c16-1', behaviorName:'Elopement',        isNew:false, isMonitoring:false, baselineFrequency:8,  sessionFrequency:5,  currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-2', behaviorName:'Vocal Disruption', isNew:false, isMonitoring:false, baselineFrequency:15, sessionFrequency:13, currentStoNumber:1, stoStatus:'in_progress' },
+        ],
+        skillEntries:[], createdAt:'2025-05-08T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c0_b3', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-06-05', sessionNumber:3, sessionType:'behavior', reauth_cycle:0,
+        notes:'Elopement moved to STO 2. New behavior observed: throwing objects when denied access to preferred items.',
+        behaviorEntries:[
+          { behaviorId:'bt-c16-1', behaviorName:'Elopement',        isNew:false, isMonitoring:false, baselineFrequency:8,  sessionFrequency:5,  currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-2', behaviorName:'Vocal Disruption', isNew:false, isMonitoring:false, baselineFrequency:15, sessionFrequency:10, currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-new-1', behaviorName:'Throwing objects', isNew:true, isMonitoring:false,
+            sessionFrequency:4, newBehaviorFunction:'Tangible', newBehaviorSeverity:'Mild',
+            newBehaviorDefinition:'Intentionally throws small objects when denied access to preferred items or activities.',
+            firstSeenDate:'2025-06-05', monitorOnly:true, includedInPlan:false },
+        ],
+        skillEntries:[], createdAt:'2025-06-05T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c0_b4', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-07-03', sessionNumber:4, sessionType:'behavior', reauth_cycle:0,
+        notes:'Elopement continuing to decrease. Throwing objects monitoring — reduced to 3.',
+        behaviorEntries:[
+          { behaviorId:'bt-c16-1', behaviorName:'Elopement',        isNew:false, isMonitoring:false, baselineFrequency:8,  sessionFrequency:4,  currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-2', behaviorName:'Vocal Disruption', isNew:false, isMonitoring:false, baselineFrequency:15, sessionFrequency:9,  currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-new-1', behaviorName:'Throwing objects', isNew:false, isMonitoring:true, sessionFrequency:3 },
+        ],
+        skillEntries:[], createdAt:'2025-07-03T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c0_b5', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-08-07', sessionNumber:5, sessionType:'behavior', reauth_cycle:0,
+        notes:'Elopement hit STO 3 target. Throwing objects slight increase to 4 — monitor closely.',
+        behaviorEntries:[
+          { behaviorId:'bt-c16-1', behaviorName:'Elopement',        isNew:false, isMonitoring:false, baselineFrequency:8,  sessionFrequency:3,  currentStoNumber:3, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-2', behaviorName:'Vocal Disruption', isNew:false, isMonitoring:false, baselineFrequency:15, sessionFrequency:8,  currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-new-1', behaviorName:'Throwing objects', isNew:false, isMonitoring:true, sessionFrequency:4 },
+        ],
+        skillEntries:[], createdAt:'2025-08-07T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c0_b6', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-09-04', sessionNumber:6, sessionType:'behavior', reauth_cycle:0,
+        notes:'Great session — elopement at STO 3. Vocal disruption tracking down. Throwing objects decreased to 3.',
+        behaviorEntries:[
+          { behaviorId:'bt-c16-1', behaviorName:'Elopement',        isNew:false, isMonitoring:false, baselineFrequency:8,  sessionFrequency:2,  currentStoNumber:3, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-2', behaviorName:'Vocal Disruption', isNew:false, isMonitoring:false, baselineFrequency:15, sessionFrequency:7,  currentStoNumber:3, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-new-1', behaviorName:'Throwing objects', isNew:false, isMonitoring:true, sessionFrequency:3 },
+        ],
+        skillEntries:[], createdAt:'2025-09-04T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c0_b7', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-09-25', sessionNumber:7, sessionType:'behavior', reauth_cycle:0,
+        notes:'Elopement holding at STO 3. Vocal disruption nearing STO 3 target. Throwing objects decreased to 2.',
+        behaviorEntries:[
+          { behaviorId:'bt-c16-1', behaviorName:'Elopement',        isNew:false, isMonitoring:false, baselineFrequency:8,  sessionFrequency:2,  currentStoNumber:3, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-2', behaviorName:'Vocal Disruption', isNew:false, isMonitoring:false, baselineFrequency:15, sessionFrequency:6,  currentStoNumber:3, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-new-1', behaviorName:'Throwing objects', isNew:false, isMonitoring:true, sessionFrequency:2 },
+        ],
+        skillEntries:[], createdAt:'2025-09-25T15:00:00.000Z',
+      },
+      // Skill sessions
+      {
+        id:'slog_c16_c0_sk1', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-04-17', sessionNumber:1, sessionType:'skill', reauth_cycle:0,
+        notes:'Baseline skill session. Following instructions at 28%, play skills at 22%.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c16-1', skillName:'Following 2-Step Instructions', isNew:false, isMonitoring:false, baselinePercent:20, accuracyPercent:28, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c16-2', skillName:'Independent Play Skills',       isNew:false, isMonitoring:false, baselinePercent:15, accuracyPercent:22, currentStoNumber:1, stoStatus:'in_progress' },
+        ], createdAt:'2025-04-17T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c0_sk2', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-05-22', sessionNumber:2, sessionType:'skill', reauth_cycle:0,
+        notes:'Following instructions approaching STO 1 target. Play skills progressing.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c16-1', skillName:'Following 2-Step Instructions', isNew:false, isMonitoring:false, baselinePercent:20, accuracyPercent:38, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c16-2', skillName:'Independent Play Skills',       isNew:false, isMonitoring:false, baselinePercent:15, accuracyPercent:30, currentStoNumber:1, stoStatus:'in_progress' },
+        ], createdAt:'2025-05-22T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c0_sk3', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-06-19', sessionNumber:3, sessionType:'skill', reauth_cycle:0,
+        notes:'Following hit STO 2 target. New skill observed: Turn-taking during peer interaction — monitoring.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c16-1', skillName:'Following 2-Step Instructions', isNew:false, isMonitoring:false, baselinePercent:20, accuracyPercent:48, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c16-2', skillName:'Independent Play Skills',       isNew:false, isMonitoring:false, baselinePercent:15, accuracyPercent:38, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c16-new-1', skillName:'Turn-taking', isNew:true, isMonitoring:false,
+            accuracyPercent:25, firstSeenDate:'2025-06-19', domain:'Social', monitorOnly:true, includedInPlan:false },
+        ], createdAt:'2025-06-19T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c0_sk4', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-07-17', sessionNumber:4, sessionType:'skill', reauth_cycle:0,
+        notes:'Following holding at STO 2. Turn-taking monitoring continues.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c16-1', skillName:'Following 2-Step Instructions', isNew:false, isMonitoring:false, baselinePercent:20, accuracyPercent:55, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c16-2', skillName:'Independent Play Skills',       isNew:false, isMonitoring:false, baselinePercent:15, accuracyPercent:45, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c16-new-1', skillName:'Turn-taking', isNew:false, isMonitoring:true, accuracyPercent:32 },
+        ], createdAt:'2025-07-17T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c0_sk5', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-08-14', sessionNumber:5, sessionType:'skill', reauth_cycle:0,
+        notes:'Following and play skills progressing well toward STO targets. Turn-taking at 38%.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c16-1', skillName:'Following 2-Step Instructions', isNew:false, isMonitoring:false, baselinePercent:20, accuracyPercent:60, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c16-2', skillName:'Independent Play Skills',       isNew:false, isMonitoring:false, baselinePercent:15, accuracyPercent:50, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c16-new-1', skillName:'Turn-taking', isNew:false, isMonitoring:true, accuracyPercent:38 },
+        ], createdAt:'2025-08-14T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c0_sk6', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-09-18', sessionNumber:6, sessionType:'skill', reauth_cycle:0,
+        notes:'Following strong at 65%. Turn-taking stable at 40%. Reassessment period approaching.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c16-1', skillName:'Following 2-Step Instructions', isNew:false, isMonitoring:false, baselinePercent:20, accuracyPercent:65, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c16-2', skillName:'Independent Play Skills',       isNew:false, isMonitoring:false, baselinePercent:15, accuracyPercent:55, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c16-new-1', skillName:'Turn-taking', isNew:false, isMonitoring:true, accuracyPercent:40 },
+        ], createdAt:'2025-09-18T15:00:00.000Z',
+      },
+    ];
+
+    // ── Cycle 0 CT logs ────────────────────────────────────────────────────────
+    const C16_CT_LOGS_C0 = [
+      {
+        id:'ctlog_c16_c0_1', clientId:'c16', bcbaId:'s2', bcbaName:'Marcus Webb',
+        sessionDate:'2025-04-15', sessionNumber:1, reauth_cycle:0,
+        notes:'Baseline caregiver session. Mom learning FCT break card procedure.',
+        trainingEntries:[
+          { targetId:'ctt-c16-1', goalName:'FCT Caregiver Implementation',  baselinePercent:35, sessionPercent:42, stoStatus:'in_progress', currentStoNumber:1 },
+          { targetId:'ctt-c16-2', goalName:'Extinction Procedure Fidelity', baselinePercent:20, sessionPercent:28, stoStatus:'in_progress', currentStoNumber:1 },
+        ], createdAt:'2025-04-15T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c16_c0_2', clientId:'c16', bcbaId:'s2', bcbaName:'Marcus Webb',
+        sessionDate:'2025-06-03', sessionNumber:2, reauth_cycle:0,
+        notes:'FCT crossing STO 1 target. Extinction fidelity improving.',
+        trainingEntries:[
+          { targetId:'ctt-c16-1', goalName:'FCT Caregiver Implementation',  baselinePercent:35, sessionPercent:58, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c16-2', goalName:'Extinction Procedure Fidelity', baselinePercent:20, sessionPercent:42, stoStatus:'in_progress', currentStoNumber:1 },
+        ], createdAt:'2025-06-03T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c16_c0_3', clientId:'c16', bcbaId:'s2', bcbaName:'Marcus Webb',
+        sessionDate:'2025-07-22', sessionNumber:3, reauth_cycle:0,
+        notes:'Mom consistently implementing FCT during demand contexts. Extinction holding.',
+        trainingEntries:[
+          { targetId:'ctt-c16-1', goalName:'FCT Caregiver Implementation',  baselinePercent:35, sessionPercent:65, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c16-2', goalName:'Extinction Procedure Fidelity', baselinePercent:20, sessionPercent:52, stoStatus:'in_progress', currentStoNumber:1 },
+        ], createdAt:'2025-07-22T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c16_c0_4', clientId:'c16', bcbaId:'s2', bcbaName:'Marcus Webb',
+        sessionDate:'2025-08-26', sessionNumber:4, reauth_cycle:0,
+        notes:'FCT strong across routines. Extinction moving to STO 2.',
+        trainingEntries:[
+          { targetId:'ctt-c16-1', goalName:'FCT Caregiver Implementation',  baselinePercent:35, sessionPercent:72, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c16-2', goalName:'Extinction Procedure Fidelity', baselinePercent:20, sessionPercent:60, stoStatus:'in_progress', currentStoNumber:2 },
+        ], createdAt:'2025-08-26T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c16_c0_5', clientId:'c16', bcbaId:'s2', bcbaName:'Marcus Webb',
+        sessionDate:'2025-09-16', sessionNumber:5, reauth_cycle:0,
+        notes:'Caregiver implementing FCT and extinction with high fidelity across all demand routines.',
+        trainingEntries:[
+          { targetId:'ctt-c16-1', goalName:'FCT Caregiver Implementation',  baselinePercent:35, sessionPercent:78, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c16-2', goalName:'Extinction Procedure Fidelity', baselinePercent:20, sessionPercent:68, stoStatus:'in_progress', currentStoNumber:2 },
+        ], createdAt:'2025-09-16T11:00:00.000Z',
+      },
+    ];
+
+    // ── Cycle 0 reassessment ───────────────────────────────────────────────────
+    const _reassess_c16_c0_raw = makeReassessmentSession(
+      c,
+      assessment_session_c16_initial,
+      C16_SERVICE_LOGS_C0,
+      '2025-04-01',
+      '2025-10-01',
+      C16_CT_LOGS_C0,
+    );
+    const reassessment_cycle0_ethan = {
+      ..._reassess_c16_c0_raw,
+      status: 'complete',
+      completedAt: '2025-10-03T14:00:00.000Z',
+      cycle_number: 0,
+      cptHours: { '97153':'80', '97155':'12', '97156':'8' },
+      submissionChecklist: { vineland:true, basc:true, finalUploaded:true },
+      progressNarrativeText: 'Ethan demonstrated significant progress during his initial authorization period, with elopement reduced by 75% from baseline (8→2 incidents/session) and vocal disruption reduced by 60% (15→6 incidents/session). Skill acquisition goals are progressing well, with instruction-following at 65% and independent play at 55%. A new behavior (throwing objects) was identified mid-cycle and is being monitored; it has not been added to the formal treatment plan at this time.',
+      newBehaviorSummary: (_reassess_c16_c0_raw.newBehaviorSummary ?? []).map(b =>
+        b.behaviorName === 'Throwing objects' ? { ...b, monitorOnly:true, includedInPlan:false } : b,
+      ),
+      newSkillSummary: (_reassess_c16_c0_raw.newSkillSummary ?? []).map(s =>
+        s.skillName === 'Turn-taking' ? { ...s, monitorOnly:true, includedInPlan:false } : s,
+      ),
+    };
+
+    // ── Promoted assessment session for cycle 1 ────────────────────────────────
+    // Baselines = avg of cycle 0 logs:
+    //   Elopement: avg(7,5,5,4,3,2,2) = 28/7 = 4
+    //   Vocal Disruption: avg(14,13,10,9,8,7,6) = 67/7 ≈ 10
+    //   Following: avg(28,38,48,55,60,65) = 294/6 = 49
+    //   Independent Play: avg(22,30,38,45,50,55) = 240/6 = 40
+    //   FCT: avg(42,58,65,72,78) = 315/5 = 63
+    //   Extinction: avg(28,42,52,60,68) = 250/5 = 50
+    const assessment_session_c16_cycle1 = {
+      ...assessment_session_c16_initial,
+      id: 'sess_c16_cycle1',
+      sessionType: 'initial',
+      status: 'complete',
+      sections: {
+        ...assessment_session_c16_initial.sections,
+        behavior_targets: {
+          completionState: 'complete',
+          approvalState: 'approved',
+          behaviorTargets: C16_BEHAVIOR_TARGETS.map(bt => {
+            if (bt.id === 'bt-c16-1') return { ...bt, baselineFrequency: 4 };
+            if (bt.id === 'bt-c16-2') return { ...bt, baselineFrequency: 10 };
+            return bt;
+          }),
+        },
+        skill_acquisitions: {
+          completionState: 'complete',
+          approvalState: 'approved',
+          skillGoals: C16_SKILL_GOALS.map(sg => {
+            if (sg.id === 'sg-c16-1') return { ...sg, baselinePercent: 49 };
+            if (sg.id === 'sg-c16-2') return { ...sg, baselinePercent: 40 };
+            return sg;
+          }),
+        },
+        caregiver_training: {
+          completionState: 'complete',
+          approvalState: 'approved',
+          caregiverTrainingTargets: C16_CT_TARGETS.map(ct => {
+            if (ct.id === 'ctt-c16-1') return { ...ct, baselinePercent: 63 };
+            if (ct.id === 'ctt-c16-2') return { ...ct, baselinePercent: 50 };
+            return ct;
+          }),
+        },
+      },
+    };
+
+    // ── Cycle 1 session logs (Oct–Nov 2025) ───────────────────────────────────
+    const C16_SERVICE_LOGS_C1 = [
+      {
+        id:'slog_c16_c1_b1', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-10-15', sessionNumber:1, sessionType:'behavior', reauth_cycle:1,
+        notes:'First session of cycle 1. Elopement at 3 from new baseline of 4. Turn-taking monitoring ongoing.',
+        behaviorEntries:[
+          { behaviorId:'bt-c16-1', behaviorName:'Elopement',        isNew:false, isMonitoring:false, baselineFrequency:4,  sessionFrequency:3,  currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-2', behaviorName:'Vocal Disruption', isNew:false, isMonitoring:false, baselineFrequency:10, sessionFrequency:9,  currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-new-1', behaviorName:'Throwing objects', isNew:false, isMonitoring:true, sessionFrequency:2 },
+        ],
+        skillEntries:[], createdAt:'2025-10-15T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c1_b2', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-11-12', sessionNumber:2, sessionType:'behavior', reauth_cycle:1,
+        notes:'Elopement moved to STO 2. Vocal disruption trending down. Throwing objects near zero.',
+        behaviorEntries:[
+          { behaviorId:'bt-c16-1', behaviorName:'Elopement',        isNew:false, isMonitoring:false, baselineFrequency:4,  sessionFrequency:2,  currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-2', behaviorName:'Vocal Disruption', isNew:false, isMonitoring:false, baselineFrequency:10, sessionFrequency:8,  currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c16-new-1', behaviorName:'Throwing objects', isNew:false, isMonitoring:true, sessionFrequency:1 },
+        ],
+        skillEntries:[], createdAt:'2025-11-12T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c1_sk1', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-10-22', sessionNumber:1, sessionType:'skill', reauth_cycle:1,
+        notes:'Skills starting from new baselines. Turn-taking monitoring continues.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c16-1', skillName:'Following 2-Step Instructions', isNew:false, isMonitoring:false, baselinePercent:49, accuracyPercent:52, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c16-2', skillName:'Independent Play Skills',       isNew:false, isMonitoring:false, baselinePercent:40, accuracyPercent:43, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c16-new-1', skillName:'Turn-taking', isNew:false, isMonitoring:true, accuracyPercent:42 },
+        ], createdAt:'2025-10-22T15:00:00.000Z',
+      },
+      {
+        id:'slog_c16_c1_sk2', clientId:'c16', rbtId:'s6', rbtName:'Devon Clark',
+        sessionDate:'2025-11-19', sessionNumber:2, sessionType:'skill', reauth_cycle:1,
+        notes:'Both skills progressing from new baselines. Turn-taking at 45%.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c16-1', skillName:'Following 2-Step Instructions', isNew:false, isMonitoring:false, baselinePercent:49, accuracyPercent:58, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c16-2', skillName:'Independent Play Skills',       isNew:false, isMonitoring:false, baselinePercent:40, accuracyPercent:48, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c16-new-1', skillName:'Turn-taking', isNew:false, isMonitoring:true, accuracyPercent:45 },
+        ], createdAt:'2025-11-19T15:00:00.000Z',
+      },
+    ];
+
+    // ── Cycle 1 CT logs ────────────────────────────────────────────────────────
+    const C16_CT_LOGS_C1 = [
+      {
+        id:'ctlog_c16_c1_1', clientId:'c16', bcbaId:'s2', bcbaName:'Marcus Webb',
+        sessionDate:'2025-10-28', sessionNumber:1, reauth_cycle:1,
+        notes:'Cycle 1 caregiver training. Mom continuing FCT and extinction from new baselines.',
+        trainingEntries:[
+          { targetId:'ctt-c16-1', goalName:'FCT Caregiver Implementation',  baselinePercent:63, sessionPercent:68, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c16-2', goalName:'Extinction Procedure Fidelity', baselinePercent:50, sessionPercent:55, stoStatus:'in_progress', currentStoNumber:1 },
+        ], createdAt:'2025-10-28T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c16_c1_2', clientId:'c16', bcbaId:'s2', bcbaName:'Marcus Webb',
+        sessionDate:'2025-12-03', sessionNumber:2, reauth_cycle:1,
+        notes:'FCT at 74% — approaching STO 2 completion. Extinction improving.',
+        trainingEntries:[
+          { targetId:'ctt-c16-1', goalName:'FCT Caregiver Implementation',  baselinePercent:63, sessionPercent:74, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c16-2', goalName:'Extinction Procedure Fidelity', baselinePercent:50, sessionPercent:62, stoStatus:'in_progress', currentStoNumber:1 },
+        ], createdAt:'2025-12-03T11:00:00.000Z',
+      },
+    ];
+
+    // ── monitoring_goals (from cycle 0 reassessment) ──────────────────────────
+    const c16_monitoring_goals = {
+      behaviors: [
+        { id:'monitor-b-c16-1', behaviorName:'Throwing objects', baselineFrequency:'3',
+          firstSeenDate:'2025-06-05', newBehaviorFunction:'Tangible', newBehaviorSeverity:'Mild',
+          newBehaviorDefinition:'Intentionally throws small objects when denied access to preferred items or activities.' },
+      ],
+      skills: [
+        { id:'monitor-s-c16-1', skillName:'Turn-taking', baselinePercent:'35',
+          firstSeenDate:'2025-06-19', domain:'Social' },
+      ],
+      ct: [],
+    };
+
+    // ── Documents ──────────────────────────────────────────────────────────────
+    const C16_DOCS = [
+      { id:'doc_c16_1',  type:'referral_form',    label:'REFERRAL FORM — Ethan Clarke',            uploaded_at:'2025-01-10T09:00:00.000Z', by:'Admin',       stage:'intake'          },
+      { id:'doc_c16_2',  type:'insurance_card',   label:'INSURANCE CARD — Cigna/Evernorth',        uploaded_at:'2025-01-10T09:15:00.000Z', by:'Admin',       stage:'intake'          },
+      { id:'doc_c16_3',  type:'cde',              label:'CDE — Ethan Clarke (Dec 2024)',            uploaded_at:'2025-01-12T10:00:00.000Z', by:'Admin',       stage:'intake'          },
+      { id:'doc_c16_4',  type:'aba_prescription', label:'ABA SCRIPT — Dr. Sandra Walsh',           uploaded_at:'2025-01-12T10:05:00.000Z', by:'Admin',       stage:'intake'          },
+      { id:'doc_c16_5',  type:'consent',          label:'CONSENT PACKET — signed',                 uploaded_at:'2025-01-15T14:00:00.000Z', by:'Admin',       stage:'intake'          },
+      { id:'doc_c16_6',  type:'prior_assessment', label:'PRIOR ASSESSMENTS — attached',            uploaded_at:'2025-02-05T11:00:00.000Z', by:'Admin',       stage:'auth_assessment' },
+      { id:'doc_c16_7',  type:'assessment_final', label:'FINAL — Initial Assessment Report',       uploaded_at:'2025-03-15T15:00:00.000Z', by:'Marcus Webb', stage:'assessment'      },
+      { id:'doc_c16_8',  type:'treatment_plan',   label:'FINAL — Signed Treatment Plan',           uploaded_at:'2025-03-20T09:00:00.000Z', by:'Marcus Webb', stage:'plan_draft'      },
+      { id:'doc_c16_9',  type:'auth_approval',    label:'AUTH APPROVAL — Cigna Apr 2025',          uploaded_at:'2025-04-01T08:00:00.000Z', by:'Admin',       stage:'submitted'       },
+      { id:'doc_c16_10', type:'progress_report',  label:'DRAFT — Reassessment_Ethan_Clarke_2025-10-03.docx', uploaded_at:'2025-10-03T14:00:00.000Z', by:'Marcus Webb', stage:'services' },
+      { id:'doc_c16_11', type:'auth_approval',    label:'AUTH APPROVAL — Cigna Reauth Oct 2025',  uploaded_at:'2025-10-05T09:00:00.000Z', by:'Admin',       stage:'services'        },
+    ];
+
+    // ── Activity log ───────────────────────────────────────────────────────────
+    const C16_LOG = [
+      { id:'log_c16_1',  action:'Client created — intake documents uploaded',                                           ts:'2025-01-10T09:00:00.000Z', by:'Admin'       },
+      { id:'log_c16_2',  action:'Authorization for 97151 submitted to Cigna/Evernorth',                                 ts:'2025-01-22T10:00:00.000Z', by:'Admin'       },
+      { id:'log_c16_3',  action:'Assessment authorization received. BCBA Marcus Webb assigned.',                         ts:'2025-02-10T09:00:00.000Z', by:'Admin'       },
+      { id:'log_c16_4',  action:'Smart Assessment interview completed by Marcus Webb',                                   ts:'2025-03-15T14:00:00.000Z', by:'Marcus Webb' },
+      { id:'log_c16_5',  action:'Treatment plan submitted to Cigna/Evernorth',                                          ts:'2025-03-20T16:00:00.000Z', by:'Admin'       },
+      { id:'log_c16_6',  action:'Services authorization received (Apr 2025). RBT Devon Clark assigned.',                 ts:'2025-04-01T08:00:00.000Z', by:'Admin'       },
+      { id:'log_c16_7',  action:'First ABA therapy session completed — behavior baseline established',                   ts:'2025-04-10T15:00:00.000Z', by:'Devon Clark' },
+      { id:'log_c16_8',  action:'First caregiver training session completed — FCT procedure introduced',                 ts:'2025-04-15T11:00:00.000Z', by:'Marcus Webb' },
+      { id:'log_c16_9',  action:'Elopement reached STO 2 target (≤5 incidents/session)',                                ts:'2025-06-05T15:00:00.000Z', by:'Devon Clark' },
+      { id:'log_c16_10', action:'New behavior observed: Throwing objects — added to monitoring list',                    ts:'2025-06-05T15:30:00.000Z', by:'Devon Clark' },
+      { id:'log_c16_11', action:'Following 2-Step Instructions reached STO 2 (48%)',                                    ts:'2025-06-19T15:00:00.000Z', by:'Devon Clark' },
+      { id:'log_c16_12', action:'Turn-taking identified as emerging skill — added to monitoring',                        ts:'2025-06-19T15:30:00.000Z', by:'Devon Clark' },
+      { id:'log_c16_13', action:'Reassessment document generated and downloaded by Marcus Webb',                         ts:'2025-10-03T14:00:00.000Z', by:'Marcus Webb' },
+      { id:'log_c16_14', action:'Reauthorization submitted to Cigna/Evernorth for cycle 1 (Oct 2025–Apr 2026)',          ts:'2025-10-05T09:30:00.000Z', by:'Admin'       },
+      { id:'log_c16_15', action:'Reauth cycle 1 authorization received — auth period Oct 5, 2025–Apr 5, 2026',          ts:'2025-10-05T13:00:00.000Z', by:'Admin'       },
+      { id:'log_c16_16', action:'Cycle 1 services started — first session logged',                                       ts:'2025-10-15T15:00:00.000Z', by:'Devon Clark' },
+    ];
+
+    return {
+      ...c,
+      pipeline_entry: true,
+      smart_assessment_session_id: assessment_session_c16_cycle1.id,
+      checklist: cl,
+      documents: C16_DOCS,
+      activity_log: C16_LOG,
+      case_notes: [],
+      monitoring_goals: c16_monitoring_goals,
+      assessment_session: assessment_session_c16_cycle1,
+      _initialAssessment: assessment_session_c16_initial,
+      service_session_logs: [...C16_SERVICE_LOGS_C0, ...C16_SERVICE_LOGS_C1],
+      caregiver_training_session_logs: [...C16_CT_LOGS_C0, ...C16_CT_LOGS_C1],
+      reassessment_sessions: [reassessment_cycle0_ethan],
+    };
+  }
+
+  if (c.id === 'c17') {
+    // ── Stage checklists ──────────────────────────────────────────────────────
+    cl.intake          = { referral_form:true, insurance_card:true, cde:true, aba_prescription:true, consent_signed:true, demographics_confirmed:true, referral_source:'Dr. Andrew Park · (305) 555-0295', insurance_plan:'Sunshine Health Medicaid', member_id_verified:'SSH-229441 / G-55320', copay_deductible:'$0 copay, $0 deductible', preferred_language:'English', insurance_verified:true, benefits_verified:true };
+    cl.auth_assessment = { cde_confirmed:true, prescription_confirmed:true, referral_confirmed:true, prior_assessments:true, auth_submitted:true, submission_date:'2024-06-20', units_requested:'16', expected_response_date:'2024-07-10', auth_portal:'Sunshine Health Provider Portal', reference_number:'SSH-AUTH-2024-0620-3312', cpt_97151_received:true, bcba_assigned:true };
+    cl.assessment      = { bcba_confirmed:true, caregiver_interview:true, direct_observation:true, vineland3:true, vineland3_date:'2024-08-01', basc3:true, basc3_date:'2024-08-01', additional_assessments:false, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
+    cl.plan_draft      = { medical_necessity:true, skill_targets:true, behavior_goals:true, intervention_strategies:true, hours_97153:'80', hours_97155:'12', hours_97156:'8', data_methodology:'Partial interval recording for behaviors; trial-by-trial data for skills', plan_start_date:'2024-08-25', plan_end_date:'2025-02-25', sessions_per_week:'10', session_duration_min:'120', baseline_graphs:true, ai_draft_approved:true, treatment_plan_finalized:true };
+    cl.submitted       = { plan_submitted:true, plan_submission_date:'2026-03-01', approval_uploaded:true, auth_reference_number:'SSH-AUT-2026-0228-9901', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2026-02-25', auth_end_date:'2026-08-25' };
+    cl.authorized      = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Tue/Thu/Fri 9am–1pm', session_location:'Home-based', scheduled_hours_week:'20', scheduled_97155_week:'3', scheduled_97156_week:'2' };
+    cl.staffing        = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2024-08-25', first_session_time:'9:00 AM', session_location:'Home-based' };
+
+    // ── Behavior targets (initial plan, cycle 0) ──────────────────────────────
+    const C17_BEHAVIOR_TARGETS = [
+      {
+        id: 'bt-c17-1',
+        behaviorName: 'Physical Aggression',
+        operationalDefinition: 'Any instance of hitting, kicking, biting, or scratching directed at another person with sufficient force to cause or potentially cause physical harm.',
+        hypothesizedFunction: 'Escape',
+        severity: 'Severe',
+        baselineFrequency: 10,
+        targetFrequency: '0',
+        stoSteps: [
+          { id:'sto-c17-1-1', targetFrequency:'6', durationWeeks:'8',  note:'Reduce to ≤6 incidents/session using FCT for escape; antecedent-based demand modification' },
+          { id:'sto-c17-1-2', targetFrequency:'3', durationWeeks:'8',  note:'Reduce to ≤3 incidents; graduated demand fading; extinction of aggression-based escape' },
+          { id:'sto-c17-1-3', targetFrequency:'0', durationWeeks:'10', note:'Zero incidents for 3 consecutive weeks; FCT generalized across home and community settings' },
+        ],
+      },
+      {
+        id: 'bt-c17-2',
+        behaviorName: 'Elopement',
+        operationalDefinition: 'Any instance of running away from a designated area or adult without permission, including crossing room boundaries or exiting a building without consent.',
+        hypothesizedFunction: 'Escape',
+        severity: 'Severe',
+        baselineFrequency: 7,
+        targetFrequency: '0',
+        stoSteps: [
+          { id:'sto-c17-2-1', targetFrequency:'4', durationWeeks:'6', note:'Reduce to ≤4 elopement attempts/session using physical boundary cues and visual schedule' },
+          { id:'sto-c17-2-2', targetFrequency:'2', durationWeeks:'6', note:'Reduce to ≤2 attempts; FCT "break" card fully generalized; environmental modification active' },
+          { id:'sto-c17-2-3', targetFrequency:'0', durationWeeks:'8', note:'Zero elopement for 3 consecutive weeks across all supervised environments' },
+        ],
+      },
+      {
+        id: 'bt-c17-3',
+        behaviorName: 'Self-Injurious Behavior',
+        operationalDefinition: 'Any instance of head-banging, self-hitting, or biting own hand/arm with sufficient force to cause redness or marks; includes any self-directed impact that produces audible sound.',
+        hypothesizedFunction: 'Automatic',
+        severity: 'Severe',
+        baselineFrequency: 5,
+        targetFrequency: '0',
+        stoSteps: [
+          { id:'sto-c17-3-1', targetFrequency:'3', durationWeeks:'6', note:'Reduce to ≤3 incidents/session with noncontingent reinforcement (NCR) and sensory diet' },
+          { id:'sto-c17-3-2', targetFrequency:'1', durationWeeks:'6', note:'Reduce to ≤1 incident; NCR schedule thinning; response interruption and redirection (RIRD)' },
+          { id:'sto-c17-3-3', targetFrequency:'0', durationWeeks:'8', note:'Zero SIB for 3 consecutive weeks; NCR fully faded; functional communication established' },
+        ],
+      },
+    ];
+
+    // ── Skill goals (initial plan, cycle 0) ───────────────────────────────────
+    const C17_SKILL_GOALS = [
+      {
+        id: 'sg-c17-1',
+        targetSkill: 'Verbal Requesting via PECS',
+        domain: 'Communication',
+        baselinePercent: 10,
+        masteryCriteriaPercent: 80,
+        stoSteps: [
+          { id:'sg-c17-1-s1', targetPercent:'30', skillDescription:'Independently exchanges picture card to request preferred items across 3 different communicative partners', durationWeeks:'6' },
+          { id:'sg-c17-1-s2', targetPercent:'55', skillDescription:'Uses PECS Phase III+ to request items not in view; discriminates between 5+ symbols', durationWeeks:'6' },
+        ],
+      },
+      {
+        id: 'sg-c17-2',
+        targetSkill: 'Parallel Play Skills',
+        domain: 'Social',
+        baselinePercent: 20,
+        masteryCriteriaPercent: 80,
+        stoSteps: [
+          { id:'sg-c17-2-s1', targetPercent:'40', skillDescription:'Plays alongside peer with same materials for ≥5 min without aggression or elopement', durationWeeks:'6' },
+          { id:'sg-c17-2-s2', targetPercent:'60', skillDescription:'Engages in parallel play across 3 different activities with minimal adult prompting', durationWeeks:'6' },
+        ],
+      },
+    ];
+
+    // ── CT targets (initial plan, cycle 0) ────────────────────────────────────
+    const C17_CT_TARGETS = [
+      {
+        id: 'ctt-c17-1',
+        goalName: 'FCT Implementation',
+        baselinePercent: 30,
+        targetPercent: 85,
+        ltoPercent: 85,
+        ltoSessions: 3,
+        stoSteps: [
+          { id:'ctt-c17-1-1', targetPercent:'55', durationWeeks:'6', note:'Caregiver correctly prompts FCT escape card during demand contexts in ≥55% of opportunities' },
+          { id:'ctt-c17-1-2', targetPercent:'75', durationWeeks:'6', note:'Caregiver independently implements FCT across all demand routines; generalized to 2 caregivers' },
+        ],
+      },
+      {
+        id: 'ctt-c17-2',
+        goalName: 'Behavior-Specific Praise',
+        baselinePercent: 40,
+        targetPercent: 85,
+        ltoPercent: 85,
+        ltoSessions: 3,
+        stoSteps: [
+          { id:'ctt-c17-2-1', targetPercent:'60', durationWeeks:'6', note:'Caregiver delivers behavior-specific praise within 3 seconds of target behavior in ≥60% of trials' },
+          { id:'ctt-c17-2-2', targetPercent:'75', durationWeeks:'6', note:'Consistent behavior-specific praise across all daily routines; generalized to father' },
+        ],
+      },
+    ];
+
+    // ── Initial assessment session ─────────────────────────────────────────────
+    const assessment_session_c17_initial = {
+      id:          'sess_c17_initial',
+      clientId:    'c17',
+      clientName:  'Maya Chen',
+      bcbaId:      's1',
+      bcbaName:    'Dr. Rachel Kim',
+      sessionType: 'initial',
+      status:      'complete',
+      completedAt: '2024-08-15T14:00:00.000Z',
+      updatedAt:   '2024-08-15T14:00:00.000Z',
+      createdAt:   '2024-08-01T09:00:00.000Z',
+      sections: {
+        behavior_targets:    { completionState:'complete', approvalState:'approved', behaviorTargets: C17_BEHAVIOR_TARGETS },
+        skill_acquisitions:  { completionState:'complete', approvalState:'approved', skillGoals: C17_SKILL_GOALS },
+        caregiver_training:  { completionState:'complete', approvalState:'approved', caregiverTrainingTargets: C17_CT_TARGETS },
+        medical_necessity:   { completionState:'complete', approvalState:'approved', notes:'Diagnosis: ASD Level 2 (F84.0). ABA services medically necessary to address severe aggression, elopement, and self-injurious behavior.' },
+        demographics:        { completionState:'complete', approvalState:'approved' },
+        presenting_concerns: { completionState:'complete', approvalState:'approved' },
+        self_help_skills:    { completionState:'complete', approvalState:'approved' },
+        daily_living:        { completionState:'complete', approvalState:'approved' },
+        safety_concerns:     { completionState:'complete', approvalState:'approved' },
+        communication:       { completionState:'complete', approvalState:'approved' },
+        self_stim:           { completionState:'complete', approvalState:'approved' },
+        crisis_plan:         { completionState:'complete', approvalState:'approved' },
+      },
+    };
+
+    // ── Cycle 0 logs (Aug 2024–Jan 2025) ─────────────────────────────────────
+    const C17_BEHAVIOR_LOGS_C0 = [
+      {
+        id:'slog_c17_c0_b1', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2024-08-30', sessionNumber:1, sessionType:'behavior', reauth_cycle:0,
+        notes:'Baseline session. All three behaviors at initial levels. FCT escape card introduced.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression',    isNew:false, isMonitoring:false, baselineFrequency:10, sessionFrequency:10, currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-2', behaviorName:'Elopement',              isNew:false, isMonitoring:false, baselineFrequency:7,  sessionFrequency:7,  currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-3', behaviorName:'Self-Injurious Behavior',isNew:false, isMonitoring:false, baselineFrequency:5,  sessionFrequency:5,  currentStoNumber:1, stoStatus:'in_progress' },
+        ],
+        skillEntries:[], createdAt:'2024-08-30T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c0_b2', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2024-09-27', sessionNumber:2, sessionType:'behavior', reauth_cycle:0,
+        notes:'Slight decrease across all behaviors. NCR schedule initiated for SIB.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression',    isNew:false, isMonitoring:false, baselineFrequency:10, sessionFrequency:9,  currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-2', behaviorName:'Elopement',              isNew:false, isMonitoring:false, baselineFrequency:7,  sessionFrequency:6,  currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-3', behaviorName:'Self-Injurious Behavior',isNew:false, isMonitoring:false, baselineFrequency:5,  sessionFrequency:4,  currentStoNumber:1, stoStatus:'in_progress' },
+        ],
+        skillEntries:[], createdAt:'2024-09-27T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c0_b3', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2024-10-25', sessionNumber:3, sessionType:'behavior', reauth_cycle:0,
+        notes:'Elopement and SIB moved to STO 2. Aggression still in STO 1.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression',    isNew:false, isMonitoring:false, baselineFrequency:10, sessionFrequency:8,  currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-2', behaviorName:'Elopement',              isNew:false, isMonitoring:false, baselineFrequency:7,  sessionFrequency:4,  currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-3', behaviorName:'Self-Injurious Behavior',isNew:false, isMonitoring:false, baselineFrequency:5,  sessionFrequency:3,  currentStoNumber:2, stoStatus:'in_progress' },
+        ],
+        skillEntries:[], createdAt:'2024-10-25T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c0_b4', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2024-11-22', sessionNumber:4, sessionType:'behavior', reauth_cycle:0,
+        notes:'New behavior: scripting (repeating video phrases out of context). Aggression and SIB decreasing.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression',    isNew:false, isMonitoring:false, baselineFrequency:10, sessionFrequency:7,  currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-2', behaviorName:'Elopement',              isNew:false, isMonitoring:false, baselineFrequency:7,  sessionFrequency:3,  currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-3', behaviorName:'Self-Injurious Behavior',isNew:false, isMonitoring:false, baselineFrequency:5,  sessionFrequency:2,  currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting', isNew:true, isMonitoring:false,
+            sessionFrequency:8, newBehaviorFunction:'Automatic', newBehaviorSeverity:'Mild',
+            newBehaviorDefinition:'Repeating phrases or scripts from videos/media out of context, lasting ≥10 seconds, occurring without communicative function.',
+            firstSeenDate:'2024-11-22', monitorOnly:true, includedInPlan:false },
+        ],
+        skillEntries:[], createdAt:'2024-11-22T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c0_b5', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2024-12-20', sessionNumber:5, sessionType:'behavior', reauth_cycle:0,
+        notes:'Aggression moved to STO 2. SIB approaching STO 3. Scripting monitoring ongoing.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression',    isNew:false, isMonitoring:false, baselineFrequency:10, sessionFrequency:5,  currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-2', behaviorName:'Elopement',              isNew:false, isMonitoring:false, baselineFrequency:7,  sessionFrequency:2,  currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-3', behaviorName:'Self-Injurious Behavior',isNew:false, isMonitoring:false, baselineFrequency:5,  sessionFrequency:1,  currentStoNumber:3, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting', isNew:false, isMonitoring:true, sessionFrequency:7 },
+        ],
+        skillEntries:[], createdAt:'2024-12-20T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c0_b6', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-01-31', sessionNumber:6, sessionType:'behavior', reauth_cycle:0,
+        notes:'SIB met mastery — zero incidents. Aggression holding. Scripting at 8.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression',    isNew:false, isMonitoring:false, baselineFrequency:10, sessionFrequency:5,  currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-2', behaviorName:'Elopement',              isNew:false, isMonitoring:false, baselineFrequency:7,  sessionFrequency:1,  currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-3', behaviorName:'Self-Injurious Behavior',isNew:false, isMonitoring:false, baselineFrequency:5,  sessionFrequency:0,  currentStoNumber:3, stoStatus:'met' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting', isNew:false, isMonitoring:true, sessionFrequency:8 },
+        ],
+        skillEntries:[], createdAt:'2025-01-31T10:00:00.000Z',
+      },
+    ];
+
+    const C17_SKILL_LOGS_C0 = [
+      {
+        id:'slog_c17_c0_sk1', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2024-09-05', sessionNumber:1, sessionType:'skill', reauth_cycle:0,
+        notes:'Baseline skill session. PECS Phase I initiated. Parallel play observed.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-1', skillName:'Verbal Requesting via PECS', isNew:false, isMonitoring:false, baselinePercent:10, accuracyPercent:12, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-2', skillName:'Parallel Play Skills',       isNew:false, isMonitoring:false, baselinePercent:20, accuracyPercent:22, currentStoNumber:1, stoStatus:'in_progress' },
+        ], createdAt:'2024-09-05T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c0_sk2', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2024-10-03', sessionNumber:2, sessionType:'skill', reauth_cycle:0,
+        notes:'PECS improving. Parallel play emerging with structured materials.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-1', skillName:'Verbal Requesting via PECS', isNew:false, isMonitoring:false, baselinePercent:10, accuracyPercent:25, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-2', skillName:'Parallel Play Skills',       isNew:false, isMonitoring:false, baselinePercent:20, accuracyPercent:28, currentStoNumber:1, stoStatus:'in_progress' },
+        ], createdAt:'2024-10-03T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c0_sk3', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2024-10-31', sessionNumber:3, sessionType:'skill', reauth_cycle:0,
+        notes:'PECS hit STO 2 target at 40%. Phase II introduced.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-1', skillName:'Verbal Requesting via PECS', isNew:false, isMonitoring:false, baselinePercent:10, accuracyPercent:40, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c17-2', skillName:'Parallel Play Skills',       isNew:false, isMonitoring:false, baselinePercent:20, accuracyPercent:35, currentStoNumber:1, stoStatus:'in_progress' },
+        ], createdAt:'2024-10-31T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c0_sk4', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2024-11-28', sessionNumber:4, sessionType:'skill', reauth_cycle:0,
+        notes:'PECS progressing well. Social initiation observed — monitoring.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-1', skillName:'Verbal Requesting via PECS', isNew:false, isMonitoring:false, baselinePercent:10, accuracyPercent:55, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c17-2', skillName:'Parallel Play Skills',       isNew:false, isMonitoring:false, baselinePercent:20, accuracyPercent:40, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-1', skillName:'Social Initiation', isNew:true, isMonitoring:false,
+            accuracyPercent:20, firstSeenDate:'2024-11-28', domain:'Social', monitorOnly:true, includedInPlan:false },
+        ], createdAt:'2024-11-28T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c0_sk5', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-01-02', sessionNumber:5, sessionType:'skill', reauth_cycle:0,
+        notes:'PECS near mastery. Social initiation monitoring at 28%.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-1', skillName:'Verbal Requesting via PECS', isNew:false, isMonitoring:false, baselinePercent:10, accuracyPercent:72, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c17-2', skillName:'Parallel Play Skills',       isNew:false, isMonitoring:false, baselinePercent:20, accuracyPercent:44, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-1', skillName:'Social Initiation', isNew:false, isMonitoring:true, accuracyPercent:28 },
+        ], createdAt:'2025-01-02T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c0_sk6', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-01-24', sessionNumber:6, sessionType:'skill', reauth_cycle:0,
+        notes:'PECS met mastery at 83%! Parallel play at 46%. Social initiation at 32%.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-1', skillName:'Verbal Requesting via PECS', isNew:false, isMonitoring:false, baselinePercent:10, accuracyPercent:83, currentStoNumber:2, stoStatus:'met' },
+          { skillId:'sg-c17-2', skillName:'Parallel Play Skills',       isNew:false, isMonitoring:false, baselinePercent:20, accuracyPercent:46, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-1', skillName:'Social Initiation', isNew:false, isMonitoring:true, accuracyPercent:32 },
+        ], createdAt:'2025-01-24T10:00:00.000Z',
+      },
+    ];
+
+    const C17_CT_LOGS_C0 = [
+      {
+        id:'ctlog_c17_c0_1', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2024-09-10', sessionNumber:1, reauth_cycle:0,
+        notes:'Baseline CT session. Dad learning FCT escape card and behavior-specific praise.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:30, sessionPercent:36, stoStatus:'in_progress', currentStoNumber:1 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:40, sessionPercent:45, stoStatus:'in_progress', currentStoNumber:1 },
+        ], createdAt:'2024-09-10T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c17_c0_2', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2024-10-15', sessionNumber:2, reauth_cycle:0,
+        notes:'Both goals crossed STO 1 targets. Excellent caregiver engagement.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:30, sessionPercent:52, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:40, sessionPercent:60, stoStatus:'in_progress', currentStoNumber:2 },
+        ], createdAt:'2024-10-15T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c17_c0_3', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2024-11-19', sessionNumber:3, reauth_cycle:0,
+        notes:'FCT and praise holding strong at STO 2.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:30, sessionPercent:62, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:40, sessionPercent:68, stoStatus:'in_progress', currentStoNumber:2 },
+        ], createdAt:'2024-11-19T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c17_c0_4', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-01-14', sessionNumber:4, reauth_cycle:0,
+        notes:'Caregiver implementing FCT and praise with high fidelity across all routines.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:30, sessionPercent:68, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:40, sessionPercent:72, stoStatus:'in_progress', currentStoNumber:2 },
+        ], createdAt:'2025-01-14T11:00:00.000Z',
+      },
+    ];
+
+    // ── Cycle 0 reassessment ───────────────────────────────────────────────────
+    const _reassess_c17_c0_raw = makeReassessmentSession(
+      c,
+      assessment_session_c17_initial,
+      C17_BEHAVIOR_LOGS_C0,
+      '2024-08-25',
+      '2025-02-25',
+      C17_CT_LOGS_C0,
+    );
+    const reassessment_cycle0_maya = {
+      ..._reassess_c17_c0_raw,
+      status: 'complete',
+      completedAt: '2025-03-01T14:00:00.000Z',
+      cycle_number: 0,
+      cptHours: { '97153':'80', '97155':'12', '97156':'8' },
+      submissionChecklist: { vineland:true, basc:true, finalUploaded:true },
+      progressNarrativeText: 'Maya completed her initial 6-month authorization period with significant behavioral progress. Physical Aggression reduced from 10 to 5 incidents/session (50% reduction), Elopement from 7 to 1 (86% reduction), and Self-Injurious Behavior reached mastery at zero incidents. PECS verbal requesting achieved mastery at 83%, and Parallel Play continues to develop. A new behavior (Scripting) and emerging skill (Social Initiation) were identified for monitoring.',
+      newBehaviorSummary: (_reassess_c17_c0_raw.newBehaviorSummary ?? []).map(b =>
+        b.behaviorName === 'Scripting' ? { ...b, monitorOnly:true, includedInPlan:false } : b,
+      ),
+      newSkillSummary: (_reassess_c17_c0_raw.newSkillSummary ?? []).map(s =>
+        s.skillName === 'Social Initiation' ? { ...s, monitorOnly:true, includedInPlan:false } : s,
+      ),
+    };
+
+    // ── Cycle 1 promoted assessment (avg of cycle 0 logs) ────────────────────
+    // Aggression: avg(10,9,8,7,5,5)=7.3→7; Elopement: avg(7,6,4,3,2,1)=3.8→4
+    // SIB: avg(5,4,3,2,1,0)=2.5→2; ParPlay: avg(22,28,35,40,44,46)=35.8→36
+    // FCT: avg(36,52,62,68)=54.5→55; Praise: avg(45,60,68,72)=61.25→61
+    const C17_ASSESSMENT_C1 = {
+      ...assessment_session_c17_initial,
+      id: 'sess_c17_cycle1',
+      sessionType: 'initial',
+      status: 'complete',
+      sections: {
+        ...assessment_session_c17_initial.sections,
+        behavior_targets: {
+          completionState: 'complete',
+          approvalState: 'approved',
+          behaviorTargets: C17_BEHAVIOR_TARGETS.map(bt => {
+            if (bt.id === 'bt-c17-1') return { ...bt, baselineFrequency: 7 };
+            if (bt.id === 'bt-c17-2') return { ...bt, baselineFrequency: 4 };
+            if (bt.id === 'bt-c17-3') return { ...bt, baselineFrequency: 2 };
+            return bt;
+          }),
+        },
+        skill_acquisitions: {
+          completionState: 'complete',
+          approvalState: 'approved',
+          skillGoals: C17_SKILL_GOALS.filter(sg => sg.id !== 'sg-c17-1').map(sg => {
+            if (sg.id === 'sg-c17-2') return { ...sg, baselinePercent: 36 };
+            return sg;
+          }),
+        },
+        caregiver_training: {
+          completionState: 'complete',
+          approvalState: 'approved',
+          caregiverTrainingTargets: C17_CT_TARGETS.map(ct => {
+            if (ct.id === 'ctt-c17-1') return { ...ct, baselinePercent: 55 };
+            if (ct.id === 'ctt-c17-2') return { ...ct, baselinePercent: 61 };
+            return ct;
+          }),
+        },
+      },
+    };
+
+    // ── Cycle 1 logs (Mar–Aug 2025) ───────────────────────────────────────────
+    const C17_BEHAVIOR_LOGS_C1 = [
+      {
+        id:'slog_c17_c1_b1', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-03-05', sessionNumber:1, sessionType:'behavior', reauth_cycle:1,
+        notes:'Cycle 1 start. Aggression from new baseline 7. Scripting monitoring continues.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression', isNew:false, isMonitoring:false, baselineFrequency:7, sessionFrequency:6, currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-2', behaviorName:'Elopement',           isNew:false, isMonitoring:false, baselineFrequency:4, sessionFrequency:3, currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting', isNew:false, isMonitoring:true, sessionFrequency:6 },
+        ],
+        skillEntries:[], createdAt:'2025-03-05T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c1_b2', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-04-03', sessionNumber:2, sessionType:'behavior', reauth_cycle:1,
+        notes:'Elopement crossing STO 2 threshold. Scripting stable.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression', isNew:false, isMonitoring:false, baselineFrequency:7, sessionFrequency:5, currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-2', behaviorName:'Elopement',           isNew:false, isMonitoring:false, baselineFrequency:4, sessionFrequency:2, currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting', isNew:false, isMonitoring:true, sessionFrequency:5 },
+        ],
+        skillEntries:[], createdAt:'2025-04-03T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c1_b3', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-05-01', sessionNumber:3, sessionType:'behavior', reauth_cycle:1,
+        notes:'New behavior: Noncompliance observed — added to monitoring. Elopement near STO 3.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression', isNew:false, isMonitoring:false, baselineFrequency:7, sessionFrequency:4, currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-2', behaviorName:'Elopement',           isNew:false, isMonitoring:false, baselineFrequency:4, sessionFrequency:1, currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting', isNew:false, isMonitoring:true, sessionFrequency:5 },
+          { behaviorId:'bt-c17-new-2', behaviorName:'Noncompliance', isNew:true, isMonitoring:false,
+            sessionFrequency:6, newBehaviorFunction:'Escape', newBehaviorSeverity:'Mild',
+            newBehaviorDefinition:'Refusal to follow adult instructions within 5 seconds; includes crying, turning away, or dropping to the floor in response to directives.',
+            firstSeenDate:'2025-05-01', monitorOnly:true, includedInPlan:false },
+        ],
+        skillEntries:[], createdAt:'2025-05-01T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c1_b4', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-06-05', sessionNumber:4, sessionType:'behavior', reauth_cycle:1,
+        notes:'Elopement met mastery — zero incidents! Aggression nearing STO 2. Noncompliance monitoring at 5.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression', isNew:false, isMonitoring:false, baselineFrequency:7, sessionFrequency:3, currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-2', behaviorName:'Elopement',           isNew:false, isMonitoring:false, baselineFrequency:4, sessionFrequency:0, currentStoNumber:3, stoStatus:'met' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting', isNew:false, isMonitoring:true, sessionFrequency:5 },
+          { behaviorId:'bt-c17-new-2', behaviorName:'Noncompliance', isNew:false, isMonitoring:true, sessionFrequency:5 },
+        ],
+        skillEntries:[], createdAt:'2025-06-05T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c1_b5', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-07-10', sessionNumber:5, sessionType:'behavior', reauth_cycle:1,
+        notes:'Aggression approaching STO 3. Elopement still at zero. Great session.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression', isNew:false, isMonitoring:false, baselineFrequency:7, sessionFrequency:2, currentStoNumber:3, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-2', behaviorName:'Elopement',           isNew:false, isMonitoring:false, baselineFrequency:4, sessionFrequency:0, currentStoNumber:3, stoStatus:'met' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting', isNew:false, isMonitoring:true, sessionFrequency:5 },
+          { behaviorId:'bt-c17-new-2', behaviorName:'Noncompliance', isNew:false, isMonitoring:true, sessionFrequency:5 },
+        ],
+        skillEntries:[], createdAt:'2025-07-10T10:00:00.000Z',
+      },
+    ];
+
+    const C17_SKILL_LOGS_C1 = [
+      {
+        id:'slog_c17_c1_sk1', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-03-12', sessionNumber:1, sessionType:'skill', reauth_cycle:1,
+        notes:'Parallel play from new baseline 36%. Social initiation monitoring continues.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-2', skillName:'Parallel Play Skills', isNew:false, isMonitoring:false, baselinePercent:36, accuracyPercent:40, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-1', skillName:'Social Initiation', isNew:false, isMonitoring:true, accuracyPercent:36 },
+        ], createdAt:'2025-03-12T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c1_sk2', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-04-10', sessionNumber:2, sessionType:'skill', reauth_cycle:1,
+        notes:'Parallel play progressing. Social initiation improving.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-2', skillName:'Parallel Play Skills', isNew:false, isMonitoring:false, baselinePercent:36, accuracyPercent:48, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-1', skillName:'Social Initiation', isNew:false, isMonitoring:true, accuracyPercent:40 },
+        ], createdAt:'2025-04-10T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c1_sk3', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-05-08', sessionNumber:3, sessionType:'skill', reauth_cycle:1,
+        notes:'Parallel play approaching STO 2. New skill: Self-Regulation — monitoring.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-2', skillName:'Parallel Play Skills', isNew:false, isMonitoring:false, baselinePercent:36, accuracyPercent:55, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-1', skillName:'Social Initiation', isNew:false, isMonitoring:true, accuracyPercent:44 },
+          { skillId:'sg-c17-new-2', skillName:'Self-Regulation', isNew:true, isMonitoring:false,
+            accuracyPercent:28, firstSeenDate:'2025-05-08', domain:'Adaptive', monitorOnly:true, includedInPlan:false },
+        ], createdAt:'2025-05-08T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c1_sk4', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-06-12', sessionNumber:4, sessionType:'skill', reauth_cycle:1,
+        notes:'Parallel play at 62%. Social initiation at 48%. Self-Regulation monitoring at 32%.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-2', skillName:'Parallel Play Skills', isNew:false, isMonitoring:false, baselinePercent:36, accuracyPercent:62, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-1', skillName:'Social Initiation', isNew:false, isMonitoring:true, accuracyPercent:48 },
+          { skillId:'sg-c17-new-2', skillName:'Self-Regulation', isNew:false, isMonitoring:true, accuracyPercent:32 },
+        ], createdAt:'2025-06-12T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c1_sk5', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-07-17', sessionNumber:5, sessionType:'skill', reauth_cycle:1,
+        notes:'Great skill session. Parallel play at 66%, social initiation at 52%, self-regulation 35%.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-2', skillName:'Parallel Play Skills', isNew:false, isMonitoring:false, baselinePercent:36, accuracyPercent:66, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-1', skillName:'Social Initiation', isNew:false, isMonitoring:true, accuracyPercent:52 },
+          { skillId:'sg-c17-new-2', skillName:'Self-Regulation', isNew:false, isMonitoring:true, accuracyPercent:35 },
+        ], createdAt:'2025-07-17T10:00:00.000Z',
+      },
+    ];
+
+    const C17_CT_LOGS_C1 = [
+      {
+        id:'ctlog_c17_c1_1', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-03-18', sessionNumber:1, reauth_cycle:1,
+        notes:'Cycle 1 CT. FCT and praise from updated baselines (55%, 61%).',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:55, sessionPercent:70, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:61, sessionPercent:76, stoStatus:'in_progress', currentStoNumber:2 },
+        ], createdAt:'2025-03-18T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c17_c1_2', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-04-22', sessionNumber:2, reauth_cycle:1,
+        notes:'Strong caregiver performance. FCT generalized to community settings.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:55, sessionPercent:74, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:61, sessionPercent:79, stoStatus:'in_progress', currentStoNumber:2 },
+        ], createdAt:'2025-04-22T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c17_c1_3', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-06-03', sessionNumber:3, reauth_cycle:1,
+        notes:'Praise crossed STO 3 threshold. FCT at 78%.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:55, sessionPercent:78, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:61, sessionPercent:81, stoStatus:'in_progress', currentStoNumber:3 },
+        ], createdAt:'2025-06-03T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c17_c1_4', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-07-29', sessionNumber:4, reauth_cycle:1,
+        notes:'FCT at 80%. Praise holding at 82%.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:55, sessionPercent:80, stoStatus:'in_progress', currentStoNumber:2 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:61, sessionPercent:82, stoStatus:'in_progress', currentStoNumber:3 },
+        ], createdAt:'2025-07-29T11:00:00.000Z',
+      },
+    ];
+
+    // ── Cycle 1 reassessment ───────────────────────────────────────────────────
+    const _c17_for_c1_reassess = { ...c, assessment_session: C17_ASSESSMENT_C1, reauth_cycle: 1 };
+    const _reassess_c17_c1_raw = makeReassessmentSession(
+      _c17_for_c1_reassess,
+      C17_ASSESSMENT_C1,
+      C17_BEHAVIOR_LOGS_C1,
+      '2025-03-01',
+      '2025-09-01',
+      C17_CT_LOGS_C1,
+    );
+    const reassessment_cycle1_maya = {
+      ..._reassess_c17_c1_raw,
+      status: 'complete',
+      completedAt: '2025-09-05T14:00:00.000Z',
+      cycle_number: 1,
+      cptHours: { '97153':'80', '97155':'12', '97156':'8' },
+      submissionChecklist: { vineland:true, basc:true, finalUploaded:true },
+      progressNarrativeText: 'Maya made excellent progress during reauth cycle 1. Elopement achieved mastery at zero incidents, and Physical Aggression reduced from 7 to 2 incidents/session (71% reduction). Parallel Play progressed to 66%. Social Initiation has been promoted to a formal plan goal for the next cycle. New monitoring items (Noncompliance, Self-Regulation) were identified and will continue to be tracked.',
+      newBehaviorSummary: (_reassess_c17_c1_raw.newBehaviorSummary ?? []).map(b => {
+        if (b.behaviorName === 'Scripting') return { ...b, monitorOnly:true, includedInPlan:false };
+        if (b.behaviorName === 'Noncompliance') return { ...b, monitorOnly:true, includedInPlan:false };
+        return b;
+      }),
+      newSkillSummary: (_reassess_c17_c1_raw.newSkillSummary ?? []).map(s => {
+        if (s.skillName === 'Social Initiation') return { ...s, monitorOnly:false, includedInPlan:true };
+        if (s.skillName === 'Self-Regulation') return { ...s, monitorOnly:true, includedInPlan:false };
+        return s;
+      }),
+    };
+
+    // ── Cycle 2 promoted assessment (avg of cycle 1 logs) ─────────────────────
+    // Aggression: avg(6,5,4,3,2)=4; Elopement: avg(3,2,1,0,0)=1.2→1 (will be mastered in C2)
+    // ParPlay: avg(40,48,55,62,66)=54.2→54
+    // SocInit promoted: avg of monitoring values [36,40,44,48,52]=44 → baseline 44%
+    // FCT: avg(70,74,78,80)=75.5→76; Praise: avg(76,79,81,82)=79.5→80
+    const C17_ASSESSMENT_C2 = {
+      ...C17_ASSESSMENT_C1,
+      id: 'sess_c17_cycle2',
+      sessionType: 'initial',
+      status: 'complete',
+      sections: {
+        ...C17_ASSESSMENT_C1.sections,
+        behavior_targets: {
+          completionState: 'complete',
+          approvalState: 'approved',
+          behaviorTargets: C17_BEHAVIOR_TARGETS.map(bt => {
+            if (bt.id === 'bt-c17-1') return { ...bt, baselineFrequency: 4 };
+            if (bt.id === 'bt-c17-2') return { ...bt, baselineFrequency: 1 };
+            if (bt.id === 'bt-c17-3') return { ...bt, baselineFrequency: 2 };
+            return bt;
+          }),
+        },
+        skill_acquisitions: {
+          completionState: 'complete',
+          approvalState: 'approved',
+          skillGoals: [
+            ...C17_SKILL_GOALS.filter(sg => sg.id !== 'sg-c17-1').map(sg => {
+              if (sg.id === 'sg-c17-2') return { ...sg, baselinePercent: 54 };
+              return sg;
+            }),
+            {
+              id: 'sg-c17-soc1',
+              targetSkill: 'Social Initiation',
+              domain: 'Social',
+              baselinePercent: 44,
+              masteryCriteriaPercent: 80,
+              stoSteps: [
+                { id:'sg-c17-soc1-s1', targetPercent:'60', skillDescription:'Initiates interaction with peer or adult across 3 structured activities with minimal prompting', durationWeeks:'8' },
+                { id:'sg-c17-soc1-s2', targetPercent:'75', skillDescription:'Independently initiates social interaction across naturalistic settings and novel peers', durationWeeks:'8' },
+              ],
+            },
+          ],
+        },
+        caregiver_training: {
+          completionState: 'complete',
+          approvalState: 'approved',
+          caregiverTrainingTargets: C17_CT_TARGETS.map(ct => {
+            if (ct.id === 'ctt-c17-1') return { ...ct, baselinePercent: 76 };
+            if (ct.id === 'ctt-c17-2') return { ...ct, baselinePercent: 80 };
+            return ct;
+          }),
+        },
+      },
+    };
+
+    // ── Cycle 2 logs (Sep 2025–Jan 2026) ─────────────────────────────────────
+    const C17_BEHAVIOR_LOGS_C2 = [
+      {
+        id:'slog_c17_c2_b1', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-09-10', sessionNumber:1, sessionType:'behavior', reauth_cycle:2,
+        notes:'Cycle 2 start. Aggression from new baseline 4. Scripting and Noncompliance monitoring.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression', isNew:false, isMonitoring:false, baselineFrequency:4, sessionFrequency:4, currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting',       isNew:false, isMonitoring:true, sessionFrequency:5 },
+          { behaviorId:'bt-c17-new-2', behaviorName:'Noncompliance',   isNew:false, isMonitoring:true, sessionFrequency:6 },
+        ],
+        skillEntries:[], createdAt:'2025-09-10T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c2_b2', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-10-08', sessionNumber:2, sessionType:'behavior', reauth_cycle:2,
+        notes:'Aggression approaching STO 2 threshold. Scripting and noncompliance slightly decreasing.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression', isNew:false, isMonitoring:false, baselineFrequency:4, sessionFrequency:3, currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting',       isNew:false, isMonitoring:true, sessionFrequency:4 },
+          { behaviorId:'bt-c17-new-2', behaviorName:'Noncompliance',   isNew:false, isMonitoring:true, sessionFrequency:5 },
+        ],
+        skillEntries:[], createdAt:'2025-10-08T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c2_b3', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-11-05', sessionNumber:3, sessionType:'behavior', reauth_cycle:2,
+        notes:'Aggression holding at 3. Monitoring items stable.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression', isNew:false, isMonitoring:false, baselineFrequency:4, sessionFrequency:3, currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting',       isNew:false, isMonitoring:true, sessionFrequency:4 },
+          { behaviorId:'bt-c17-new-2', behaviorName:'Noncompliance',   isNew:false, isMonitoring:true, sessionFrequency:5 },
+        ],
+        skillEntries:[], createdAt:'2025-11-05T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c2_b4', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-12-03', sessionNumber:4, sessionType:'behavior', reauth_cycle:2,
+        notes:'Aggression decreasing to 2. Scripting and noncompliance showing improvement.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression', isNew:false, isMonitoring:false, baselineFrequency:4, sessionFrequency:2, currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting',       isNew:false, isMonitoring:true, sessionFrequency:3 },
+          { behaviorId:'bt-c17-new-2', behaviorName:'Noncompliance',   isNew:false, isMonitoring:true, sessionFrequency:4 },
+        ],
+        skillEntries:[], createdAt:'2025-12-03T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c2_b5', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2026-01-14', sessionNumber:5, sessionType:'behavior', reauth_cycle:2,
+        notes:'Aggression holding at 2. Monitoring items stable. Reassessment approaching.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression', isNew:false, isMonitoring:false, baselineFrequency:4, sessionFrequency:2, currentStoNumber:2, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting',       isNew:false, isMonitoring:true, sessionFrequency:3 },
+          { behaviorId:'bt-c17-new-2', behaviorName:'Noncompliance',   isNew:false, isMonitoring:true, sessionFrequency:4 },
+        ],
+        skillEntries:[], createdAt:'2026-01-14T10:00:00.000Z',
+      },
+    ];
+
+    const C17_SKILL_LOGS_C2 = [
+      {
+        id:'slog_c17_c2_sk1', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-09-17', sessionNumber:1, sessionType:'skill', reauth_cycle:2,
+        notes:'Parallel play from 54% baseline, Social Initiation now formal goal at 44% baseline. Self-Reg monitoring.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-2',    skillName:'Parallel Play Skills',  isNew:false, isMonitoring:false, baselinePercent:54, accuracyPercent:56, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-soc1', skillName:'Social Initiation',     isNew:false, isMonitoring:false, baselinePercent:44, accuracyPercent:46, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-2', skillName:'Self-Regulation', isNew:false, isMonitoring:true, accuracyPercent:33 },
+        ], createdAt:'2025-09-17T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c2_sk2', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-10-15', sessionNumber:2, sessionType:'skill', reauth_cycle:2,
+        notes:'Both plan skills improving. Self-Reg at 36%.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-2',    skillName:'Parallel Play Skills', isNew:false, isMonitoring:false, baselinePercent:54, accuracyPercent:62, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-soc1', skillName:'Social Initiation',    isNew:false, isMonitoring:false, baselinePercent:44, accuracyPercent:52, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-2', skillName:'Self-Regulation', isNew:false, isMonitoring:true, accuracyPercent:36 },
+        ], createdAt:'2025-10-15T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c2_sk3', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-11-12', sessionNumber:3, sessionType:'skill', reauth_cycle:2,
+        notes:'Parallel play approaching STO 2. Social initiation solid at 56%.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-2',    skillName:'Parallel Play Skills', isNew:false, isMonitoring:false, baselinePercent:54, accuracyPercent:66, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c17-soc1', skillName:'Social Initiation',    isNew:false, isMonitoring:false, baselinePercent:44, accuracyPercent:56, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-2', skillName:'Self-Regulation', isNew:false, isMonitoring:true, accuracyPercent:38 },
+        ], createdAt:'2025-11-12T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c2_sk4', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2025-12-10', sessionNumber:4, sessionType:'skill', reauth_cycle:2,
+        notes:'Both skills progressing well. Self-Reg at 40%.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-2',    skillName:'Parallel Play Skills', isNew:false, isMonitoring:false, baselinePercent:54, accuracyPercent:70, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c17-soc1', skillName:'Social Initiation',    isNew:false, isMonitoring:false, baselinePercent:44, accuracyPercent:60, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-2', skillName:'Self-Regulation', isNew:false, isMonitoring:true, accuracyPercent:40 },
+        ], createdAt:'2025-12-10T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c2_sk5', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2026-01-21', sessionNumber:5, sessionType:'skill', reauth_cycle:2,
+        notes:'Parallel play at 74%, social initiation at 64%. Strong cycle 2 close.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-2',    skillName:'Parallel Play Skills', isNew:false, isMonitoring:false, baselinePercent:54, accuracyPercent:74, currentStoNumber:2, stoStatus:'in_progress' },
+          { skillId:'sg-c17-soc1', skillName:'Social Initiation',    isNew:false, isMonitoring:false, baselinePercent:44, accuracyPercent:64, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-2', skillName:'Self-Regulation', isNew:false, isMonitoring:true, accuracyPercent:42 },
+        ], createdAt:'2026-01-21T10:00:00.000Z',
+      },
+    ];
+
+    const C17_CT_LOGS_C2 = [
+      {
+        id:'ctlog_c17_c2_1', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-09-23', sessionNumber:1, reauth_cycle:2,
+        notes:'Cycle 2 CT from new baselines. Both at STO 3.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:76, sessionPercent:80, stoStatus:'in_progress', currentStoNumber:3 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:80, sessionPercent:82, stoStatus:'in_progress', currentStoNumber:3 },
+        ], createdAt:'2025-09-23T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c17_c2_2', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-10-28', sessionNumber:2, reauth_cycle:2,
+        notes:'Excellent caregiver implementation across all routines.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:76, sessionPercent:82, stoStatus:'in_progress', currentStoNumber:3 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:80, sessionPercent:84, stoStatus:'in_progress', currentStoNumber:3 },
+        ], createdAt:'2025-10-28T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c17_c2_3', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2025-12-02', sessionNumber:3, reauth_cycle:2,
+        notes:'Both goals approaching mastery. FCT 84%, Praise 84%.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:76, sessionPercent:84, stoStatus:'in_progress', currentStoNumber:3 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:80, sessionPercent:84, stoStatus:'in_progress', currentStoNumber:3 },
+        ], createdAt:'2025-12-02T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c17_c2_4', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2026-02-03', sessionNumber:4, reauth_cycle:2,
+        notes:'Both FCT and Praise met mastery criteria! Outstanding caregiver progress.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:76, sessionPercent:85, stoStatus:'met', currentStoNumber:3 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:80, sessionPercent:85, stoStatus:'met', currentStoNumber:3 },
+        ], createdAt:'2026-02-03T11:00:00.000Z',
+      },
+    ];
+
+    // ── Cycle 2 reassessment ───────────────────────────────────────────────────
+    const _c17_for_c2_reassess = { ...c, assessment_session: C17_ASSESSMENT_C2, reauth_cycle: 2 };
+    const _reassess_c17_c2_raw = makeReassessmentSession(
+      _c17_for_c2_reassess,
+      C17_ASSESSMENT_C2,
+      C17_BEHAVIOR_LOGS_C2,
+      '2025-09-05',
+      '2026-02-25',
+      C17_CT_LOGS_C2,
+    );
+    const reassessment_cycle2_maya = {
+      ..._reassess_c17_c2_raw,
+      status: 'complete',
+      completedAt: '2026-02-25T14:00:00.000Z',
+      cycle_number: 2,
+      cptHours: { '97153':'80', '97155':'12', '97156':'8' },
+      submissionChecklist: { vineland:true, basc:true, finalUploaded:true },
+      progressNarrativeText: 'Maya continued to demonstrate meaningful progress in cycle 2. Physical Aggression reduced from 4 to 2 incidents/session (50% reduction). Social Initiation has been formally incorporated as a plan goal and is progressing well at 64%. Parallel Play reached 74%, approaching mastery. Both caregiver training goals (FCT Implementation and Behavior-Specific Praise) achieved mastery this cycle. Elopement has been removed from the plan as it was mastered in cycle 1.',
+      newBehaviorSummary: (_reassess_c17_c2_raw.newBehaviorSummary ?? []).map(b => {
+        if (b.behaviorName === 'Scripting')     return { ...b, monitorOnly:true, includedInPlan:false };
+        if (b.behaviorName === 'Noncompliance') return { ...b, monitorOnly:true, includedInPlan:false };
+        return b;
+      }),
+      newSkillSummary: (_reassess_c17_c2_raw.newSkillSummary ?? []).map(s =>
+        s.skillName === 'Self-Regulation' ? { ...s, monitorOnly:true, includedInPlan:false } : s,
+      ),
+    };
+
+    // ── Cycle 3 promoted assessment (avg of cycle 2 logs) ─────────────────────
+    // Aggression: avg(4,3,3,2,2)=2.8→3
+    // Elopement: mastered — REMOVED from behavior_targets
+    // SIB: mastered in cycle 1 — already removed from C17_ASSESSMENT_C2
+    // ParPlay: avg(56,62,66,70,74)=65.6→66
+    // SocInit: avg(46,52,56,60,64)=55.6→56
+    // FCT: avg(80,82,84,85)=82.75→83
+    // Praise: avg(82,84,84,85)=83.75→84
+    const C17_ASSESSMENT_C3 = {
+      ...C17_ASSESSMENT_C2,
+      id: 'sess_c17_cycle3',
+      sessionType: 'initial',
+      status: 'complete',
+      sections: {
+        ...C17_ASSESSMENT_C2.sections,
+        behavior_targets: {
+          completionState: 'complete',
+          approvalState: 'approved',
+          // Elopement removed (mastered cycle 1); SIB already removed from C2; keep only Aggression
+          behaviorTargets: [
+            { ...C17_BEHAVIOR_TARGETS.find(bt => bt.id === 'bt-c17-1'), baselineFrequency: 3 },
+          ],
+        },
+        skill_acquisitions: {
+          completionState: 'complete',
+          approvalState: 'approved',
+          skillGoals: C17_ASSESSMENT_C2.sections.skill_acquisitions.skillGoals.map(sg => {
+            if (sg.id === 'sg-c17-2')    return { ...sg, baselinePercent: 66 };
+            if (sg.id === 'sg-c17-soc1') return { ...sg, baselinePercent: 56 };
+            return sg;
+          }),
+        },
+        caregiver_training: {
+          completionState: 'complete',
+          approvalState: 'approved',
+          caregiverTrainingTargets: C17_CT_TARGETS.map(ct => {
+            if (ct.id === 'ctt-c17-1') return { ...ct, baselinePercent: 83 };
+            if (ct.id === 'ctt-c17-2') return { ...ct, baselinePercent: 84 };
+            return ct;
+          }),
+        },
+      },
+    };
+
+    // ── Cycle 3 logs (Mar–Apr 2026) ───────────────────────────────────────────
+    const C17_BEHAVIOR_LOGS_C3 = [
+      {
+        id:'slog_c17_c3_b1', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2026-03-04', sessionNumber:1, sessionType:'behavior', reauth_cycle:3,
+        notes:'Cycle 3 start. Only Aggression remains on plan. Monitoring items continuing.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression', isNew:false, isMonitoring:false, baselineFrequency:3, sessionFrequency:2, currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting',       isNew:false, isMonitoring:true, sessionFrequency:3 },
+          { behaviorId:'bt-c17-new-2', behaviorName:'Noncompliance',   isNew:false, isMonitoring:true, sessionFrequency:4 },
+        ],
+        skillEntries:[], createdAt:'2026-03-04T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c3_b2', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2026-04-01', sessionNumber:2, sessionType:'behavior', reauth_cycle:3,
+        notes:'Aggression holding at 2. Scripting and noncompliance decreasing.',
+        behaviorEntries:[
+          { behaviorId:'bt-c17-1', behaviorName:'Physical Aggression', isNew:false, isMonitoring:false, baselineFrequency:3, sessionFrequency:2, currentStoNumber:1, stoStatus:'in_progress' },
+          { behaviorId:'bt-c17-new-1', behaviorName:'Scripting',       isNew:false, isMonitoring:true, sessionFrequency:2 },
+          { behaviorId:'bt-c17-new-2', behaviorName:'Noncompliance',   isNew:false, isMonitoring:true, sessionFrequency:3 },
+        ],
+        skillEntries:[], createdAt:'2026-04-01T10:00:00.000Z',
+      },
+    ];
+
+    const C17_SKILL_LOGS_C3 = [
+      {
+        id:'slog_c17_c3_sk1', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2026-03-11', sessionNumber:1, sessionType:'skill', reauth_cycle:3,
+        notes:'Parallel play and social initiation from new baselines. Self-Reg monitoring.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-2',    skillName:'Parallel Play Skills', isNew:false, isMonitoring:false, baselinePercent:66, accuracyPercent:68, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-soc1', skillName:'Social Initiation',    isNew:false, isMonitoring:false, baselinePercent:56, accuracyPercent:58, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-2', skillName:'Self-Regulation', isNew:false, isMonitoring:true, accuracyPercent:38 },
+        ], createdAt:'2026-03-11T10:00:00.000Z',
+      },
+      {
+        id:'slog_c17_c3_sk2', clientId:'c17', rbtId:'s5', rbtName:'Tanya Reyes',
+        sessionDate:'2026-04-08', sessionNumber:2, sessionType:'skill', reauth_cycle:3,
+        notes:'Both skills progressing. Self-Reg at 40%.',
+        behaviorEntries:[], skillEntries:[
+          { skillId:'sg-c17-2',    skillName:'Parallel Play Skills', isNew:false, isMonitoring:false, baselinePercent:66, accuracyPercent:72, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-soc1', skillName:'Social Initiation',    isNew:false, isMonitoring:false, baselinePercent:56, accuracyPercent:62, currentStoNumber:1, stoStatus:'in_progress' },
+          { skillId:'sg-c17-new-2', skillName:'Self-Regulation', isNew:false, isMonitoring:true, accuracyPercent:40 },
+        ], createdAt:'2026-04-08T10:00:00.000Z',
+      },
+    ];
+
+    const C17_CT_LOGS_C3 = [
+      {
+        id:'ctlog_c17_c3_1', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2026-03-17', sessionNumber:1, reauth_cycle:3,
+        notes:'Cycle 3 CT. Both goals maintaining mastery from previous cycle.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:83, sessionPercent:85, stoStatus:'met', currentStoNumber:3 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:84, sessionPercent:85, stoStatus:'met', currentStoNumber:3 },
+        ], createdAt:'2026-03-17T11:00:00.000Z',
+      },
+      {
+        id:'ctlog_c17_c3_2', clientId:'c17', bcbaId:'s1', bcbaName:'Dr. Rachel Kim',
+        sessionDate:'2026-04-14', sessionNumber:2, reauth_cycle:3,
+        notes:'Caregiver maintaining mastery. Planning for generalization to school setting.',
+        trainingEntries:[
+          { targetId:'ctt-c17-1', goalName:'FCT Implementation',      baselinePercent:83, sessionPercent:85, stoStatus:'met', currentStoNumber:3 },
+          { targetId:'ctt-c17-2', goalName:'Behavior-Specific Praise', baselinePercent:84, sessionPercent:85, stoStatus:'met', currentStoNumber:3 },
+        ], createdAt:'2026-04-14T11:00:00.000Z',
+      },
+    ];
+
+    // ── monitoring_goals for cycle 3 ──────────────────────────────────────────
+    const c17_monitoring_goals = {
+      behaviors: [
+        { id:'monitor-b-c17-1', behaviorName:'Scripting', baselineFrequency:'4',
+          firstSeenDate:'2024-11-22', newBehaviorFunction:'Automatic', newBehaviorSeverity:'Mild',
+          newBehaviorDefinition:'Repeating phrases or scripts from videos/media out of context, lasting ≥10 seconds, occurring without communicative function.' },
+        { id:'monitor-b-c17-2', behaviorName:'Noncompliance', baselineFrequency:'5',
+          firstSeenDate:'2025-05-01', newBehaviorFunction:'Escape', newBehaviorSeverity:'Mild',
+          newBehaviorDefinition:'Refusal to follow adult instructions within 5 seconds; includes crying, turning away, or dropping to the floor in response to directives.' },
+      ],
+      skills: [
+        { id:'monitor-s-c17-1', skillName:'Self-Regulation', baselinePercent:'39',
+          firstSeenDate:'2025-05-08', domain:'Adaptive' },
+      ],
+      ct: [],
+    };
+
+    // ── Documents ──────────────────────────────────────────────────────────────
+    const C17_DOCS = [
+      { id:'doc_c17_1',  type:'referral_form',    label:'REFERRAL FORM — Maya Chen',                    uploaded_at:'2024-06-08T09:00:00.000Z', by:'Admin',            stage:'intake'          },
+      { id:'doc_c17_2',  type:'insurance_card',   label:'INSURANCE CARD — Sunshine Health',             uploaded_at:'2024-06-08T09:15:00.000Z', by:'Admin',            stage:'intake'          },
+      { id:'doc_c17_3',  type:'cde',              label:'CDE — Maya Chen (May 2024)',                    uploaded_at:'2024-06-10T10:00:00.000Z', by:'Admin',            stage:'intake'          },
+      { id:'doc_c17_4',  type:'aba_prescription', label:'ABA SCRIPT — Dr. Andrew Park',                 uploaded_at:'2024-06-10T10:05:00.000Z', by:'Admin',            stage:'intake'          },
+      { id:'doc_c17_5',  type:'consent',          label:'CONSENT PACKET — signed',                      uploaded_at:'2024-06-12T14:00:00.000Z', by:'Admin',            stage:'intake'          },
+      { id:'doc_c17_6',  type:'prior_assessment', label:'PRIOR ASSESSMENTS — attached',                 uploaded_at:'2024-07-05T11:00:00.000Z', by:'Admin',            stage:'auth_assessment' },
+      { id:'doc_c17_7',  type:'assessment_final', label:'FINAL — Initial Assessment Report',            uploaded_at:'2024-08-15T15:00:00.000Z', by:'Dr. Rachel Kim',   stage:'assessment'      },
+      { id:'doc_c17_8',  type:'treatment_plan',   label:'FINAL — Signed Treatment Plan',                uploaded_at:'2024-08-20T09:00:00.000Z', by:'Dr. Rachel Kim',   stage:'plan_draft'      },
+      { id:'doc_c17_9',  type:'auth_approval',    label:'AUTH APPROVAL — Sunshine Health Aug 2024',     uploaded_at:'2024-08-25T08:00:00.000Z', by:'Admin',            stage:'submitted'       },
+      { id:'doc_c17_10', type:'progress_report',  label:'DRAFT — Reassessment_Maya_Chen_2025-03-01.docx', uploaded_at:'2025-03-01T14:00:00.000Z', by:'Dr. Rachel Kim', stage:'services'        },
+      { id:'doc_c17_11', type:'auth_approval',    label:'AUTH APPROVAL — Sunshine Health Mar 2025',     uploaded_at:'2025-03-01T16:00:00.000Z', by:'Admin',            stage:'services'        },
+      { id:'doc_c17_12', type:'progress_report',  label:'DRAFT — Reassessment_Maya_Chen_2025-09-05.docx', uploaded_at:'2025-09-05T14:00:00.000Z', by:'Dr. Rachel Kim', stage:'services'        },
+      { id:'doc_c17_13', type:'auth_approval',    label:'AUTH APPROVAL — Sunshine Health Sep 2025',     uploaded_at:'2025-09-05T16:00:00.000Z', by:'Admin',            stage:'services'        },
+      { id:'doc_c17_14', type:'progress_report',  label:'DRAFT — Reassessment_Maya_Chen_2026-02-25.docx', uploaded_at:'2026-02-25T14:00:00.000Z', by:'Dr. Rachel Kim', stage:'services'        },
+    ];
+
+    // ── Activity log ───────────────────────────────────────────────────────────
+    const C17_LOG = [
+      { id:'log_c17_1',  action:'Client created — intake documents uploaded',                                              ts:'2024-06-08T09:00:00.000Z', by:'Admin'            },
+      { id:'log_c17_2',  action:'Authorization for 97151 submitted to Sunshine Health',                                    ts:'2024-06-20T10:00:00.000Z', by:'Admin'            },
+      { id:'log_c17_3',  action:'Assessment authorization received. BCBA Dr. Rachel Kim assigned.',                         ts:'2024-07-10T09:00:00.000Z', by:'Admin'            },
+      { id:'log_c17_4',  action:'Smart Assessment interview completed by Dr. Rachel Kim',                                   ts:'2024-08-15T14:00:00.000Z', by:'Dr. Rachel Kim'   },
+      { id:'log_c17_5',  action:'Treatment plan submitted to Sunshine Health',                                             ts:'2024-08-20T16:00:00.000Z', by:'Admin'            },
+      { id:'log_c17_6',  action:'Services authorization received (Aug 2024). RBT Tanya Reyes assigned.',                    ts:'2024-08-25T08:00:00.000Z', by:'Admin'            },
+      { id:'log_c17_7',  action:'First ABA therapy session completed — behavior baseline established',                      ts:'2024-08-30T10:00:00.000Z', by:'Tanya Reyes'      },
+      { id:'log_c17_8',  action:'PECS verbal requesting showing strong progress — approaching STO 2 target',               ts:'2024-10-31T10:00:00.000Z', by:'Tanya Reyes'      },
+      { id:'log_c17_9',  action:'Scripting behavior identified for the first time — added to monitoring',                   ts:'2024-11-22T10:00:00.000Z', by:'Tanya Reyes'      },
+      { id:'log_c17_10', action:'SIB approaching mastery — zero incidents in session 6',                                    ts:'2025-01-31T10:00:00.000Z', by:'Tanya Reyes'      },
+      { id:'log_c17_11', action:'PECS Verbal Requesting achieved mastery at 83%',                                           ts:'2025-01-24T10:00:00.000Z', by:'Tanya Reyes'      },
+      { id:'log_c17_12', action:'Cycle 0 reassessment completed by Dr. Rachel Kim',                                        ts:'2025-03-01T14:00:00.000Z', by:'Dr. Rachel Kim'   },
+      { id:'log_c17_13', action:'Reauth cycle 1 authorization received — auth period Mar 1–Sep 1, 2025',                   ts:'2025-03-01T16:00:00.000Z', by:'Admin'            },
+      { id:'log_c17_14', action:'SIB mastery confirmed — zero incidents for 3 consecutive sessions',                        ts:'2025-03-05T10:00:00.000Z', by:'Tanya Reyes'      },
+      { id:'log_c17_15', action:'Elopement approaching mastery — zero incidents in session 4',                              ts:'2025-06-05T10:00:00.000Z', by:'Tanya Reyes'      },
+      { id:'log_c17_16', action:'Noncompliance identified as new behavior — added to monitoring',                           ts:'2025-05-01T10:00:00.000Z', by:'Tanya Reyes'      },
+      { id:'log_c17_17', action:'Social Initiation promoted from monitoring to formal plan goal',                           ts:'2025-09-05T14:00:00.000Z', by:'Dr. Rachel Kim'   },
+      { id:'log_c17_18', action:'Cycle 1 reassessment completed by Dr. Rachel Kim',                                        ts:'2025-09-05T14:00:00.000Z', by:'Dr. Rachel Kim'   },
+      { id:'log_c17_19', action:'Reauth cycle 2 authorization received — auth period Sep 5, 2025–Feb 25, 2026',            ts:'2025-09-05T16:00:00.000Z', by:'Admin'            },
+      { id:'log_c17_20', action:'FCT Implementation and Behavior-Specific Praise both achieved mastery',                    ts:'2026-02-03T11:00:00.000Z', by:'Dr. Rachel Kim'   },
+      { id:'log_c17_21', action:'Elopement mastery confirmed — removed from cycle 3 treatment plan',                        ts:'2026-02-25T14:00:00.000Z', by:'Dr. Rachel Kim'   },
+      { id:'log_c17_22', action:'Cycle 2 reassessment completed by Dr. Rachel Kim',                                        ts:'2026-02-25T14:00:00.000Z', by:'Dr. Rachel Kim'   },
+      { id:'log_c17_23', action:'Reauth cycle 3 authorization received — auth period Feb 25–Aug 25, 2026',                  ts:'2026-03-01T09:00:00.000Z', by:'Admin'            },
+      { id:'log_c17_24', action:'Cycle 3 services started — first session logged',                                          ts:'2026-03-04T10:00:00.000Z', by:'Tanya Reyes'      },
+    ];
+
+    return {
+      ...c,
+      pipeline_entry: true,
+      smart_assessment_session_id: C17_ASSESSMENT_C3.id,
+      checklist: cl,
+      documents: C17_DOCS,
+      activity_log: C17_LOG,
+      case_notes: [],
+      monitoring_goals: c17_monitoring_goals,
+      assessment_session: C17_ASSESSMENT_C3,
+      _initialAssessment: assessment_session_c17_initial,
+      service_session_logs: [...C17_BEHAVIOR_LOGS_C0, ...C17_SKILL_LOGS_C0, ...C17_BEHAVIOR_LOGS_C1, ...C17_SKILL_LOGS_C1, ...C17_BEHAVIOR_LOGS_C2, ...C17_SKILL_LOGS_C2, ...C17_BEHAVIOR_LOGS_C3, ...C17_SKILL_LOGS_C3],
+      caregiver_training_session_logs: [...C17_CT_LOGS_C0, ...C17_CT_LOGS_C1, ...C17_CT_LOGS_C2, ...C17_CT_LOGS_C3],
+      reassessment_sessions: [reassessment_cycle0_maya, reassessment_cycle1_maya, reassessment_cycle2_maya],
+    };
+  }
+
   return { ...c, pipeline_entry:true, smart_assessment_session_id: smart_session_id, checklist:cl, documents:[], activity_log:[], case_notes: SEED_NOTES[c.id] || [], assessment_session, service_session_logs: [], caregiver_training_session_logs: [] };
 });
 
@@ -3198,6 +4740,33 @@ export const makeReassessmentSession = (
 
   // ── (3) newBehaviorSummary ─────────────────────────────────────────────────
   const newMap = new Map();
+
+  // Pre-seed from monitoring_goals so behaviors that were marked "Monitor Only" in the
+  // previous cycle's reassessment appear in the new cycle's reassessment form, even if
+  // the RBT hasn't yet re-flagged them as isNew in this cycle's session logs.
+  // The stored baselineFrequency is the rolling-average baseline from the prior cycle.
+  for (const mg of (client?.monitoring_goals?.behaviors ?? [])) {
+    const key = mg.behaviorName;
+    if (!key || newMap.has(key)) continue;
+    const baselineFreq = mg.baselineFrequency != null ? parseFloat(mg.baselineFrequency) : null;
+    newMap.set(key, {
+      behaviorName:              mg.behaviorName,
+      firstSeenDate:             mg.firstSeenDate,
+      rbtDefinitionDraft:        mg.newBehaviorDefinition ?? '',
+      function:                  mg.newBehaviorFunction ?? '',
+      severity:                  mg.newBehaviorSeverity ?? '',
+      firstFrequency:            baselineFreq,
+      frequencies:               [],   // populated by isNew/isMonitoring log entries below
+      sessionHistory:            [],
+      includedInPlan:            null,
+      monitorOnly:               null,
+      stoStructure:              [],
+      bcbaLtoText:               '',
+      masteryCriteriaFrequency:  null,
+      masteryCriteriaWeeks:      null,
+    });
+  }
+
   for (const log of (sessionLogs ?? [])) {
     for (const entry of (log.behaviorEntries ?? [])) {
       if (!entry.isNew && !newMap.has(entry.behaviorName)) continue;
@@ -3330,6 +4899,35 @@ export const makeReassessmentSession = (
 
   // ── (5) newSkillSummary ────────────────────────────────────────────────────
   const seenSkills = new Map();
+
+  // Pre-seed from monitoring_goals so skills marked "Monitor Only" in the previous
+  // cycle's reassessment appear here, with the rolling-average baseline carried forward.
+  for (const mg of (client?.monitoring_goals?.skills ?? [])) {
+    const key = mg.skillName;
+    if (!key || seenSkills.has(key)) continue;
+    const baselinePct = mg.baselinePercent != null ? parseFloat(mg.baselinePercent) : null;
+    seenSkills.set(key, {
+      skillId:                null,
+      skillName:              mg.skillName,
+      firstSeenDate:          mg.firstSeenDate,
+      rbtNotes:               '',
+      baselinePercent:        baselinePct,
+      currentPercent:         null,
+      bcbaGoalName:           '',
+      bcbaDefinition:         '',
+      bcbaDomain:             mg.domain ?? '',
+      includedInPlan:         null,
+      monitorOnly:            null,
+      stoSteps:               [],
+      masteryCriteriaPercent: null,
+      masteryCriteriaWeeks:   null,
+      bcbaLtoText:            '',
+      _sessionHistory:        [],
+      _accuracies:            [],   // populated by isNew/isMonitoring log entries below
+      _latestDate:            null,
+    });
+  }
+
   for (const log of (sessionLogs ?? [])) {
     for (const entry of (log.skillEntries ?? [])) {
       if (!entry.isNew) continue;
@@ -3510,6 +5108,22 @@ export const makeReassessmentSession = (
   const ctPlanNames = new Set(ctTargets.map(t => t.goalName?.toLowerCase()));
   const newCgMap = new Map();
 
+  // Pre-seed from monitoring_goals so CT goals marked "Monitor Only" in the previous
+  // cycle's reassessment appear here, with the rolling-average baseline carried forward.
+  for (const mg of (client?.monitoring_goals?.ct ?? [])) {
+    const name = mg.goalName;
+    if (!name || newCgMap.has(name) || ctPlanNames.has(name?.toLowerCase())) continue;
+    const baselinePct = mg.baselinePercent != null ? parseFloat(mg.baselinePercent) : null;
+    newCgMap.set(name, {
+      goalName:        name,
+      firstSeenDate:   mg.firstSeenDate,
+      baselinePercent: baselinePct,
+      notes:           '',
+      _accuracies:     [],   // populated by isNew/isMonitoring log entries below
+      _sessionHistory: [],
+    });
+  }
+
   for (const log of ctLogs) {
     for (const entry of (log.trainingEntries ?? [])) {
       if (!entry.isNew && !entry.isMonitoring) continue;
@@ -3577,7 +5191,8 @@ export const makeReassessmentSession = (
       maxAccuracy:            maxAcc,
       avgAccuracy:            avgAcc,
       trend,
-      includedInPlan:         null,    // BCBA decision
+      includedInPlan:         null,    // BCBA decision (set during reassessment review)
+      monitorOnly:            null,    // BCBA decision (set during reassessment review)
       stoSteps:               [],
       masteryCriteriaPercent: null,
       masteryCriteriaWeeks:   null,

@@ -65,8 +65,9 @@ export default function BehaviorSessionModal({ client, onSave, onClose, currentU
     );
   }, [client]);
 
-  // ── Behaviors flagged as new in past logs but NOT yet in the official plan ────
-  // These are shown in a "Currently monitoring" section so RBTs can keep tracking them.
+  // ── Behaviors flagged as new in past logs OR carried forward as monitor-only
+  //    from the previous cycle's reassessment. These appear in "Currently monitoring"
+  //    so RBTs can keep tracking them without them being formal plan targets.
   const monitoringBehaviors = useMemo(() => {
     const currentCycle = client?.reauth_cycle ?? 0;
     const planNames = new Set(behaviorTargets.map(bt => bt.behaviorName?.toLowerCase()));
@@ -77,7 +78,26 @@ export default function BehaviorSessionModal({ client, onSave, onClose, currentU
       )
       .sort((a, b) => a.sessionNumber - b.sessionNumber);
 
-    const seen = new Map(); // behaviorName → { firstSeenDate, function, severity, lastFrequency }
+    const seen = new Map(); // lowercase behaviorName → entry
+
+    // Pre-seed from monitoring_goals (set when the BCBA clicked "Start Reauthorization"
+    // after the previous cycle's reassessment). These items were marked "Monitor Only"
+    // and should appear here from session 1 of the new cycle.
+    for (const mg of (client?.monitoring_goals?.behaviors ?? [])) {
+      const key = mg.behaviorName?.toLowerCase();
+      if (!key || planNames.has(key)) continue;
+      seen.set(key, {
+        behaviorName:          mg.behaviorName,
+        firstSeenDate:         mg.firstSeenDate,
+        newBehaviorFunction:   mg.newBehaviorFunction  || '',
+        newBehaviorSeverity:   mg.newBehaviorSeverity  || '',
+        newBehaviorDefinition: mg.newBehaviorDefinition || '',
+        baselineFrequency:     mg.baselineFrequency != null ? parseFloat(mg.baselineFrequency) : null,
+        lastFrequency:         mg.baselineFrequency != null ? parseFloat(mg.baselineFrequency) : null,
+      });
+    }
+
+    // Layer on any newly-flagged behaviors from this cycle's session logs
     for (const log of allLogs) {
       for (const entry of (log.behaviorEntries ?? [])) {
         if (!entry.isNew) continue;
@@ -117,12 +137,27 @@ export default function BehaviorSessionModal({ client, onSave, onClose, currentU
     behaviorTargets.map(bt => {
       const prev = latestLogEntryMap[bt.id];
 
+      const baseline = (() => { const v = parseFloat(bt.baselineFrequency); return !isNaN(v) ? Math.round(v) : null; })();
+
+      // When no previous log exists for this cycle, advance past any STOs the new
+      // baseline already satisfies (reduction goal: met when baseline ≤ targetFrequency).
+      // Land on the first STO still challenging; pin to the last STO if all are met.
+      const computedStoNumber = (() => {
+        if (prev?.currentStoNumber != null) return prev.currentStoNumber;
+        const stoList = (bt?.stoSteps?.length > 0) ? bt.stoSteps : (reassessmentStoMap[bt.id] ?? []);
+        if (!stoList.length || baseline == null) return 1;
+        const firstUncompleted = stoList.findIndex(
+          step => baseline > parseFloat(step.targetFrequency),
+        );
+        return firstUncompleted === -1 ? stoList.length : firstUncompleted + 1;
+      })();
+
       return {
         behaviorId:            bt.id,
         behaviorName:          bt.behaviorName,
-        baselineFrequency:     (() => { const v = parseFloat(bt.baselineFrequency); return !isNaN(v) ? Math.round(v) : null; })(),
+        baselineFrequency:     baseline,
         sessionFrequency:      '',
-        currentStoNumber:      prev?.currentStoNumber ?? 1,
+        currentStoNumber:      computedStoNumber,
         stoStatus:             prev?.stoStatus ?? 'in_progress',
         isNew:                 false,
         newBehaviorDefinition: '',

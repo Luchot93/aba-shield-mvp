@@ -36,17 +36,34 @@ export default function SkillSessionModal({ client, onSave, onClose, currentUser
     return result;
   }, [client]);
 
-  // Previously-flagged skills not yet in the formal plan — current cycle only
+  // Skills not yet in the formal plan: carried forward as monitor-only from the
+  // previous cycle's reassessment OR newly flagged in this cycle's session logs.
   const monitoringSkills = useMemo(() => {
     const currentCycle = client?.reauth_cycle ?? 0;
     const planSkillNames = new Set((skillGoals ?? []).map(g => g.targetSkill?.toLowerCase()));
-    const seen = new Map();
+    const seen = new Map(); // lowercase skillName → entry
+
+    // Pre-seed from monitoring_goals (set at "Start Reauthorization" time by the BCBA
+    // selecting "Monitor Only" for these items in the reassessment review).
+    for (const mg of (client?.monitoring_goals?.skills ?? [])) {
+      const key = mg.skillName?.toLowerCase();
+      if (!key || planSkillNames.has(key)) continue;
+      seen.set(key, {
+        skillName:       mg.skillName,
+        firstSeenDate:   mg.firstSeenDate,
+        baselinePercent: mg.baselinePercent,
+        rbtNotes:        '',
+      });
+    }
+
+    // Layer on any newly-flagged skills from this cycle's session logs
     for (const log of (client?.service_session_logs ?? []).filter(l => (l.reauth_cycle ?? 0) === currentCycle)) {
       for (const entry of (log.skillEntries ?? [])) {
         if (!entry.isNew) continue;
-        if (planSkillNames.has(entry.skillName?.toLowerCase())) continue;
-        if (!seen.has(entry.skillName)) {
-          seen.set(entry.skillName, {
+        const key = entry.skillName?.toLowerCase();
+        if (!key || planSkillNames.has(key)) continue;
+        if (!seen.has(key)) {
+          seen.set(key, {
             skillName:       entry.skillName,
             firstSeenDate:   entry.firstSeenDate,
             baselinePercent: entry.baselinePercent,
@@ -72,12 +89,27 @@ export default function SkillSessionModal({ client, onSave, onClose, currentUser
   const [skillProgressEntries, setSkillProgressEntries] = useState(() =>
     skillGoals.map(g => {
       const prev = latestSkillLogMap[g.id];
+
+      // When no previous log exists for this cycle, advance past any STOs the new
+      // baseline already satisfies (acquisition goal: met when baseline >= targetPercent).
+      const computedStoNumber = (() => {
+        if (prev?.currentStoNumber != null) return prev.currentStoNumber;
+        const stoList = g?.stoSteps ?? [];
+        if (!stoList.length) return 1;
+        const baseline = parseFloat(g.baselinePercent);
+        if (isNaN(baseline)) return 1;
+        const firstUncompleted = stoList.findIndex(
+          step => baseline < parseFloat(step.targetPercent),
+        );
+        return firstUncompleted === -1 ? stoList.length : firstUncompleted + 1;
+      })();
+
       return {
         skillId:          g.id,
         skillName:        g.targetSkill,
         isNew:            false,
         accuracyPercent:  '',
-        currentStoNumber: prev?.currentStoNumber ?? 1,
+        currentStoNumber: computedStoNumber,
         stoStatus:        prev?.stoStatus ?? 'in_progress',
       };
     }),

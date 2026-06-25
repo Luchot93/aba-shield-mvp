@@ -55,8 +55,11 @@ export default function App() {
         return;
       }
 
-      // 2. Check archived sessions for an in-progress entry
-      const inProgress = (client.reassessment_sessions ?? []).find(s => s.status !== 'complete');
+      // 2. Check archived sessions for an in-progress entry — restrict to current cycle so
+      //    BCBA edits from a prior cycle's in-progress session don't bleed into the new one.
+      const inProgress = (client.reassessment_sessions ?? []).find(
+        s => s.status !== 'complete' && (s.cycle_number ?? 0) === (client.reauth_cycle ?? 0),
+      );
 
       // Always regenerate from the latest session logs so newly-logged sessions
       // (flagged behaviors, skill entries) appear. Merge back any BCBA edits already made.
@@ -70,9 +73,12 @@ export default function App() {
         .filter(l => (l.reauth_cycle ?? 0) === cycleFilter);
       const cycleCTLogs      = (client.caregiver_training_session_logs ?? [])
         .filter(l => (l.reauth_cycle ?? 0) === cycleFilter);
+      // Always pass the current cycle's promoted assessment_session as initialSession so that:
+      //  • origBehaviors/skills/CT targets reflect the current cycle's plan (not the original cycle 0 plan)
+      //  • per-goal baselines are the cycle-N starting values (updated by buildPromotedSections)
       const freshSession = makeReassessmentSession(
         client,
-        client._initialAssessment ?? client.assessment_session,
+        client.assessment_session,
         cycleServiceLogs,
         authStart,
         authEnd,
@@ -237,7 +243,9 @@ export default function App() {
         const existingSessions = (c.reassessment_sessions ?? []).filter(s => s.id !== freshSession.id);
         return {
           ...c,
-          _initialAssessment: c._initialAssessment ?? c.assessment_session,
+          // Always overwrite _initialAssessment with the current promoted session so that
+          // archiveReassessmentAndClose restores back to THIS cycle's plan, not cycle 0's.
+          _initialAssessment: c.assessment_session,
           assessment_session: freshSession,
           reassessment_sessions: [...existingSessions, freshSession],
         };

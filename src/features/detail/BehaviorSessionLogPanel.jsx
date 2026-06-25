@@ -174,11 +174,14 @@ function BehaviorSessionCard({ log, prevLog, defaultOpen }) {
   );
 }
 
-export default function BehaviorSessionLogPanel({ client, onLogSession }) {
+export default function BehaviorSessionLogPanel({ client, onLogSession, selectedCycle }) {
   const allLogs = client?.service_session_logs ?? [];
-  const logs = allLogs.filter(
+  const typedLogs = allLogs.filter(
     l => l.sessionType === 'behavior' || (!l.sessionType && (l.behaviorEntries ?? []).length > 0),
   );
+  const logs = selectedCycle != null
+    ? typedLogs.filter(l => (l.reauth_cycle ?? 0) === selectedCycle)
+    : typedLogs;
 
   const behaviorTargets =
     client?.assessment_session?.sections?.behavior_targets?.behaviorTargets ?? [];
@@ -252,7 +255,7 @@ export default function BehaviorSessionLogPanel({ client, onLogSession }) {
           )}
         </div>
       ) : view === 'progress' ? (
-        <ServiceSessionProgressPanel client={client} />
+        <ServiceSessionProgressPanel client={client} selectedCycle={selectedCycle} />
       ) : (
         <div>
           {sortedLogs.map((log, idx) => {

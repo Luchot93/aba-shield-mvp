@@ -814,7 +814,7 @@ function MaintenanceSkillRow({ item }) {
 /** INCLUDE card for a new caregiver training goal — expandable STOs/LTO rail */
 function NewCaregiverPlanCard({ item }) {
   const [open, setOpen] = useState(false);
-  const steps = item.stoStructure ?? [];
+  const steps = (item.stoSteps ?? []).filter(s => s.targetPercent !== '' && s.targetPercent != null);
   const hasSteps = steps.length > 0;
   const hasMastery = item.masteryCriteriaPercent != null;
   const name = item.goalName ?? '(unnamed)';

@@ -266,8 +266,10 @@ function SkillProgressCard({ data }) {
 
 // ── Default export ────────────────────────────────────────────────────────────
 
-export default function SkillSessionProgressPanel({ client }) {
-  const sessionLogs  = client?.service_session_logs ?? [];
+export default function SkillSessionProgressPanel({ client, selectedCycle }) {
+  const sessionLogs  = (client?.service_session_logs ?? []).filter(
+    l => selectedCycle == null || (l.reauth_cycle ?? 0) === selectedCycle,
+  );
   const skillGoals   = client?.assessment_session?.sections?.skill_acquisitions?.skillGoals ?? [];
 
   const skills = useMemo(

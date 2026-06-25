@@ -65,12 +65,18 @@ export default function App() {
         ? new Date(new Date(authEnd).setMonth(new Date(authEnd).getMonth() - 6))
             .toISOString().slice(0, 10)
         : null;
+      const cycleFilter      = client.reauth_cycle ?? 0;
+      const cycleServiceLogs = (client.service_session_logs ?? [])
+        .filter(l => (l.reauth_cycle ?? 0) === cycleFilter);
+      const cycleCTLogs      = (client.caregiver_training_session_logs ?? [])
+        .filter(l => (l.reauth_cycle ?? 0) === cycleFilter);
       const freshSession = makeReassessmentSession(
         client,
         client._initialAssessment ?? client.assessment_session,
-        client.service_session_logs ?? [],
+        cycleServiceLogs,
         authStart,
         authEnd,
+        cycleCTLogs,
       );
 
       // If there's an in-progress session, preserve BCBA edits by merging them in

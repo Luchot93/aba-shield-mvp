@@ -38,6 +38,35 @@ function getDisposition(item) {
   return 'excluded';
 }
 
+// ─── LTO callout block ────────────────────────────────────────────────────────
+// Visually separated from STO list — larger value, tinted background, "LTO" pill
+
+function LtoCallout({ value, variant = 'skill' }) {
+  if (value == null) return null;
+  const styles = {
+    skill:    { bg: '#F0FDFA', border: '#5EEAD4', text: '#0D9488', labelBg: '#CCFBF1', labelText: '#0F766E' },
+    behavior: { bg: '#FFF1F2', border: '#FECDD3', text: '#E11D48', labelBg: '#FFE4E6', labelText: '#BE123C' },
+    ct:       { bg: '#F0F9FF', border: '#BAE6FD', text: '#0284C7', labelBg: '#E0F2FE', labelText: '#0369A1' },
+  }[variant] ?? {};
+  return (
+    <div className="mt-3 rounded-xl flex items-center justify-between gap-3 px-4 py-3"
+      style={{ background: styles.bg, border: `1.5px solid ${styles.border}` }}>
+      <div>
+        <p className="text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: styles.labelText }}>
+          Long-Term Objective
+        </p>
+        <p className="text-[16px] font-extrabold tabular-nums leading-tight" style={{ color: styles.text }}>
+          {value}
+        </p>
+      </div>
+      <span className="text-[10px] font-bold px-2.5 py-1 rounded-full flex-shrink-0"
+        style={{ background: styles.labelBg, color: styles.labelText }}>
+        LTO
+      </span>
+    </div>
+  );
+}
+
 // ─── Shared UI pieces ─────────────────────────────────────────────────────────
 
 function SectionHeader({ icon, title, count }) {
@@ -632,7 +661,8 @@ function NewBehaviorRow({ item, planBt }) {
   const isInPlan = disposition === 'in_plan';
   // Pull STO steps from the formal plan target (traceable to the reassessment form)
   const stoSteps = planBt?.stoSteps ?? item.stoStructure ?? [];
-  const hasDetail = stoSteps.length > 0 || planBt?.operationalDefinition || item.bcbaLtoText;
+  const opDef = planBt?.operationalDefinition || item.bcbaDefinitionFinal || item.rbtDefinitionDraft || null;
+  const hasDetail = stoSteps.length > 0 || opDef || item.bcbaLtoText;
   return (
     <div className={`rounded-xl border overflow-hidden ${isInPlan ? 'border-teal-200 bg-teal-50/30' : 'border-stone-100 bg-stone-50/40'}`}>
       <button
@@ -668,23 +698,32 @@ function NewBehaviorRow({ item, planBt }) {
         )}
       </button>
       {isInPlan && open && hasDetail && (
-        <div className="px-3 pb-3 border-t border-teal-100 pt-2 space-y-1">
-          {planBt?.operationalDefinition && (
-            <p className="text-[12px] text-slate-500 italic leading-relaxed mb-1">{planBt.operationalDefinition}</p>
+        <div className="px-3 pb-3 border-t border-teal-100 pt-2">
+          {opDef && (
+            <p className="text-[12px] text-slate-500 italic leading-relaxed mb-2">{opDef}</p>
           )}
-          {stoSteps.map((s, i) => (
-            <div key={s.id ?? i} className="text-[12px] text-slate-600 py-0.5">
-              <span className="font-semibold text-teal-700">STO {i + 1}:</span>{' '}
-              {s.targetFrequency != null ? `≤ ${s.targetFrequency}/day` : ''}
-              {s.durationWeeks ? ` · ${s.durationWeeks} wks` : ''}
-              {s.note ? <span className="text-slate-400"> — {s.note}</span> : null}
+          <div className="space-y-1">
+            {stoSteps.map((s, i) => (
+              <div key={s.id ?? i} className="text-[12px] text-slate-600 py-0.5">
+                <span className="font-semibold text-teal-700">STO {i + 1}:</span>{' '}
+                {s.targetFrequency != null ? `≤ ${s.targetFrequency}/day` : ''}
+                {s.durationWeeks ? ` · ${s.durationWeeks} wks` : ''}
+                {s.note ? <span className="text-slate-400"> — {s.note}</span> : null}
+              </div>
+            ))}
+          </div>
+          {item.masteryCriteriaFrequency != null && (
+            <LtoCallout
+              value={`≤ ${item.masteryCriteriaFrequency}/day${item.masteryCriteriaWeeks ? ` · ${item.masteryCriteriaWeeks} wks` : ''}`}
+              variant="behavior"
+            />
+          )}
+          {item.bcbaLtoText ? (
+            <div className="text-[12px] text-slate-600 py-0.5 mt-1">
+              <span className="font-semibold text-rose-600">LTO:</span>
+              <span className="text-slate-400"> — {item.bcbaLtoText}</span>
             </div>
-          ))}
-          {item.bcbaLtoText && (
-            <p className="text-[12px] text-slate-600 mt-1">
-              <span className="font-semibold text-teal-700">LTO:</span> {item.bcbaLtoText}
-            </p>
-          )}
+          ) : null}
         </div>
       )}
     </div>
@@ -848,15 +887,27 @@ function NewSkillRow({ item }) {
         )}
       </button>
       {isInPlan && open && (item.stoSteps?.length > 0 || item.masteryCriteriaPercent || item.bcbaLtoText) && (
-        <div className="px-3 pb-3 border-t border-teal-100">
-          {item.stoSteps?.map((s, i) => (
-            <p key={i} className="text-[12px] text-slate-600 py-0.5">
-              <span className="font-semibold text-teal-700">STO {i + 1}:</span>{' '}
-              {s.targetPercent != null ? `${s.targetPercent}%` : ''}{s.durationWeeks ? ` · ${s.durationWeeks} wks` : ''}
-            </p>
-          ))}
-          {item.masteryCriteriaPercent && <p className="text-[12px] text-slate-600 mt-1"><span className="font-semibold text-teal-700">Mastery:</span> {item.masteryCriteriaPercent}%{item.masteryCriteriaWeeks ? ` · ${item.masteryCriteriaWeeks} wks` : ''}</p>}
-          {item.bcbaLtoText && <p className="text-[12px] text-slate-600 mt-1"><span className="font-semibold text-teal-700">LTO:</span> {item.bcbaLtoText}</p>}
+        <div className="px-3 pb-3 border-t border-teal-100 pt-2">
+          <div className="space-y-1">
+            {item.stoSteps?.map((s, i) => (
+              <p key={i} className="text-[12px] text-slate-600 py-0.5">
+                <span className="font-semibold text-teal-700">STO {i + 1}:</span>{' '}
+                {s.targetPercent != null ? `${s.targetPercent}%` : ''}{s.durationWeeks ? ` · ${s.durationWeeks} wks` : ''}
+              </p>
+            ))}
+          </div>
+          {item.masteryCriteriaPercent != null && (
+            <LtoCallout
+              value={`${item.masteryCriteriaPercent}%${item.masteryCriteriaWeeks ? ` · ${item.masteryCriteriaWeeks} wks` : ''}`}
+              variant="skill"
+            />
+          )}
+          {item.bcbaLtoText ? (
+            <div className="text-[12px] text-slate-600 py-0.5 mt-1">
+              <span className="font-semibold text-teal-700">LTO:</span>
+              <span className="text-slate-400"> — {item.bcbaLtoText}</span>
+            </div>
+          ) : null}
         </div>
       )}
     </div>
@@ -991,10 +1042,18 @@ function CTContinuingCard({ item, ctLogs }) {
 
 function NewCTRow({ item }) {
   const disposition = getDisposition(item);
+  const [open, setOpen] = useState(false);
   const isInPlan = disposition === 'in_plan';
+  // Filter to only steps with actual values so an empty initial step doesn't show
+  const validStoSteps = (item.stoSteps ?? []).filter(s => s.targetPercent !== '' && s.targetPercent != null);
+  const hasDetail = isInPlan && (validStoSteps.length > 0 || item.masteryCriteriaPercent != null || item.ltoData?.percent != null || item.bcbaLtoText);
   return (
     <div className={`rounded-xl border overflow-hidden ${isInPlan ? 'border-teal-200 bg-teal-50/30' : 'border-stone-100 bg-stone-50/40'}`}>
-      <div className="flex items-start gap-3 px-3 py-2.5">
+      <button
+        className="w-full flex items-start gap-3 px-3 py-2.5 text-left"
+        onClick={() => hasDetail ? setOpen(o => !o) : undefined}
+        style={!hasDetail ? { cursor: 'default' } : undefined}
+      >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <DispositionBadge type={disposition} />
@@ -1002,10 +1061,44 @@ function NewCTRow({ item }) {
           </div>
           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
             {item.firstSeenDate && <span className="text-[11px] text-slate-400">First seen {fmtDate(item.firstSeenDate)}</span>}
+            {item.baselinePercent != null && <span className="text-[11px] text-slate-500 tabular-nums">baseline {item.baselinePercent}%</span>}
             {item.avgAccuracy != null && <span className="text-[11px] text-slate-500 tabular-nums">avg {item.avgAccuracy}%</span>}
           </div>
         </div>
-      </div>
+        {hasDetail && (
+          <svg className={`w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5 transition-transform ${open ? 'rotate-180' : ''}`}
+            fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        )}
+      </button>
+      {hasDetail && open && (
+        <div className="px-3 pb-3 border-t border-teal-100 pt-2">
+          <div className="space-y-1">
+            {validStoSteps.map((s, i) => (
+              <div key={i}>
+                <p className="text-[12px] text-slate-600 py-0.5">
+                  <span className="font-semibold text-teal-700">STO {i + 1}:</span>{' '}
+                  {s.targetPercent != null ? `${s.targetPercent}%` : ''}{s.durationWeeks ? ` · ${s.durationWeeks} wks` : ''}
+                </p>
+                {s.note ? <p className="text-[11px] text-slate-400 italic ml-2 pb-0.5">{s.note}</p> : null}
+              </div>
+            ))}
+          </div>
+          {(item.masteryCriteriaPercent != null || item.ltoData?.percent != null) && (
+            <LtoCallout
+              value={`${item.masteryCriteriaPercent ?? item.ltoData?.percent}%${item.masteryCriteriaWeeks ? ` · ${item.masteryCriteriaWeeks} wks` : ''}`}
+              variant="ct"
+            />
+          )}
+          {item.bcbaLtoText ? (
+            <div className="text-[12px] text-slate-600 py-0.5 mt-1">
+              <span className="font-semibold text-teal-700">LTO:</span>
+              <span className="text-slate-400"> — {item.bcbaLtoText}</span>
+            </div>
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }

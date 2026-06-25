@@ -2223,6 +2223,7 @@ export const SEED_CLIENTS = () => [
       C10_SERVICE_SESSION_LOGS,
       '2026-01-20',
       '2026-07-20',
+      C10_CAREGIVER_TRAINING_LOGS,
     );
 
     const reassessment_cycle1_charlotte = {
@@ -2664,6 +2665,8 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
               { targetFrequency:'1', durationWeeks:'6', note:'Reduce to ≤1 incident/day using FCT + antecedent modification' },
               { targetFrequency:'0', durationWeeks:'8', note:'Zero incidents for 3 consecutive weeks across all demand contexts' },
             ],
+            masteryCriteriaFrequency: 0,
+            masteryCriteriaWeeks:     12,
             bcbaLtoText:'Zero incidents of property destruction across all settings for 3 consecutive weeks',
           },
         ],
@@ -2902,14 +2905,13 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
     ];
 
     // ── Build the reassessment session from logs ───────────────────────────────
-    // Enrich `c` with CT logs so makeReassessmentSession can compute CT averages
-    // (the function reads client.caregiver_training_session_logs internally)
     const _sofiaReassessBase = makeReassessmentSession(
-      { ...c, caregiver_training_session_logs: C15_CT_LOGS },
+      c,
       assessment_session_sofia,
       C15_SERVICE_LOGS,
       '2025-07-01',
       '2025-12-31',
+      C15_CT_LOGS,
     );
 
     const reassessment_cycle1_sofia = {
@@ -2953,6 +2955,7 @@ Continued ABA services are medically necessary to maintain SIB mastery, complete
               hypothesizedFunction: 'escape',
               severity:             'mild',
               baselineFrequency:    '1',
+              targetFrequency:      '0',
               stoSteps: [
                 { id:'sto-c15-n1-1', targetFrequency:'3', durationWeeks:'6', note:'Reduce to ≤3 incidents/day using FCT "break" card across demand contexts; antecedent modification (pre-task choice board)' },
                 { id:'sto-c15-n1-2', targetFrequency:'1', durationWeeks:'6', note:'Reduce to ≤1 incident/day; graduated demand fading with token economy for task completion' },
@@ -3100,7 +3103,7 @@ export const makeCaregiverTrainingSessionLog = (
 });
 
 export const makeReassessmentSession = (
-  client, initialSession, sessionLogs, authPeriodStart, authPeriodEnd,
+  client, initialSession, sessionLogs, authPeriodStart, authPeriodEnd, ctLogsArg,
 ) => {
   const base = makeAssessmentSession(
     client.id, client.name, client.bcba_id,
@@ -3202,16 +3205,20 @@ export const makeReassessmentSession = (
       const key = entry.behaviorName;
       if (!newMap.has(key)) {
         newMap.set(key, {
-          behaviorName:       entry.behaviorName,
-          firstSeenDate:      entry.firstSeenDate,
-          rbtDefinitionDraft: entry.newBehaviorDefinition,
-          function:           entry.newBehaviorFunction,
-          severity:           entry.newBehaviorSeverity,
-          firstFrequency:     entry.sessionFrequency,
-          frequencies:        [],
-          sessionHistory:     [],
-          includedInPlan:     entry.includedInPlan ?? null,
-          monitorOnly:        entry.monitorOnly    ?? null,
+          behaviorName:              entry.behaviorName,
+          firstSeenDate:             entry.firstSeenDate,
+          rbtDefinitionDraft:        entry.newBehaviorDefinition,
+          function:                  entry.newBehaviorFunction,
+          severity:                  entry.newBehaviorSeverity,
+          firstFrequency:            entry.sessionFrequency,
+          frequencies:               [],
+          sessionHistory:            [],
+          includedInPlan:            entry.includedInPlan            ?? null,
+          monitorOnly:               entry.monitorOnly               ?? null,
+          stoStructure:              entry.stoStructure              ?? [],
+          bcbaLtoText:               entry.bcbaLtoText               ?? '',
+          masteryCriteriaFrequency:  entry.masteryCriteriaFrequency  ?? null,
+          masteryCriteriaWeeks:      entry.masteryCriteriaWeeks      ?? null,
         });
       }
       newMap.get(key).frequencies.push(entry.sessionFrequency);
@@ -3267,10 +3274,10 @@ export const makeReassessmentSession = (
       bcbaDefinitionFinal:       '',
       includedInPlan:            rec.includedInPlan ?? null,
       monitorOnly:               rec.monitorOnly    ?? null,
-      stoStructure:              [],
-      masteryCriteriaFrequency:  null,
-      masteryCriteriaWeeks:      null,
-      bcbaLtoText:               '',
+      stoStructure:              rec.stoStructure   ?? [],
+      masteryCriteriaFrequency:  rec.masteryCriteriaFrequency ?? null,
+      masteryCriteriaWeeks:      rec.masteryCriteriaWeeks     ?? null,
+      bcbaLtoText:               rec.bcbaLtoText               ?? '',
     };
   });
 
@@ -3411,7 +3418,7 @@ export const makeReassessmentSession = (
   // ── (6) caregiverTrainingSummary ───────────────────────────────────────────
   const ctTargets =
     initialSession?.sections?.caregiver_training?.caregiverTrainingTargets ?? [];
-  const ctLogs = client.caregiver_training_session_logs ?? [];
+  const ctLogs = ctLogsArg ?? client.caregiver_training_session_logs ?? [];
 
   const caregiverTrainingSummary = ctTargets.map(target => {
     const entries = ctLogs.flatMap(log =>
@@ -3668,6 +3675,7 @@ export const makeReassessmentSession = (
     sectionsWithData:       computedSectionsWithData,
     id: `session_${client.id}_reassessment_${Date.now()}`,
     sessionType:            'reassessment',
+    cycle_number:           client.reauth_cycle ?? 0,
     authPeriodStart,
     authPeriodEnd,
     linkedSessionLogIds,

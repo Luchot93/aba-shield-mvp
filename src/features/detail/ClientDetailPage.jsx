@@ -20,6 +20,120 @@ import CaregiverTrainingLogPanel from './CaregiverTrainingLogPanel.jsx';
 import CaregiverTrainingLogModal from './CaregiverTrainingLogModal.jsx';
 import ReassessmentCyclePanel, { ReauthSubmissionChecklist } from './ReassessmentCyclePanel.jsx';
 
+function buildPromotedSections(originalAssessment, completedReassessment) {
+  const origSections = originalAssessment?.sections ?? {};
+  const now = Date.now();
+
+  // Build lookup maps from the reassessment summaries so we can update
+  // baselines for continuing behaviors/skills/CT to their end-of-cycle averages.
+  const origBehaviorMap = Object.fromEntries(
+    (completedReassessment?.originalBehaviorSummary ?? []).map(b => [
+      b.behaviorId ?? b.behaviorName?.toLowerCase(),
+      b,
+    ]),
+  );
+  const origSkillMap = Object.fromEntries(
+    (completedReassessment?.originalSkillSummary ?? []).map(s => [
+      s.skillId ?? s.skillName?.toLowerCase(),
+      s,
+    ]),
+  );
+  const origCTMap = Object.fromEntries(
+    (completedReassessment?.caregiverTrainingSummary ?? []).map(t => [
+      t.targetId ?? t.goalName?.toLowerCase(),
+      t,
+    ]),
+  );
+
+  // Continuing behaviors: carry forward, but update baselineFrequency to the
+  // end-of-cycle average (rounded) so the new cycle starts from where the client actually is.
+  const origBehaviors = (origSections.behavior_targets?.behaviorTargets ?? []).map(bt => {
+    const summary = origBehaviorMap[bt.id] ?? origBehaviorMap[bt.behaviorName?.toLowerCase()];
+    const raw = summary?.averageFrequency;
+    const newBaseline = raw != null && !isNaN(raw) ? String(Math.round(raw)) : null;
+    return newBaseline != null ? { ...bt, baselineFrequency: newBaseline } : bt;
+  });
+
+  // New behaviors included in the reassessment plan
+  const newBehaviorsInPlan = (completedReassessment?.newBehaviorSummary ?? [])
+    .filter(item => item.includedInPlan === true)
+    .map((item, idx) => {
+      const rawFreq = item.averageFrequency ?? item.baselineFrequency;
+      const parsedFreq = parseFloat(rawFreq);
+      return {
+        id:                    `bt-promoted-${now}-${idx}`,
+        behaviorName:          item.behaviorName,
+        operationalDefinition: item.bcbaDefinitionFinal || item.rbtDefinitionDraft || '',
+        hypothesizedFunction:  item.hypothesizedFunction ?? 'Attention',
+        baselineFrequency:     !isNaN(parsedFreq) ? String(Math.round(parsedFreq)) : '',
+        targetFrequency:       item.masteryCriteriaFrequency != null ? String(item.masteryCriteriaFrequency) : '',
+        stoSteps:              item.stoStructure ?? item.stoSteps ?? [],
+      };
+    });
+
+  // Continuing skills: update baselinePercent to end-of-cycle average accuracy (rounded)
+  const origSkills = (origSections.skill_acquisitions?.skillGoals ?? []).map(sk => {
+    const summary = origSkillMap[sk.id] ?? origSkillMap[sk.targetSkill?.toLowerCase()];
+    const raw = summary?.averageAccuracy;
+    const newBaseline = raw != null && !isNaN(raw) ? String(Math.round(raw)) : null;
+    return newBaseline != null ? { ...sk, baselinePercent: newBaseline } : sk;
+  });
+
+  // New skills included in the reassessment plan
+  const newSkillsInPlan = (completedReassessment?.newSkillSummary ?? [])
+    .filter(item => item.includedInPlan === true)
+    .map((item, idx) => {
+      const rawPct = parseFloat(item.averageAccuracy ?? item.baselinePercent);
+      return {
+        id:                     `sk-promoted-${now}-${idx}`,
+        targetSkill:            item.skillName,
+        domain:                 item.domain ?? 'Adaptive',
+        baselinePercent:        !isNaN(rawPct) ? String(Math.round(rawPct)) : '',
+        stoSteps:               item.stoSteps ?? [],
+        masteryCriteriaPercent: item.masteryCriteriaPercent != null ? String(item.masteryCriteriaPercent) : '',
+        masteryCriteriaWeeks:   item.masteryCriteriaWeeks   != null ? String(item.masteryCriteriaWeeks)   : '',
+      };
+    });
+
+  // Continuing CT targets: update baselinePercent to end-of-cycle average session % (rounded)
+  const origCTTargets = (origSections.caregiver_training?.caregiverTrainingTargets ?? []).map(ct => {
+    const summary = origCTMap[ct.id] ?? origCTMap[ct.goalName?.toLowerCase()];
+    const raw = summary?.averageSessionPercent;
+    const newBaseline = raw != null && !isNaN(raw) ? String(Math.round(raw)) : null;
+    return newBaseline != null ? { ...ct, baselinePercent: newBaseline } : ct;
+  });
+
+  // New CT goals included in the reassessment plan
+  const newCTInPlan = (completedReassessment?.newCaregiverSummary ?? [])
+    .filter(item => item.includedInPlan === true)
+    .map((item, idx) => {
+      const rawPct = parseFloat(item.averageSessionPercent ?? item.baselinePercent);
+      return {
+        id:                     `ct-promoted-${now}-${idx}`,
+        goalName:               item.goalName,
+        baselinePercent:        !isNaN(rawPct) ? String(Math.round(rawPct)) : '',
+        stoSteps:               item.stoSteps ?? [],
+        masteryCriteriaPercent: item.ltoData?.percent != null ? String(item.ltoData.percent) : '',
+      };
+    });
+
+  return {
+    ...origSections,
+    behavior_targets: {
+      ...(origSections.behavior_targets ?? {}),
+      behaviorTargets: [...origBehaviors, ...newBehaviorsInPlan],
+    },
+    skill_acquisitions: {
+      ...(origSections.skill_acquisitions ?? {}),
+      skillGoals: [...origSkills, ...newSkillsInPlan],
+    },
+    caregiver_training: {
+      ...(origSections.caregiver_training ?? {}),
+      caregiverTrainingTargets: [...origCTTargets, ...newCTInPlan],
+    },
+  };
+}
+
 export default function ClientDetailPage({ clientId, clients, staff, setClients, onBack, backLabel, currentUser, addNotif, onClientAdvanced, onOpenAssessment, initialServicesTab }) {
   useBodyScrollLock();
   const client = clients.find(c => c.id === clientId);
@@ -39,6 +153,10 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [logSkillSessionModalOpen,     setLogSkillSessionModalOpen]     = useState(false);
   const [logCaregiverSessionModalOpen, setLogCaregiverSessionModalOpen] = useState(false);
   const [servicesTab,                  setServicesTab]                  = useState(initialServicesTab ?? 'sessions');
+  // Always default to the client's current reauth cycle so the most recent data
+  // is visible immediately. A useEffect below keeps this in sync if the cycle
+  // advances while the component is already mounted (e.g. Start Reauthorization).
+  const [selectedLogCycle, setSelectedLogCycle] = useState(() => client?.reauth_cycle ?? 0);
   const [historyOpen,                  setHistoryOpen]                  = useState(false);
   const pickerRef = useRef(null);
   const saveTimers = useRef({});
@@ -59,6 +177,12 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [planGraphs, setPlanGraphs] = useState(null);
   const [reassessmentGraphs, setReassessmentGraphs] = useState(null);
 
+  // Keep the cycle selector in sync when reauth_cycle advances while the
+  // component is already mounted (e.g. "Start Reauthorization" is clicked).
+  useEffect(() => {
+    setSelectedLogCycle(client?.reauth_cycle ?? 0);
+  }, [client?.reauth_cycle]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // When the stage advances to plan_draft within the same mounted session,
   // expand all panels and start graph generation.
   useEffect(() => {
@@ -78,9 +202,12 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     if (!activeSession) return;
     let cancelled = false;
     setReassessmentGraphs(null);
+    // Filter logs to the cycle this reassessment covers so progress charts
+    // only reflect data from the current auth period, not all historical cycles.
+    const sessionCycle = activeSession.cycle_number ?? client?.reauth_cycle ?? 0;
     buildGraphsFromSession(activeSession, {
-      sessionLogs: client?.service_session_logs ?? [],
-      ctLogs:      client?.caregiver_training_session_logs ?? [],
+      sessionLogs: (client?.service_session_logs ?? []).filter(l => (l.reauth_cycle ?? 0) === sessionCycle),
+      ctLogs:      (client?.caregiver_training_session_logs ?? []).filter(l => (l.reauth_cycle ?? 0) === sessionCycle),
     })
       .then(g => { if (!cancelled) setReassessmentGraphs(g); })
       .catch(err => { console.error('Reassessment graph generation failed:', err); if (!cancelled) setReassessmentGraphs({}); });
@@ -1515,6 +1642,37 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     );
                   })()}
 
+                  {/* Shared cycle selector — shown above tabs when multiple cycles exist */}
+                  {(() => {
+                    const allServiceLogs = client?.service_session_logs ?? [];
+                    const allCtLogs      = client?.caregiver_training_session_logs ?? [];
+                    const clientCycle    = client?.reauth_cycle ?? 0;
+                    const cycleSet = new Set([
+                      clientCycle,
+                      ...allServiceLogs.map(l => l.reauth_cycle ?? 0),
+                      ...allCtLogs.map(l => l.reauth_cycle ?? 0),
+                      ...(client?.reassessment_sessions ?? []).map(s => s.cycle_number ?? 0),
+                    ]);
+                    const availableCycles = [...cycleSet].sort((a, b) => a - b);
+                    if (availableCycles.length <= 1) return null;
+                    return (
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Cycle</span>
+                        <select
+                          value={selectedLogCycle}
+                          onChange={e => setSelectedLogCycle(Number(e.target.value))}
+                          className="text-[12px] font-medium text-slate-700 border border-slate-200 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-teal-400"
+                        >
+                          {availableCycles.map(c => (
+                            <option key={c} value={c}>
+                              {c === 0 ? 'Initial Authorization' : `Reauth Cycle ${c}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })()}
+
                   {/* Tab bar */}
                   <div className="flex border-b border-stone-100 -mx-5 px-5">
                     {(() => {
@@ -1564,21 +1722,28 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     <BehaviorSessionLogPanel
                       client={client}
                       onLogSession={() => setLogSessionModalOpen(true)}
+                      selectedCycle={selectedLogCycle}
                     />
                     <SkillSessionLogPanel
                       client={client}
                       onLogSession={() => setLogSkillSessionModalOpen(true)}
+                      selectedCycle={selectedLogCycle}
                     />
                     <CaregiverTrainingLogPanel
                       client={client}
                       onLogSession={() => setLogCaregiverSessionModalOpen(true)}
+                      selectedCycle={selectedLogCycle}
                     />
                   </div>
                 )}
 
                 {/* ── Tab 2: Reassessment ── */}
                 {servicesTab === 'reassessment' && (() => {
-                  const cycles = client.reassessment_sessions ?? [];
+                  const allCycles = client.reassessment_sessions ?? [];
+                  // Filter to the cycle selected in the shared cycle selector
+                  const cycles = allCycles.filter(
+                    s => (s.cycle_number ?? allCycles.indexOf(s)) === selectedLogCycle,
+                  );
                   const hasActive = cycles.some(s => s.status !== 'complete');
                   // A new reassessment can only start when no cycles exist yet.
                   // Once any cycle is completed, the next cycle is gated behind
@@ -1775,7 +1940,39 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                                     </span>
                                   </div>
 
-                                  {/* Row 4: progress bar */}
+                                  {/* Row 4: session count chips */}
+                                  {(() => {
+                                    const cycleNum = session.cycle_number ?? (cycles.indexOf(session));
+                                    const bCount = (client.service_session_logs ?? [])
+                                      .filter(l => (l.sessionType === 'behavior' || (!l.sessionType && (l.behaviorEntries ?? []).length > 0)) && (l.reauth_cycle ?? 0) === cycleNum).length;
+                                    const sCount = (client.service_session_logs ?? [])
+                                      .filter(l => (l.sessionType === 'skill' || (!l.sessionType && (l.skillEntries ?? []).some(e => !e.isNew))) && (l.reauth_cycle ?? 0) === cycleNum).length;
+                                    const ctCount = (client.caregiver_training_session_logs ?? [])
+                                      .filter(l => (l.reauth_cycle ?? 0) === cycleNum).length;
+                                    const hasAny = bCount > 0 || sCount > 0 || ctCount > 0;
+                                    if (!hasAny) return null;
+                                    return (
+                                      <div className="flex flex-wrap items-center gap-1.5 mb-3">
+                                        {bCount > 0 && (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-100">
+                                            {bCount} behavior session{bCount !== 1 ? 's' : ''}
+                                          </span>
+                                        )}
+                                        {sCount > 0 && (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-100">
+                                            {sCount} skill session{sCount !== 1 ? 's' : ''}
+                                          </span>
+                                        )}
+                                        {ctCount > 0 && (
+                                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-100">
+                                            {ctCount} CT session{ctCount !== 1 ? 's' : ''}
+                                          </span>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+
+                                  {/* Row 5: progress bar */}
                                   <div
                                     className="w-full rounded-full mb-3 overflow-hidden"
                                     style={{ height: '4px', background: '#E7E5E4' }}
@@ -1832,6 +2029,16 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                                     if (!submissionReady) return;
                                     const cptHours = session.cptHours ?? {};
                                     const currentCycle = client.reauth_cycle ?? 0;
+
+                                    // Promote completed reassessment plan into assessment_session
+                                    const completedReassessment = (client.reassessment_sessions ?? [])
+                                      .filter(s => s.status === 'complete' && (s.cycle_number ?? 0) === currentCycle)
+                                      .at(-1)
+                                      ?? (client.reassessment_sessions ?? []).filter(s => s.status === 'complete').at(-1);
+                                    const originalAssessment = client._initialAssessment ?? client.assessment_session;
+                                    const promotedAssessmentSession = completedReassessment
+                                      ? { ...originalAssessment, sections: buildPromotedSections(originalAssessment, completedReassessment) }
+                                      : originalAssessment;
                                     // Snapshot current auth data into history
                                     const sub = client.checklist?.submitted ?? {};
                                     const historyEntry = {
@@ -1869,6 +2076,10 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                                           '97155': cptHours['97155'] ?? '',
                                           '97156': cptHours['97156'] ?? '',
                                         },
+                                        // Promote completed reassessment plan into assessment_session
+                                        assessment_session: promotedAssessmentSession,
+                                        // Preserve original first assessment — never overwritten
+                                        _initialAssessment: c._initialAssessment ?? c.assessment_session,
                                         // Only add history entry if this cycle isn't already recorded (prevents duplicate when seed data pre-populates it)
                                         auth_cycles_history: (c.auth_cycles_history ?? []).some(e => e.cycle === currentCycle)
                                           ? c.auth_cycles_history
@@ -1876,6 +2087,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                                         checklist: { ...c.checklist, submitted: freshSubmitted },
                                       };
                                     }));
+                                    setSelectedLogCycle(currentCycle + 1);
                                     pushLog(`Reauth Cycle ${currentCycle + 1} started — submitted for new authorization`);
                                     addNotif(mkNotif(`${client.name} — Reauth Cycle ${currentCycle + 1} submitted for new authorization`, client.name, 'normal'));
                                     if (onClientAdvanced) onClientAdvanced(client.id);

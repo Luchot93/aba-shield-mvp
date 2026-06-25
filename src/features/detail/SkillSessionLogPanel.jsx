@@ -159,11 +159,14 @@ function SkillSessionCard({ log, prevLog, defaultOpen }) {
   );
 }
 
-export default function SkillSessionLogPanel({ client, onLogSession }) {
+export default function SkillSessionLogPanel({ client, onLogSession, selectedCycle }) {
   const allLogs = client?.service_session_logs ?? [];
-  const logs = allLogs.filter(
+  const typedLogs = allLogs.filter(
     l => l.sessionType === 'skill' || (!l.sessionType && (l.skillEntries ?? []).some(s => !s.isNew)),
   );
+  const logs = selectedCycle != null
+    ? typedLogs.filter(l => (l.reauth_cycle ?? 0) === selectedCycle)
+    : typedLogs;
 
   const skillGoals =
     client?.assessment_session?.sections?.skill_acquisitions?.skillGoals ?? [];
@@ -237,7 +240,7 @@ export default function SkillSessionLogPanel({ client, onLogSession }) {
           )}
         </div>
       ) : view === 'progress' ? (
-        <SkillSessionProgressPanel client={client} />
+        <SkillSessionProgressPanel client={client} selectedCycle={selectedCycle} />
       ) : (
         <div>
           {sortedLogs.map((log, idx) => {

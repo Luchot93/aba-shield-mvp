@@ -285,9 +285,11 @@ function BehaviorProgressCard({ data }) {
 
 // ── ServiceSessionProgressPanel (default export) ──────────────────────────────
 
-export default function ServiceSessionProgressPanel({ client }) {
+export default function ServiceSessionProgressPanel({ client, selectedCycle }) {
   const sessionLogs = (client?.service_session_logs ?? []).filter(
-    l => l.sessionType === 'behavior' || (!l.sessionType && (l.behaviorEntries ?? []).some(e => !e.isNew)),
+    l =>
+      (l.sessionType === 'behavior' || (!l.sessionType && (l.behaviorEntries ?? []).some(e => !e.isNew))) &&
+      (selectedCycle == null || (l.reauth_cycle ?? 0) === selectedCycle),
   );
   const behaviorTargets =
     client?.assessment_session?.sections?.behavior_targets?.behaviorTargets ?? [];

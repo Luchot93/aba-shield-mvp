@@ -14,9 +14,10 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 import LoginPage from './auth/LoginPage.jsx';
 import SetPasswordPage from './auth/SetPasswordPage.jsx';
 import ClientProfilePanel from './features/clients/components/ClientProfilePanel.jsx';
+import { FLAGS } from './constants/featureFlags.js';
 
 export default function App() {
-  const [page,            setPage]           = useState('pipeline');
+  const [page,            setPage]           = useState('clients');
   const [clients,         setClients]        = useState(SEED_CLIENTS);
   const [staff,           setStaff]          = useState(SEED_STAFF);
   const [notifications,   setNotifications]  = useState([]);
@@ -41,222 +42,11 @@ export default function App() {
   //   3. None found → call makeReassessmentSession, swap it in
 
   const handleOpenAssessment = useCallback((arg) => {
-    const type = (arg && typeof arg === 'object') ? (arg.type ?? 'initial') : 'initial';
     const cId  = (arg && typeof arg === 'object') ? arg.clientId : arg;
     const client = clients.find(c => c.id === cId);
     if (!client) return;
 
-    if (type === 'reassessment') {
-      // 1. Already swapped in from a previous open
-      if (client.assessment_session?.sessionType === 'reassessment' &&
-          client.assessment_session?.status !== 'complete') {
-        setAssessmentClientId(cId);
-        setPage('assessment');
-        return;
-      }
-
-      // 2. Check archived sessions for an in-progress entry — restrict to current cycle so
-      //    BCBA edits from a prior cycle's in-progress session don't bleed into the new one.
-      const inProgress = (client.reassessment_sessions ?? []).find(
-        s => s.status !== 'complete' && (s.cycle_number ?? 0) === (client.reauth_cycle ?? 0),
-      );
-
-      // Always regenerate from the latest session logs so newly-logged sessions
-      // (flagged behaviors, skill entries) appear. Merge back any BCBA edits already made.
-      const authEnd   = client.auth_expiry_date ?? null;
-      const authStart = authEnd
-        ? new Date(new Date(authEnd).setMonth(new Date(authEnd).getMonth() - 6))
-            .toISOString().slice(0, 10)
-        : null;
-      const cycleFilter      = client.reauth_cycle ?? 0;
-      const cycleServiceLogs = (client.service_session_logs ?? [])
-        .filter(l => (l.reauth_cycle ?? 0) === cycleFilter);
-      const cycleCTLogs      = (client.caregiver_training_session_logs ?? [])
-        .filter(l => (l.reauth_cycle ?? 0) === cycleFilter);
-      // Always pass the current cycle's promoted assessment_session as initialSession so that:
-      //  • origBehaviors/skills/CT targets reflect the current cycle's plan (not the original cycle 0 plan)
-      //  • per-goal baselines are the cycle-N starting values (updated by buildPromotedSections)
-      const freshSession = makeReassessmentSession(
-        client,
-        client.assessment_session,
-        cycleServiceLogs,
-        authStart,
-        authEnd,
-        cycleCTLogs,
-      );
-
-      // If there's an in-progress session, preserve BCBA edits by merging them in
-      if (inProgress) {
-        const bcbaNewBehaviorEdits = Object.fromEntries(
-          (inProgress.newBehaviorSummary ?? []).map(item => [item.behaviorName, item]),
-        );
-        const bcbaOrigBehaviorEdits = Object.fromEntries(
-          (inProgress.originalBehaviorSummary ?? []).map(item => [item.behaviorId ?? item.behaviorName, item]),
-        );
-        const bcbaNewSkillEdits = Object.fromEntries(
-          (inProgress.newSkillSummary ?? []).map(item => [item.skillName, item]),
-        );
-        const bcbaOrigSkillEdits = Object.fromEntries(
-          (inProgress.originalSkillSummary ?? []).map(item => [item.skillId ?? item.skillName, item]),
-        );
-
-        freshSession.newBehaviorSummary = (freshSession.newBehaviorSummary ?? []).map(item => {
-          const saved = bcbaNewBehaviorEdits[item.behaviorName];
-          if (!saved) return item;
-          return {
-            ...item,
-            bcbaDefinitionFinal:      saved.bcbaDefinitionFinal ?? item.bcbaDefinitionFinal,
-            function:                 saved.function ?? item.function,
-            includedInPlan:           saved.includedInPlan,
-            monitorOnly:              saved.monitorOnly ?? item.monitorOnly,
-            stoStructure:             saved.stoStructure ?? item.stoStructure,
-            masteryCriteriaFrequency: saved.masteryCriteriaFrequency ?? item.masteryCriteriaFrequency,
-            masteryCriteriaWeeks:     saved.masteryCriteriaWeeks ?? item.masteryCriteriaWeeks,
-            bcbaLtoText:              saved.bcbaLtoText ?? item.bcbaLtoText,
-          };
-        });
-
-        freshSession.originalBehaviorSummary = (freshSession.originalBehaviorSummary ?? []).map(item => {
-          const saved = bcbaOrigBehaviorEdits[item.behaviorId ?? item.behaviorName];
-          if (!saved) return item;
-          return {
-            ...item,
-            averageFrequency: saved.averageFrequency ?? item.averageFrequency,
-            stoStatus:        saved.stoStatus ?? item.stoStatus,
-            // sessionDerivedStoStatus always comes from live session logs — never merge saved BCBA value.
-            // The Mastered/Active partition in AssessmentInterviewPage reads this field.
-            sessionDerivedStoStatus: item.sessionDerivedStoStatus,
-          };
-        });
-
-        freshSession.newSkillSummary = (freshSession.newSkillSummary ?? []).map(item => {
-          const saved = bcbaNewSkillEdits[item.skillName];
-          if (!saved) return item;
-          return {
-            ...item,
-            bcbaGoalName:          saved.bcbaGoalName ?? item.bcbaGoalName,
-            bcbaDefinition:        saved.bcbaDefinition ?? item.bcbaDefinition,
-            bcbaDomain:            saved.bcbaDomain ?? item.bcbaDomain,
-            includedInPlan:         saved.includedInPlan,
-            monitorOnly:            saved.monitorOnly ?? item.monitorOnly,
-            stoSteps:               saved.stoSteps ?? item.stoSteps,
-            masteryCriteriaPercent: saved.masteryCriteriaPercent ?? item.masteryCriteriaPercent,
-            masteryCriteriaWeeks:   saved.masteryCriteriaWeeks ?? item.masteryCriteriaWeeks,
-            bcbaLtoText:            saved.bcbaLtoText ?? item.bcbaLtoText,
-            baselinePercent:        saved.baselinePercent ?? item.baselinePercent,
-          };
-        });
-
-        freshSession.originalSkillSummary = (freshSession.originalSkillSummary ?? []).map(item => {
-          const saved = bcbaOrigSkillEdits[item.skillId ?? item.skillName];
-          if (!saved) return item;
-          return {
-            ...item,
-            currentPercent: saved.currentPercent ?? item.currentPercent,
-            status:         saved.status ?? item.status,
-            // sessionDerivedStatus always comes from live session logs — never merge saved BCBA value.
-            sessionDerivedStatus: item.sessionDerivedStatus,
-          };
-        });
-
-        // Merge newCaregiverSummary BCBA edits
-        const bcbaCgEdits = Object.fromEntries(
-          (inProgress.newCaregiverSummary ?? []).map(item => [item.goalName, item]),
-        );
-        freshSession.newCaregiverSummary = (freshSession.newCaregiverSummary ?? []).map(item => {
-          const saved = bcbaCgEdits[item.goalName];
-          if (!saved) return item;
-          return {
-            ...item,
-            includedInPlan:         saved.includedInPlan,
-            monitorOnly:            saved.monitorOnly ?? item.monitorOnly,
-            baselinePercent:        saved.baselinePercent ?? item.baselinePercent,
-            stoSteps:               saved.stoSteps ?? item.stoSteps,
-            masteryCriteriaPercent: saved.masteryCriteriaPercent ?? item.masteryCriteriaPercent,
-            masteryCriteriaWeeks:   saved.masteryCriteriaWeeks ?? item.masteryCriteriaWeeks,
-            bcbaLtoText:            saved.bcbaLtoText ?? item.bcbaLtoText,
-          };
-        });
-
-        // Merge caregiverTrainingSummary BCBA edits (averageSessionPercent per goal)
-        const bcbaCtEdits = Object.fromEntries(
-          (inProgress.caregiverTrainingSummary ?? []).map(item => [item.goalName, item]),
-        );
-        freshSession.caregiverTrainingSummary = (freshSession.caregiverTrainingSummary ?? []).map(item => {
-          const saved = bcbaCtEdits[item.goalName];
-          if (!saved) return item;
-          return {
-            ...item,
-            averageSessionPercent: saved.averageSessionPercent ?? item.averageSessionPercent,
-          };
-        });
-
-        // Preserve session-level fields (BCBA-reviewed AI sections, status, etc.)
-        freshSession.id     = inProgress.id;
-        freshSession.status = inProgress.status;
-        freshSession.sectionApprovalStatus = inProgress.sectionApprovalStatus ?? freshSession.sectionApprovalStatus;
-
-        // Restore BCBA-typed content that makeReassessmentSession can't regenerate:
-        // progress narrative and section notes/structured fields (medical_necessity, etc.)
-        freshSession.progressNarrativeText = inProgress.progressNarrativeText || freshSession.progressNarrativeText;
-        freshSession.cptHours = inProgress.cptHours ?? freshSession.cptHours;
-
-        for (const [key, storedSec] of Object.entries(inProgress.sections ?? {})) {
-          if (!freshSession.sections[key]) continue;
-          const hasNotes = storedSec.notes?.trim();
-          const hasTranscript = storedSec.transcript;
-          if (hasNotes || hasTranscript) {
-            freshSession.sections[key] = {
-              ...freshSession.sections[key],
-              notes:          storedSec.notes ?? freshSession.sections[key].notes,
-              transcript:     storedSec.transcript ?? freshSession.sections[key].transcript,
-              completionState: storedSec.completionState !== 'empty'
-                ? storedSec.completionState
-                : freshSession.sections[key].completionState,
-            };
-          }
-        }
-
-        // Restore medical_necessity structured fields (diagnoses, meds, hours, setting, etc.)
-        if (inProgress.sections?.medical_necessity) {
-          const s = inProgress.sections.medical_necessity;
-          const f = freshSession.sections.medical_necessity;
-          freshSession.sections.medical_necessity = {
-            ...f,
-            coOccurringDiagnoses:    s.coOccurringDiagnoses    ?? f.coOccurringDiagnoses,
-            medications:             s.medications             ?? f.medications,
-            hasPriorABA:             s.hasPriorABA             ?? f.hasPriorABA,
-            priorABAHistory:         s.priorABAHistory         ?? f.priorABAHistory,
-            recommendedHoursPerWeek: s.recommendedHoursPerWeek ?? f.recommendedHoursPerWeek,
-            recommendedSetting:      s.recommendedSetting      ?? f.recommendedSetting,
-            completionState:         s.completionState !== 'empty' ? s.completionState : f.completionState,
-          };
-        }
-
-        // Recompute sectionsWithData after merges
-        freshSession.sectionsWithData = Object.values(freshSession.sections)
-          .filter(s => s.completionState !== 'empty').length;
-      }
-
-      setClients(prev => prev.map(c => {
-        if (c.id !== cId) return c;
-        const existingSessions = (c.reassessment_sessions ?? []).filter(s => s.id !== freshSession.id);
-        return {
-          ...c,
-          // Always overwrite _initialAssessment with the current promoted session so that
-          // archiveReassessmentAndClose restores back to THIS cycle's plan, not cycle 0's.
-          _initialAssessment: c.assessment_session,
-          assessment_session: freshSession,
-          reassessment_sessions: [...existingSessions, freshSession],
-        };
-      }));
-
-      setAssessmentClientId(cId);
-      setPage('assessment');
-      return;
-    }
-
-    // Initial assessment — existing behavior
+    // Initial assessment only
     setClients(prev => prev.map(c => {
       if (c.id !== cId || c.assessment_session != null) return c;
       const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
@@ -267,18 +57,6 @@ export default function App() {
   }, [clients, setClients]);
 
   const [currentUser, setCurrentUser] = useState(null);
-
-  // Set landing page only when user transitions from logged-out → logged-in.
-  // Using a ref to track the previous value prevents re-firing on re-renders
-  // where currentUser already exists (which would incorrectly reset the page
-  // after tab inactivity).
-  const prevUserRef = useRef(null);
-  useEffect(() => {
-    if (currentUser && !prevUserRef.current) {
-      setPage(currentUser.role === 'admin' ? 'metrics' : 'pipeline');
-    }
-    prevUserRef.current = currentUser;
-  }, [currentUser]);
 
   const handleClientAdvanced = useCallback(clientId => {
     setRecentlyMovedId(clientId);
@@ -291,6 +69,7 @@ export default function App() {
 
   // Seed notifications on mount based on client auth expiry and staff cert expiry
   useEffect(() => {
+    if (!FLAGS.PIPELINE) return;
     const today = new Date('2026-05-14');
     const seedNotifs = [];
 
@@ -360,32 +139,35 @@ export default function App() {
       <FontLoader/>
       <NavBar page={page} setPage={setPage} notifications={notifications} setNotifications={setNotifications} currentUser={currentUser} setCurrentUser={setCurrentUser}/>
 
-      {page === 'pipeline'
-        ? <PipelinePage
-            clients={clients}
-            staff={enrichedStaff}
-            setClients={setClients}
-            setSelectedClient={c => setSelectedClient(c)}
-            currentUser={currentUser}
-            addNotif={addNotif}
-            onClientAdvanced={handleClientAdvanced}
-            recentlyMovedId={recentlyMovedId}
-          />
-        : <main className="max-w-7xl mx-auto px-6 py-8">
-            {page==='clients'     && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={c => setProfileClient(c)} currentUser={currentUser}/>}
-            {page==='staff'       && <StaffPage staff={staff} setStaff={setStaff} clients={clients} currentUser={currentUser}
-                                      onSelectClient={c => setProfileClient(c)}/>}
-            {page==='metrics'     && (
-              currentUser.role === 'admin'
-                ? <MetricsPage clients={clients} staff={staff}/>
-                : <div className="flex items-center justify-center h-64 text-sm text-slate-500">Access restricted</div>
-            )}
-            {page==='assessments' && (
-              <AssessmentsPage clients={clients} staff={enrichedStaff} currentUser={currentUser}
-                onOpenAssessment={handleOpenAssessment} />
-            )}
-          </main>
-      }
+      {FLAGS.PIPELINE && page === 'pipeline' && (
+        <PipelinePage
+          clients={clients}
+          staff={enrichedStaff}
+          setClients={setClients}
+          setSelectedClient={c => setSelectedClient(c)}
+          currentUser={currentUser}
+          addNotif={addNotif}
+          onClientAdvanced={handleClientAdvanced}
+          recentlyMovedId={recentlyMovedId}
+        />
+      )}
+
+      {page !== 'pipeline' && (
+        <main className="max-w-7xl mx-auto px-6 py-8">
+          {page==='clients'     && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={c => setProfileClient(c)} currentUser={currentUser}/>}
+          {FLAGS.STAFF && page==='staff' && <StaffPage staff={staff} setStaff={setStaff} clients={clients} currentUser={currentUser}
+                                    onSelectClient={c => setProfileClient(c)}/>}
+          {FLAGS.METRICS && page==='metrics' && (
+            currentUser.role === 'admin'
+              ? <MetricsPage clients={clients} staff={staff}/>
+              : <div className="flex items-center justify-center h-64 text-sm text-slate-500">Access restricted</div>
+          )}
+          {page==='assessments' && (
+            <AssessmentsPage clients={clients} staff={enrichedStaff} currentUser={currentUser}
+              onOpenAssessment={handleOpenAssessment} />
+          )}
+        </main>
+      )}
 
       {page === 'assessment' && assessmentClientId && (
         <ErrorBoundary label="Assessment">
@@ -420,7 +202,16 @@ export default function App() {
           onAddToPipeline={!profileClient.pipeline_entry ? () => {
             setClients(prev => prev.map(c =>
               c.id === profileClient.id
-                ? { ...c, pipeline_entry: true, stage: 'intake', stage_entered_at: new Date().toISOString() }
+                ? {
+                    stage: null, stage_entered_at: null, auth_expiry_date: null,
+                    reauth_cycle: 0, pipeline_entry: false, bcba_id: null, rbt_id: null,
+                    service_session_logs: [], reassessment_sessions: [],
+                    caregiver_training_session_logs: [],
+                    ...c,
+                    pipeline_entry: true,
+                    stage: 'intake',
+                    stage_entered_at: new Date().toISOString(),
+                  }
                 : c
             ));
             setProfileClient(null);
@@ -428,7 +219,7 @@ export default function App() {
         />
       )}
 
-      {selectedClient && (
+      {FLAGS.PIPELINE && selectedClient && (
         <ClientDetailPage
           clientId={selectedClient.id}
           clients={clients}

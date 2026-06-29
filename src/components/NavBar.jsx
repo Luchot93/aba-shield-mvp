@@ -3,6 +3,7 @@ import { Ico } from './icons.jsx';
 import { relTime } from '../utils/notifications.js';
 import { SEED_USERS } from '../constants/seedData.js';
 import { isAdmin } from '../utils/permissions.js';
+import { FLAGS } from '../constants/featureFlags.js';
 
 const ROLE_BADGE = {
   admin: 'bg-purple-500/20 text-purple-300',
@@ -67,8 +68,11 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
 
           <nav className="flex items-center gap-0.5 flex-1">
             {[
-              ...(isAdmin(currentUser?.role) ? [['metrics','Metrics']] : []),
-              ['pipeline','Pipeline'],['assessments','Assessments'],['clients','Clients'],['staff','Staff'],
+              ...(FLAGS.METRICS && isAdmin(currentUser?.role) ? [['metrics','Metrics']] : []),
+              ...(FLAGS.PIPELINE ? [['pipeline','Pipeline']] : []),
+              ['clients','Clients'],
+              ['assessments','Assessments'],
+              ...(FLAGS.STAFF ? [['staff','Staff']] : []),
             ].map(([id,label]) => (
               <button key={id} onClick={() => setPage(id)}
                 className={`relative px-3.5 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${page===id ? 'text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
@@ -80,21 +84,25 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
           </nav>
 
           <div className="flex items-center gap-2">
-            <button
-              data-testid="bell-btn"
-              onClick={() => setNotifOpen(o => !o)}
-              className="relative p-2 rounded-md hover:bg-white/5"
-              style={{ color:'#94A3B8' }}>
-              <Ico.Bell />
-              {unread > 0 && (
-                <span
-                  className="absolute top-1 right-1 inline-flex h-2.5 w-2.5 rounded-full bg-red-500 items-center justify-center text-[8px] font-bold text-white"
-                  style={{ animation: 'bellPing 1.5s ease-in-out infinite' }}>
-                  {unread > 9 ? '9+' : unread}
-                </span>
-              )}
-            </button>
-            <div className="h-5 w-px mx-1" style={{ background:'#1E293B' }}/>
+            {FLAGS.PIPELINE && (
+              <>
+                <button
+                  data-testid="bell-btn"
+                  onClick={() => setNotifOpen(o => !o)}
+                  className="relative p-2 rounded-md hover:bg-white/5"
+                  style={{ color:'#94A3B8' }}>
+                  <Ico.Bell />
+                  {unread > 0 && (
+                    <span
+                      className="absolute top-1 right-1 inline-flex h-2.5 w-2.5 rounded-full bg-red-500 items-center justify-center text-[8px] font-bold text-white"
+                      style={{ animation: 'bellPing 1.5s ease-in-out infinite' }}>
+                      {unread > 9 ? '9+' : unread}
+                    </span>
+                  )}
+                </button>
+                <div className="h-5 w-px mx-1" style={{ background:'#1E293B' }}/>
+              </>
+            )}
 
             {/* Role switcher */}
             <div className="relative" ref={switcherRef}>
@@ -153,7 +161,7 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
       </header>
 
       {/* Notification panel overlay */}
-      {notifOpen && (
+      {FLAGS.PIPELINE && notifOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
           {/* Backdrop */}
           <div className="flex-1" onClick={() => setNotifOpen(false)}/>

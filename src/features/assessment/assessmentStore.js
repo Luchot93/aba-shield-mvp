@@ -6,8 +6,6 @@
  * on the clients array. Components import only what they need.
  */
 
-import { makeReassessmentSession } from '../../constants/seedData.js';
-
 // ─── Internal helpers ───────────────────────────────────────────────────────
 
 /** Recompute the three derived counters on assessment_session. */
@@ -806,40 +804,6 @@ export function addCaregiverTrainingSessionLog(clientId, newLog, clients, setCli
       ],
     };
   }));
-}
-
-// ─── Reassessment ─────────────────────────────────────────────────────────────
-
-export function createReassessmentSession(clientId, clients, setClients, bcbaId, bcbaName) {
-  const client = clients.find(c => c.id === clientId);
-  if (!client) return null;
-
-  const initialSession    = client.assessment_session;
-  const cycleFilter       = client.reauth_cycle ?? 0;
-  const sessionLogs       = (client.service_session_logs ?? []).filter(
-    l => (l.reauth_cycle ?? 0) === cycleFilter,
-  );
-  const ctLogs            = (client.caregiver_training_session_logs ?? []).filter(
-    l => (l.reauth_cycle ?? 0) === cycleFilter,
-  );
-  const authPeriodStart   = client.checklist?.submitted?.auth_start_date ?? null;
-  const authPeriodEnd     = client.checklist?.submitted?.auth_end_date
-    ?? client.auth_expiry_date
-    ?? null;
-
-  const newSession = makeReassessmentSession(
-    client, initialSession, sessionLogs, authPeriodStart, authPeriodEnd, ctLogs,
-  );
-
-  setClients(prev => prev.map(c => {
-    if (c.id !== clientId) return c;
-    return {
-      ...c,
-      reassessment_sessions: [...(c.reassessment_sessions ?? []), newSession],
-    };
-  }));
-
-  return newSession;
 }
 
 // ─── Session listing ──────────────────────────────────────────────────────────

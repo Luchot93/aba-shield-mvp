@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Ico } from '../../components/icons.jsx';
+import { FLAGS } from '../../constants/featureFlags.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -106,7 +107,7 @@ function GroupHeader({ group, expanded, onToggle }) {
   const { client, reassessments } = group;
   const initials = client.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
   const stageLabel = STAGE_LABELS[client.stage] ?? client.stage;
-  const totalCount = 1 + reassessments.length;
+  const totalCount = 1 + (FLAGS.REASSESSMENT ? reassessments.length : 0);
 
   return (
     <button
@@ -371,18 +372,20 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
       </div>
 
       {/* Type filter row */}
-      <div className="flex items-center gap-1.5 mb-5">
-        {TYPE_PILLS.map(p => (
-          <button key={p.key} onClick={() => setTypeFilter(p.key)}
-            className={`px-3 py-1 text-xs font-medium rounded-lg border transition-all ${
-              typeFilter === p.key
-                ? 'border-teal-500 text-teal-700 bg-teal-50'
-                : 'text-slate-500 border-stone-200 bg-white hover:border-teal-200 hover:text-teal-600'
-            }`}>
-            {p.label}
-          </button>
-        ))}
-      </div>
+      {FLAGS.REASSESSMENT && (
+        <div className="flex items-center gap-1.5 mb-5">
+          {TYPE_PILLS.map(p => (
+            <button key={p.key} onClick={() => setTypeFilter(p.key)}
+              className={`px-3 py-1 text-xs font-medium rounded-lg border transition-all ${
+                typeFilter === p.key
+                  ? 'border-teal-500 text-teal-700 bg-teal-50'
+                  : 'text-slate-500 border-stone-200 bg-white hover:border-teal-200 hover:text-teal-600'
+              }`}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Session groups */}
       {filteredGroups.length === 0 ? (
@@ -468,7 +471,7 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
                     )}
 
                     {/* Reassessment cards */}
-                    {reassessments.map(r => (
+                    {FLAGS.REASSESSMENT && reassessments.map(r => (
                       <ReassessmentCard
                         key={r.session?.id ?? `r-${r.cycleNumber}`}
                         client={client}

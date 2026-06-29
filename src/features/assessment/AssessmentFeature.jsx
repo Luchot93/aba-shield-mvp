@@ -2,8 +2,8 @@ import React, { useState, useCallback } from 'react';
 import AssessmentInterviewPage   from './AssessmentInterviewPage.jsx';
 import AssessmentChecklistPage   from './AssessmentChecklistPage.jsx';
 import AssessmentReviewPage      from './AssessmentReviewPage.jsx';
-import ReassessmentReviewPage    from './ReassessmentReviewPage.jsx';
 import { completeSession, canExport } from './assessmentStore.js';
+import { FLAGS } from '../../constants/featureFlags.js';
 import { generateAssessmentDoc } from './lib/generateAssessmentDoc.js';
 import { generateTemplateDoc }   from './lib/docxExport.js';
 
@@ -189,7 +189,7 @@ export default function AssessmentFeature({
   const ActionButton = () => {
     if (page === 'interview') {
       // Reassessment: "Review Progress →" goes straight to the reassessment review page
-      if (isReassessment) {
+      if (FLAGS.REASSESSMENT && isReassessment) {
         return (
           <button
             onClick={() => setPage('reassessment_review')}
@@ -343,9 +343,6 @@ export default function AssessmentFeature({
         )}
         {page === 'review' && (
           <AssessmentReviewPage {...pageProps} />
-        )}
-        {page === 'reassessment_review' && (
-          <ReassessmentReviewPage {...pageProps} />
         )}
       </div>
     </div>

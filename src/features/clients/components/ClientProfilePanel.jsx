@@ -3,6 +3,7 @@ import { Ico } from '../../../components/icons.jsx';
 import StagePill from '../../../components/StagePill.jsx';
 import Avatar from '../../../components/Avatar.jsx';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock.js';
+import { FLAGS } from '../../../constants/featureFlags.js';
 
 function Section({ title, children }) {
   return (
@@ -130,37 +131,39 @@ export default function ClientProfilePanel({ client, staff, onClose, onOpenPipel
           </div>
 
           {/* Pipeline status */}
-          <div className="mt-3 flex items-center gap-2">
-            {client.pipeline_entry && client.stage ? (
-              <>
-                <StagePill stage={client.stage} />
-                {onOpenPipeline && (
-                  <button
-                    onClick={onOpenPipeline}
-                    className="text-[11px] font-semibold text-teal-600 hover:text-teal-700 underline underline-offset-2 decoration-teal-300 transition-colors">
-                    View in pipeline
-                  </button>
-                )}
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-stone-200 text-slate-500 bg-stone-50">
-                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path strokeLinecap="round" d="M12 8v4m0 4h.01"/>
-                  </svg>
-                  Directory only
-                </span>
-                {onAddToPipeline && (
-                  <button
-                    onClick={onAddToPipeline}
-                    className="text-[11px] font-semibold text-teal-600 border border-teal-200 bg-teal-50 hover:bg-teal-100 px-2.5 py-0.5 rounded-lg transition-colors">
-                    + Add to pipeline
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          {FLAGS.PIPELINE && (
+            <div className="mt-3 flex items-center gap-2">
+              {client.pipeline_entry && client.stage ? (
+                <>
+                  <StagePill stage={client.stage} />
+                  {onOpenPipeline && (
+                    <button
+                      onClick={onOpenPipeline}
+                      className="text-[11px] font-semibold text-teal-600 hover:text-teal-700 underline underline-offset-2 decoration-teal-300 transition-colors">
+                      View in pipeline
+                    </button>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-stone-200 text-slate-500 bg-stone-50">
+                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10"/>
+                      <path strokeLinecap="round" d="M12 8v4m0 4h.01"/>
+                    </svg>
+                    Directory only
+                  </span>
+                  {onAddToPipeline && (
+                    <button
+                      onClick={onAddToPipeline}
+                      className="text-[11px] font-semibold text-teal-600 border border-teal-200 bg-teal-50 hover:bg-teal-100 px-2.5 py-0.5 rounded-lg transition-colors">
+                      + Add to pipeline
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Scrollable body */}
@@ -301,12 +304,14 @@ export default function ClientProfilePanel({ client, staff, onClose, onOpenPipel
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 px-5 py-3 border-t border-stone-100">
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-            <span className={`inline-block w-1.5 h-1.5 rounded-full ${client.source === 'imported' ? 'bg-blue-400' : 'bg-teal-400'}`} />
-            {client.source === 'imported' ? 'Imported from Excel/CSV' : 'Created in CRM'}
+        {FLAGS.PIPELINE && (
+          <div className="flex-shrink-0 px-5 py-3 border-t border-stone-100">
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+              <span className={`inline-block w-1.5 h-1.5 rounded-full ${client.source === 'imported' ? 'bg-blue-400' : 'bg-teal-400'}`} />
+              {client.source === 'imported' ? 'Imported from Excel/CSV' : 'Created in CRM'}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </>
   );

@@ -10,10 +10,10 @@ const EMPTY_FORM = {
   referral_date: new Date().toISOString().split('T')[0],
   gender:'', icd10:'', diagnosis:'',
   parent_name:'', parent_relationship:'', parent_email:'', preferred_language:'English',
-  createPipelineEntry: true,
+  createPipelineEntry: false,
 };
 
-export default function NewClientModal({ clients, onSave, onClose, onOpenClient, onAddToPipeline }) {
+export default function NewClientModal({ clients, onSave, onClose, onOpenClient, onAddToPipeline, showPipelineOption }) {
   useBodyScrollLock();
   const [search,         setSearch]         = useState('');
   const [showSearchDrop, setShowSearchDrop] = useState(false);
@@ -314,39 +314,41 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
           </div>
 
           {/* ── Pipeline entry checkbox ── */}
-          <label className="flex items-start gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-colors select-none"
-            style={{
-              background: form.createPipelineEntry ? 'rgba(13,148,136,0.06)' : '#FAFAF8',
-              borderColor: form.createPipelineEntry ? 'rgba(13,148,136,0.3)' : '#E7E5E0',
-            }}>
-            <div className="flex-shrink-0 mt-0.5">
-              <input
-                type="checkbox"
-                checked={form.createPipelineEntry}
-                onChange={e => setField('createPipelineEntry', e.target.checked)}
-                className="sr-only"
-              />
-              <div className="w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
-                style={{
-                  background: form.createPipelineEntry ? '#0D9488' : 'white',
-                  borderColor: form.createPipelineEntry ? '#0D9488' : '#CBD5E1',
-                }}>
-                {form.createPipelineEntry && (
-                  <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
-                  </svg>
-                )}
+          {showPipelineOption && (
+            <label className="flex items-start gap-3 px-4 py-3 rounded-xl border cursor-pointer transition-colors select-none"
+              style={{
+                background: form.createPipelineEntry ? 'rgba(13,148,136,0.06)' : '#FAFAF8',
+                borderColor: form.createPipelineEntry ? 'rgba(13,148,136,0.3)' : '#E7E5E0',
+              }}>
+              <div className="flex-shrink-0 mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={form.createPipelineEntry}
+                  onChange={e => setField('createPipelineEntry', e.target.checked)}
+                  className="sr-only"
+                />
+                <div className="w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
+                  style={{
+                    background: form.createPipelineEntry ? '#0D9488' : 'white',
+                    borderColor: form.createPipelineEntry ? '#0D9488' : '#CBD5E1',
+                  }}>
+                  {form.createPipelineEntry && (
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                  )}
+                </div>
               </div>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-800">Add to pipeline</p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                {form.createPipelineEntry
-                  ? 'Client will be created and placed in the Intake stage of the pipeline.'
-                  : 'Client will be saved to the directory only — no pipeline entry created.'}
-              </p>
-            </div>
-          </label>
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Add to pipeline</p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {form.createPipelineEntry
+                    ? 'Client will be created and placed in the Intake stage of the pipeline.'
+                    : 'Client will be saved to the directory only — no pipeline entry created.'}
+                </p>
+              </div>
+            </label>
+          )}
         </div>
 
         {/* Footer */}

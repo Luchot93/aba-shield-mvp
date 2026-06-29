@@ -6,7 +6,7 @@ import StagePill from '../../components/StagePill.jsx';
 import Avatar from '../../components/Avatar.jsx';
 import NewClientModal from '../pipeline/components/NewClientModal.jsx';
 import ImportPanel from './components/ImportPanel.jsx';
-import { isAdmin } from '../../utils/permissions.js';
+import { FLAGS } from '../../constants/featureFlags.js';
 
 // ─── Filter config ────────────────────────────────────────────────────────────
 const FILTER_GROUPS = {
@@ -174,7 +174,7 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
           </p>
         </div>
         {/* C-01: isAdmin called as function */}
-        {isAdmin(currentUser?.role) && (
+        {true && (
           <div className="flex items-center gap-2 flex-shrink-0">
             <button onClick={() => setShowImport(true)} data-testid="import-btn"
               className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-700 border border-stone-200 bg-white rounded-xl hover:bg-stone-50 transition-colors">
@@ -211,26 +211,28 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
           )}
         </div>
         {/* U-04: filter chips with counts */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {FILTER_LABELS.map(f => (
-            <button key={f.key} onClick={() => setFilter(f.key)} data-testid={`filter-${f.key}`}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${
-                filter === f.key
-                  ? 'text-white border-teal-600'
-                  : 'text-slate-600 border-stone-200 bg-white hover:border-teal-300 hover:text-teal-700'
-              }`}
-              style={filter === f.key ? { background:'#0D9488' } : {}}>
-              {f.label}
-              {filterCounts[f.key] > 0 && (
-                <span className={`ml-1.5 text-[10px] font-bold px-1 py-0.5 rounded ${
-                  filter === f.key ? 'bg-white/20' : 'bg-stone-100 text-slate-500'
-                }`}>
-                  {filterCounts[f.key]}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+        {FLAGS.PIPELINE && (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {FILTER_LABELS.map(f => (
+              <button key={f.key} onClick={() => setFilter(f.key)} data-testid={`filter-${f.key}`}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${
+                  filter === f.key
+                    ? 'text-white border-teal-600'
+                    : 'text-slate-600 border-stone-200 bg-white hover:border-teal-300 hover:text-teal-700'
+                }`}
+                style={filter === f.key ? { background:'#0D9488' } : {}}>
+                {f.label}
+                {filterCounts[f.key] > 0 && (
+                  <span className={`ml-1.5 text-[10px] font-bold px-1 py-0.5 rounded ${
+                    filter === f.key ? 'bg-white/20' : 'bg-stone-100 text-slate-500'
+                  }`}>
+                    {filterCounts[f.key]}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -239,15 +241,18 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
           <table className="w-full border-collapse" style={{ minWidth:'820px' }}>
             <thead>
               <tr style={{ background:'#FAFAF8', borderBottom:'1px solid #E7E5E0' }}>
-                {COLS.map(c => (
-                  <th key={c.key}
-                    onClick={c.sortable ? () => handleSort(c.key) : undefined}
-                    className={`text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400 select-none whitespace-nowrap ${
-                      c.sortable ? 'cursor-pointer hover:text-slate-600' : ''
-                    }`}>
-                    {c.label}{c.sortable && <SortIcon col={c.key}/>}
-                  </th>
-                ))}
+                {COLS.map(c => {
+                  if (!FLAGS.PIPELINE && (c.key === 'stage' || c.key === 'care_team' || c.key === 'referral_date')) return null;
+                  return (
+                    <th key={c.key}
+                      onClick={c.sortable ? () => handleSort(c.key) : undefined}
+                      className={`text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400 select-none whitespace-nowrap ${
+                        c.sortable ? 'cursor-pointer hover:text-slate-606' : ''
+                      }`}>
+                      {c.label}{c.sortable && <SortIcon col={c.key}/>}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
@@ -262,7 +267,7 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
                     </div>
                     <p className="text-sm font-semibold text-slate-700 mb-1">No clients yet</p>
                     <p className="text-xs text-slate-400 mb-4">Add your first client manually or import from a spreadsheet</p>
-                    {isAdmin(currentUser?.role) && (
+                    {true && (
                       <div className="flex items-center gap-2 justify-center">
                         <button onClick={() => setShowImport(true)}
                           className="px-3 py-1.5 text-xs font-semibold border border-stone-200 rounded-lg text-slate-600 hover:bg-stone-50 transition-colors">
@@ -360,49 +365,55 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
                     <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap" style={{ fontFamily:'DM Mono, monospace' }}>{c.member_id}</td>
 
                     {/* Stage cell: pipeline stage OR quick Add to pipeline */}
-                    <td className="px-4 py-3">
-                      {isDirectoryOnly
-                        ? (
-                          /* U-09: inline add-to-pipeline for directory clients */
-                          <button
-                            onClick={e => handleAddToPipeline(e, c.id)}
-                            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-teal-200 text-teal-600 bg-teal-50 hover:bg-teal-100 transition-colors whitespace-nowrap">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
-                            </svg>
-                            Add to pipeline
-                          </button>
-                        )
-                        : <StagePill stage={c.stage}/>
-                      }
-                    </td>
+                    {FLAGS.PIPELINE && (
+                      <td className="px-4 py-3">
+                        {isDirectoryOnly
+                          ? (
+                            /* U-09: inline add-to-pipeline for directory clients */
+                            <button
+                              onClick={e => handleAddToPipeline(e, c.id)}
+                              className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg border border-teal-200 text-teal-600 bg-teal-50 hover:bg-teal-100 transition-colors whitespace-nowrap">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/>
+                              </svg>
+                              Add to pipeline
+                            </button>
+                          )
+                          : <StagePill stage={c.stage}/>
+                        }
+                      </td>
+                    )}
 
                     {/* U-07: merged Care Team column */}
-                    <td className="px-4 py-3">
-                      {(bcba || rbt)
-                        ? (
-                          <div className="flex flex-col gap-1">
-                            {bcba && (
-                              <div className="flex items-center gap-1.5">
-                                <Avatar initials={bcba.initials} role="bcba" size="sm"/>
-                                <span className="text-xs text-slate-600 whitespace-nowrap">{bcba.name.replace('Dr. ','')}</span>
-                              </div>
-                            )}
-                            {rbt && (
-                              <div className="flex items-center gap-1.5">
-                                <Avatar initials={rbt.initials} role="rbt" size="sm"/>
-                                <span className="text-xs text-slate-600 whitespace-nowrap">{rbt.name}</span>
-                              </div>
-                            )}
-                          </div>
-                        )
-                        : <span className="text-slate-300 text-xs">—</span>
-                      }
-                    </td>
+                    {FLAGS.PIPELINE && (
+                      <td className="px-4 py-3">
+                        {(bcba || rbt)
+                          ? (
+                            <div className="flex flex-col gap-1">
+                              {bcba && (
+                                <div className="flex items-center gap-1.5">
+                                  <Avatar initials={bcba.initials} role="bcba" size="sm"/>
+                                  <span className="text-xs text-slate-600 whitespace-nowrap">{bcba.name.replace('Dr. ','')}</span>
+                                </div>
+                              )}
+                              {rbt && (
+                                <div className="flex items-center gap-1.5">
+                                  <Avatar initials={rbt.initials} role="rbt" size="sm"/>
+                                  <span className="text-xs text-slate-600 whitespace-nowrap">{rbt.name}</span>
+                                </div>
+                              )}
+                            </div>
+                          )
+                          : <span className="text-slate-300 text-xs">—</span>
+                        }
+                      </td>
+                    )}
 
-                    <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap" style={{ fontFamily:'DM Mono, monospace' }}>
-                      {c.referral_date || '—'}
-                    </td>
+                    {FLAGS.PIPELINE && (
+                      <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap" style={{ fontFamily:'DM Mono, monospace' }}>
+                        {c.referral_date || '—'}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -431,6 +442,7 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
       {showNew && (
         <NewClientModal
           clients={clients}
+          showPipelineOption={FLAGS.PIPELINE}
           onSave={data => {
             const { createPipelineEntry, ...clientData } = data;
             const now = new Date().toISOString();

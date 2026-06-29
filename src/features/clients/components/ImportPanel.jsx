@@ -4,6 +4,7 @@ import { loadCdnScript } from '../../../utils/cdn.js';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock.js';
 import { normalizeDate } from '../../../utils/dates.js';
 import { mkChecklist } from '../../../constants/checklist.js';
+import { FLAGS } from '../../../constants/featureFlags.js';
 
 const IMPORT_REQUIRED = [
   { key:'name',             label:'Client name'      },
@@ -424,25 +425,27 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
                         </p>
                       </div>
                     </button>
-                    <button
-                      onClick={() => setAddToPipeline(true)}
-                      className={`flex-1 flex items-start gap-3 px-4 py-3.5 text-left transition-colors ${
-                        addToPipeline ? 'bg-teal-50' : 'bg-white hover:bg-stone-50'
-                      }`}>
-                      <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
-                        addToPipeline ? 'border-teal-500 bg-teal-500' : 'border-stone-300'
-                      }`}>
-                        {addToPipeline && <div className="w-1.5 h-1.5 rounded-full bg-white"/>}
-                      </div>
-                      <div>
-                        <p className={`text-xs font-semibold ${addToPipeline ? 'text-teal-700' : 'text-slate-700'}`}>
-                          Add to intake pipeline
-                        </p>
-                        <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
-                          Clients are saved and immediately appear in the Intake stage of the pipeline
-                        </p>
-                      </div>
-                    </button>
+                    {FLAGS.PIPELINE && (
+                      <button
+                        onClick={() => setAddToPipeline(true)}
+                        className={`flex-1 flex items-start gap-3 px-4 py-3.5 text-left transition-colors ${
+                          addToPipeline ? 'bg-teal-50' : 'bg-white hover:bg-stone-50'
+                        }`}>
+                        <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                          addToPipeline ? 'border-teal-500 bg-teal-500' : 'border-stone-300'
+                        }`}>
+                          {addToPipeline && <div className="w-1.5 h-1.5 rounded-full bg-white"/>}
+                        </div>
+                        <div>
+                          <p className={`text-xs font-semibold ${addToPipeline ? 'text-teal-700' : 'text-slate-700'}`}>
+                            Add to intake pipeline
+                          </p>
+                          <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
+                            Clients are saved and immediately appear in the Intake stage of the pipeline
+                          </p>
+                        </div>
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -559,7 +562,7 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
             <button onClick={doImport} disabled={readyCount === 0} data-testid="import-submit"
               className="px-5 py-2 text-sm font-semibold text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
               style={{ background:'#0D9488' }}>
-              {addToPipeline
+              {FLAGS.PIPELINE && addToPipeline
                 ? `Import ${readyCount} client${readyCount !== 1 ? 's' : ''} to pipeline`
                 : `Import ${readyCount} client${readyCount !== 1 ? 's' : ''} to directory`}
             </button>

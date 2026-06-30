@@ -231,11 +231,89 @@ function ReassessmentCard({ client, reassessment, bcba, onOpen }) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+// ─── New Interview Modal ──────────────────────────────────────────────────────
+
+function NewInterviewModal({ clients, onSelect, onClose }) {
+  const [query, setQuery] = useState('');
+  const inputRef = React.useRef(null);
+
+  React.useEffect(() => { inputRef.current?.focus(); }, []);
+
+  const eligible = clients.filter(c => {
+    if (c.assessment_session != null) return false;
+    if (!query.trim()) return true;
+    return c.name.toLowerCase().includes(query.toLowerCase());
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="px-5 pt-5 pb-3 border-b border-stone-100">
+          <h2 className="text-base font-semibold text-slate-800 mb-3">Select a client</h2>
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+              <Ico.Search />
+            </div>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search by name…"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-stone-200 rounded-xl outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 placeholder:text-slate-400"
+            />
+          </div>
+        </div>
+
+        <ul className="max-h-72 overflow-y-auto divide-y divide-stone-100">
+          {eligible.length === 0 && (
+            <li className="px-5 py-8 text-center text-sm text-slate-400">No clients found</li>
+          )}
+          {eligible.map(c => (
+            <li key={c.id}>
+              <button
+                onClick={() => onSelect(c.id)}
+                className="w-full flex items-center gap-3 px-5 py-3 hover:bg-teal-50 transition-colors text-left"
+              >
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+                  style={{ background: '#0D9488' }}
+                >
+                  {c.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-800">{c.name}</p>
+                  {c.insurer_name && <p className="text-xs text-slate-400">{c.insurer_name}</p>}
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+
+        <div className="px-5 py-3 border-t border-stone-100 flex justify-end">
+          <button
+            onClick={onClose}
+            className="text-sm text-slate-500 hover:text-slate-700 font-medium transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function AssessmentsPage({ clients, staff, currentUser, onOpenAssessment }) {
   const [filter,     setFilter]     = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [search,     setSearch]     = useState('');
   const [toast,      setToast]      = useState(false);
+  const [showNewModal, setShowNewModal] = useState(false);
 
   // Auto-expand groups that have an active reassessment
   const [expandedGroups, setExpandedGroups] = useState(() => {
@@ -250,6 +328,11 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
   });
 
   const showToast = () => { setToast(true); setTimeout(() => setToast(false), 3500); };
+
+  const handleNewInterviewSelect = (clientId) => {
+    setShowNewModal(false);
+    onOpenAssessment(clientId);
+  };
 
   const toggleGroup = id => setExpandedGroups(prev => {
     const next = new Set(prev);
@@ -334,7 +417,7 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
           Assessments
         </h1>
         <button
-          onClick={showToast}
+          onClick={() => setShowNewModal(true)}
           className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity"
           style={{ background: '#0D9488' }}>
           <Ico.Plus /> New Interview
@@ -486,6 +569,15 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
             );
           })}
         </div>
+      )}
+
+      {/* New Interview Modal */}
+      {showNewModal && (
+        <NewInterviewModal
+          clients={clients}
+          onSelect={handleNewInterviewSelect}
+          onClose={() => setShowNewModal(false)}
+        />
       )}
 
       {/* Toast */}

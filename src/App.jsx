@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { SEED_CLIENTS, SEED_STAFF, makeAssessmentSession, makeReassessmentSession } from './constants/seedData.js';
 import { mkNotif } from './utils/notifications.js';
+import { supabase } from './lib/supabase.js';
 import FontLoader from './components/FontLoader.jsx';
 import NavBar from './components/NavBar.jsx';
 import PipelinePage from './features/pipeline/PipelinePage.jsx';
@@ -56,7 +57,33 @@ export default function App() {
     setPage('assessment');
   }, [clients, setClients]);
 
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser,  setCurrentUser]  = useState(null);
+  const [authLoading,  setAuthLoading]  = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const user = data.session?.user ?? null;
+      if (user) {
+        setCurrentUser({ id: user.id, email: user.email, name: user.email, role: user.user_metadata?.role ?? 'admin' });
+      }
+    }).finally(() => setAuthLoading(false));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const user = session.user;
+        setCurrentUser({ id: user.id, email: user.email, name: user.email, role: user.user_metadata?.role ?? 'admin' });
+      } else if (event === 'SIGNED_OUT') {
+        setCurrentUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+  };
 
   const handleClientAdvanced = useCallback(clientId => {
     setRecentlyMovedId(clientId);
@@ -114,6 +141,18 @@ export default function App() {
     active_case_count: clients.filter(c => c.bcba_id===s.id || c.rbt_id===s.id).length,
   }));
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0B1220' }}>
+        <FontLoader/>
+        <svg className="animate-spin h-10 w-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" style={{ color: '#0D9488' }}>
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+        </svg>
+      </div>
+    );
+  }
+
   if (!currentUser) {
     const isInvite = new URLSearchParams(window.location.search).get('invite') === 'true';
     return (
@@ -137,7 +176,7 @@ export default function App() {
   return (
     <div className="min-h-screen" style={{ background:'#F8F7F4', fontFamily:'DM Sans, sans-serif' }}>
       <FontLoader/>
-      <NavBar page={page} setPage={setPage} notifications={notifications} setNotifications={setNotifications} currentUser={currentUser} setCurrentUser={setCurrentUser}/>
+      <NavBar page={page} setPage={setPage} notifications={notifications} setNotifications={setNotifications} currentUser={currentUser} setCurrentUser={setCurrentUser} onLogout={handleLogout}/>
 
       {FLAGS.PIPELINE && page === 'pipeline' && (
         <PipelinePage

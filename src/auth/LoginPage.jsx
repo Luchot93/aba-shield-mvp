@@ -1,23 +1,25 @@
 import React, { useState } from 'react';
 import { Ico } from '../components/icons.jsx';
-import { SEED_USERS } from '../constants/seedData.js';
-
-const VALID_EMAIL    = 'admin@abashield.com';
-const VALID_PASSWORD = 'admin123';
+import { supabase } from '../lib/supabase.js';
 
 export default function LoginPage({ onLogin }) {
-  const [email,    setEmail]    = useState(VALID_EMAIL);
-  const [password, setPassword] = useState(VALID_PASSWORD);
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
   const [error,    setError]    = useState('');
+  const [loading,  setLoading]  = useState(false);
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    if (email === VALID_EMAIL && password === VALID_PASSWORD) {
-      setError('');
-      onLogin(SEED_USERS[0]);
-    } else {
-      setError('Invalid email or password');
+    setError('');
+    setLoading(true);
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+    if (authError) {
+      setError(authError.message);
+      return;
     }
+    const user = data.user;
+    onLogin({ id: user.id, email: user.email, name: user.email, role: user.user_metadata?.role ?? 'admin' });
   };
 
   return (
@@ -68,9 +70,16 @@ export default function LoginPage({ onLogin }) {
           <button
             type="submit"
             data-testid="login-submit"
-            className="w-full py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity"
+            disabled={loading}
+            className="w-full py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             style={{ background: '#0D9488' }}>
-            Sign in
+            {loading && (
+              <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              </svg>
+            )}
+            {loading ? 'Signing in…' : 'Sign in'}
           </button>
 
           {error && (

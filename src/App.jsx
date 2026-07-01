@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { SEED_CLIENTS, SEED_STAFF, makeAssessmentSession, makeReassessmentSession } from './constants/seedData.js';
+import { SEED_STAFF, makeAssessmentSession, makeReassessmentSession } from './constants/seedData.js';
 import { mkNotif } from './utils/notifications.js';
 import { supabase } from './lib/supabase.js';
+import { getClients, createClient } from './lib/db.js';
 import FontLoader from './components/FontLoader.jsx';
 import NavBar from './components/NavBar.jsx';
 import PipelinePage from './features/pipeline/PipelinePage.jsx';
@@ -19,7 +20,8 @@ import { FLAGS } from './constants/featureFlags.js';
 
 export default function App() {
   const [page,            setPage]           = useState('clients');
-  const [clients,         setClients]        = useState(SEED_CLIENTS);
+  const [clients,         setClients]        = useState([]);
+  const [clientsLoading,  setClientsLoading] = useState(false);
   const [staff,           setStaff]          = useState(SEED_STAFF);
   const [notifications,   setNotifications]  = useState([]);
   const [selectedClient,         setSelectedClient]        = useState(null);
@@ -79,6 +81,15 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    setClientsLoading(true);
+    getClients(currentUser.id)
+      .then(rows => setClients(rows))
+      .catch(err => console.error('Failed to load clients:', err))
+      .finally(() => setClientsLoading(false));
+  }, [currentUser?.id]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -193,7 +204,7 @@ export default function App() {
 
       {page !== 'pipeline' && (
         <main className="max-w-7xl mx-auto px-6 py-8">
-          {page==='clients'     && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={c => setProfileClient(c)} currentUser={currentUser}/>}
+          {page==='clients'     && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={c => setProfileClient(c)} currentUser={currentUser} clientsLoading={clientsLoading}/>}
           {FLAGS.STAFF && page==='staff' && <StaffPage staff={staff} setStaff={setStaff} clients={clients} currentUser={currentUser}
                                     onSelectClient={c => setProfileClient(c)}/>}
           {FLAGS.METRICS && page==='metrics' && (

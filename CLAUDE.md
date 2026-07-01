@@ -97,9 +97,10 @@ even if they are null in Alpha. Phase 2 components expect them.
 When a client is created (manually or via import), these client fields
 auto-populate the Demographics section of the Initial Assessment:
 dob, phone, address, insurer_name, member_id, group_number,
-referring_provider, referral_date, gender, icd10, diagnosis
+referring_provider, referral_date, gender, icd10, diagnosis,
+parent_name, parent_relationship, preferred_language
 
-This is handled by INTAKE_PROFILE_MAP in seedData.js → makeAssessmentSession().
+This is handled by INTAKE_PROFILE_MAP in seedData.js → buildClientProfile().
 Any missing fields are flagged with a yellow border in DemographicsForm.jsx.
 
 ## db.js Pattern — One File, Grows With Each Trench

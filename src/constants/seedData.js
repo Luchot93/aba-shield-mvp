@@ -63,6 +63,8 @@ const SECTION_TITLES = {
   crisis_plan:'Crisis Plan',
 };
 
+export const makeInitialSections = () => makeSections();
+
 const makeSections = () => Object.fromEntries(
   SECTION_ORDER.map(key => [key, {
     key,
@@ -115,8 +117,11 @@ const INTAKE_PROFILE_MAP = [
   { profileKey: 'diagnosis',         clientKey: 'diagnosis'         },
 ];
 
-export const makeAssessmentSession = (clientId, clientName, bcbaId, bcbaName, client = null) => {
-  // Build autofill patch from the client record when provided
+// Builds the clientProfile snapshot (blank defaults + client-record autofill).
+// Exported so callers that create a Supabase assessment_session directly
+// (e.g. App.jsx's handleOpenAssessment) can build the same snapshot without
+// duplicating the field list.
+export function buildClientProfile(client = null) {
   const autofill = {};
   const _intakeMissingFields = [];
   if (client) {
@@ -128,6 +133,19 @@ export const makeAssessmentSession = (clientId, clientName, bcbaId, bcbaName, cl
   }
 
   return {
+    dob: '', phone: '', address: '', referralDate: '',
+    insurerName: '', memberId: '', groupNumber: '', referringProvider: '',
+    diagnosis: '', gender: '', icd10: '', medicaidId: '',
+    assessmentType: 'Initial', assessmentDate: '',
+    parentGuardianNames: '', relationship: '', preferredLanguage: 'English',
+    reasonForReferral: '', interventionSettings: [],
+    ...autofill,             // overwrite blanks with client record values
+    _intakeMissingFields,    // tracked for yellow-border indicators in DemographicsForm
+  };
+}
+
+export const makeAssessmentSession = (clientId, clientName, bcbaId, bcbaName, client = null) => {
+  return {
     id: `session_${clientId}_${Date.now()}`,
     clientId, clientName, bcbaId, bcbaName,
     status: 'not_started',
@@ -137,16 +155,7 @@ export const makeAssessmentSession = (clientId, clientName, bcbaId, bcbaName, cl
     consentGrantedAt: null,
     sectionsWithData: 0,
     sectionsApproved: 0,
-    clientProfile: {
-      dob: '', phone: '', address: '', referralDate: '',
-      insurerName: '', memberId: '', groupNumber: '', referringProvider: '',
-      diagnosis: '', gender: '', icd10: '', medicaidId: '',
-      assessmentType: 'Initial', assessmentDate: '',
-      parentGuardianNames: '', relationship: '', preferredLanguage: 'English',
-      reasonForReferral: '', interventionSettings: [],
-      ...autofill,             // overwrite blanks with client record values
-      _intakeMissingFields,    // tracked for yellow-border indicators in DemographicsForm
-    },
+    clientProfile: buildClientProfile(client),
     sections: makeSections(),
     result: null,
   };

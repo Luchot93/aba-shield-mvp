@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { SEED_STAFF, makeAssessmentSession, makeReassessmentSession } from './constants/seedData.js';
+import { SEED_STAFF, makeAssessmentSession, makeReassessmentSession, makeInitialSections, buildClientProfile } from './constants/seedData.js';
 import { mkNotif } from './utils/notifications.js';
 import { supabase } from './lib/supabase.js';
-import { getClients, createClient } from './lib/db.js';
+import { getClients, createClient, getAssessmentSession, createAssessmentSession, getAssessmentSessionsByBcba } from './lib/db.js';
 import FontLoader from './components/FontLoader.jsx';
 import NavBar from './components/NavBar.jsx';
 import PipelinePage from './features/pipeline/PipelinePage.jsx';
@@ -29,35 +29,7 @@ export default function App() {
   const [recentlyMovedId, setRecentlyMovedId]= useState(null);
   const [assessmentClientId, setAssessmentClientId] = useState(null);
   const [profileClient,      setProfileClient]     = useState(null);
-
-  // ── Assessment navigation ──────────────────────────────────────────────────
-  //
-  // handleOpenAssessment({ type, clientId })
-  //
-  // type === 'initial'      — existing path: create session if needed, open AssessmentFeature
-  // type === 'reassessment' — swap the active reassessment session into client.assessment_session
-  //                           so all existing patchSession calls work without changes.
-  //                           On close/complete, AssessmentFeature un-swaps it back.
-  //
-  // Reassessment session priority:
-  //   1. client.assessment_session already has sessionType==='reassessment' → just navigate
-  //   2. client.reassessment_sessions has a non-complete entry → swap it in
-  //   3. None found → call makeReassessmentSession, swap it in
-
-  const handleOpenAssessment = useCallback((arg) => {
-    const cId  = (arg && typeof arg === 'object') ? arg.clientId : arg;
-    const client = clients.find(c => c.id === cId);
-    if (!client) return;
-
-    // Initial assessment only
-    setClients(prev => prev.map(c => {
-      if (c.id !== cId || c.assessment_session != null) return c;
-      const bcba = SEED_STAFF().find(s => s.id === c.bcba_id);
-      return { ...c, assessment_session: makeAssessmentSession(c.id, c.name, c.bcba_id, bcba?.name ?? 'Unassigned', c) };
-    }));
-    setAssessmentClientId(cId);
-    setPage('assessment');
-  }, [clients, setClients]);
+  const [openingAssessmentId, setOpeningAssessmentId] = useState(null);
 
   const [currentUser,  setCurrentUser]  = useState(null);
   const [authLoading,  setAuthLoading]  = useState(true);
@@ -85,8 +57,14 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return;
     setClientsLoading(true);
-    getClients(currentUser.id)
-      .then(rows => setClients(rows))
+    Promise.all([
+      getClients(currentUser.id),
+      getAssessmentSessionsByBcba(currentUser.id),
+    ])
+      .then(([rows, sessions]) => {
+        const sessionByClientId = new Map(sessions.map(s => [s.clientId, s]));
+        setClients(rows.map(c => ({ ...c, assessment_session: sessionByClientId.get(c.id) ?? null })));
+      })
       .catch(err => console.error('Failed to load clients:', err))
       .finally(() => setClientsLoading(false));
   }, [currentUser?.id]);
@@ -104,6 +82,40 @@ export default function App() {
   const addNotif = useCallback(notif => {
     setNotifications(prev => [notif, ...prev]);
   }, [setNotifications]);
+
+  // Fetch the client's Supabase assessment_session, creating one if it doesn't
+  // exist yet (bcba_id must be currentUser.id — RLS requires bcba_id = auth.uid()).
+  const handleOpenAssessment = useCallback(async (arg) => {
+    const cId = (arg && typeof arg === 'object') ? arg.clientId : arg;
+    const client = clients.find(c => c.id === cId);
+    if (!client || openingAssessmentId) return;
+
+    setOpeningAssessmentId(cId);
+    try {
+      let dbSession = await getAssessmentSession(cId);
+      if (!dbSession) {
+        dbSession = await createAssessmentSession(cId, currentUser.id, {
+          sections: makeInitialSections(),
+          status: 'not_started',
+          sectionsWithData: 0,
+          sectionsApproved: 0,
+          clientProfile: buildClientProfile(client),
+          clientName: client.name,
+          bcbaName: currentUser.name,
+          consentGranted: false,
+        });
+      }
+      const localSession = { ...dbSession, consentGrantedAt: dbSession.consentGrantedAt ?? null };
+      setClients(prev => prev.map(c => c.id === cId ? { ...c, assessment_session: localSession } : c));
+      setAssessmentClientId(cId);
+      setPage('assessment');
+    } catch (err) {
+      console.error('Failed to open assessment:', err);
+      addNotif?.({ type: 'error', message: 'Could not open assessment. Please try again.' });
+    } finally {
+      setOpeningAssessmentId(null);
+    }
+  }, [clients, currentUser, openingAssessmentId, setClients, addNotif]);
 
   // Seed notifications on mount based on client auth expiry and staff cert expiry
   useEffect(() => {
@@ -214,7 +226,7 @@ export default function App() {
           )}
           {page==='assessments' && (
             <AssessmentsPage clients={clients} staff={enrichedStaff} currentUser={currentUser}
-              onOpenAssessment={handleOpenAssessment} />
+              onOpenAssessment={handleOpenAssessment} assessmentOpeningId={openingAssessmentId} />
           )}
         </main>
       )}

@@ -3,6 +3,7 @@ import AssessmentInterviewPage   from './AssessmentInterviewPage.jsx';
 import AssessmentChecklistPage   from './AssessmentChecklistPage.jsx';
 import AssessmentReviewPage      from './AssessmentReviewPage.jsx';
 import { completeSession, canExport } from './assessmentStore.js';
+import { useSaveStatus } from '../../hooks/useSaveStatus.js';
 import { FLAGS } from '../../constants/featureFlags.js';
 import { generateAssessmentDoc } from './lib/generateAssessmentDoc.js';
 import { generateTemplateDoc }   from './lib/docxExport.js';
@@ -26,6 +27,7 @@ export default function AssessmentFeature({
   const [page,          setPage]          = useState('interview');
   const [targetSection, setTargetSection] = useState(null);
   const [isExporting,   setIsExporting]   = useState(false);
+  const { status: saveStatus } = useSaveStatus();
 
   // Navigate between pages, optionally jumping to a specific section
   const handleNavigate = (newPage, sectionKey = null) => {
@@ -325,6 +327,15 @@ export default function AssessmentFeature({
             style={{ background: tagMeta.dot }}/>
           {tagMeta.label}
         </span>
+
+        {/* Save status indicator — reflects real Supabase round-trips (aba:save-* events) */}
+        {saveStatus !== 'idle' && (
+          <span className="text-[11px] font-semibold text-slate-400 flex-shrink-0">
+            {saveStatus === 'saving' && 'Saving…'}
+            {saveStatus === 'saved'  && 'Saved'}
+            {saveStatus === 'error'  && <span className="text-red-500">Save failed</span>}
+          </span>
+        )}
 
         <div className="flex-1"/>
 

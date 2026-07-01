@@ -6,6 +6,8 @@
  * on the clients array. Components import only what they need.
  */
 
+import { updateAssessmentSession } from '../../lib/db.js';
+
 // ─── Internal helpers ───────────────────────────────────────────────────────
 
 /** Recompute the three derived counters on assessment_session. */
@@ -41,10 +43,26 @@ function _recomputeCounts(session) {
   return { sectionsWithData, sectionsApproved, status };
 }
 
+/** Fire-and-forget persistence to Supabase, broadcasting save-lifecycle events. */
+function _persist(sessionId, patch) {
+  if (!sessionId) return;
+  window.dispatchEvent(new CustomEvent('aba:save-start'));
+  updateAssessmentSession(sessionId, patch)
+    .then(() => {
+      window.dispatchEvent(new CustomEvent('aba:save-success'));
+    })
+    .catch(err => {
+      console.error('[assessmentStore] Supabase save failed:', err);
+      window.dispatchEvent(new CustomEvent('aba:save-error'));
+    });
+}
+
 /** Update a single client's assessment_session, merging patch at the top level. */
 export function patchSession(setClients, clientId, patch) {
+  let sessionId;
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
+    sessionId = c.assessment_session?.id;
     const updatedSession = {
       ...c.assessment_session,
       ...patch,
@@ -62,10 +80,15 @@ export function patchSession(setClients, clientId, patch) {
       reassessment_sessions: updatedReassessmentSessions,
     };
   }));
+
+  _persist(sessionId, patch);
 }
 
 /** Merge sectionPatch into a specific section and recompute derived counts. */
 export function patchSection(setClients, clientId, sectionKey, sectionPatch) {
+  let sessionId;
+  let persistPatch;
+
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
 
@@ -87,6 +110,14 @@ export function patchSection(setClients, clientId, sectionKey, sectionPatch) {
     const counts = _recomputeCounts(updatedSession);
     const finalSession = { ...updatedSession, ...counts };
 
+    sessionId = finalSession.id;
+    persistPatch = {
+      sections: finalSession.sections,
+      status: finalSession.status,
+      sectionsWithData: finalSession.sectionsWithData,
+      sectionsApproved: finalSession.sectionsApproved,
+    };
+
     const updatedReassessmentSessions = (c.reassessment_sessions ?? []).map(s =>
       s.id === finalSession.id ? finalSession : s,
     );
@@ -97,6 +128,8 @@ export function patchSection(setClients, clientId, sectionKey, sectionPatch) {
       reassessment_sessions: updatedReassessmentSessions,
     };
   }));
+
+  _persist(sessionId, persistPatch);
 }
 
 // ─── Notes ──────────────────────────────────────────────────────────────────

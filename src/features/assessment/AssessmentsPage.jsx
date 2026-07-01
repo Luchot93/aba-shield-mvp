@@ -308,7 +308,7 @@ function NewInterviewModal({ clients, onSelect, onClose }) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function AssessmentsPage({ clients, staff, currentUser, onOpenAssessment }) {
+export default function AssessmentsPage({ clients, staff, currentUser, onOpenAssessment, assessmentOpeningId }) {
   const [filter,     setFilter]     = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [search,     setSearch]     = useState('');
@@ -411,6 +411,18 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
 
   return (
     <div data-testid="assessments-page">
+      {/* Opening-assessment overlay — covers the gap between clicking a client
+          and the Supabase fetch/create resolving, since a brand-new client has
+          no card here yet to attach a per-row spinner to. */}
+      {assessmentOpeningId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
+          <div className="bg-white rounded-2xl shadow-xl px-6 py-5 flex items-center gap-3">
+            <div className="w-5 h-5 animate-spin border-2 border-teal-500 border-t-transparent rounded-full flex-shrink-0" />
+            <span className="text-sm font-medium text-slate-700">Opening assessment…</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-2xl font-bold text-slate-800" style={{ fontFamily: 'Syne, sans-serif' }}>
@@ -505,7 +517,7 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
                     {/* Initial assessment card — unchanged visually */}
                     {typeFilter !== 'reassessment' && (
                       <div
-                        onClick={() => onOpenAssessment(client.id)}
+                        onClick={() => { if (!assessmentOpeningId) onOpenAssessment(client.id); }}
                         className="bg-white border border-stone-200 rounded-xl p-5 mb-3 cursor-pointer hover:shadow-md hover:-translate-y-px transition-all duration-150">
 
                         {/* Row 1: name + status badge */}

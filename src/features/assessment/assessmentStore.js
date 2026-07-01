@@ -615,25 +615,35 @@ export function removeSkillStoStep(setClients, clientId, goalId, stepId) {
 // ─── Client Profile ──────────────────────────────────────────────────────────
 
 export function updateClientProfile(setClients, clientId, patch) {
+  let sessionId;
+  let mergedProfile;
+
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
+    sessionId = c.assessment_session?.id;
+    mergedProfile = {
+      ...c.assessment_session.clientProfile,
+      ...patch,
+    };
     return {
       ...c,
       assessment_session: {
         ...c.assessment_session,
-        clientProfile: {
-          ...c.assessment_session.clientProfile,
-          ...patch,
-        },
+        clientProfile: mergedProfile,
         updatedAt: new Date().toISOString(),
       },
     };
   }));
+
+  _persist(sessionId, { clientProfile: mergedProfile });
 }
 
 export function updateClientName(setClients, clientId, name) {
+  let sessionId;
+
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
+    sessionId = c.assessment_session?.id;
     return {
       ...c,
       assessment_session: {
@@ -643,6 +653,8 @@ export function updateClientName(setClients, clientId, name) {
       },
     };
   }));
+
+  _persist(sessionId, { clientName: name });
 }
 
 // ─── Session Completion ──────────────────────────────────────────────────────

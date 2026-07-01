@@ -3,7 +3,6 @@ import { Ico } from '../../../components/icons.jsx';
 import { loadCdnScript } from '../../../utils/cdn.js';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock.js';
 import { normalizeDate } from '../../../utils/dates.js';
-import { mkChecklist } from '../../../constants/checklist.js';
 import { FLAGS } from '../../../constants/featureFlags.js';
 
 const IMPORT_REQUIRED = [
@@ -84,15 +83,29 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
       }
 
       const hdrs = Object.keys(rows[0]);
+      const norm = s => s.toLowerCase().replace(/[\s_-]/g,'');
       const autoMap = {};
+      const usedHeaders = new Set();
+
+      // Pass 1: exact matches only, so e.g. "Referring provider NPI" claims its own
+      // column before the looser pass 2 lets "Referring provider" swallow it via substring match.
       IMPORT_ALL.forEach(f => {
+        const fk = norm(f.key), fl = norm(f.label);
+        const match = hdrs.find(h => !usedHeaders.has(h) && (norm(h) === fk || norm(h) === fl));
+        if (match) { autoMap[f.key] = match; usedHeaders.add(match); }
+      });
+
+      // Pass 2: fuzzy substring matches for anything still unmapped, restricted to
+      // headers pass 1 didn't already claim, so no header is assigned to two fields.
+      IMPORT_ALL.forEach(f => {
+        if (autoMap[f.key]) return;
+        const fk = norm(f.key), fl = norm(f.label);
         const match = hdrs.find(h => {
-          const hn = h.toLowerCase().replace(/[\s_-]/g,'');
-          const fk = f.key.toLowerCase().replace(/[\s_-]/g,'');
-          const fl = f.label.toLowerCase().replace(/[\s_-]/g,'');
-          return hn === fk || hn.includes(fk) || fk.includes(hn) || hn.includes(fl) || fl.includes(hn);
+          if (usedHeaders.has(h)) return false;
+          const hn = norm(h);
+          return hn.includes(fk) || fk.includes(hn) || hn.includes(fl) || fl.includes(hn);
         });
-        if (match) autoMap[f.key] = match;
+        if (match) { autoMap[f.key] = match; usedHeaders.add(match); }
       });
 
       // If not a single required column was recognized, this is probably the wrong file
@@ -159,8 +172,7 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
   const doImport = () => {
     const valid = validated.filter(r => r._valid);
     const now   = new Date().toISOString();
-    onImport(valid.map((r, i) => ({
-      id:`imp_${Date.now()}_${i}`,
+    onImport(valid.map(r => ({
       name:r.name, dob:r.dob, phone:r.phone||'', address:r.address||'',
       insurer_name:r.insurer_name, member_id:r.member_id,
       group_number:r.group_number||'', health_plan_name:r.health_plan_name||'',
@@ -177,10 +189,6 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
       stage_entered_at:addToPipeline
         ? (r.referral_date ? new Date(r.referral_date).toISOString() : now)
         : null,
-      denial_reason:null, bcba_id:null, rbt_id:null,
-      auth_expiry_date:null, reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[],
-      smart_assessment_session_id:null,
-      checklist:mkChecklist(), documents:[], activity_log:[],
     })));
   };
 

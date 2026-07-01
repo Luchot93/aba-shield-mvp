@@ -33,6 +33,23 @@ export async function createClient(userId, fields) {
   return enrichClient(data)
 }
 
+export async function createClients(userId, rows) {
+  const { data, error } = await supabase
+    .from('clients')
+    .insert(rows.map(fields => ({ ...fields, user_id: userId })))
+    .select()
+  if (error) throw error
+  return data.map(enrichClient)
+}
+
+export async function deleteClient(clientId) {
+  const { error } = await supabase
+    .from('clients')
+    .delete()
+    .eq('id', clientId)
+  if (error) throw error
+}
+
 export async function getAssessmentSession(clientId) {
   const { data, error } = await supabase
     .from('assessment_sessions')

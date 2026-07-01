@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { STAGES } from '../../constants/stages.js';
-import { mkChecklist } from '../../constants/checklist.js';
 import { Ico } from '../../components/icons.jsx';
 import StagePill from '../../components/StagePill.jsx';
 import Avatar from '../../components/Avatar.jsx';
 import NewClientModal from '../pipeline/components/NewClientModal.jsx';
 import ImportPanel from './components/ImportPanel.jsx';
+import DeleteClientModal from './components/DeleteClientModal.jsx';
 import { FLAGS } from '../../constants/featureFlags.js';
+import { createClient, createClients, deleteClient } from '../../lib/db.js';
 
 // ─── Filter config ────────────────────────────────────────────────────────────
 const FILTER_GROUPS = {
@@ -72,13 +73,14 @@ function sortClients(arr, col, dir) {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function ClientsPage({ clients, staff, setClients, setSelectedClient, currentUser }) {
+export default function ClientsPage({ clients, staff, setClients, setSelectedClient, currentUser, clientsLoading }) {
   const [search,     setSearch]     = useState('');
   const [filter,     setFilter]     = useState('all');
   const [sortCol,    setSortCol]    = useState('name');
   const [sortDir,    setSortDir]    = useState('asc');
   const [showNew,    setShowNew]    = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [toast,      setToast]      = useState(null);
   const toastTimer = useRef(null);
 
@@ -107,6 +109,14 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
         : c
     ));
     showToast('Client added to Intake pipeline');
+  };
+
+  const handleDeleteClient = async () => {
+    const client = deleteTarget;
+    await deleteClient(client.id);
+    setClients(prev => prev.filter(c => c.id !== client.id));
+    setDeleteTarget(null);
+    showToast(`${client.name} deleted`);
   };
 
   // ── Filter counts for chips ──────────────────────────────────────────────
@@ -157,6 +167,7 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
     { key:'stage',         label:'Stage',         sortable: true  },
     { key:'care_team',     label:'Care Team',     sortable: false },
     { key:'referral_date', label:'Referral Date', sortable: true  },
+    { key:'actions',       label:'',              sortable: false },
   ];
 
   return (
@@ -236,6 +247,14 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
       </div>
 
       {/* Table */}
+      {clientsLoading ? (
+        <div className="bg-white rounded-xl border border-stone-200 flex items-center justify-center py-24" data-testid="clients-loading">
+          <svg className="animate-spin h-8 w-8 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+          </svg>
+        </div>
+      ) : (
       <div className="bg-white rounded-xl border border-stone-200 overflow-hidden" data-testid="clients-table">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse" style={{ minWidth:'820px' }}>
@@ -414,6 +433,17 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
                         {c.referral_date || '—'}
                       </td>
                     )}
+
+                    {/* Delete action — revealed on row hover */}
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={e => { e.stopPropagation(); setDeleteTarget(c); }}
+                        data-testid={`delete-client-${c.id}`}
+                        title="Delete client"
+                        className="p-1.5 rounded-lg text-slate-500 bg-stone-100 opacity-0 group-hover:opacity-100 hover:bg-red-100 hover:text-red-600 transition-all">
+                        <Ico.Trash/>
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -437,29 +467,27 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
           </div>
         )}
       </div>
+      )}
 
       {/* New Client modal */}
       {showNew && (
         <NewClientModal
           clients={clients}
           showPipelineOption={FLAGS.PIPELINE}
-          onSave={data => {
+          onSave={async data => {
             const { createPipelineEntry, ...clientData } = data;
-            const now = new Date().toISOString();
-            const nc = {
-              id: `c_${Date.now()}`,
-              ...clientData,
-              source: 'crm_created',                          // C-03: explicit source
-              stage: createPipelineEntry ? 'intake' : null,
-              stage_entered_at: createPipelineEntry ? now : null,
-              pipeline_entry: createPipelineEntry ?? false,
-              denial_reason:null, bcba_id:null, rbt_id:null,
-              auth_expiry_date:null, reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[],
-              smart_assessment_session_id:null,
-              checklist:mkChecklist(), documents:[], activity_log:[],
-            };
-            setClients(prev => [nc, ...prev]);
-            setShowNew(false);
+            try {
+              const newRow = await createClient(currentUser.id, {
+                ...clientData,
+                source: 'crm_created',   // C-03: explicit source
+                pipeline_entry: false,   // Alpha: pipeline checkbox hidden behind FLAGS.PIPELINE
+              });
+              setClients(prev => [newRow, ...prev]);
+              setShowNew(false);
+            } catch (err) {
+              console.error('Failed to create client:', err);
+              showToast('Failed to save client. Please try again.', 'error');
+            }
           }}
           onClose={() => setShowNew(false)}
           onOpenClient={c => { setShowNew(false); setSelectedClient(c); }}
@@ -472,30 +500,45 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
         <ImportPanel
           onClose={() => setShowImport(false)}
           existingClients={clients}
-          onImport={newClients => {
-            setClients(prev => [...newClients, ...prev]);
-            setShowImport(false);
-            // C-02: toast reflects actual destination
-            const toPipeline = newClients.some(c => c.pipeline_entry);
-            const toDirectory = newClients.some(c => !c.pipeline_entry);
-            const n = newClients.length;
-            const label = n === 1 ? '1 client' : `${n} clients`;
-            if (toPipeline && toDirectory) {
-              showToast(`${label} added — some to pipeline, some to directory`);
-            } else if (toPipeline) {
-              showToast(`${label} added to Intake pipeline`);
-            } else {
-              showToast(`${label} added to client directory`);
+          onImport={async newClients => {
+            try {
+              const savedClients = await createClients(currentUser.id, newClients);
+              setClients(prev => [...savedClients, ...prev]);
+              setShowImport(false);
+              // C-02: toast reflects actual destination
+              const toPipeline = savedClients.some(c => c.pipeline_entry);
+              const toDirectory = savedClients.some(c => !c.pipeline_entry);
+              const n = savedClients.length;
+              const label = n === 1 ? '1 client' : `${n} clients`;
+              if (toPipeline && toDirectory) {
+                showToast(`${label} added — some to pipeline, some to directory`);
+              } else if (toPipeline) {
+                showToast(`${label} added to Intake pipeline`);
+              } else {
+                showToast(`${label} added to client directory`);
+              }
+            } catch (err) {
+              console.error('Failed to import clients:', err);
+              showToast('Failed to save imported clients. Please try again.', 'error');
             }
           }}
+        />
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <DeleteClientModal
+          client={deleteTarget}
+          onConfirm={handleDeleteClient}
+          onCancel={() => setDeleteTarget(null)}
         />
       )}
 
       {/* P-01: dismissable toast */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-3 rounded-xl shadow-xl text-sm font-medium z-[100]"
-          style={{ background:'#0F766E', color:'#fff' }} data-testid="import-toast">
-          <Ico.Check/>
+          style={{ background: toast.type === 'error' ? '#B91C1C' : '#0F766E', color:'#fff' }} data-testid="import-toast">
+          {toast.type === 'error' ? <Ico.Warn/> : <Ico.Check/>}
           <span>{toast.msg}</span>
           <button onClick={dismissToast} className="ml-1 opacity-70 hover:opacity-100 transition-opacity">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">

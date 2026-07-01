@@ -131,8 +131,11 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
   };
 
   const buildPreview = () => {
-    const rows = rawRows.map((row, i) => {
-      const r = {};
+    // First pass: just extract/normalize fields for every row. Duplicate checks
+    // below need to compare rows against each other, so all rows must be
+    // extracted before any of them are validated.
+    const extracted = rawRows.map((row, i) => {
+      const r = { _idx:i };
       IMPORT_ALL.forEach(f => {
         const raw = mapping[f.key] ? row[mapping[f.key]] : '';
         if (f.key === 'dob' || f.key === 'referral_date') {
@@ -141,6 +144,10 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
           r[f.key] = raw !== undefined && raw !== null ? String(raw).trim() : '';
         }
       });
+      return r;
+    });
+
+    const rows = extracted.map(r => {
       const errs  = [];   // data errors — need fixing
       const warns = [];   // soft warnings — still importable
       let   isDup = false;
@@ -151,19 +158,43 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
       if (r.referral_date && !/^\d{4}-\d{2}-\d{2}$/.test(r.referral_date))
         errs.push('Invalid date format (Referral)');
 
-      // Duplicate detection: Member ID is the authoritative unique key.
-      // Fall back to name+DOB as a soft warning when Member ID is absent on either side.
-      const memberId = r.member_id?.trim().toLowerCase();
+      // Duplicate detection: exact Member ID match against an existing client is
+      // the only hard/silent-skip case (it's the authoritative unique key).
+      // Everything else — name+DOB match, parent email match, or a matching row
+      // earlier in this same file — is a soft warning: still importable, but
+      // flagged so it can be reviewed. These are checked even when Member ID is
+      // present, since a different (or mistyped) Member ID shouldn't hide an
+      // otherwise-obvious duplicate — this was the original gap.
+      const memberId   = r.member_id?.trim().toLowerCase();
+      const nameKey    = r.name?.trim().toLowerCase();
+      const parentEmail = r.parent_email?.trim().toLowerCase();
+
       if (memberId && existingClients.some(c => c.member_id?.trim().toLowerCase() === memberId)) {
         isDup = true;   // already in system — skip silently, not a data error
-      } else if (!memberId) {
-        const nameDobDup = existingClients.some(
-          c => c.name?.toLowerCase() === r.name?.toLowerCase() && c.dob === r.dob
+      } else {
+        const nameDobDup = !!(nameKey && r.dob) && existingClients.some(
+          c => c.name?.trim().toLowerCase() === nameKey && c.dob === r.dob
         );
         if (nameDobDup) warns.push('Possible duplicate (name + DOB match)');
+
+        const emailDup = !!parentEmail && existingClients.some(
+          c => c.parent_email?.trim().toLowerCase() === parentEmail
+        );
+        if (emailDup) warns.push('Possible duplicate (parent email match)');
+
+        // Duplicate of an earlier row in this same upload (not yet in the system,
+        // so not caught by the existingClients checks above).
+        const dupInBatch = extracted.some(other =>
+          other._idx < r._idx && (
+            (!!memberId && other.member_id?.trim().toLowerCase() === memberId) ||
+            (!!(nameKey && r.dob) && other.name?.trim().toLowerCase() === nameKey && other.dob === r.dob) ||
+            (!!parentEmail && other.parent_email?.trim().toLowerCase() === parentEmail)
+          )
+        );
+        if (dupInBatch) warns.push('Possible duplicate (duplicate row in this file)');
       }
 
-      return { ...r, _idx:i, _errors:errs, _warnings:warns, _isDup:isDup, _valid:!isDup && errs.length === 0 };
+      return { ...r, _errors:errs, _warnings:warns, _isDup:isDup, _valid:!isDup && errs.length === 0 };
     });
     setValidated(rows);
     setStep('preview');

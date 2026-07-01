@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useAutoSave } from '../../../hooks/useAutoSave.js';
 import { updateClientProfile, updateClientName } from '../assessmentStore.js';
 
 const SETTINGS_OPTIONS = [
@@ -75,26 +76,48 @@ export default function DemographicsForm({ clientId, client, session, setClients
   const profile = session?.clientProfile ?? {};
   const clientName = session?.clientName ?? client?.name ?? '';
 
-  const set = (field) => (e) =>
-    updateClientProfile(setClients, clientId, { [field]: e.target.value });
+  // Local draft state, debounced before hitting Supabase — mirrors the
+  // useAutoSave pattern already used by FreeTextNotes/ProseEditor/InlineEditor.
+  // Without this, every keystroke fired its own PATCH request; concurrent
+  // requests could complete out of order and silently clobber each other,
+  // which is why typed text (e.g. Reason for Referral) could vanish on reload.
+  const [draft, setDraft] = useState(profile);
+  const [nameDraft, setNameDraft] = useState(clientName);
 
-  const setName = (e) =>
-    updateClientName(setClients, clientId, e.target.value);
+  // Re-hydrate local drafts only when switching to a different assessment
+  // session — never on every keystroke (session.id is stable across edits).
+  useEffect(() => {
+    setDraft(profile);
+    setNameDraft(clientName);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id]);
 
-  const toggleSetting = (setting) => {
-    const current = profile.interventionSettings ?? [];
-    const next = current.includes(setting)
-      ? current.filter(s => s !== setting)
-      : [...current, setting];
-    updateClientProfile(setClients, clientId, { interventionSettings: next });
+  useAutoSave(draft, (v) => updateClientProfile(setClients, clientId, v), 800);
+  useAutoSave(nameDraft, (v) => updateClientName(setClients, clientId, v), 800);
+
+  const set = (field) => (e) => {
+    const { value } = e.target;
+    setDraft(d => ({ ...d, [field]: value }));
   };
 
-  const missing = (key) => isMissingFromIntake(profile, key);
+  const setName = (e) => setNameDraft(e.target.value);
+
+  const toggleSetting = (setting) => {
+    setDraft(d => {
+      const current = d.interventionSettings ?? [];
+      const next = current.includes(setting)
+        ? current.filter(s => s !== setting)
+        : [...current, setting];
+      return { ...d, interventionSettings: next };
+    });
+  };
+
+  const missing = (key) => isMissingFromIntake(draft, key);
 
   return (
     <div style={{ fontFamily: 'DM Sans, sans-serif' }}>
       {/* Autofill notice — only shown when session was seeded from a client record */}
-      {(profile._intakeMissingFields?.length > 0) && (
+      {(draft._intakeMissingFields?.length > 0) && (
         <div className="mb-4 flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl border"
           style={{ background: 'rgba(245,158,11,0.06)', borderColor: 'rgba(245,158,11,0.3)' }}>
           <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" style={{ color:'#B45309' }}>
@@ -115,77 +138,77 @@ export default function DemographicsForm({ clientId, client, session, setClients
 
         {/* Client Name */}
         <Field label="Client Full Name">
-          <Input value={clientName} onChange={setName} placeholder="Full legal name" />
+          <Input value={nameDraft} onChange={setName} placeholder="Full legal name" />
         </Field>
 
         {/* DOB */}
         <Field label="Date of Birth" half missing={missing('dob')}>
-          <Input type="date" value={profile.dob} onChange={set('dob')} missing={missing('dob')} />
+          <Input type="date" value={draft.dob} onChange={set('dob')} missing={missing('dob')} />
         </Field>
 
         {/* Gender */}
         <Field label="Gender" half missing={missing('gender')}>
-          <Input value={profile.gender} onChange={set('gender')} placeholder="e.g. Male / Female / Non-binary" missing={missing('gender')} />
+          <Input value={draft.gender} onChange={set('gender')} placeholder="e.g. Male / Female / Non-binary" missing={missing('gender')} />
         </Field>
 
         {/* Diagnosis */}
         <Field label="Primary Diagnosis" missing={missing('diagnosis')}>
-          <Input value={profile.diagnosis} onChange={set('diagnosis')} placeholder="e.g. ASD Level 2" missing={missing('diagnosis')} />
+          <Input value={draft.diagnosis} onChange={set('diagnosis')} placeholder="e.g. ASD Level 2" missing={missing('diagnosis')} />
         </Field>
 
         {/* ICD-10 */}
         <Field label="ICD-10 Code" half missing={missing('icd10')}>
-          <Input value={profile.icd10} onChange={set('icd10')} placeholder="e.g. F84.0" missing={missing('icd10')} />
+          <Input value={draft.icd10} onChange={set('icd10')} placeholder="e.g. F84.0" missing={missing('icd10')} />
         </Field>
 
         {/* Phone */}
         <Field label="Phone" half missing={missing('phone')}>
-          <Input type="tel" value={profile.phone} onChange={set('phone')} placeholder="(555) 000-0000" missing={missing('phone')} />
+          <Input type="tel" value={draft.phone} onChange={set('phone')} placeholder="(555) 000-0000" missing={missing('phone')} />
         </Field>
 
         {/* Address */}
         <Field label="Address" missing={missing('address')}>
-          <Input value={profile.address} onChange={set('address')} placeholder="Street, City, State ZIP" missing={missing('address')} />
+          <Input value={draft.address} onChange={set('address')} placeholder="Street, City, State ZIP" missing={missing('address')} />
         </Field>
 
         {/* Insurer */}
         <Field label="Insurance Carrier" half missing={missing('insurerName')}>
-          <Input value={profile.insurerName} onChange={set('insurerName')} placeholder="e.g. Aetna" missing={missing('insurerName')} />
+          <Input value={draft.insurerName} onChange={set('insurerName')} placeholder="e.g. Aetna" missing={missing('insurerName')} />
         </Field>
 
         {/* Member ID */}
         <Field label="Member ID" half missing={missing('memberId')}>
-          <Input value={profile.memberId} onChange={set('memberId')} placeholder="e.g. AET-000000" missing={missing('memberId')} />
+          <Input value={draft.memberId} onChange={set('memberId')} placeholder="e.g. AET-000000" missing={missing('memberId')} />
         </Field>
 
         {/* Group Number */}
         <Field label="Group Number" half missing={missing('groupNumber')}>
-          <Input value={profile.groupNumber} onChange={set('groupNumber')} placeholder="e.g. G-00000" missing={missing('groupNumber')} />
+          <Input value={draft.groupNumber} onChange={set('groupNumber')} placeholder="e.g. G-00000" missing={missing('groupNumber')} />
         </Field>
 
         {/* Medicaid ID */}
         <Field label="Medicaid ID" half>
-          <Input value={profile.medicaidId} onChange={set('medicaidId')} placeholder="If applicable" />
+          <Input value={draft.medicaidId} onChange={set('medicaidId')} placeholder="If applicable" />
         </Field>
 
         {/* Referring Provider */}
         <Field label="Referring Provider" missing={missing('referringProvider')}>
-          <Input value={profile.referringProvider} onChange={set('referringProvider')} placeholder="Dr. Name / Practice" missing={missing('referringProvider')} />
+          <Input value={draft.referringProvider} onChange={set('referringProvider')} placeholder="Dr. Name / Practice" missing={missing('referringProvider')} />
         </Field>
 
         {/* Referral Date */}
         <Field label="Referral Date" half missing={missing('referralDate')}>
-          <Input type="date" value={profile.referralDate} onChange={set('referralDate')} missing={missing('referralDate')} />
+          <Input type="date" value={draft.referralDate} onChange={set('referralDate')} missing={missing('referralDate')} />
         </Field>
 
         {/* Assessment Date */}
         <Field label="Assessment Date" half>
-          <Input type="date" value={profile.assessmentDate} onChange={set('assessmentDate')} />
+          <Input type="date" value={draft.assessmentDate} onChange={set('assessmentDate')} />
         </Field>
 
         {/* Assessment Type */}
         <Field label="Assessment Type" half>
-          <Select value={profile.assessmentType} onChange={set('assessmentType')}>
+          <Select value={draft.assessmentType} onChange={set('assessmentType')}>
             <option value="Initial">Initial</option>
             <option value="Re-evaluation">Re-evaluation</option>
             <option value="Reauthorization">Reauthorization</option>
@@ -194,23 +217,23 @@ export default function DemographicsForm({ clientId, client, session, setClients
 
         {/* Preferred Language */}
         <Field label="Preferred Language" half>
-          <Input value={profile.preferredLanguage} onChange={set('preferredLanguage')} placeholder="e.g. English" />
+          <Input value={draft.preferredLanguage} onChange={set('preferredLanguage')} placeholder="e.g. English" />
         </Field>
 
         {/* Parent/Guardian Names */}
         <Field label="Parent / Guardian Name(s)">
-          <Input value={profile.parentGuardianNames} onChange={set('parentGuardianNames')} placeholder="Full names" />
+          <Input value={draft.parentGuardianNames} onChange={set('parentGuardianNames')} placeholder="Full names" />
         </Field>
 
         {/* Relationship */}
         <Field label="Relationship to Client">
-          <Input value={profile.relationship} onChange={set('relationship')} placeholder="e.g. Mother / Father / Guardian" />
+          <Input value={draft.relationship} onChange={set('relationship')} placeholder="e.g. Mother / Father / Guardian" />
         </Field>
 
         {/* Reason for Referral */}
         <Field label="Reason for Referral">
           <textarea
-            value={profile.reasonForReferral ?? ''}
+            value={draft.reasonForReferral ?? ''}
             onChange={set('reasonForReferral')}
             placeholder="Brief summary of referral reason…"
             rows={3}
@@ -225,7 +248,7 @@ export default function DemographicsForm({ clientId, client, session, setClients
         <Field label="Intervention Settings (select all that apply)">
           <div className="flex flex-wrap gap-2 mt-1">
             {SETTINGS_OPTIONS.map(s => {
-              const selected = (profile.interventionSettings ?? []).includes(s);
+              const selected = (draft.interventionSettings ?? []).includes(s);
               return (
                 <button
                   key={s}

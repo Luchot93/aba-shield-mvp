@@ -115,6 +115,9 @@ const INTAKE_PROFILE_MAP = [
   { profileKey: 'gender',            clientKey: 'gender'            },
   { profileKey: 'icd10',             clientKey: 'icd10'             },
   { profileKey: 'diagnosis',         clientKey: 'diagnosis'         },
+  { profileKey: 'parentGuardianNames', clientKey: 'parent_name'         },
+  { profileKey: 'relationship',        clientKey: 'parent_relationship' },
+  { profileKey: 'preferredLanguage',   clientKey: 'preferred_language'  },
 ];
 
 // Builds the clientProfile snapshot (blank defaults + client-record autofill).

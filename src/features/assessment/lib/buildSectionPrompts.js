@@ -30,6 +30,29 @@ const list = (arr) => (arr && arr.length) ? arr.join(', ') : 'None recorded';
 const val  = (v, fallback = 'Not recorded') => (v !== '' && v != null) ? String(v) : fallback;
 const pct  = (v) => (v !== '' && v != null) ? `${v}%` : 'Not recorded';
 
+// ─── Section data-presence check ───────────────────────────────────────────────
+// Single source of truth for "does this section have anything worth drafting".
+// Mirrors the criteria AssessmentChecklistPage shows the BCBA on the Ready to
+// Generate screen ("Ready — X captured" vs "No data captured. Section will be
+// skipped."), so what the user is told will be skipped is what actually gets
+// skipped when the section prompts are built.
+export function sectionHasData(session, sectionKey) {
+  const sec = session.sections?.[sectionKey] ?? {};
+  const hasNotes            = !!(sec.notes?.trim());
+  const hasTranscript       = !!(sec.transcript?.trim());
+  const hasIndicators       = (sec.indicators ?? []).some(i => i.count > 0);
+  const hasSkillGoals       = (sec.skillGoals ?? []).length > 0;
+  const hasBehaviorTargets  = (sec.behaviorTargets ?? []).length > 0;
+  const hasCaregiverData    = sectionKey === 'caregiver_training' && !!(
+    (sec.caregiverBaselines?.premack_baseline != null && sec.caregiverBaselines?.premack_baseline !== '') ||
+    (sec.caregiverBaselines?.reinforcement_baseline != null && sec.caregiverBaselines?.reinforcement_baseline !== '') ||
+    (sec.trainingFormat?.length > 0) ||
+    sec.trainingBarriers?.trim() ||
+    sec.caregiverStrengths?.trim()
+  );
+  return hasNotes || hasTranscript || hasIndicators || hasSkillGoals || hasBehaviorTargets || hasCaregiverData;
+}
+
 // ─── Client profile (Demographics) ───────────────────────────────────────────
 
 function buildDemographics(session) {
@@ -374,22 +397,33 @@ function buildGenericSection(session, sectionKey) {
  * Returns an object mapping each section key to a fully-populated prompt string.
  * Every structured field from every form is included.
  *
+ * Sections other than Demographics (which is always pre-filled from the
+ * client record and therefore always ready) return an empty string when
+ * `sectionHasData` finds nothing captured, so the caller (generateDraft.js)
+ * skips them instead of drafting placeholder "Not recorded" content.
+ *
  * @param {object} session - The full assessment session object
  * @returns {{ [sectionKey: string]: string }}
  */
 export function buildSectionPrompts(session) {
-  return {
-    demographics:       buildDemographics(session),
-    presenting_concerns: buildGenericSection(session, 'presenting_concerns'),
-    self_help:          buildGenericSection(session, 'self_help'),
-    daily_living:       buildGenericSection(session, 'daily_living'),
-    safety:             buildSafety(session),
-    communication:      buildCommunication(session),
-    self_stim:          buildGenericSection(session, 'self_stim'),
-    medical_necessity:  buildMedicalNecessity(session),
-    behavior_targets:   buildBehaviorTargets(session),
-    skill_acquisitions: buildSkillAcquisitions(session),
-    caregiver_training: buildCaregiverTraining(session),
-    crisis_plan:        buildCrisisPlan(session),
+  const builders = {
+    demographics:       () => buildDemographics(session),
+    presenting_concerns: () => buildGenericSection(session, 'presenting_concerns'),
+    self_help:          () => buildGenericSection(session, 'self_help'),
+    daily_living:       () => buildGenericSection(session, 'daily_living'),
+    safety:             () => buildSafety(session),
+    communication:      () => buildCommunication(session),
+    self_stim:          () => buildGenericSection(session, 'self_stim'),
+    medical_necessity:  () => buildMedicalNecessity(session),
+    behavior_targets:   () => buildBehaviorTargets(session),
+    skill_acquisitions: () => buildSkillAcquisitions(session),
+    caregiver_training: () => buildCaregiverTraining(session),
+    crisis_plan:        () => buildCrisisPlan(session),
   };
+
+  return Object.fromEntries(
+    Object.entries(builders).map(([key, build]) =>
+      [key, (key === 'demographics' || sectionHasData(session, key)) ? build() : ''],
+    ),
+  );
 }

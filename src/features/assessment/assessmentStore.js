@@ -57,6 +57,28 @@ function _persist(sessionId, patch) {
     });
 }
 
+/**
+ * Merge an updated section object into a session, recomputing derived counts.
+ * Mirrors what patchSection does internally — used by mutators that need to
+ * transform a section's array data (indicators, skill goals, behavior targets,
+ * caregiver training targets) before merging, rather than a flat sectionPatch.
+ * Returns { finalSession, persistPatch } for the caller to apply via setClients
+ * and _persist respectively.
+ */
+function _buildSectionUpdate(session, sectionKey, updatedSectionData) {
+  const updatedSections = { ...session.sections, [sectionKey]: updatedSectionData };
+  const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
+  const counts = _recomputeCounts(updatedSession);
+  const finalSession = { ...updatedSession, ...counts };
+  const persistPatch = {
+    sections: finalSession.sections,
+    status: finalSession.status,
+    sectionsWithData: finalSession.sectionsWithData,
+    sectionsApproved: finalSession.sectionsApproved,
+  };
+  return { finalSession, persistPatch };
+}
+
 /** Update a single client's assessment_session, merging patch at the top level. */
 export function patchSession(setClients, clientId, patch) {
   let sessionId;
@@ -144,6 +166,7 @@ export function updateSectionNotes(setClients, clientId, sectionKey, notes) {
 // ─── Indicators ─────────────────────────────────────────────────────────────
 
 export function updateIndicatorCount(setClients, clientId, sectionKey, indicatorId, delta) {
+  let sessionId, persistPatch;
   setClients(prev => {
     const client = prev.find(c => c.id === clientId);
     if (!client) return prev;
@@ -153,20 +176,20 @@ export function updateIndicatorCount(setClients, clientId, sectionKey, indicator
         ? { ...ind, count: Math.max(0, ind.count + delta) }
         : ind
     );
+    const updated = { ...section, indicators: updatedIndicators };
     return prev.map(c => {
       if (c.id !== clientId) return c;
-      const session = c.assessment_session;
-      const updatedSections = {
-        ...session.sections,
-        [sectionKey]: { ...section, indicators: updatedIndicators },
-      };
-      const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-      return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+      const { finalSession, persistPatch: pp } = _buildSectionUpdate(c.assessment_session, sectionKey, updated);
+      sessionId = finalSession.id;
+      persistPatch = pp;
+      return { ...c, assessment_session: finalSession };
     });
   });
+  _persist(sessionId, persistPatch);
 }
 
 export function addCustomIndicator(setClients, clientId, sectionKey, label) {
+  let sessionId, persistPatch;
   setClients(prev => {
     const client = prev.find(c => c.id === clientId);
     if (!client) return prev;
@@ -179,39 +202,39 @@ export function addCustomIndicator(setClients, clientId, sectionKey, label) {
       unit: 'count',
     };
     const updatedIndicators = [...section.indicators, newIndicator];
+    const updated = { ...section, indicators: updatedIndicators };
     return prev.map(c => {
       if (c.id !== clientId) return c;
-      const session = c.assessment_session;
-      const updatedSections = {
-        ...session.sections,
-        [sectionKey]: { ...section, indicators: updatedIndicators },
-      };
-      const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-      return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+      const { finalSession, persistPatch: pp } = _buildSectionUpdate(c.assessment_session, sectionKey, updated);
+      sessionId = finalSession.id;
+      persistPatch = pp;
+      return { ...c, assessment_session: finalSession };
     });
   });
+  _persist(sessionId, persistPatch);
 }
 
 export function removeCustomIndicator(setClients, clientId, sectionKey, indicatorId) {
+  let sessionId, persistPatch;
   setClients(prev => {
     const client = prev.find(c => c.id === clientId);
     if (!client) return prev;
     const section = client.assessment_session.sections[sectionKey];
     const updatedIndicators = section.indicators.filter(ind => ind.id !== indicatorId);
+    const updated = { ...section, indicators: updatedIndicators };
     return prev.map(c => {
       if (c.id !== clientId) return c;
-      const session = c.assessment_session;
-      const updatedSections = {
-        ...session.sections,
-        [sectionKey]: { ...section, indicators: updatedIndicators },
-      };
-      const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-      return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+      const { finalSession, persistPatch: pp } = _buildSectionUpdate(c.assessment_session, sectionKey, updated);
+      sessionId = finalSession.id;
+      persistPatch = pp;
+      return { ...c, assessment_session: finalSession };
     });
   });
+  _persist(sessionId, persistPatch);
 }
 
 export function resetIndicator(setClients, clientId, sectionKey, indicatorId) {
+  let sessionId, persistPatch;
   setClients(prev => {
     const client = prev.find(c => c.id === clientId);
     if (!client) return prev;
@@ -219,17 +242,16 @@ export function resetIndicator(setClients, clientId, sectionKey, indicatorId) {
     const updatedIndicators = section.indicators.map(ind =>
       ind.id === indicatorId ? { ...ind, count: 0 } : ind
     );
+    const updated = { ...section, indicators: updatedIndicators };
     return prev.map(c => {
       if (c.id !== clientId) return c;
-      const session = c.assessment_session;
-      const updatedSections = {
-        ...session.sections,
-        [sectionKey]: { ...section, indicators: updatedIndicators },
-      };
-      const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-      return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+      const { finalSession, persistPatch: pp } = _buildSectionUpdate(c.assessment_session, sectionKey, updated);
+      sessionId = finalSession.id;
+      persistPatch = pp;
+      return { ...c, assessment_session: finalSession };
     });
   });
+  _persist(sessionId, persistPatch);
 }
 
 // ─── Recording ──────────────────────────────────────────────────────────────
@@ -285,26 +307,26 @@ export function markSectionEdited(setClients, clientId, sectionKey) {
 }
 
 export function revertToAiOriginal(setClients, clientId, sectionKey) {
+  let sessionId, persistPatch;
   setClients(prev => {
     const client = prev.find(c => c.id === clientId);
     if (!client) return prev;
     const section = client.assessment_session.sections[sectionKey];
+    const updated = {
+      ...section,
+      draftContent: section.aiOriginalContent,
+      approvalState: 'pending',
+      // Preserve edit history — wasEdited/editedAt intentionally kept
+    };
     return prev.map(c => {
       if (c.id !== clientId) return c;
-      const session = c.assessment_session;
-      const updatedSections = {
-        ...session.sections,
-        [sectionKey]: {
-          ...section,
-          draftContent: section.aiOriginalContent,
-          approvalState: 'pending',
-          // Preserve edit history — wasEdited/editedAt intentionally kept
-        },
-      };
-      const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-      return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+      const { finalSession, persistPatch: pp } = _buildSectionUpdate(c.assessment_session, sectionKey, updated);
+      sessionId = finalSession.id;
+      persistPatch = pp;
+      return { ...c, assessment_session: finalSession };
     });
   });
+  _persist(sessionId, persistPatch);
 }
 
 // ─── completionState helpers ──────────────────────────────────────────────────
@@ -358,6 +380,7 @@ const SKILL_GOAL_DEFAULTS = {
 };
 
 export function addSkillGoal(setClients, clientId) {
+  let sessionId, persistPatch;
   setClients(prev => {
     const client = prev.find(c => c.id === clientId);
     if (!client) return prev;
@@ -371,15 +394,17 @@ export function addSkillGoal(setClients, clientId) {
     };
     return prev.map(c => {
       if (c.id !== clientId) return c;
-      const session = c.assessment_session;
-      const updatedSections = { ...session.sections, skill_acquisitions: updatedSection };
-      const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-      return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+      const { finalSession, persistPatch: pp } = _buildSectionUpdate(c.assessment_session, 'skill_acquisitions', updatedSection);
+      sessionId = finalSession.id;
+      persistPatch = pp;
+      return { ...c, assessment_session: finalSession };
     });
   });
+  _persist(sessionId, persistPatch);
 }
 
 export function updateSkillGoal(setClients, clientId, goalId, patch) {
+  let sessionId, persistPatch;
   setClients(prev => {
     const client = prev.find(c => c.id === clientId);
     if (!client) return prev;
@@ -387,39 +412,39 @@ export function updateSkillGoal(setClients, clientId, goalId, patch) {
     const updatedGoals = (section.skillGoals || []).map(g =>
       g.id === goalId ? { ...g, ...patch } : g
     );
+    const updatedSection = { ...section, skillGoals: updatedGoals, completionState: skillGoalCompletionState(updatedGoals) };
     return prev.map(c => {
       if (c.id !== clientId) return c;
-      const session = c.assessment_session;
-      const updatedSections = {
-        ...session.sections,
-        skill_acquisitions: { ...section, skillGoals: updatedGoals, completionState: skillGoalCompletionState(updatedGoals) },
-      };
-      const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-      return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+      const { finalSession, persistPatch: pp } = _buildSectionUpdate(c.assessment_session, 'skill_acquisitions', updatedSection);
+      sessionId = finalSession.id;
+      persistPatch = pp;
+      return { ...c, assessment_session: finalSession };
     });
   });
+  _persist(sessionId, persistPatch);
 }
 
 export function removeSkillGoal(setClients, clientId, goalId) {
+  let sessionId, persistPatch;
   setClients(prev => {
     const client = prev.find(c => c.id === clientId);
     if (!client) return prev;
     const section = client.assessment_session.sections['skill_acquisitions'];
     const updatedGoals = (section.skillGoals || []).filter(g => g.id !== goalId);
+    const updatedSection = { ...section, skillGoals: updatedGoals, completionState: skillGoalCompletionState(updatedGoals) };
     return prev.map(c => {
       if (c.id !== clientId) return c;
-      const session = c.assessment_session;
-      const updatedSections = {
-        ...session.sections,
-        skill_acquisitions: { ...section, skillGoals: updatedGoals },
-      };
-      const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-      return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+      const { finalSession, persistPatch: pp } = _buildSectionUpdate(c.assessment_session, 'skill_acquisitions', updatedSection);
+      sessionId = finalSession.id;
+      persistPatch = pp;
+      return { ...c, assessment_session: finalSession };
     });
   });
+  _persist(sessionId, persistPatch);
 }
 
 export function reorderSkillGoals(setClients, clientId, fromIndex, toIndex) {
+  let sessionId, persistPatch;
   setClients(prev => {
     const client = prev.find(c => c.id === clientId);
     if (!client) return prev;
@@ -427,17 +452,16 @@ export function reorderSkillGoals(setClients, clientId, fromIndex, toIndex) {
     const goals = [...(section.skillGoals || [])];
     const [moved] = goals.splice(fromIndex, 1);
     goals.splice(toIndex, 0, moved);
+    const updatedSection = { ...section, skillGoals: goals };
     return prev.map(c => {
       if (c.id !== clientId) return c;
-      const session = c.assessment_session;
-      const updatedSections = {
-        ...session.sections,
-        skill_acquisitions: { ...section, skillGoals: goals },
-      };
-      const updatedSession = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-      return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+      const { finalSession, persistPatch: pp } = _buildSectionUpdate(c.assessment_session, 'skill_acquisitions', updatedSection);
+      sessionId = finalSession.id;
+      persistPatch = pp;
+      return { ...c, assessment_session: finalSession };
     });
   });
+  _persist(sessionId, persistPatch);
 }
 
 // ─── Behavior Targets ────────────────────────────────────────────────────────
@@ -464,6 +488,7 @@ const BEHAVIOR_TARGET_DEFAULTS = {
 };
 
 export function addBehaviorTarget(setClients, clientId) {
+  let sessionId, persistPatch;
   setClients(prev => {
     const client = prev.find(c => c.id === clientId);
     if (!client) return prev;
@@ -473,44 +498,60 @@ export function addBehaviorTarget(setClients, clientId) {
     const updated = { ...section, behaviorTargets: updatedTargets, completionState: behaviorTargetCompletionState(updatedTargets) };
     return prev.map(c => {
       if (c.id !== clientId) return c;
-      const session = c.assessment_session;
-      const updatedSections = { ...session.sections, behavior_targets: updated };
-      const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-      return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+      const { finalSession, persistPatch: pp } = _buildSectionUpdate(c.assessment_session, 'behavior_targets', updated);
+      sessionId = finalSession.id;
+      persistPatch = pp;
+      return { ...c, assessment_session: finalSession };
     });
   });
+  _persist(sessionId, persistPatch);
 }
 
 export function updateBehaviorTarget(setClients, clientId, targetId, patch) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
     const session = c.assessment_session;
     const section = session.sections['behavior_targets'];
-    const updatedTargets = (section.behaviorTargets || []).map(t =>
-      t.id === targetId ? { ...t, ...patch } : t,
-    );
+    const updatedTargets = (section.behaviorTargets || []).map(t => {
+      if (t.id !== targetId) return t;
+      // Baseline is a snapshot: capture the first real frequency value entered
+      // and never overwrite it afterward, so it stays fixed as a comparison
+      // point for the reduction goal even if frequency is edited later.
+      const baselineFrequency = (t.baselineFrequency === '' || t.baselineFrequency == null) && patch.frequencyPerDay !== undefined && patch.frequencyPerDay !== ''
+        ? patch.frequencyPerDay
+        : t.baselineFrequency;
+      return { ...t, ...patch, baselineFrequency };
+    });
     const updated = { ...section, behaviorTargets: updatedTargets, completionState: behaviorTargetCompletionState(updatedTargets) };
-    const updatedSections = { ...session.sections, behavior_targets: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'behavior_targets', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
 export function removeBehaviorTarget(setClients, clientId, targetId) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
     const session = c.assessment_session;
     const section = session.sections['behavior_targets'];
-    const updated = { ...section, behaviorTargets: (section.behaviorTargets || []).filter(t => t.id !== targetId) };
-    const updatedSections = { ...session.sections, behavior_targets: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const updatedTargets = (section.behaviorTargets || []).filter(t => t.id !== targetId);
+    const updated = { ...section, behaviorTargets: updatedTargets, completionState: behaviorTargetCompletionState(updatedTargets) };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'behavior_targets', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
 // ─── Behavior Target STO Steps ───────────────────────────────────────────────
 
 export function addBehaviorStoStep(setClients, clientId, targetId) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
     const session = c.assessment_session;
@@ -521,13 +562,16 @@ export function addBehaviorStoStep(setClients, clientId, targetId) {
       return { ...t, stoSteps: [...(t.stoSteps ?? []), newStep] };
     });
     const updated = { ...section, behaviorTargets: updatedTargets, completionState: behaviorTargetCompletionState(updatedTargets) };
-    const updatedSections = { ...session.sections, behavior_targets: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'behavior_targets', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
 export function updateBehaviorStoStep(setClients, clientId, targetId, stepId, field, value) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
     const session = c.assessment_session;
@@ -538,13 +582,16 @@ export function updateBehaviorStoStep(setClients, clientId, targetId, stepId, fi
       return { ...t, stoSteps: updatedSteps };
     });
     const updated = { ...section, behaviorTargets: updatedTargets, completionState: behaviorTargetCompletionState(updatedTargets) };
-    const updatedSections = { ...session.sections, behavior_targets: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'behavior_targets', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
 export function removeBehaviorStoStep(setClients, clientId, targetId, stepId) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
     const session = c.assessment_session;
@@ -554,32 +601,38 @@ export function removeBehaviorStoStep(setClients, clientId, targetId, stepId) {
       return { ...t, stoSteps: (t.stoSteps ?? []).filter(s => s.id !== stepId) };
     });
     const updated = { ...section, behaviorTargets: updatedTargets, completionState: behaviorTargetCompletionState(updatedTargets) };
-    const updatedSections = { ...session.sections, behavior_targets: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'behavior_targets', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
 // ─── Skill Goal STO Steps ─────────────────────────────────────────────────────
 
 export function addSkillStoStep(setClients, clientId, goalId) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
     const session = c.assessment_session;
     const section = session.sections['skill_acquisitions'];
     const updatedGoals = (section.skillGoals || []).map(g => {
       if (g.id !== goalId) return g;
-      const newStep = { id: crypto.randomUUID(), targetPercent: '', skillDescription: '', durationWeeks: '' };
+      const newStep = { id: crypto.randomUUID(), targetPercent: '', targetSessions: '', skillDescription: '', durationWeeks: '' };
       return { ...g, stoSteps: [...(g.stoSteps ?? []), newStep] };
     });
     const updated = { ...section, skillGoals: updatedGoals, completionState: skillGoalCompletionState(updatedGoals) };
-    const updatedSections = { ...session.sections, skill_acquisitions: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'skill_acquisitions', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
 export function updateSkillStoStep(setClients, clientId, goalId, stepId, field, value) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
     const session = c.assessment_session;
@@ -590,13 +643,16 @@ export function updateSkillStoStep(setClients, clientId, goalId, stepId, field, 
       return { ...g, stoSteps: updatedSteps };
     });
     const updated = { ...section, skillGoals: updatedGoals, completionState: skillGoalCompletionState(updatedGoals) };
-    const updatedSections = { ...session.sections, skill_acquisitions: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'skill_acquisitions', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
 export function removeSkillStoStep(setClients, clientId, goalId, stepId) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
     const session = c.assessment_session;
@@ -606,10 +662,12 @@ export function removeSkillStoStep(setClients, clientId, goalId, stepId) {
       return { ...g, stoSteps: (g.stoSteps ?? []).filter(s => s.id !== stepId) };
     });
     const updated = { ...section, skillGoals: updatedGoals, completionState: skillGoalCompletionState(updatedGoals) };
-    const updatedSections = { ...session.sections, skill_acquisitions: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'skill_acquisitions', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
 // ─── Client Profile ──────────────────────────────────────────────────────────
@@ -740,9 +798,10 @@ const CAREGIVER_TRAINING_TARGET_DEFAULTS = {
   standardKey:           null,
 };
 
-export function addCaregiverTrainingTarget(sessionId, clients, setClients) {
+export function addCaregiverTrainingTarget(clientId, clients, setClients) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
-    if (c.id !== sessionId) return c;
+    if (c.id !== clientId) return c;
     const session  = c.assessment_session;
     const section  = session.sections['caregiver_training'];
     const newTarget = { id: crypto.randomUUID(), ...CAREGIVER_TRAINING_TARGET_DEFAULTS };
@@ -750,43 +809,52 @@ export function addCaregiverTrainingTarget(sessionId, clients, setClients) {
       ...section,
       caregiverTrainingTargets: [...(section.caregiverTrainingTargets ?? []), newTarget],
     };
-    const updatedSections = { ...session.sections, caregiver_training: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'caregiver_training', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
-export function updateCaregiverTrainingTarget(sessionId, targetId, field, value, clients, setClients) {
+export function updateCaregiverTrainingTarget(clientId, targetId, field, value, clients, setClients) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
-    if (c.id !== sessionId) return c;
+    if (c.id !== clientId) return c;
     const session  = c.assessment_session;
     const section  = session.sections['caregiver_training'];
     const updatedTargets = (section.caregiverTrainingTargets ?? []).map(t =>
       t.id === targetId ? { ...t, [field]: value } : t,
     );
     const updated = { ...section, caregiverTrainingTargets: updatedTargets };
-    const updatedSections = { ...session.sections, caregiver_training: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'caregiver_training', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
-export function removeCaregiverTrainingTarget(sessionId, targetId, clients, setClients) {
+export function removeCaregiverTrainingTarget(clientId, targetId, clients, setClients) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
-    if (c.id !== sessionId) return c;
+    if (c.id !== clientId) return c;
     const session  = c.assessment_session;
     const section  = session.sections['caregiver_training'];
     const updatedTargets = (section.caregiverTrainingTargets ?? []).filter(t => t.isStandard || t.id !== targetId);
     const updated = { ...section, caregiverTrainingTargets: updatedTargets };
-    const updatedSections = { ...session.sections, caregiver_training: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'caregiver_training', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
 // ─── Caregiver Training STO Steps ────────────────────────────────────────────
 
 export function addCaregiverStoStep(setClients, clientId, targetId) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
     const session = c.assessment_session;
@@ -797,13 +865,16 @@ export function addCaregiverStoStep(setClients, clientId, targetId) {
       return { ...t, stoSteps: [...(t.stoSteps ?? []), newStep] };
     });
     const updated = { ...section, caregiverTrainingTargets: updatedTargets };
-    const updatedSections = { ...session.sections, caregiver_training: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'caregiver_training', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
 export function updateCaregiverStoStep(setClients, clientId, targetId, stepId, field, value) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
     const session = c.assessment_session;
@@ -814,13 +885,16 @@ export function updateCaregiverStoStep(setClients, clientId, targetId, stepId, f
       return { ...t, stoSteps: updatedSteps };
     });
     const updated = { ...section, caregiverTrainingTargets: updatedTargets };
-    const updatedSections = { ...session.sections, caregiver_training: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'caregiver_training', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
 export function removeCaregiverStoStep(setClients, clientId, targetId, stepId) {
+  let sessionId, persistPatch;
   setClients(prev => prev.map(c => {
     if (c.id !== clientId) return c;
     const session = c.assessment_session;
@@ -830,10 +904,12 @@ export function removeCaregiverStoStep(setClients, clientId, targetId, stepId) {
       return { ...t, stoSteps: (t.stoSteps ?? []).filter(s => s.id !== stepId) };
     });
     const updated = { ...section, caregiverTrainingTargets: updatedTargets };
-    const updatedSections = { ...session.sections, caregiver_training: updated };
-    const updatedSession  = { ...session, sections: updatedSections, updatedAt: new Date().toISOString() };
-    return { ...c, assessment_session: { ...updatedSession, ..._recomputeCounts(updatedSession) } };
+    const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'caregiver_training', updated);
+    sessionId = finalSession.id;
+    persistPatch = pp;
+    return { ...c, assessment_session: finalSession };
   }));
+  _persist(sessionId, persistPatch);
 }
 
 // ─── Caregiver Training Session Logs ─────────────────────────────────────────

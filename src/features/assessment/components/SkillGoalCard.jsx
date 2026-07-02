@@ -577,7 +577,7 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
                 style={{ fontFamily: 'DM Sans, sans-serif' }}
               />
             )}
-            {aiError && <p className="text-xs text-red-500 mt-1">{aiError}</p>}
+            {aiError && !goal.operationalDefinition?.trim() && <p className="text-xs text-red-500 mt-1">{aiError}</p>}
           </div>
 
           {/* Teaching Strategies */}
@@ -671,15 +671,20 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
                       width="3.5rem"
                     />
                     <span>% accuracy across</span>
-                    <span className="font-semibold text-slate-700">{goal.masteryCriteriaSessions || '3'}</span>
-                    <span>sessions within</span>
+                    <InlineNum
+                      value={step.targetSessions}
+                      onChange={e => updateSkillStoStep(setClients, clientId, goal.id, step.id, 'targetSessions', e.target.value)}
+                      placeholder="3"
+                      width="2.5rem"
+                    />
+                    <span>consecutive sessions within</span>
                     <InlineNum
                       value={step.durationWeeks}
                       onChange={e => updateSkillStoStep(setClients, clientId, goal.id, step.id, 'durationWeeks', e.target.value)}
                       placeholder="4"
                       width="2.5rem"
                     />
-                    <span>consecutive weeks.</span>
+                    <span>weeks.</span>
                     <button
                       type="button"
                       onClick={() => removeSkillStoStep(setClients, clientId, goal.id, step.id)}

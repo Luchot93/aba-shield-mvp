@@ -210,7 +210,7 @@ function ChipGroup({ options, selected, onToggle }) {
 const SectionRule = ({ label }) => (
   <div className="flex items-center gap-2 my-1">
     <div className="h-px flex-1 bg-stone-100" />
-    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-300">{label}</span>
+    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">{label}</span>
     <div className="h-px flex-1 bg-stone-100" />
   </div>
 );
@@ -381,30 +381,23 @@ function TrainingTargetCard({ target, index, clientId, setClients }) {
         {/* ── Long-Term Objective (LTO) ── */}
         <div>
           <SectionRule label="Long-Term Objective" />
-          <div className="flex gap-3 items-start mt-3">
-            <div>
-              <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-2">Long-Term (LTO)</p>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number" min={0} max={100}
-                  value={target.ltoPercent ?? ''}
-                  onChange={e => upd('ltoPercent', e.target.value === '' ? null : Number(e.target.value))}
-                  className={`w-16 ${inputCls}`}
-                  style={{ fontFamily: 'DM Sans, sans-serif' }}
-                />
-                <span className="text-[12px] text-slate-400">%</span>
-              </div>
-            </div>
-            <div>
-              <SL>Sessions to mastery</SL>
-              <input
-                type="number" min={1}
-                value={target.ltoSessions ?? ''}
-                onChange={e => upd('ltoSessions', e.target.value === '' ? null : Number(e.target.value))}
-                className={`w-16 ${inputCls}`}
-                style={{ fontFamily: 'DM Sans, sans-serif' }}
-              />
-            </div>
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-slate-600 rounded-lg px-3 py-2 mt-3"
+            style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
+            <span>Caregiver will demonstrate</span>
+            <InlineNum
+              value={target.ltoPercent}
+              onChange={e => upd('ltoPercent', e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="90"
+              width="3rem"
+            />
+            <span>% accuracy across</span>
+            <InlineNum
+              value={target.ltoSessions}
+              onChange={e => upd('ltoSessions', e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="4"
+              width="2.5rem"
+            />
+            <span>consecutive sessions.</span>
           </div>
         </div>
 

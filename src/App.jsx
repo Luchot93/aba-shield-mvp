@@ -94,8 +94,16 @@ export default function App() {
     try {
       let dbSession = await getAssessmentSession(cId);
       if (!dbSession) {
+        const initialSections = makeInitialSections();
         dbSession = await createAssessmentSession(cId, currentUser.id, {
-          sections: makeInitialSections(),
+          sections: {
+            ...initialSections,
+            // Demographics is pre-filled from the client record at creation time —
+            // BCBA verifies/edits rather than starting from blank, so it always
+            // counts toward capture progress (matches Ready to Generate screen,
+            // which treats Demographics as always ready).
+            demographics: { ...initialSections.demographics, completionState: 'complete' },
+          },
           status: 'not_started',
           sectionsWithData: 0,
           sectionsApproved: 0,

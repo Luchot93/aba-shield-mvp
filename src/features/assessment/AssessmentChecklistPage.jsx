@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { SECTION_ORDER, SECTION_TITLES } from './sectionConfig.js';
 import { setDraftContent } from './assessmentStore.js';
 import { generateDraft } from './lib/generateDraft.js';
+import { sectionHasData } from './lib/buildSectionPrompts.js';
 
 // ─── Demo drafts (Marcus – fictional ABA assessment) ──────────────────────────
 
@@ -1222,7 +1223,7 @@ export default function AssessmentChecklistPage({
       sec?.trainingBarriers?.trim() ||
       sec?.caregiverStrengths?.trim()
     );
-    const hasData = hasNotes || hasTranscript || hasIndicators || hasSkillGoals || hasBehaviorTargets || hasCaregiverData;
+    const hasData = sectionHasData(session, key);
     const isEmpty = sec?.completionState === 'empty';
 
     return {

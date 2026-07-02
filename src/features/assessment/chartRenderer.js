@@ -43,6 +43,8 @@ function fillBackground(ctx, width, height) {
  * @returns {string} base64 PNG (no data URI prefix)
  */
 export function renderMaladaptiveBehaviorChart(behaviorName, baselineCount, targetCount, frequencyUnit = 'day') {
+  if (!behaviorName?.trim() || !Number.isFinite(baselineCount)) return null;
+
   const canvas = createOffscreenCanvas(520, 300);
   const ctx    = canvas.getContext('2d');
   fillBackground(ctx, 520, 300);
@@ -121,6 +123,8 @@ export function renderMaladaptiveBehaviorChart(behaviorName, baselineCount, targ
  * @returns {string} base64 PNG
  */
 export function renderSTOTrajectoryChart(behaviorName, baselineCount, masteryDates, targetCount = 0, stoSteps = null) {
+  if (!behaviorName?.trim() || !Number.isFinite(baselineCount)) return null;
+
   let stoTargets, labels;
 
   if (stoSteps && stoSteps.length > 0) {
@@ -214,6 +218,8 @@ export function renderReplacementBehaviorChart(skillTargets) {
         ? s.targetSkill.slice(0, 30) + '…'
         : s.targetSkill,
     }));
+
+  if (targets.length === 0) return null;
 
   const canvas = createOffscreenCanvas(700, 350);
   const ctx    = canvas.getContext('2d');
@@ -358,6 +364,8 @@ export function renderSkillSTOChart(skillName, baselinePercent, stoSteps, master
  * @returns {string} base64 PNG
  */
 export function renderCaregiverTrainingChart(interventionName, baselinePercent, stoTargets) {
+  if (!interventionName?.trim() || baselinePercent === '' || baselinePercent == null || !(stoTargets?.length > 0)) return null;
+
   const labels = ['Baseline', 'STO 1', 'STO 2', 'STO 3', 'STO 4', 'LTO'];
   const data   = [parseFloat(baselinePercent) || 0, ...stoTargets];
 
@@ -424,6 +432,8 @@ export function renderCaregiverTrainingChart(interventionName, baselinePercent, 
  * @returns {string} base64 PNG
  */
 export function renderCaregiverSTOChart(goalName, baselinePercent, stoSteps, ltoPercent = 90) {
+  if (!goalName?.trim() || baselinePercent === '' || baselinePercent == null) return null;
+
   let data, labels;
 
   if (stoSteps && stoSteps.length > 0) {

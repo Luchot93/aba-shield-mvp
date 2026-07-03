@@ -2,11 +2,12 @@ import React, { useState, useCallback } from 'react';
 import AssessmentInterviewPage   from './AssessmentInterviewPage.jsx';
 import AssessmentChecklistPage   from './AssessmentChecklistPage.jsx';
 import AssessmentReviewPage      from './AssessmentReviewPage.jsx';
-import { completeSession, canExport } from './assessmentStore.js';
+import { completeSession, canExport, addSessionDocument } from './assessmentStore.js';
 import { useSaveStatus } from '../../hooks/useSaveStatus.js';
 import { FLAGS } from '../../constants/featureFlags.js';
 import { generateAssessmentDoc } from './lib/generateAssessmentDoc.js';
 import { generateTemplateDoc }   from './lib/docxExport.js';
+import { supabase } from '../../lib/supabase.js';
 
 // ─── Status tag config ────────────────────────────────────────────────────────
 
@@ -27,6 +28,8 @@ export default function AssessmentFeature({
   const [page,          setPage]          = useState('interview');
   const [targetSection, setTargetSection] = useState(null);
   const [isExporting,   setIsExporting]   = useState(false);
+  const [exportError,   setExportError]   = useState(null);
+  const [cloudBackupWarning, setCloudBackupWarning] = useState(false);
   const { status: saveStatus } = useSaveStatus();
 
   // Navigate between pages, optionally jumping to a specific section
@@ -91,6 +94,8 @@ export default function AssessmentFeature({
   const handleExport = async () => {
     if (!session || isExporting) return;
     setIsExporting(true);
+    setExportError(null);
+    setCloudBackupWarning(false);
 
     // Generate and download the Word document FIRST — only mark complete if it succeeds
     try {
@@ -160,9 +165,25 @@ export default function AssessmentFeature({
       setClients(prev => prev.map(c =>
         c.id === clientId ? { ...c, documents: [...(c.documents ?? []), doc] } : c
       ));
+
+      // Background cloud backup — the browser download above has already
+      // succeeded, so a Storage failure here must never block or undo it.
+      const storagePath = `${currentUser.id}/${clientId}/${latestSession.id}/initial_assessment_${Date.now()}.docx`;
+      supabase.storage.from('assessment-documents').upload(storagePath, blob)
+        .then(({ error: uploadError }) => {
+          if (uploadError) throw uploadError;
+          addSessionDocument(setClients, clientId, latestSession.id, [
+            ...(latestSession.documents ?? []),
+            { path: storagePath, uploadedAt: new Date().toISOString(), type: 'initial_assessment' },
+          ]);
+        })
+        .catch(err => {
+          console.warn('[export] Cloud backup failed:', err);
+          setCloudBackupWarning(true);
+        });
     } catch (err) {
       console.error('DOCX generation failed:', err);
-      addNotif?.({ type: 'error', message: 'Document generation failed. Please try again.' });
+      setExportError(err?.message ?? 'Unknown error');
       setIsExporting(false);
       return;
     }
@@ -343,6 +364,33 @@ export default function AssessmentFeature({
         <ActionButton />
       </div>
 
+      {/* ── Export error banner ───────────────────────────────────────── */}
+      {exportError && (
+        <div className="flex-shrink-0 flex items-center gap-2 px-4 py-2 text-[12px] font-semibold text-white"
+          style={{ background: '#DC2626' }}>
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+          </svg>
+          <span className="flex-1">Export failed. {exportError}. Check console for details.</span>
+          <button onClick={() => setExportError(null)} className="flex-shrink-0 hover:opacity-75 transition-opacity">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* ── Cloud backup warning (subtle, non-blocking) ─────────────────── */}
+      {cloudBackupWarning && (
+        <div className="flex-shrink-0 flex items-center gap-2 px-4 py-1.5 text-[11px] font-semibold text-amber-700 bg-amber-50 border-b border-amber-200">
+          <span className="flex-1">Document downloaded. Cloud backup failed — save your local copy.</span>
+          <button onClick={() => setCloudBackupWarning(false)} className="flex-shrink-0 hover:opacity-75 transition-opacity">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* ── Page content ───────────────────────────────────────────────── */}
       <div className="flex-1 overflow-hidden">

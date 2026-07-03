@@ -756,6 +756,32 @@ export function completeSession(setClients, clientId, result) {
   }));
 }
 
+// ─── Cloud document backup ───────────────────────────────────────────────────
+
+/**
+ * Append a Storage-backed document record to the session and persist it.
+ *
+ * Called from a Storage-upload `.then()` callback (outside React's
+ * synchronous event-batching), so `sessionId` and the resulting `documents`
+ * array must be supplied by the caller rather than captured from inside the
+ * `setClients` updater below — that updater isn't guaranteed to run before
+ * this function returns when invoked from a plain Promise callback.
+ */
+export function addSessionDocument(setClients, clientId, sessionId, updatedDocuments) {
+  setClients(prev => prev.map(c => (
+    c.id !== clientId ? c : {
+      ...c,
+      assessment_session: {
+        ...c.assessment_session,
+        documents: updatedDocuments,
+        updatedAt: new Date().toISOString(),
+      },
+    }
+  )));
+
+  _persist(sessionId, { documents: updatedDocuments });
+}
+
 // ─── Export readiness ────────────────────────────────────────────────────────
 
 // Sections excluded from the export gate — demographics has no standalone approve path

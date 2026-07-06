@@ -105,10 +105,7 @@ export default function SafetyForm({ clientId, session, setClients }) {
   const sec = session?.sections?.['safety'] ?? {};
 
   const patch = (fields) =>
-    patchSection(setClients, clientId, 'safety', {
-      ...fields,
-      completionState: 'partial',
-    });
+    patchSection(setClients, clientId, 'safety', fields);
 
   return (
     <div className="space-y-6 pt-1 pb-2" style={{ fontFamily: 'DM Sans, sans-serif' }}>

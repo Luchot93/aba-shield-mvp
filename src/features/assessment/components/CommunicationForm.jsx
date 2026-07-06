@@ -90,10 +90,7 @@ export default function CommunicationForm({ clientId, session, setClients }) {
   const sec = session?.sections?.['communication'] ?? {};
 
   const set = (field) => (val) =>
-    patchSection(setClients, clientId, 'communication', {
-      [field]: val,
-      completionState: 'partial',
-    });
+    patchSection(setClients, clientId, 'communication', { [field]: val });
 
   const modes      = sec.primaryCommunicationModes ?? [];
   const hasVerbal  = modes.includes('Verbal');

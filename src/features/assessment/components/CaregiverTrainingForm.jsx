@@ -447,10 +447,7 @@ export default function CaregiverTrainingForm({ clientId, session, setClients, i
   if (isReassessment) return null;
 
   const patch = (fields) =>
-    patchSection(setClients, clientId, 'caregiver_training', {
-      ...fields,
-      completionState: 'partial',
-    });
+    patchSection(setClients, clientId, 'caregiver_training', fields);
 
   const handleFormatToggle = (opt) => {
     const next = format.includes(opt)

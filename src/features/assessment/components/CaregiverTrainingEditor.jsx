@@ -464,10 +464,7 @@ export default function CaregiverTrainingEditor({ session, clientId, setClients,
   const targets   = sec.caregiverTrainingTargets ?? [];
 
   const patch = (fields) =>
-    patchSection(setClients, clientId, 'caregiver_training', {
-      ...fields,
-      completionState: 'partial',
-    });
+    patchSection(setClients, clientId, 'caregiver_training', fields);
 
   const handleFormatToggle = (opt) => {
     const next = format.includes(opt)

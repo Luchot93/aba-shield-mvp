@@ -115,12 +115,13 @@ export function patchSection(setClients, clientId, sectionKey, sectionPatch) {
     if (c.id !== clientId) return c;
 
     const session = c.assessment_session;
+    const mergedSection = { ...session.sections[sectionKey], ...sectionPatch };
+    const computedState = computeSectionCompletionState(sectionKey, mergedSection);
     const updatedSections = {
       ...session.sections,
-      [sectionKey]: {
-        ...session.sections[sectionKey],
-        ...sectionPatch,
-      },
+      [sectionKey]: computedState !== undefined
+        ? { ...mergedSection, completionState: computedState }
+        : mergedSection,
     };
 
     const updatedSession = {
@@ -157,10 +158,7 @@ export function patchSection(setClients, clientId, sectionKey, sectionPatch) {
 // ─── Notes ──────────────────────────────────────────────────────────────────
 
 export function updateSectionNotes(setClients, clientId, sectionKey, notes) {
-  patchSection(setClients, clientId, sectionKey, {
-    notes,
-    completionState: notes.trim() ? 'partial' : 'empty',
-  });
+  patchSection(setClients, clientId, sectionKey, { notes });
 }
 
 // ─── Indicators ─────────────────────────────────────────────────────────────
@@ -346,6 +344,144 @@ function behaviorTargetCompletionState(targets) {
     t.hypothesizedFunction?.trim() && t.baselineFrequency
   );
   return allComplete ? 'complete' : 'partial';
+}
+
+function caregiverTargetsComplete(targets) {
+  if (!targets || targets.length === 0) return false;
+  return targets.every(t =>
+    t.goalName?.trim() && t.operationalDefinition?.trim() &&
+    hasValue(t.baselinePercent) && hasValue(t.ltoPercent) && hasValue(t.ltoSessions)
+  );
+}
+
+/** True for a non-empty string, non-empty array, or any other non-null/undefined value. */
+function hasValue(v) {
+  if (v === null || v === undefined) return false;
+  if (typeof v === 'string') return v.trim().length > 0;
+  if (Array.isArray(v)) return v.length > 0;
+  return true;
+}
+
+/**
+ * Derive empty/partial/complete from a flags object. A flag of null/undefined
+ * means "not applicable" (e.g. a detail field whose gating toggle is off) and
+ * is excluded from the count, so turning a gate off never blocks completion.
+ */
+function deriveCompletionState(flags) {
+  const applicable = Object.values(flags).filter(v => v !== null && v !== undefined);
+  if (applicable.length === 0) return 'empty';
+  const filled = applicable.filter(Boolean).length;
+  if (filled === 0) return 'empty';
+  if (filled === applicable.length) return 'complete';
+  return 'partial';
+}
+
+function communicationCompletionFlags(s) {
+  const modes    = s.primaryCommunicationModes ?? [];
+  const hasVerbal = modes.includes('Verbal');
+  const hasAAC    = modes.includes('AAC Device');
+  const hasPECS   = modes.includes('PECS');
+  return {
+    primaryCommunicationModes: hasValue(modes),
+    mluWords:                  hasVerbal ? hasValue(s.mluWords) : null,
+    intelligibilityFamiliar:   hasVerbal ? hasValue(s.intelligibilityFamiliar) : null,
+    intelligibilityUnfamiliar: hasVerbal ? hasValue(s.intelligibilityUnfamiliar) : null,
+    aacSystem:                 hasAAC ? hasValue(s.aacSystem) : null,
+    aacPhase:                  hasAAC ? hasValue(s.aacPhase) : null,
+    pecsPhase:                 hasPECS ? hasValue(s.pecsPhase) : null,
+    functionalRepertoire:      hasValue(s.functionalRepertoire),
+    receptiveSingleStep:       hasValue(s.receptiveSingleStep),
+    receptiveTwoStep:          hasValue(s.receptiveTwoStep),
+    eyeContact:                hasValue(s.eyeContact),
+    initiatesCommunication:    hasValue(s.initiatesCommunication),
+    turnTaking:                hasValue(s.turnTaking),
+    slpFrequencyPerWeek:       s.slpServices ? hasValue(s.slpFrequencyPerWeek) : null,
+    slpFocus:                  s.slpServices ? hasValue(s.slpFocus) : null,
+    notes:                     hasValue(s.notes),
+  };
+}
+
+// envSafety and medical contraindication checklists are informational — an
+// empty checklist is a valid clinical answer ("none apply"), not missing data.
+function safetyCompletionFlags(s) {
+  return {
+    riskLevel:                hasValue(s.riskLevel),
+    sibTopography:            s.sibPresent ? hasValue(s.sibTopography) : null,
+    sibFrequency:             s.sibPresent ? hasValue(s.sibFrequency) : null,
+    sibInjuryNotes:           (s.sibPresent && s.sibInjuryHistory) ? hasValue(s.sibInjuryNotes) : null,
+    aggressionTopography:     s.aggressionPresent ? hasValue(s.aggressionTopography) : null,
+    aggressionTargets:        s.aggressionPresent ? hasValue(s.aggressionTargets) : null,
+    aggressionFrequency:      s.aggressionPresent ? hasValue(s.aggressionFrequency) : null,
+    aggressionInjuryNotes:    (s.aggressionPresent && s.aggressionInjuryHistory) ? hasValue(s.aggressionInjuryNotes) : null,
+    elopementNotes:           s.elopementPresent ? hasValue(s.elopementNotes) : null,
+    propertyDestructionNotes: s.propertyDestructionPresent ? hasValue(s.propertyDestructionNotes) : null,
+    priorIncidentNotes:       (s.lawEnforcementInvolvement || s.hospitalizationHistory) ? hasValue(s.priorIncidentNotes) : null,
+    notes:                    hasValue(s.notes),
+  };
+}
+
+function medicalNecessityCompletionFlags(s) {
+  return {
+    priorABAHistory:         s.hasPriorABA ? hasValue(s.priorABAHistory) : null,
+    recommendedHoursPerWeek: hasValue(s.recommendedHoursPerWeek),
+    recommendedSetting:      hasValue(s.recommendedSetting),
+    notes:                   hasValue(s.notes),
+  };
+}
+
+function caregiverTrainingCompletionFlags(s) {
+  return {
+    trainingFormat:           hasValue(s.trainingFormat),
+    trainingFrequency:        hasValue(s.trainingFrequency),
+    trainingBarriers:         hasValue(s.trainingBarriers),
+    caregiverStrengths:       hasValue(s.caregiverStrengths),
+    caregiverTrainingTargets: caregiverTargetsComplete(s.caregiverTrainingTargets),
+    notes:                    hasValue(s.notes),
+  };
+}
+
+function crisisPlanCompletionFlags(s) {
+  return {
+    emergencyContacts:   (s.emergencyContacts ?? []).some(c => c.name?.trim()),
+    warningSigns:        hasValue(s.warningSignsSelected) || hasValue(s.warningSignsCustom),
+    deEscalationWorks:   hasValue(s.deEscalationWorks),
+    deEscalationWorsens: hasValue(s.deEscalationWorsens),
+    deEscalationNotes:   hasValue(s.deEscalationNotes),
+    bcbaCallMinutes:     hasValue(s.bcbaCallMinutes),
+    bcbaCallIncidents:   hasValue(s.bcbaCallIncidents),
+    bcbaCallWindow:      hasValue(s.bcbaCallWindow),
+    call911Notes:        s.call911Threshold ? hasValue(s.call911Notes) : null,
+    sessionSuspendNotes: s.sessionSuspendThreshold ? hasValue(s.sessionSuspendNotes) : null,
+    baselineReturnMin:   hasValue(s.baselineReturnMin),
+    baselineReturnMax:   hasValue(s.baselineReturnMax),
+    remorseNotes:        s.remorsePresentPostCrisis ? hasValue(s.remorseNotes) : null,
+    notes:               hasValue(s.notes),
+  };
+}
+
+const NOTES_ONLY_SECTIONS = new Set(['presenting_concerns', 'self_help', 'daily_living', 'self_stim']);
+
+/**
+ * Central dispatcher for section completionState, called from patchSection
+ * and the caregiver-training-target CRUD helpers below. Returns undefined for
+ * sections whose completionState is owned elsewhere (demographics is set at
+ * intake auto-population; skill_acquisitions/behavior_targets own their state
+ * via skillGoalCompletionState/behaviorTargetCompletionState) — callers must
+ * leave those sections' completionState untouched.
+ */
+function computeSectionCompletionState(sectionKey, section) {
+  const s = section ?? {};
+  if (NOTES_ONLY_SECTIONS.has(sectionKey)) {
+    return deriveCompletionState({ notes: hasValue(s.notes) });
+  }
+  switch (sectionKey) {
+    case 'communication':      return deriveCompletionState(communicationCompletionFlags(s));
+    case 'safety':             return deriveCompletionState(safetyCompletionFlags(s));
+    case 'medical_necessity':  return deriveCompletionState(medicalNecessityCompletionFlags(s));
+    case 'caregiver_training': return deriveCompletionState(caregiverTrainingCompletionFlags(s));
+    case 'crisis_plan':        return deriveCompletionState(crisisPlanCompletionFlags(s));
+    default:                   return undefined;
+  }
 }
 
 // ─── Skill Goals ─────────────────────────────────────────────────────────────
@@ -831,9 +967,11 @@ export function addCaregiverTrainingTarget(clientId, clients, setClients) {
     const session  = c.assessment_session;
     const section  = session.sections['caregiver_training'];
     const newTarget = { id: crypto.randomUUID(), ...CAREGIVER_TRAINING_TARGET_DEFAULTS };
+    const updatedTargets = [...(section.caregiverTrainingTargets ?? []), newTarget];
     const updated  = {
       ...section,
-      caregiverTrainingTargets: [...(section.caregiverTrainingTargets ?? []), newTarget],
+      caregiverTrainingTargets: updatedTargets,
+      completionState: computeSectionCompletionState('caregiver_training', { ...section, caregiverTrainingTargets: updatedTargets }),
     };
     const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'caregiver_training', updated);
     sessionId = finalSession.id;
@@ -852,7 +990,11 @@ export function updateCaregiverTrainingTarget(clientId, targetId, field, value, 
     const updatedTargets = (section.caregiverTrainingTargets ?? []).map(t =>
       t.id === targetId ? { ...t, [field]: value } : t,
     );
-    const updated = { ...section, caregiverTrainingTargets: updatedTargets };
+    const updated = {
+      ...section,
+      caregiverTrainingTargets: updatedTargets,
+      completionState: computeSectionCompletionState('caregiver_training', { ...section, caregiverTrainingTargets: updatedTargets }),
+    };
     const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'caregiver_training', updated);
     sessionId = finalSession.id;
     persistPatch = pp;
@@ -868,7 +1010,11 @@ export function removeCaregiverTrainingTarget(clientId, targetId, clients, setCl
     const session  = c.assessment_session;
     const section  = session.sections['caregiver_training'];
     const updatedTargets = (section.caregiverTrainingTargets ?? []).filter(t => t.isStandard || t.id !== targetId);
-    const updated = { ...section, caregiverTrainingTargets: updatedTargets };
+    const updated = {
+      ...section,
+      caregiverTrainingTargets: updatedTargets,
+      completionState: computeSectionCompletionState('caregiver_training', { ...section, caregiverTrainingTargets: updatedTargets }),
+    };
     const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'caregiver_training', updated);
     sessionId = finalSession.id;
     persistPatch = pp;
@@ -890,7 +1036,11 @@ export function addCaregiverStoStep(setClients, clientId, targetId) {
       const newStep = { id: crypto.randomUUID(), targetPercent: '', durationWeeks: '', note: '' };
       return { ...t, stoSteps: [...(t.stoSteps ?? []), newStep] };
     });
-    const updated = { ...section, caregiverTrainingTargets: updatedTargets };
+    const updated = {
+      ...section,
+      caregiverTrainingTargets: updatedTargets,
+      completionState: computeSectionCompletionState('caregiver_training', { ...section, caregiverTrainingTargets: updatedTargets }),
+    };
     const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'caregiver_training', updated);
     sessionId = finalSession.id;
     persistPatch = pp;
@@ -910,7 +1060,11 @@ export function updateCaregiverStoStep(setClients, clientId, targetId, stepId, f
       const updatedSteps = (t.stoSteps ?? []).map(s => s.id === stepId ? { ...s, [field]: value } : s);
       return { ...t, stoSteps: updatedSteps };
     });
-    const updated = { ...section, caregiverTrainingTargets: updatedTargets };
+    const updated = {
+      ...section,
+      caregiverTrainingTargets: updatedTargets,
+      completionState: computeSectionCompletionState('caregiver_training', { ...section, caregiverTrainingTargets: updatedTargets }),
+    };
     const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'caregiver_training', updated);
     sessionId = finalSession.id;
     persistPatch = pp;
@@ -929,7 +1083,11 @@ export function removeCaregiverStoStep(setClients, clientId, targetId, stepId) {
       if (t.id !== targetId) return t;
       return { ...t, stoSteps: (t.stoSteps ?? []).filter(s => s.id !== stepId) };
     });
-    const updated = { ...section, caregiverTrainingTargets: updatedTargets };
+    const updated = {
+      ...section,
+      caregiverTrainingTargets: updatedTargets,
+      completionState: computeSectionCompletionState('caregiver_training', { ...section, caregiverTrainingTargets: updatedTargets }),
+    };
     const { finalSession, persistPatch: pp } = _buildSectionUpdate(session, 'caregiver_training', updated);
     sessionId = finalSession.id;
     persistPatch = pp;

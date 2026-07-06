@@ -69,10 +69,7 @@ export default function MedicalNecessityForm({ clientId, session, setClients }) 
   const sec = session?.sections?.['medical_necessity'] ?? {};
 
   const patch = (fields) =>
-    patchSection(setClients, clientId, 'medical_necessity', {
-      ...fields,
-      completionState: 'partial',
-    });
+    patchSection(setClients, clientId, 'medical_necessity', fields);
 
   // ── Co-occurring diagnoses ──
   const diagnoses = sec.coOccurringDiagnoses ?? [];

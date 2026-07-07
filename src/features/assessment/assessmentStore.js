@@ -7,6 +7,8 @@
  */
 
 import { updateAssessmentSession } from '../../lib/db.js';
+import { sectionPromptHashes } from './lib/draftHash.js';
+import { SECTION_TITLES } from './sectionConfig.js';
 
 // ─── Internal helpers ───────────────────────────────────────────────────────
 
@@ -284,11 +286,15 @@ export function grantConsent(setClients, clientId) {
 
 // ─── Draft / Approval ────────────────────────────────────────────────────────
 
-export function setDraftContent(setClients, clientId, sectionKey, content, draftState, aiOriginal) {
+export function setDraftContent(setClients, clientId, sectionKey, content, draftState, aiOriginal, promptHash) {
   patchSection(setClients, clientId, sectionKey, {
     draftContent: content,
     draftState,
     aiOriginalContent: aiOriginal ?? content,
+    // Fingerprint of the inputs this draft was generated from, so we can later
+    // detect when the form data changed and only that section needs a re-run.
+    // undefined → don't touch the stored hash (callers that don't generate).
+    ...(promptHash !== undefined ? { generatedPromptHash: promptHash } : {}),
   });
 }
 
@@ -329,10 +335,37 @@ export function revertToAiOriginal(setClients, clientId, sectionKey) {
 
 // ─── completionState helpers ──────────────────────────────────────────────────
 
+// ─── STO presence helpers ─────────────────────────────────────────────────────
+// An entry "has an STO" only when the BCBA has entered real data — the app never
+// fabricates one (CLAUDE.md rule 6, HIPAA-facing accuracy). The recognized STO
+// field set differs per goal section.
+
+/** Skill goal: multi-step OR any structured/free-text STO field. */
+export function skillGoalHasSTO(g) {
+  if (!g) return false;
+  return (g.stoSteps ?? []).length > 0 ||
+    hasValue(g.stoPercent) || hasValue(g.stoSkillDescription) ||
+    hasValue(g.stoWeeks) || hasValue(g.sto);
+}
+
+/** Behavior target: STO is expressed only via stoSteps[{targetFrequency,…}]. */
+export function behaviorTargetHasSTO(t) {
+  if (!t) return false;
+  return (t.stoSteps ?? []).some(s => s.targetFrequency !== '' && s.targetFrequency != null);
+}
+
+/** Caregiver target: multi-step OR legacy stoPercent/stoWeeks/free-text. */
+export function caregiverTargetHasSTO(t) {
+  if (!t) return false;
+  return (t.stoSteps ?? []).some(s => s.targetPercent !== '' && s.targetPercent != null) ||
+    hasValue(t.stoPercent) || hasValue(t.stoWeeks) || hasValue(t.sto);
+}
+
 function skillGoalCompletionState(goals) {
   if (!goals || goals.length === 0) return 'empty';
   const allComplete = goals.every(g =>
-    g.targetSkill?.trim() && g.operationalDefinition?.trim() && g.masteryCriteriaPercent
+    g.targetSkill?.trim() && g.operationalDefinition?.trim() && g.masteryCriteriaPercent &&
+    skillGoalHasSTO(g)
   );
   return allComplete ? 'complete' : 'partial';
 }
@@ -341,7 +374,8 @@ function behaviorTargetCompletionState(targets) {
   if (!targets || targets.length === 0) return 'empty';
   const allComplete = targets.every(t =>
     t.behaviorName?.trim() && t.operationalDefinition?.trim() &&
-    t.hypothesizedFunction?.trim() && t.baselineFrequency
+    t.hypothesizedFunction?.trim() && t.baselineFrequency &&
+    behaviorTargetHasSTO(t)
   );
   return allComplete ? 'complete' : 'partial';
 }
@@ -350,7 +384,8 @@ function caregiverTargetsComplete(targets) {
   if (!targets || targets.length === 0) return false;
   return targets.every(t =>
     t.goalName?.trim() && t.operationalDefinition?.trim() &&
-    hasValue(t.baselinePercent) && hasValue(t.ltoPercent) && hasValue(t.ltoSessions)
+    hasValue(t.baselinePercent) && hasValue(t.ltoPercent) && hasValue(t.ltoSessions) &&
+    caregiverTargetHasSTO(t)
   );
 }
 
@@ -923,9 +958,115 @@ export function addSessionDocument(setClients, clientId, sessionId, updatedDocum
 // Sections excluded from the export gate — demographics has no standalone approve path
 const EXPORT_EXCLUDED = new Set(['demographics']);
 
+/**
+ * Every goal-section entry that exists but lacks a BCBA-defined STO. Iterates
+ * ONLY existing entries: a section with an empty entries array contributes
+ * nothing, so a client with (e.g.) only behaviors + caregiver is never blocked
+ * for skills. Returns [{ sectionLabel, entryName }] for the UI to name offenders.
+ */
+export function sectionsMissingSTO(session) {
+  const sections = session?.sections;
+  if (!sections) return [];
+  const out = [];
+
+  (sections.skill_acquisitions?.skillGoals ?? []).forEach(g => {
+    if (!skillGoalHasSTO(g)) {
+      out.push({ sectionLabel: 'Skill Acquisitions', entryName: g.targetSkill?.trim() || 'Unnamed goal' });
+    }
+  });
+
+  (sections.behavior_targets?.behaviorTargets ?? []).forEach(t => {
+    if (!behaviorTargetHasSTO(t)) {
+      out.push({ sectionLabel: 'Maladaptive Behaviors', entryName: t.behaviorName?.trim() || 'Unnamed behavior' });
+    }
+  });
+
+  (sections.caregiver_training?.caregiverTrainingTargets ?? []).forEach(t => {
+    if (!caregiverTargetHasSTO(t)) {
+      out.push({ sectionLabel: 'Caregiver Training', entryName: t.goalName?.trim() || 'Unnamed goal' });
+    }
+  });
+
+  return out;
+}
+
+/**
+ * Sections whose form inputs changed since their AI draft was generated.
+ *
+ * Compares the current per-section prompt fingerprint against the
+ * `generatedPromptHash` stored when the draft was last (re)generated. Only a
+ * section that (a) already has draft content and (b) has a stored fingerprint
+ * that no longer matches qualifies — so legacy drafts (no stored hash) and
+ * never-generated sections never nag. Returns [{ key, title }] for the UI.
+ */
+export function sectionsWithChanges(session) {
+  if (!session?.sections) return [];
+  const currentHashes = sectionPromptHashes(session);
+  const out = [];
+  for (const [key, section] of Object.entries(session.sections)) {
+    if (EXPORT_EXCLUDED.has(key)) continue;
+    const hasDraft = !!(section?.draftContent?.trim());
+    const storedHash = section?.generatedPromptHash;
+    if (!hasDraft || storedHash == null) continue;
+    if (currentHashes[key] !== storedHash) {
+      out.push({ key, title: SECTION_TITLES[key] ?? key });
+    }
+  }
+  return out;
+}
+
+/**
+ * One-time migration for drafts generated before change-detection existed.
+ *
+ * Any section that already has draft content but no stored input fingerprint
+ * gets one stamped from its CURRENT inputs — establishing the existing draft as
+ * the baseline so future edits flag correctly. Costs zero tokens (no AI call),
+ * and is idempotent: once every draft-bearing section has a hash, it no-ops.
+ *
+ * Absorbs any edits made before the backfill into the baseline (they won't
+ * flag); only edits made AFTER stamping will surface as "changes available".
+ *
+ * @returns {number} how many sections were stamped (0 if nothing to do).
+ */
+export function backfillPromptHashes(setClients, clientId) {
+  let sessionId, persistPatch, stamped = 0;
+  setClients(prev => prev.map(c => {
+    if (c.id !== clientId) return c;
+    const s = c.assessment_session;
+    if (!s?.sections) return c;
+
+    const currentHashes = sectionPromptHashes(s);
+    const updatedSections = { ...s.sections };
+    let changed = false;
+    for (const [key, sec] of Object.entries(s.sections)) {
+      const hasDraft = !!(sec?.draftContent?.trim());
+      if (hasDraft && sec?.generatedPromptHash == null) {
+        updatedSections[key] = { ...sec, generatedPromptHash: currentHashes[key] ?? null };
+        changed = true;
+        stamped++;
+      }
+    }
+    if (!changed) return c;
+
+    const updatedSession = { ...s, sections: updatedSections, updatedAt: new Date().toISOString() };
+    sessionId = updatedSession.id;
+    persistPatch = { sections: updatedSession.sections };
+
+    const updatedReassessmentSessions = (c.reassessment_sessions ?? []).map(rs =>
+      rs.id === updatedSession.id ? updatedSession : rs,
+    );
+    return { ...c, assessment_session: updatedSession, reassessment_sessions: updatedReassessmentSessions };
+  }));
+
+  if (sessionId) _persist(sessionId, persistPatch);
+  return stamped;
+}
+
 export function canExport(client) {
   const session = client?.assessment_session;
   if (!session) return false;
+  // Hard gate: never export while any existing goal entry lacks a real STO.
+  if (sectionsMissingSTO(session).length > 0) return false;
   return Object.entries(session.sections)
     .filter(([key]) => !EXPORT_EXCLUDED.has(key))
     .every(([, s]) => s.approvalState === 'approved' || s.approvalState === 'skipped');

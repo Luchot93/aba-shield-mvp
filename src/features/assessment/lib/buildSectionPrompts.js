@@ -343,7 +343,7 @@ function buildSkillAcquisitions(session) {
         `  Teaching Strategies: ${list(g.teachingStrategies)}${g.teachingStrategiesOther ? ` + ${g.teachingStrategiesOther}` : ''}`,
         `  Baseline: ${pct(g.baselinePercent)} correct across ${val(g.baselineOpportunities)} opportunities with ${val(g.baselinePromptingLevel) || val(g.promptingLevel)} prompting`,
         g.baselinePromptingDesc ? `  Baseline detail: ${g.baselinePromptingDesc}` : null,
-        `  Mastery Criteria: ${pct(g.masteryCriteriaPercent)} across ${val(g.masteryCriteriaSessions)} consecutive sessions, ${val(g.masteryCriteriaSettings)} people/settings, with ${val(g.masteryCriteriaPromptingLevel)} prompting`,
+        `  Mastery Criteria: ${pct(g.masteryCriteriaPercent)} across ${val(g.masteryCriteriaSessions)} consecutive sessions, ${val(g.masteryCriteriaSettings)} opportunities/trials, with ${val(g.masteryCriteriaPromptingLevel)} prompting`,
         (g.stoSteps ?? []).length > 0
           ? `  Short-Term Objectives (BCBA-defined):\n${(g.stoSteps).map((s, si) =>
               `    STO ${si + 1}: Client will demonstrate ${s.skillDescription || g.targetSkill} with ${s.targetPercent || '?'}% accuracy across ${g.masteryCriteriaSessions || '3'} sessions within ${s.durationWeeks || '?'} weeks`

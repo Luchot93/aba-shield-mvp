@@ -131,12 +131,18 @@ export default function InlineEditor({ clientId, sectionKey, section, session, s
   const content = section?.draftContent ?? '';
 
   const handleChange = useCallback((newContent) => {
+    // Ignore spurious fires where nothing actually changed. useAutoSave calls
+    // this once ~800ms after mount (and regeneration/backfill re-seed identical
+    // content), which would otherwise flip an approved section to 'edited' and
+    // wipe its approval just by landing on the review page. Only a genuine edit
+    // (RichEditor passes new markdown) gets past this guard.
+    if (newContent === (section?.draftContent ?? '')) return;
     if (!hasEdited) {
       markSectionEdited(setClients, clientId, sectionKey);
       setHasEdited(true);
     }
     setDraftContent(setClients, clientId, sectionKey, newContent, 'edited', section?.aiOriginalContent);
-  }, [hasEdited, clientId, sectionKey, setClients, section?.aiOriginalContent]);
+  }, [hasEdited, clientId, sectionKey, setClients, section?.draftContent, section?.aiOriginalContent]);
 
   const { saveState } = useAutoSave(content, handleChange, 800);
 

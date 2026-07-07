@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import AssessmentInterviewPage   from './AssessmentInterviewPage.jsx';
 import AssessmentChecklistPage   from './AssessmentChecklistPage.jsx';
 import AssessmentReviewPage      from './AssessmentReviewPage.jsx';
-import { completeSession, canExport, addSessionDocument } from './assessmentStore.js';
+import { completeSession, canExport, addSessionDocument, sectionsMissingSTO, backfillPromptHashes } from './assessmentStore.js';
 import { useSaveStatus } from '../../hooks/useSaveStatus.js';
 import { FLAGS } from '../../constants/featureFlags.js';
 import { generateAssessmentDoc } from './lib/generateAssessmentDoc.js';
@@ -40,6 +40,14 @@ export default function AssessmentFeature({
 
   const client  = clients?.find(c => c.id === clientId);
   const session = client?.assessment_session ?? null;
+
+  // One-time migration: drafts created before change-detection have no input
+  // fingerprint, so edits could never flag "changes available". On open, stamp
+  // any draft-bearing section that lacks a hash from its current inputs (zero
+  // AI cost). Idempotent + keyed on session id, so it runs once per open.
+  useEffect(() => {
+    if (session?.id) backfillPromptHashes(setClients, clientId);
+  }, [session?.id, clientId, setClients]);
 
   // ── Reassessment close/complete — un-swap the session back ────────────────
   //
@@ -83,6 +91,9 @@ export default function AssessmentFeature({
   const tagMeta     = STATUS_TAG[status] ?? STATUS_TAG.not_started;
   const exportReady = canExport(client);
 
+  // Goal entries that exist but lack a BCBA-defined STO — export is blocked until resolved.
+  const stoBlockers = session ? sectionsMissingSTO(session) : [];
+
   const pendingCount = session
     ? Object.values(session.sections)
         .filter(s => s.approvalState !== 'approved' && s.approvalState !== 'skipped')
@@ -93,6 +104,12 @@ export default function AssessmentFeature({
 
   const handleExport = async () => {
     if (!session || isExporting) return;
+    // Never generate while any goal entry is missing a real STO (no fabrication).
+    if (stoBlockers.length > 0) {
+      const names = stoBlockers.map(b => `${b.sectionLabel} (${b.entryName})`).join(', ');
+      setExportError(`Add at least one short-term objective (STO) to: ${names}.`);
+      return;
+    }
     setIsExporting(true);
     setExportError(null);
     setCloudBackupWarning(false);
@@ -225,13 +242,24 @@ export default function AssessmentFeature({
           </button>
         );
       }
-      // Initial assessment: goes to pre-generation checklist
+      // Initial assessment: goes to pre-generation checklist.
+      // Blocked while any goal/behavior entry lacks a real STO — no fabrication,
+      // and no spending AI tokens generating narrative for an incomplete plan.
+      const stoBlocked = stoBlockers.length > 0;
       return (
         <button
           onClick={() => setPage('checklist')}
-          className="flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-xl text-white hover:opacity-90 active:scale-[0.97] transition-all"
-          style={{ background: '#0D9488' }}>
-          Ready to Generate
+          disabled={stoBlocked}
+          title={stoBlocked
+            ? `Add at least one short-term objective (STO) to: ${stoBlockers.map(b => `${b.sectionLabel} (${b.entryName})`).join(', ')}`
+            : undefined}
+          className={`flex items-center gap-1.5 px-4 py-2 text-[12px] font-bold rounded-xl transition-all ${
+            stoBlocked
+              ? 'text-slate-400 bg-stone-100 border border-stone-200 cursor-not-allowed'
+              : 'text-white hover:opacity-90 active:scale-[0.97]'
+          }`}
+          style={stoBlocked ? {} : { background: '#0D9488' }}>
+          {stoBlocked ? `STO required (${stoBlockers.length})` : 'Ready to Generate'}
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
           </svg>
@@ -271,7 +299,11 @@ export default function AssessmentFeature({
                 <path strokeLinecap="round" strokeLinejoin="round"
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
               </svg>
-              {exportReady ? 'Download Report (.docx)' : `${pendingCount} section${pendingCount !== 1 ? 's' : ''} pending`}
+              {exportReady
+                ? 'Download Report (.docx)'
+                : stoBlockers.length > 0
+                  ? `STO required (${stoBlockers.length})`
+                  : `${pendingCount} section${pendingCount !== 1 ? 's' : ''} pending`}
             </>
           )}
         </button>
@@ -377,6 +409,23 @@ export default function AssessmentFeature({
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
+        </div>
+      )}
+
+      {/* ── STO-required banner (blocks export until each goal entry has an STO) ─ */}
+      {page === 'review' && stoBlockers.length > 0 && (
+        <div className="flex-shrink-0 flex items-start gap-2 px-4 py-2 text-[12px] font-semibold text-amber-800 bg-amber-50 border-b border-amber-200">
+          <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+          </svg>
+          <span className="flex-1">
+            Add at least one short-term objective (STO) before generating:{' '}
+            {stoBlockers.map((b, i) => (
+              <span key={`${b.sectionLabel}-${b.entryName}-${i}`}>
+                {i > 0 && '; '}<strong>{b.sectionLabel}</strong> — {b.entryName}
+              </span>
+            ))}
+          </span>
         </div>
       )}
 

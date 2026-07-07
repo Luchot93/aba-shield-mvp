@@ -497,8 +497,8 @@ export default function BehaviorTargetCard({ clientId, target, index, setClients
               Milestones that must be met before reaching the reduction goal
             </p>
             {(target.stoSteps ?? []).length === 0 ? (
-              <p className="text-[11px] text-slate-400 italic">
-                No steps defined — auto-formula will be used in the plan
+              <p className="text-[11px] font-semibold text-amber-600">
+                At least one short-term objective (STO) is required
               </p>
             ) : (
               <div className="space-y-2">

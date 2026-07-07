@@ -6,9 +6,21 @@ import react from '@vitejs/plugin-react';
 // runs in Node and reads process.env directly, so .env.local must be loaded
 // into process.env here too — otherwise VITE_DEMO_MODE, ANTHROPIC_API_KEY, etc.
 // are always undefined server-side regardless of what .env.local says.
+//
+// IMPORTANT: Vite's own loadEnv() already gives ambient process.env values
+// priority over .env files — it does this internally, before we ever see the
+// returned object. That means a stray *empty-string* ambient var (e.g. an old
+// `export ANTHROPIC_API_KEY=` left in a shell profile) silently shadows the
+// real value in .env.local at the loadEnv() call itself, not in the merge
+// loop below. So we clear empty-string ambient vars first — only truly unset
+// vars should defer to .env.local; a real non-empty ambient value still wins.
+for (const key of Object.keys(process.env)) {
+  if (process.env[key] === '') delete process.env[key];
+}
+
 const fileEnv = loadEnv('development', process.cwd(), '');
 for (const [key, value] of Object.entries(fileEnv)) {
-  if (process.env[key] === undefined) process.env[key] = value;
+  if (!process.env[key]) process.env[key] = value;
 }
 
 // ─── Collect streaming request body into a Buffer ────────────────────────────
@@ -328,6 +340,6 @@ const anthropicPlugin = () => ({
 
 export default defineConfig({
   plugins: [react(), assemblyTranscribePlugin(), anthropicPlugin()],
-  base: '/aba-shield-mvp/',
+  base: '/',
   server: { port: 5175 },
 });

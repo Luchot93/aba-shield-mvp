@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
 import { SECTION_ORDER, SECTION_TITLES } from './sectionConfig.js';
-import { setDraftContent } from './assessmentStore.js';
+import { setDraftContent, sectionsWithChanges, sectionsMissingSTO } from './assessmentStore.js';
 import { generateDraft } from './lib/generateDraft.js';
 import { sectionHasData } from './lib/buildSectionPrompts.js';
+import { buildLocalDraft } from './lib/buildLocalDraft.js';
+import { sectionPromptHashes } from './lib/draftHash.js';
+import { regenerateSections } from './lib/runGeneration.js';
 
 // ─── Demo drafts (Marcus – fictional ABA assessment) ──────────────────────────
 
@@ -1087,108 +1090,9 @@ function getDemoSeedDrafts(clientId) {
   return null; // non-seed client → use buildLocalDraft instead
 }
 
-// ─── Local draft builder for non-seed clients ─────────────────────────────────
-// Generates clinical markdown directly from the session's structured data.
-// No API call needed — always correct client name, goals, and behaviors.
-
-function buildLocalDraft(session) {
-  const name    = session.clientName ?? 'the client';
-  const profile = session.clientProfile ?? {};
-  const secs    = session.sections ?? {};
-  const dx      = profile.diagnosis ?? 'Autism Spectrum Disorder';
-  const icd     = profile.icd10 ? ` (${profile.icd10})` : '';
-  const ref     = profile.referringProvider ? `, referred by ${profile.referringProvider}` : '';
-
-  const drafts = {};
-
-  // ── Demographics ────────────────────────────────────────────────────────────
-  drafts.demographics = [
-    `## Client & Referral Summary`,
-    `**Client:** ${name}`,
-    profile.dob         ? `**DOB:** ${profile.dob}` : null,
-    profile.gender      ? `**Gender:** ${profile.gender}` : null,
-    `**Primary Diagnosis:** ${dx}${icd}${ref}`,
-    profile.insurerName ? `**Insurance:** ${profile.insurerName}${profile.memberId ? ' | Member ID: ' + profile.memberId : ''}${profile.groupNumber ? ' | Group: ' + profile.groupNumber : ''}` : null,
-    secs.demographics?.notes ? `\n${secs.demographics.notes}` : null,
-  ].filter(Boolean).join('\n');
-
-  // ── Presenting Concerns ────────────────────────────────────────────────────
-  const pcNotes = secs.presenting_concerns?.notes ?? secs.presenting_concerns?.transcript ?? '';
-  drafts.presenting_concerns = pcNotes.trim()
-    ? `## Presenting Concerns\n\n${pcNotes.trim()}`
-    : `## Presenting Concerns\n\nCaregiver and clinical referral identify behavioral and developmental concerns requiring comprehensive ABA assessment. See notes for details.`;
-
-  // ── Self-Help, Daily Living, Safety, Communication, Self-Stim, Crisis ───────
-  const simpleSection = (key, title) => {
-    const sec = secs[key] ?? {};
-    const body = [sec.notes, sec.transcript].filter(Boolean).join('\n\n').trim();
-    return body ? `## ${title}\n\n${body}` : `## ${title}\n\nSee clinician notes.`;
-  };
-  drafts.self_help        = simpleSection('self_help',        'Self-Help Skills');
-  drafts.daily_living     = simpleSection('daily_living',     'Daily Living Skills');
-  drafts.safety           = simpleSection('safety',           'Safety Concerns');
-  drafts.communication    = simpleSection('communication',    'Communication');
-  drafts.self_stim        = simpleSection('self_stim',        'Self-Stimulatory Behavior');
-  drafts.crisis_plan      = simpleSection('crisis_plan',      'Crisis Plan');
-  drafts.caregiver_training = simpleSection('caregiver_training', 'Caregiver Training');
-
-  // ── Medical Necessity ──────────────────────────────────────────────────────
-  const mnSec   = secs.medical_necessity ?? {};
-  const mnNotes = [mnSec.notes, mnSec.transcript].filter(Boolean).join('\n\n').trim();
-  drafts.medical_necessity = [
-    `## Medical Necessity`,
-    ``,
-    `**${name}** carries a primary diagnosis of **${dx}**${icd}${ref}. This diagnosis necessitates intensive, individualized Applied Behavior Analysis (ABA) therapy to address functional impairments across communication, adaptive behavior, and safety.`,
-    ``,
-    mnNotes || `ABA services are medically necessary to reduce behavioral barriers and build functional skills that cannot be adequately addressed through less intensive interventions. Without ABA, ${name} is at significant risk for continued skill regression and safety incidents.`,
-  ].join('\n');
-
-  // ── Skill Acquisitions ─────────────────────────────────────────────────────
-  const goals = secs.skill_acquisitions?.skillGoals ?? [];
-  if (goals.length > 0) {
-    const goalBlocks = goals.map((g, i) => {
-      const baseline = g.baselinePct != null ? `${g.baselinePct}%` : 'not recorded';
-      const mastery  = g.masteryPct  != null ? `${g.masteryPct}%` : 'not recorded';
-      const strats   = (g.teachingStrategies ?? []).join(', ') || 'To be determined';
-      return [
-        `### Goal ${i + 1}: ${g.targetSkill ?? 'Untitled Goal'}`,
-        g.operationalDefinition ? `**Operational Definition:** ${g.operationalDefinition}` : null,
-        `**Teaching Strategies:** ${strats}`,
-        `**Baseline:** ${baseline} → **Target (LTO):** ${mastery}`,
-      ].filter(Boolean).join('\n');
-    });
-    drafts.skill_acquisitions = `## Skill Acquisition Plan\n\n${goalBlocks.join('\n\n')}`;
-  } else {
-    const saNotes = [secs.skill_acquisitions?.notes, secs.skill_acquisitions?.transcript].filter(Boolean).join('\n\n').trim();
-    drafts.skill_acquisitions = saNotes
-      ? `## Skill Acquisition Plan\n\n${saNotes}`
-      : `## Skill Acquisition Plan\n\nSkill acquisition targets will be developed based on assessment findings.`;
-  }
-
-  // ── Behavior Targets ──────────────────────────────────────────────────────
-  const behaviors = secs.behavior_targets?.behaviorTargets ?? [];
-  if (behaviors.length > 0) {
-    const btBlocks = behaviors.map(bt => {
-      const baseline = bt.baselineFrequency ? `${bt.baselineFrequency} per ${bt.frequencyUnit ?? 'day'}` : 'not recorded';
-      const target   = bt.targetFrequency   ? `${bt.targetFrequency} per ${bt.frequencyUnit ?? 'day'}`   : 'elimination';
-      return [
-        `### ${bt.behaviorName ?? 'Untitled Behavior'}`,
-        bt.operationalDefinition ? `**Operational Definition:** ${bt.operationalDefinition}` : null,
-        bt.antecedents           ? `**Antecedents:** ${bt.antecedents}` : null,
-        bt.hypothesizedFunction  ? `**Hypothesized Function:** ${bt.hypothesizedFunction}` : null,
-        `**Baseline:** ${baseline} → **Target:** ${target}`,
-      ].filter(Boolean).join('\n');
-    });
-    drafts.behavior_targets = `## Behavior-Reduction Targets\n\n${btBlocks.join('\n\n')}`;
-  } else {
-    const btNotes = [secs.behavior_targets?.notes, secs.behavior_targets?.transcript].filter(Boolean).join('\n\n').trim();
-    drafts.behavior_targets = btNotes
-      ? `## Behavior-Reduction Targets\n\n${btNotes}`
-      : `## Behavior-Reduction Targets\n\nBehavior targets will be identified based on direct observation and caregiver interview data.`;
-  }
-
-  return drafts;
-}
+// ─── Local draft builder ──────────────────────────────────────────────────────
+// buildLocalDraft(session) now lives in ./lib/buildLocalDraft.js so both the
+// checklist generation path and the review-page scoped regeneration can reuse it.
 
 // ─── AssessmentChecklistPage ──────────────────────────────────────────────────
 
@@ -1240,9 +1144,22 @@ export default function AssessmentChecklistPage({
   const hasConflicts    = rows.some(r => r.hasConflict);
   const allGenerated    = rows.every(r => r.hasDraft);
 
+  // Sections whose form inputs changed since their draft was generated. Empty
+  // unless a draft already exists AND its inputs were edited afterward.
+  const changedSections = sectionsWithChanges(session);
+
   // ── Generate handler ────────────────────────────────────────────────────────
 
   const handleGenerate = async () => {
+    // Backstop: never spend AI tokens (or fabricate) when a goal/behavior entry
+    // still lacks a real STO. The interview "Ready to Generate" button is already
+    // gated on this, but guard here too in case an STO is removed after arriving.
+    const stoBlockers = sectionsMissingSTO(session);
+    if (stoBlockers.length > 0) {
+      const names = stoBlockers.map(b => `${b.sectionLabel} (${b.entryName})`).join(', ');
+      addNotif?.({ type: 'error', message: `Add at least one short-term objective (STO) to: ${names}.` });
+      return;
+    }
     setIsGenerating(true);
     setLoadingStep(0);
 
@@ -1254,6 +1171,10 @@ export default function AssessmentChecklistPage({
     // then restart the dev server (or redeploy). No other changes needed.
     // ─────────────────────────────────────────────────────────────────────────
     const isDemoMode = import.meta.env.VITE_DEMO_MODE !== 'false';
+
+    // Fingerprint the current inputs so we can later detect which sections'
+    // data changed and only re-run those (change-detection on re-entry).
+    const hashes = sectionPromptHashes(session);
 
     if (isDemoMode) {
       // ── DEMO PATH — simulate realistic loading, then inject drafts
@@ -1267,7 +1188,7 @@ export default function AssessmentChecklistPage({
       const seedDrafts = getDemoSeedDrafts(clientId);
       const DRAFTS = seedDrafts ?? buildLocalDraft(session);
       for (const [key, content] of Object.entries(DRAFTS)) {
-        setDraftContent(setClients, clientId, key, content, 'pending', content);
+        setDraftContent(setClients, clientId, key, content, 'pending', content, hashes[key]);
       }
       await new Promise(r => setTimeout(r, 300));
 
@@ -1288,7 +1209,7 @@ export default function AssessmentChecklistPage({
         });
 
         for (const [key, content] of Object.entries(drafts)) {
-          setDraftContent(setClients, clientId, key, content, 'pending', content);
+          setDraftContent(setClients, clientId, key, content, 'pending', content, hashes[key]);
         }
 
         setLoadingMessage('Finalizing assessment document…');
@@ -1303,6 +1224,32 @@ export default function AssessmentChecklistPage({
       }
     }
 
+    setIsGenerating(false);
+    onNavigate('review');
+  };
+
+  // ── Regenerate only the sections whose inputs changed ───────────────────────
+  const handleRegenerateChanged = async () => {
+    if (changedSections.length === 0) return;
+    setIsGenerating(true);
+    setLoadingStep(0);
+    setLoadingMessage('Updating changed sections…');
+    const clientName = clients.find(c => c.id === clientId)?.name ?? 'the client';
+    try {
+      await regenerateSections({
+        session, clientId, clientName, setClients,
+        only: changedSections.map(s => s.key),
+        onProgress: (sectionKey, sectionTitle, index, total) => {
+          setLoadingMessage(`Updating ${SECTION_TITLES[sectionKey] ?? sectionTitle}…`);
+          setLoadingStep(Math.max(1, Math.round(((index + 1) / (total + 1)) * LOADING_MESSAGES.length)));
+        },
+      });
+    } catch (err) {
+      console.error('[handleRegenerateChanged]', err);
+      setIsGenerating(false);
+      addNotif?.({ type: 'error', message: `Section update failed: ${err.message}` });
+      return;
+    }
     setIsGenerating(false);
     onNavigate('review');
   };
@@ -1510,7 +1457,8 @@ export default function AssessmentChecklistPage({
                 <p className="text-[12px] font-medium text-slate-500">{loadingMessage}</p>
               </div>
             </div>
-          ) : (
+          ) : !allGenerated ? (
+            /* First generation — no draft exists yet */
             <button
               onClick={handleGenerate}
               className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[14px] font-bold text-white transition-all hover:opacity-90 active:scale-[0.98]"
@@ -1518,8 +1466,53 @@ export default function AssessmentChecklistPage({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
               </svg>
-              {allGenerated ? 'Regenerate Assessment Draft' : 'Generate Assessment Draft'}
+              Generate Assessment Draft
             </button>
+          ) : (
+            /* Draft exists — reviewing/downloading is free; regeneration is only
+               offered for sections whose form data actually changed. */
+            <div className="space-y-3">
+              {changedSections.length > 0 && (
+                <div className="rounded-2xl border px-5 py-3.5"
+                  style={{ background: 'rgba(245,158,11,0.06)', borderColor: 'rgba(245,158,11,0.30)' }}>
+                  <div className="flex items-start gap-2.5">
+                    <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="#B45309" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                    <div>
+                      <p className="text-[12px] font-bold" style={{ color: '#92400E' }}>
+                        {changedSections.length} section{changedSections.length !== 1 ? 's have' : ' has'} updated data
+                      </p>
+                      <p className="text-[11px] leading-relaxed mt-0.5" style={{ color: '#B45309' }}>
+                        {changedSections.map(s => s.title).join(', ')} changed since the draft was generated.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {changedSections.length > 0 && (
+                <button
+                  onClick={handleRegenerateChanged}
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[14px] font-bold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                  style={{ background: '#B45309' }}>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                  Regenerate {changedSections.length} changed section{changedSections.length !== 1 ? 's' : ''}
+                </button>
+              )}
+
+              <button
+                onClick={() => onNavigate('review')}
+                className={`w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[14px] font-bold transition-all hover:opacity-90 active:scale-[0.98] ${changedSections.length > 0 ? 'border border-stone-200 bg-white text-slate-600' : 'text-white'}`}
+                style={changedSections.length > 0 ? undefined : { background: '#0D9488' }}>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7"/>
+                </svg>
+                Review &amp; Download
+              </button>
+            </div>
           )}
 
         </div>

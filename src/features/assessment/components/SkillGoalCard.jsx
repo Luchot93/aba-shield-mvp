@@ -654,8 +654,8 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
               Milestones that must be met before reaching the mastery goal
             </p>
             {(goal.stoSteps ?? []).length === 0 ? (
-              <p className="text-[11px] text-slate-400 italic">
-                No steps defined — auto-formula will be used in the plan
+              <p className="text-[11px] font-semibold text-amber-600">
+                At least one short-term objective (STO) is required
               </p>
             ) : (
               <div className="space-y-2">
@@ -723,7 +723,7 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
                 placeholder="2"
                 width="3rem"
               />
-              <span>people/settings with</span>
+              <span>opportunities/trials with</span>
               <InlinePromptPick
                 value={goal.masteryCriteriaPromptingLevel}
                 onChange={setVal('masteryCriteriaPromptingLevel')}

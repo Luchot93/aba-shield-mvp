@@ -117,39 +117,27 @@ export function renderMaladaptiveBehaviorChart(behaviorName, baselineCount, targ
  *
  * @param {string}   behaviorName  – e.g. "Elopement"
  * @param {number}   baselineCount – baseline frequency per session
- * @param {string[]} masteryDates  – up to 9 date strings (used for auto mode only)
+ * @param {string[]} masteryDates  – unused (retained for call-site signature compatibility)
  * @param {number}   [targetCount=0] – LTO target (0 = elimination)
- * @param {object[]|null} [stoSteps=null] – BCBA-defined steps [{targetFrequency, durationWeeks}]; if null, auto-interpolates 9 steps
- * @returns {string} base64 PNG
+ * @param {object[]|null} [stoSteps=null] – BCBA-defined steps [{targetFrequency, durationWeeks}]
+ * @returns {string|null} base64 PNG, or null when no BCBA-defined STO steps exist
  */
 export function renderSTOTrajectoryChart(behaviorName, baselineCount, masteryDates, targetCount = 0, stoSteps = null) {
   if (!behaviorName?.trim() || !Number.isFinite(baselineCount)) return null;
 
-  let stoTargets, labels;
+  // Never fabricate a trajectory. Only chart BCBA-defined STO steps; if none, omit the chart.
+  if (!stoSteps || stoSteps.length === 0) return null;
 
-  if (stoSteps && stoSteps.length > 0) {
-    // BCBA-defined explicit steps + LTO as final point
-    stoTargets = [
-      ...stoSteps.map(s => parseFloat(s.targetFrequency) || 0),
-      targetCount,
-    ];
-    labels = [
-      'Baseline',
-      ...stoSteps.map((_, i) => `STO ${i + 1}`),
-      'LTO',
-    ];
-  } else {
-    // Auto-interpolate 9 evenly-spaced steps from baseline down to targetCount
-    const steps = 9;
-    stoTargets = Array.from({ length: steps }, (_, i) => {
-      const t = (i + 1) / steps; // 1/9, 2/9, ... 9/9
-      return Math.round(baselineCount + (targetCount - baselineCount) * t);
-    });
-    labels = [
-      'Baseline',
-      ...masteryDates.map((d, i) => `STO ${i + 1} ${d}`),
-    ];
-  }
+  // BCBA-defined explicit steps + LTO as final point
+  const stoTargets = [
+    ...stoSteps.map(s => parseFloat(s.targetFrequency) || 0),
+    targetCount,
+  ];
+  const labels = [
+    'Baseline',
+    ...stoSteps.map((_, i) => `STO ${i + 1}`),
+    'LTO',
+  ];
 
   const canvas = createOffscreenCanvas(600, 300);
   const ctx    = canvas.getContext('2d');
@@ -283,23 +271,17 @@ export function renderReplacementBehaviorChart(skillTargets) {
  *
  * @param {string}   skillName             – e.g. "Mand Training"
  * @param {number}   baselinePercent       – observed baseline %
- * @param {object[]|null} stoSteps         – BCBA-defined steps [{targetPercent, skillDescription, durationWeeks}]; null = auto midpoint
+ * @param {object[]|null} stoSteps         – BCBA-defined steps [{targetPercent, skillDescription, durationWeeks}]
  * @param {number}   [masteryCriteriaPercent=80] – LTO mastery target %
- * @returns {string} base64 PNG
+ * @returns {string|null} base64 PNG, or null when no BCBA-defined STO steps exist
  */
 export function renderSkillSTOChart(skillName, baselinePercent, stoSteps, masteryCriteriaPercent = 80) {
-  let data, labels;
+  // Never fabricate a midpoint. Only chart BCBA-defined STO steps; if none, omit the chart.
+  if (!stoSteps || stoSteps.length === 0) return null;
 
-  if (stoSteps && stoSteps.length > 0) {
-    // BCBA-defined steps
-    data   = [baselinePercent, ...stoSteps.map(s => parseFloat(s.targetPercent) || 0), masteryCriteriaPercent];
-    labels = ['Baseline', ...stoSteps.map((_, i) => `STO ${i + 1}`), 'LTO (Mastery)'];
-  } else {
-    // Auto: single midpoint between baseline and mastery
-    const mid = Math.round((baselinePercent + masteryCriteriaPercent) / 2);
-    data   = [baselinePercent, mid, masteryCriteriaPercent];
-    labels = ['Baseline', 'STO (auto)', 'LTO (Mastery)'];
-  }
+  // BCBA-defined steps
+  const data   = [baselinePercent, ...stoSteps.map(s => parseFloat(s.targetPercent) || 0), masteryCriteriaPercent];
+  const labels = ['Baseline', ...stoSteps.map((_, i) => `STO ${i + 1}`), 'LTO (Mastery)'];
 
   const canvas = createOffscreenCanvas(600, 300);
   const ctx    = canvas.getContext('2d');

@@ -10,11 +10,18 @@ function computeBtBaseline(bt) {
 }
 
 function computeBtSTO(bt) {
-  const base = parseFloat(bt.baselineFrequency) || 0;
-  const unit = bt.frequencyUnit || 'day';
-  if (!base) return `Reduce ${bt.behaviorName || 'behavior'} frequency by 50% within 12 weeks`;
-  const half = Math.ceil(base * 0.5);
-  return `Reduce to ${half} per ${unit} within 12 weeks`;
+  // Only render BCBA-defined STO steps. Never fabricate a "reduce by 50%" target.
+  // Mirrors computeBtSTO in generateAssessmentDoc.js.
+  const unit  = bt.frequencyUnit || 'day';
+  const steps = (bt.stoSteps ?? []).filter(
+    s => s.targetFrequency !== '' && s.targetFrequency != null,
+  );
+  if (steps.length > 0) {
+    return steps.map((s, i) =>
+      `STO ${i + 1}: Reduce to ${s.targetFrequency} per ${unit} within ${s.durationWeeks || '?'} weeks.`,
+    ).join('\n');
+  }
+  return '—';
 }
 
 function computeBtLTO(bt) {

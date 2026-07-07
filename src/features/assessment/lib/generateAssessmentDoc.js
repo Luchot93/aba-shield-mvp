@@ -112,27 +112,21 @@ function computeSkillSTO(g) {
       `STO ${i + 1}: Client will demonstrate ${s.skillDescription || g.targetSkill || 'the target skill'} with ${s.targetPercent || '?'}% accuracy across ${g.masteryCriteriaSessions || '3'} consecutive sessions within ${s.durationWeeks || '?'} weeks.`
     ).join('\n');
   }
-  // Tier 1 — structured single-step fields
-  if (g.stoPercent || g.stoSkillDescription || g.stoWeeks) {
-    const pct      = g.stoPercent         || Math.round(Number(g.masteryCriteriaPercent || 80) * 0.5);
+  // Tier 1 — structured single-step fields (only when the BCBA entered a real STO %)
+  if (g.stoPercent) {
     const desc     = g.stoSkillDescription || (g.targetSkill || 'the target skill');
     const weeks    = g.stoWeeks           || '12';
     const sessions = g.masteryCriteriaSessions || '3';
     return (
-      `Client will demonstrate ${desc} with ${pct}% accuracy across ` +
+      `Client will demonstrate ${desc} with ${g.stoPercent}% accuracy across ` +
       `${sessions} consecutive sessions within ${weeks} weeks.`
     );
   }
   // Tier 2 — legacy free-text
   if (g.sto) return g.sto;
-  // Tier 3 — auto-formula
-  const pct      = g.masteryCriteriaPercent  || '80';
-  const sessions = g.masteryCriteriaSessions || '3';
-  return (
-    `Client will demonstrate ${g.targetSkill || 'the target skill'} with ` +
-    `${Math.round(Number(pct) * 0.5) || 40}% accuracy across ${sessions} ` +
-    `consecutive sessions with decreasing prompt support.`
-  );
+  // No STO defined — never fabricate one. Export is gated on a real STO
+  // (see sectionsMissingSTO/canExport), so this marker should be unreachable in a real export.
+  return '—';
 }
 
 function computeSkillMastery(g) {
@@ -143,7 +137,7 @@ function computeSkillMastery(g) {
   return (
     `Client will demonstrate ${g.targetSkill || 'the target skill'} with ` +
     `${pct}% accuracy across ${sessions} consecutive sessions across ` +
-    `${settings} people/settings with ${prompt} level of prompting.`
+    `${settings} opportunities/trials with ${prompt} level of prompting.`
   );
 }
 
@@ -156,12 +150,18 @@ function computeBtBaseline(bt) {
 }
 
 function computeBtSTO(bt) {
-  const base = parseFloat(bt.baselineFrequency) || 0;
-  const unit = bt.frequencyUnit || 'day';
-  const name = bt.behaviorName  || 'behavior';
-  if (!base) return `Reduce ${name} frequency by 50% within 12 weeks`;
-  const half = Math.ceil(base * 0.5);
-  return `Reduce to ${half} per ${unit} within 12 weeks`;
+  // Only render BCBA-defined STO steps. Never fabricate a "reduce by 50%" target.
+  const unit  = bt.frequencyUnit || 'day';
+  const steps = (bt.stoSteps ?? []).filter(
+    s => s.targetFrequency !== '' && s.targetFrequency != null,
+  );
+  if (steps.length > 0) {
+    return steps.map((s, i) =>
+      `STO ${i + 1}: Reduce to ${s.targetFrequency} per ${unit} within ${s.durationWeeks || '?'} weeks.`,
+    ).join('\n');
+  }
+  // No STO defined — never fabricate one. Export is gated on a real STO.
+  return '—';
 }
 
 function computeBtLTO(bt) {
@@ -186,19 +186,13 @@ function computeCaregiverSTO(t) {
       `STO ${i + 1}: Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${s.targetPercent}% accuracy within ${s.durationWeeks || '?'} consecutive weeks.`,
     ).join('\n');
   }
-  // Tier 1 — legacy stoPercent field
+  // Tier 1 — legacy stoPercent field (BCBA-entered)
   if (t.stoPercent != null) {
     return t.stoWeeks != null
       ? `${t.stoPercent}% over ${t.stoWeeks} weeks`
       : `${t.stoPercent}%`;
   }
-  // Tier 2 — auto-formula from baseline
-  const bp = t.baselinePercent != null ? Number(t.baselinePercent) : null;
-  const lto = t.ltoPercent != null ? Number(t.ltoPercent) : 90;
-  if (bp !== null) {
-    const mid = Math.round((bp + lto) / 2);
-    return `${mid}% accuracy (auto-computed from baseline ${bp}%)`;
-  }
+  // No STO defined — never fabricate one (previously (baseline+lto)/2). Export is gated on a real STO.
   return '—';
 }
 

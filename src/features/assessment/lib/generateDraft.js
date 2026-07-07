@@ -38,13 +38,18 @@ import { SECTION_ORDER, SECTION_TITLES } from '../sectionConfig.js';
  * @param {function} [options.onProgress] - (sectionKey, sectionTitle, index, total) => void
  * @returns {Promise<Record<string, string>>} Map of sectionKey → draft content string
  */
-export async function generateDraft(session, { clientName = 'the client', onProgress } = {}) {
+export async function generateDraft(session, { clientName = 'the client', onProgress, only } = {}) {
   // Build all section prompts from the structured form data.
   // buildSectionPrompts returns { [sectionKey]: string } — empty string if no data.
   const prompts = buildSectionPrompts(session);
 
-  // Only draft sections that have actual prompt content.
+  // Optional scoped regeneration: when `only` is provided, restrict to that set
+  // so we re-run (and pay for) just the sections whose inputs changed.
+  const onlySet = Array.isArray(only) && only.length > 0 ? new Set(only) : null;
+
+  // Only draft sections that have actual prompt content (and, if scoped, are in `only`).
   const sectionsToGenerate = SECTION_ORDER.filter(key => {
+    if (onlySet && !onlySet.has(key)) return false;
     const p = prompts[key];
     return typeof p === 'string' && p.trim().length > 0;
   });

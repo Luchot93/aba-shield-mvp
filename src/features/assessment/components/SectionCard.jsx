@@ -1,5 +1,6 @@
 import React from 'react';
 import { SECTION_TITLES } from '../sectionConfig.js';
+import { FLAGS } from '../../../constants/featureFlags.js';
 import ConflictFlag from './ConflictFlag.jsx';
 import GuidedPrompts from './GuidedPrompts.jsx';
 import RecordButton from './RecordButton.jsx';
@@ -49,7 +50,9 @@ export default function SectionCard({
   if (!section) return null;
 
   const completionState = section.completionState ?? 'empty';
-  const hasTranscript   = !!section.transcript;
+  // Transcript UI is part of the voice-capture feature — gate it with the same
+  // flag as RecordButton so no recording/transcript surfaces when voice is off.
+  const hasTranscript   = FLAGS.VOICE_CAPTURE && !!section.transcript;
 
   const borderColor = isExpanded
     ? undefined

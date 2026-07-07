@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useAutoSave } from '../../../hooks/useAutoSave.js';
 import { updateSectionNotes } from '../assessmentStore.js';
+import { FLAGS } from '../../../constants/featureFlags.js';
 
 export default function FreeTextNotes({ clientId, sectionKey, section, setClients }) {
   const [value, setValue] = useState(section?.notes ?? '');
-  const hasTranscript = section?.transcript != null;
+  // Transcript only feeds the draft when voice capture is enabled; otherwise the
+  // chip must read "Notes → AI draft" (no transcript source exists).
+  const hasTranscript = FLAGS.VOICE_CAPTURE && section?.transcript != null;
 
   const { saveState } = useAutoSave(
     value,

@@ -1,9 +1,9 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { computeStoPercent } from '../assessmentStore.js';
-
 function computeReviewSTO(t) {
+  // Only render BCBA-defined STO. Never fabricate one (mirrors computeCaregiverSTO
+  // in generateAssessmentDoc.js). No baseline-derived midpoint fallback.
   const validSteps = (t.stoSteps ?? []).filter(
     s => s.targetPercent !== '' && s.targetPercent != null,
   );
@@ -12,13 +12,14 @@ function computeReviewSTO(t) {
       `STO ${i + 1}: ${s.targetPercent}% accuracy within ${s.durationWeeks || '?'} wks`,
     );
   }
-  // Legacy fallback
-  const bpNum = t.baselinePercent != null && t.baselinePercent !== '' ? Number(t.baselinePercent) : null;
-  const stoPercent = t.stoPercent != null ? t.stoPercent : (bpNum !== null ? computeStoPercent(bpNum) : null);
-  const text = t.sto?.trim()
-    ? t.sto
-    : `Caregiver will demonstrate ${t.goalName || 'the target skill'} with ${stoPercent != null ? stoPercent : '?'}% consistency across ${t.stoWeeks != null ? t.stoWeeks : '?'} consecutive weeks.`;
-  return [text];
+  // Legacy free-text / stoPercent (BCBA-entered)
+  if (t.sto?.trim()) return [t.sto];
+  if (t.stoPercent != null) {
+    return [t.stoWeeks != null
+      ? `${t.stoPercent}% over ${t.stoWeeks} weeks`
+      : `${t.stoPercent}%`];
+  }
+  return ['—'];
 }
 
 // ─── Table primitives — exact match to SkillAcquisitions / MaladaptiveBehaviors ─

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { setTranscript, setRecordingState, setRecordingDuration } from '../assessmentStore.js';
+import { FLAGS } from '../../../constants/featureFlags.js';
 
 // ─── Transcribe via server proxy ─────────────────────────────────────────────
 // In mock mode (DEV_MOCK_TRANSCRIPTION=true in .env.local):
@@ -29,7 +30,15 @@ async function transcribeAudio(audioBlob, durationSeconds) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function RecordButton({
+// Flag gate lives in a hook-free wrapper so the implementation (which uses
+// hooks) is only ever mounted when voice capture is enabled — keeps hook order
+// stable and avoids ever calling /api/transcribe when the feature is off.
+export default function RecordButton(props) {
+  if (!FLAGS.VOICE_CAPTURE) return null;
+  return <RecordButtonImpl {...props} />;
+}
+
+function RecordButtonImpl({
   clientId,
   sectionKey,
   session,

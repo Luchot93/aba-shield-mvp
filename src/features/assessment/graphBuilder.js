@@ -22,11 +22,9 @@ import {
   renderMaladaptiveBehaviorChart,
   renderSTOTrajectoryChart,
   renderReplacementBehaviorChart,
-  renderCaregiverTrainingChart,
   renderSkillSTOChart,
   renderCaregiverSTOChart,
 } from './chartRenderer.js';
-import { computeStoPercent } from './assessmentStore.js';
 
 // ─── buildBehaviorTrendFromLogs ───────────────────────────────────────────────
 
@@ -128,13 +126,13 @@ export function renderCaregiverTrainingTargetChart(target, options = {}) {
     return renderCaregiverSTOChart(target.goalName || 'Caregiver Goal', bp, validStoSteps, ltoPercent);
   }
 
-  // Legacy: single STO reference line chart
-  const stoPercent = target.stoPercent != null
-    ? parseFloat(target.stoPercent)
-    : (computeStoPercent(bp) ?? bp);
+  // Legacy: single STO reference line chart. Only draw the STO line from a real
+  // BCBA-entered stoPercent — never fabricate one from the baseline.
+  const stoPercent = target.stoPercent != null ? parseFloat(target.stoPercent) : null;
 
-  // Y-axis ticks: [0, baseline, STO, LTO, 100] — deduplicated and sorted
-  const tickSet = new Set([0, Math.round(bp), Math.round(stoPercent), Math.round(ltoPercent), 100]);
+  // Y-axis ticks: [0, baseline, (STO), LTO, 100] — deduplicated and sorted
+  const tickSet = new Set([0, Math.round(bp), Math.round(ltoPercent), 100]);
+  if (stoPercent != null) tickSet.add(Math.round(stoPercent));
   const tickValues = [...tickSet].sort((a, b) => a - b);
 
   // Use 3 phantom x-positions so line datasets span horizontally across the chart
@@ -162,7 +160,7 @@ export function renderCaregiverTrainingTargetChart(target, options = {}) {
           borderRadius:    3,
           barPercentage:   0.5,
         },
-        {
+        ...(stoPercent != null ? [{
           type:        'line',
           label:       'STO target',
           data:        [stoPercent, stoPercent, stoPercent],
@@ -171,7 +169,7 @@ export function renderCaregiverTrainingTargetChart(target, options = {}) {
           borderDash:  [6, 3],
           pointRadius: 0,
           fill:        false,
-        },
+        }] : []),
         {
           type:        'line',
           label:       'LTO target',
@@ -345,14 +343,6 @@ export async function buildGraphsFromSession(session, { sessionLogs = [], ctLogs
   const behaviorTargets =
     session?.sections?.behavior_targets?.behaviorTargets ?? [];
 
-  // Mastery date helper — today + N months
-  const today = new Date();
-  const masteryDates = Array.from({ length: 9 }, (_, i) => {
-    const d = new Date(today);
-    d.setMonth(d.getMonth() + i + 1);
-    return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  });
-
   for (const bt of behaviorTargets) {
     const name = (bt.behaviorName || '').trim();
     if (!name) {
@@ -386,22 +376,20 @@ export async function buildGraphsFromSession(session, { sessionLogs = [], ctLogs
     }
 
     // Step 2 — STO reduction trajectory line chart
-    // Skip if baseline is 0 — all STO targets would also be 0, producing a flat useless line
-    const stoKey  = `sto_${normalize(name)}`;
-    if (baselineCount > 0) {
-      const stoSteps = (bt.stoSteps ?? []).filter(s => s.targetFrequency !== '' && s.targetFrequency != null);
+    // Only render from BCBA-defined STO steps (never fabricated), and only when
+    // baseline > 0 (a 0 baseline yields a flat, useless line).
+    const stoKey   = `sto_${normalize(name)}`;
+    const stoSteps = (bt.stoSteps ?? []).filter(s => s.targetFrequency !== '' && s.targetFrequency != null);
+    if (baselineCount > 0 && stoSteps.length > 0) {
       console.log(`[graphBuilder] ${stoKey} input:`, JSON.stringify({ name, baselineCount, targetCount, stoSteps }));
       try {
-        result[stoKey] = renderSTOTrajectoryChart(name, baselineCount, masteryDates, targetCount, stoSteps.length > 0 ? stoSteps : null);
+        result[stoKey] = renderSTOTrajectoryChart(name, baselineCount, null, targetCount, stoSteps);
         console.log(`[graphBuilder] ${stoKey} result:`, result[stoKey]?.slice(0, 30) ?? 'null');
-        if (!result[stoKey]) {
-          console.warn(`[graphBuilder] ${stoKey} skipped — missing: valid behaviorName/baselineCount`);
-        }
       } catch (err) {
         console.warn(`Chart failed: ${stoKey}`, err);
       }
     } else {
-      console.warn(`[graphBuilder] ${stoKey} skipped — missing: baselineCount <= 0`);
+      console.warn(`[graphBuilder] ${stoKey} skipped — no BCBA-defined STO steps or baselineCount <= 0`);
     }
   }
 
@@ -462,9 +450,10 @@ export async function buildGraphsFromSession(session, { sessionLogs = [], ctLogs
 
   // ── Step 4 — Caregiver training charts ──────────────────────────────────────
   //
-  // If the BCBA has defined caregiver training targets (caregiverTrainingTargets),
-  // generate one dynamic chart per target (baseline + STO/LTO reference lines).
-  // Otherwise fall back to the legacy hardcoded Premack / Reinforcement charts.
+  // Generate one dynamic chart per BCBA-defined caregiver training target
+  // (baseline + real STO/LTO reference lines). No legacy hardcoded fallback —
+  // the previous Premack/Reinforcement charts fabricated a [20,40,60,80,100]
+  // progression, which is never rendered now.
 
   const ct = session?.sections?.caregiver_training;
   const ctTargets = session?.caregiver_training?.caregiverTrainingTargets
@@ -486,45 +475,6 @@ export async function buildGraphsFromSession(session, { sessionLogs = [], ctLogs
       } catch (err) {
         console.warn(`Chart failed: ${key}`, err);
       }
-    }
-  } else if (ct) {
-    // Fallback: legacy hardcoded Premack + Reinforcement logic — only reachable
-    // when the session has no caregiverTrainingTargets at all (older sessions
-    // predating the standardKey-based target list).
-    const bl = ct.caregiverBaselines ?? {};
-
-    const premack = bl.premack_baseline;
-    console.log('[graphBuilder] caregiver_premack input:', JSON.stringify({ premack }));
-    if (premack !== '' && premack != null && parseFloat(premack) >= 0) {
-      try {
-        result['caregiver_premack'] = renderCaregiverTrainingChart(
-          'Premack Principle',
-          premack,
-          [20, 40, 60, 80, 100],
-        );
-        console.log('[graphBuilder] caregiver_premack result:', result['caregiver_premack']?.slice(0, 30) ?? 'null');
-      } catch (err) {
-        console.warn('Chart failed: caregiver_premack', err);
-      }
-    } else {
-      console.warn('[graphBuilder] caregiver_premack skipped — missing: premack_baseline');
-    }
-
-    const reinforcement = bl.reinforcement_baseline;
-    console.log('[graphBuilder] caregiver_reinforcement input:', JSON.stringify({ reinforcement }));
-    if (reinforcement !== '' && reinforcement != null && parseFloat(reinforcement) >= 0) {
-      try {
-        result['caregiver_reinforcement'] = renderCaregiverTrainingChart(
-          'Reinforcement Delivery',
-          reinforcement,
-          [20, 40, 60, 80, 100],
-        );
-        console.log('[graphBuilder] caregiver_reinforcement result:', result['caregiver_reinforcement']?.slice(0, 30) ?? 'null');
-      } catch (err) {
-        console.warn('Chart failed: caregiver_reinforcement', err);
-      }
-    } else {
-      console.warn('[graphBuilder] caregiver_reinforcement skipped — missing: reinforcement_baseline');
     }
   }
 
@@ -554,7 +504,7 @@ export async function buildGraphsFromSession(session, { sessionLogs = [], ctLogs
       if (baseline > 0) {
         try {
           result[`reauth_sto_${normalize(name)}`] = renderSTOTrajectoryChart(
-            name, baseline, masteryDates, target, stoSteps.length > 0 ? stoSteps : null,
+            name, baseline, null, target, stoSteps.length > 0 ? stoSteps : null,
           );
         } catch (e) { console.warn(`Reauth chart failed: reauth_sto_${normalize(name)}`, e); }
       }

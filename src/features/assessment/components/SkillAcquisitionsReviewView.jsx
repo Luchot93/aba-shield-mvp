@@ -16,7 +16,7 @@ function computeMastery(goal) {
   const sessions = goal.masteryCriteriaSessions  || '3';
   const settings = goal.masteryCriteriaSettings  || '2';
   const prompt   = goal.masteryCriteriaPromptingLevel || goal.masteryCriteriaPrompting || 'independent';
-  return `Client will demonstrate ${goal.targetSkill || 'the target skill'} with ${pct}% accuracy across ${sessions} consecutive sessions across ${settings} people/settings with ${prompt} level of prompting.`;
+  return `Client will demonstrate ${goal.targetSkill || 'the target skill'} with ${pct}% accuracy across ${sessions} consecutive sessions across ${settings} opportunities/trials with ${prompt} level of prompting.`;
 }
 
 function computeSTO(goal) {
@@ -26,20 +26,17 @@ function computeSTO(goal) {
       `STO ${i + 1}: Client will demonstrate ${s.skillDescription || goal.targetSkill || 'the target skill'} with ${s.targetPercent || '?'}% accuracy across ${goal.masteryCriteriaSessions || '3'} consecutive sessions within ${s.durationWeeks || '?'} weeks.`
     ).join('\n');
   }
-  // Tier 1 — structured single-step fields
-  if (goal.stoPercent || goal.stoSkillDescription || goal.stoWeeks) {
-    const pct   = goal.stoPercent      || Math.round(Number(goal.masteryCriteriaPercent || 80) * 0.5);
+  // Tier 1 — structured single-step fields (only when the BCBA entered a real STO %)
+  if (goal.stoPercent) {
     const desc  = goal.stoSkillDescription || (goal.targetSkill || 'the target skill');
     const weeks = goal.stoWeeks        || '12';
     const sessions = goal.masteryCriteriaSessions || '3';
-    return `Client will demonstrate ${desc} with ${pct}% accuracy across ${sessions} consecutive sessions within ${weeks} weeks.`;
+    return `Client will demonstrate ${desc} with ${goal.stoPercent}% accuracy across ${sessions} consecutive sessions within ${weeks} weeks.`;
   }
   // Tier 2 — legacy free-text
   if (goal.sto) return goal.sto;
-  // Tier 3 — auto-formula
-  const pct      = goal.masteryCriteriaPercent  || '80';
-  const sessions = goal.masteryCriteriaSessions || '3';
-  return `Client will demonstrate ${goal.targetSkill || 'the target skill'} with ${Math.round(Number(pct) * 0.5) || 40}% accuracy across ${sessions} consecutive sessions with decreasing prompt support.`;
+  // No STO defined — never fabricate one (mirrors computeSkillSTO in generateAssessmentDoc.js).
+  return '—';
 }
 
 // Extract [BCBA to complete: ...] blocks from draftContent

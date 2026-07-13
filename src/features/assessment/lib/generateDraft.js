@@ -28,6 +28,7 @@
 
 import { buildSectionPrompts } from './buildSectionPrompts.js';
 import { SECTION_ORDER, SECTION_TITLES } from '../sectionConfig.js';
+import { supabase } from '../../../lib/supabase.js';
 
 /**
  * Generate clinical draft content for every section that has usable data.
@@ -66,9 +67,14 @@ export async function generateDraft(session, { clientName = 'the client', onProg
       onProgress(sectionKey, sectionTitle, i, total);
     }
 
+    const accessToken = (await supabase.auth.getSession()).data.session?.access_token;
+
     const res = await fetch('/api/generate', {
       method:  'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
       body: JSON.stringify({
         sectionKey,
         sectionPrompt: prompts[sectionKey],

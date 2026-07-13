@@ -1,5 +1,14 @@
+import { verifyAuth } from './_lib/verifyAuth.js';
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
+
+  const { user, error: authError } = await verifyAuth(req);
+  if (!user) {
+    console.error(`[Anthropic /api/generate] auth rejected: ${authError}`);
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
   const { sectionKey, sectionPrompt, clientName, sectionTitle } = req.body;
 
   let response;
@@ -20,7 +29,7 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error(`[Anthropic /api/generate] ${sectionKey} — network error:`, err);
-    return res.status(502).json({ error: `Network error contacting Anthropic: ${err.message}` });
+    return res.status(502).json({ error: 'Draft generation failed. Please try again.' });
   }
 
   const data = await response.json();
@@ -28,7 +37,7 @@ export default async function handler(req, res) {
   if (!response.ok) {
     const errMsg = data?.error?.message ?? `Anthropic API returned ${response.status}`;
     console.error(`[Anthropic /api/generate] ${sectionKey} — ${response.status}: ${errMsg}`);
-    return res.status(response.status).json({ error: errMsg });
+    return res.status(502).json({ error: 'Draft generation failed. Please try again.' });
   }
 
   const content = data.content?.[0]?.text ?? '';

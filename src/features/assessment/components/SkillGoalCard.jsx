@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAutoSave } from '../../../hooks/useAutoSave.js';
 import { updateSkillGoal, removeSkillGoal, addSkillStoStep, updateSkillStoStep, removeSkillStoStep } from '../assessmentStore.js';
+import { supabase } from '../../../lib/supabase.js';
 
 const DOMAINS = [
   'Communication',
@@ -418,9 +419,13 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
         // In production this becomes your backend endpoint.
         // The Anthropic API key lives in .env.local (server-side only) and is
         // never exposed to the browser bundle.
+        const accessToken = (await supabase.auth.getSession()).data.session?.access_token;
         const res = await fetch('/api/generate-definition', {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: {
+            'content-type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
           body: JSON.stringify({ skillName: val }),
         });
         const data = await res.json();

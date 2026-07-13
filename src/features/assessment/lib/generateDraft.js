@@ -91,6 +91,12 @@ export async function generateDraft(session, { clientName = 'the client', onProg
       } catch {
         // ignore parse error, keep errMsg as status
       }
+      // Rate limited: surface the server's friendly message verbatim (no retry).
+      if (res.status === 429) {
+        const rateErr = new Error(errMsg);
+        rateErr.isRateLimit = true;
+        throw rateErr;
+      }
       throw new Error(`Draft generation failed for "${sectionTitle}": ${errMsg}`);
     }
 

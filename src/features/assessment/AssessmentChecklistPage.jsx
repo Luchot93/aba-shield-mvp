@@ -1219,7 +1219,10 @@ export default function AssessmentChecklistPage({
       } catch (err) {
         console.error('[handleGenerate]', err);
         setIsGenerating(false);
-        addNotif?.({ type: 'error', message: `Draft generation failed: ${err.message}` });
+        addNotif?.({
+          type: 'error',
+          message: err.isRateLimit ? err.message : `Draft generation failed: ${err.message}`,
+        });
         return;
       }
     }
@@ -1247,7 +1250,10 @@ export default function AssessmentChecklistPage({
     } catch (err) {
       console.error('[handleRegenerateChanged]', err);
       setIsGenerating(false);
-      addNotif?.({ type: 'error', message: `Section update failed: ${err.message}` });
+      addNotif?.({
+        type: 'error',
+        message: err.isRateLimit ? err.message : `Section update failed: ${err.message}`,
+      });
       return;
     }
     setIsGenerating(false);

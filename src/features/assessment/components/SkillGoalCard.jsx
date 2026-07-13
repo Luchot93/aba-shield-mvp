@@ -429,6 +429,11 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
           body: JSON.stringify({ skillName: val }),
         });
         const data = await res.json();
+        // Rate limited: show the server's friendly message inline, no retry.
+        if (res.status === 429) {
+          setAiError(data.error ?? 'Rate limit reached. Please wait a few minutes and try again.');
+          return;
+        }
         if (!res.ok) throw new Error(data.error ?? 'Server error');
         const text = data.text ?? '';
         if (!defRef.current?.trim() && text) {

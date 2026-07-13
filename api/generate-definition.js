@@ -1,12 +1,19 @@
 import { verifyAuth } from './_lib/verifyAuth.js';
+import { checkRateLimit } from './_lib/rateLimit.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { user, error: authError } = await verifyAuth(req);
+  const { user, supabase, error: authError } = await verifyAuth(req);
   if (!user) {
     console.error(`[Anthropic /api/generate-definition] auth rejected: ${authError}`);
     return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const ok = await checkRateLimit(supabase, user.id, 'generate-definition', 60);
+  if (!ok) {
+    console.warn(`[Anthropic /api/generate-definition] rate limit reached for user ${user.id}`);
+    return res.status(429).json({ error: 'Rate limit reached. Please wait a few minutes and try again.' });
   }
 
   const { skillName } = req.body;

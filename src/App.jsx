@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { SEED_STAFF, makeAssessmentSession, makeReassessmentSession, makeInitialSections, buildClientProfile } from './constants/seedData.js';
 import { mkNotif } from './utils/notifications.js';
 import { supabase } from './lib/supabase.js';
-import { getClients, createClient, getAssessmentSession, createAssessmentSession, getAssessmentSessionsByBcba } from './lib/db.js';
+import { getClients, createClient, getAssessmentSession, createAssessmentSession, getAssessmentSessionsByBcba, getProfile } from './lib/db.js';
 import FontLoader from './components/FontLoader.jsx';
 import NavBar from './components/NavBar.jsx';
 import PipelinePage from './features/pipeline/PipelinePage.jsx';
@@ -35,17 +35,27 @@ export default function App() {
   const [authLoading,  setAuthLoading]  = useState(true);
 
   useEffect(() => {
+    // Role is authoritative from the profiles table, never user_metadata.
+    // If the profile can't be read we fail closed: sign out, never assume 'admin'.
+    async function resolveUser(user) {
+      try {
+        const profile = await getProfile(user.id);
+        setCurrentUser({ id: user.id, email: user.email, name: profile.full_name ?? user.email, role: profile.role });
+      } catch (err) {
+        console.error('Profile fetch failed — signing out (fail-closed):', err);
+        await supabase.auth.signOut();
+        setCurrentUser(null);
+      }
+    }
+
     supabase.auth.getSession().then(({ data }) => {
       const user = data.session?.user ?? null;
-      if (user) {
-        setCurrentUser({ id: user.id, email: user.email, name: user.email, role: user.user_metadata?.role ?? 'admin' });
-      }
+      if (user) return resolveUser(user);
     }).finally(() => setAuthLoading(false));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        const user = session.user;
-        setCurrentUser({ id: user.id, email: user.email, name: user.email, role: user.user_metadata?.role ?? 'admin' });
+        resolveUser(session.user);
       } else if (event === 'SIGNED_OUT') {
         setCurrentUser(null);
       }
@@ -198,7 +208,7 @@ export default function App() {
                 setCurrentUser({ id:'u3', name:'Dr. Sara Kim', email:'sara@abashield.com', role:'bcaba' });
               }}
             />
-          : <LoginPage onLogin={setCurrentUser}/>
+          : <LoginPage/>
         }
       </>
     );

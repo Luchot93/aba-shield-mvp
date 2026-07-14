@@ -50,6 +50,16 @@ export async function deleteClient(clientId) {
   if (error) throw error
 }
 
+export async function getProfile(userId) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('role, full_name')
+    .eq('id', userId)
+    .single()
+  if (error) throw error
+  return data
+}
+
 const SESSION_FIELD_MAP = {
   sections: 'sections',
   status: 'status',

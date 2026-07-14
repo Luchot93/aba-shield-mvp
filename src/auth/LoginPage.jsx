@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Ico } from '../components/icons.jsx';
 import { supabase } from '../lib/supabase.js';
 
-export default function LoginPage({ onLogin }) {
+export default function LoginPage() {
   const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [error,    setError]    = useState('');
@@ -12,14 +12,14 @@ export default function LoginPage({ onLogin }) {
     e.preventDefault();
     setError('');
     setLoading(true);
-    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (authError) {
       setError(authError.message);
       return;
     }
-    const user = data.user;
-    onLogin({ id: user.id, email: user.email, name: user.email, role: user.user_metadata?.role ?? 'admin' });
+    // No role resolution here: the SIGNED_IN listener in App.jsx fetches the
+    // profile and owns currentUser (single source of truth, no double-fetch).
   };
 
   return (

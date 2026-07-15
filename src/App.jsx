@@ -18,6 +18,20 @@ import SetPasswordPage from './auth/SetPasswordPage.jsx';
 import ClientProfilePanel from './features/clients/components/ClientProfilePanel.jsx';
 import { FLAGS } from './constants/featureFlags.js';
 
+// Two ways to enter the set-password flow, even though the invite link already
+// created a session:
+//   • type=invite in the hash — what a real Supabase invite redirect always
+//     carries, regardless of Site URL, so production needs no ?invite= suffix.
+//   • ?invite=true query param — the dev "Test invite flow" link / manual testing.
+// The hash also carries error/error_description for expired or already-used links.
+// window.__INITIAL_HASH is captured by an inline script in index.html BEFORE the
+// module bundle loads, because the Supabase client consumes and clears the hash
+// (when it carries an access_token) during init — too early to read it here.
+const INITIAL_HASH = window.__INITIAL_HASH ?? window.location.hash;
+const IS_INVITE    = /(^|&|#)type=invite(&|$)/.test(INITIAL_HASH)
+  || new URLSearchParams(window.location.search).get('invite') === 'true';
+const INVITE_ERROR = /error=|error_description=/.test(INITIAL_HASH);
+
 export default function App() {
   const [page,            setPage]           = useState('clients');
   const [clients,         setClients]        = useState([]);
@@ -33,6 +47,7 @@ export default function App() {
 
   const [currentUser,  setCurrentUser]  = useState(null);
   const [authLoading,  setAuthLoading]  = useState(true);
+  const [inviteComplete, setInviteComplete] = useState(false);
 
   useEffect(() => {
     // Role is authoritative from the profiles table, never user_metadata.
@@ -182,6 +197,25 @@ export default function App() {
     active_case_count: clients.filter(c => c.bcba_id===s.id || c.rbt_id===s.id).length,
   }));
 
+  // Invite mode takes precedence: the invite link creates a session immediately,
+  // so without this gate the app would resolve currentUser and skip straight to
+  // the app, never showing the set-password form. Cleared once the password is set.
+  if (IS_INVITE && !inviteComplete) {
+    return (
+      <>
+        <FontLoader/>
+        <SetPasswordPage
+          invitedEmail={currentUser?.email ?? null}
+          inviteError={INVITE_ERROR}
+          onDone={() => {
+            window.history.replaceState({}, '', window.location.pathname);
+            setInviteComplete(true);
+          }}
+        />
+      </>
+    );
+  }
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#0B1220' }}>
@@ -195,21 +229,10 @@ export default function App() {
   }
 
   if (!currentUser) {
-    const isInvite = new URLSearchParams(window.location.search).get('invite') === 'true';
     return (
       <>
         <FontLoader/>
-        {isInvite
-          ? <SetPasswordPage
-              invitedEmail="sara@abashield.com"
-              onSetPassword={() => {
-                // Clear the query param and log the invited user in to Pipeline
-                window.history.replaceState({}, '', window.location.pathname);
-                setCurrentUser({ id:'u3', name:'Dr. Sara Kim', email:'sara@abashield.com', role:'bcaba' });
-              }}
-            />
-          : <LoginPage/>
-        }
+        <LoginPage/>
       </>
     );
   }

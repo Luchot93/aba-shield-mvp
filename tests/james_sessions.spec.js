@@ -1,16 +1,20 @@
 import { test, expect } from '@playwright/test';
+import { FLAGS } from '../src/constants/featureFlags.js';
+import { loginAsAdmin } from './helpers/auth.js';
+
+// Session logging is Phase-2 (FLAGS.SESSION_LOG, off in Alpha). This whole block
+// auto-skips while the flag is off and runs unmodified once it flips true.
+const gated = (flag) => (flag ? test.describe : test.describe.skip);
 
 async function loginAndOpenJames(page) {
-  await page.goto('/');
-  await page.click('button:has-text("Sign in")');
-  await page.waitForSelector('[data-testid="metrics-page"]');
+  await loginAsAdmin(page);
   await page.getByRole('button', { name: 'Pipeline' }).click();
   await page.waitForSelector('[data-testid="new-client-btn"]');
   await page.getByText('James Martinez').first().click();
   await page.getByRole('button', { name: /Session Logs/i }).click();
 }
 
-test.describe('James Martinez — Skill & Caregiver Sessions', () => {
+gated(FLAGS.SESSION_LOG)('James Martinez — Skill & Caregiver Sessions', () => {
 
   test('Skill Sessions panel visible with sessions (not empty state)', async ({ page }) => {
     await loginAndOpenJames(page);

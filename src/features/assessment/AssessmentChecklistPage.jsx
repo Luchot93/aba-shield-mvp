@@ -1467,6 +1467,7 @@ export default function AssessmentChecklistPage({
             /* First generation — no draft exists yet */
             <button
               onClick={handleGenerate}
+              data-testid="generate-drafts-btn"
               className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl text-[14px] font-bold text-white transition-all hover:opacity-90 active:scale-[0.98]"
               style={{ background: '#0D9488' }}>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">

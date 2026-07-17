@@ -844,46 +844,59 @@ export function removeSkillStoStep(setClients, clientId, goalId, stepId) {
 // ─── Client Profile ──────────────────────────────────────────────────────────
 
 export function updateClientProfile(setClients, clientId, patch) {
-  let sessionId;
-  let mergedProfile;
-
-  setClients(prev => prev.map(c => {
-    if (c.id !== clientId) return c;
-    sessionId = c.assessment_session?.id;
-    mergedProfile = {
-      ...c.assessment_session.clientProfile,
-      ...patch,
-    };
-    return {
-      ...c,
-      assessment_session: {
-        ...c.assessment_session,
-        clientProfile: mergedProfile,
-        updatedAt: new Date().toISOString(),
-      },
-    };
-  }));
-
-  _persist(sessionId, { clientProfile: mergedProfile });
+  // Persist from INSIDE the updater. These autosave mutators fire from a
+  // setTimeout (useAutoSave debounce), not a React event handler, so the
+  // functional updater does not flush synchronously — reading a `sessionId`
+  // assigned inside the updater from the next line would still be undefined,
+  // silently dropping the save. Computing sessionId/mergedProfile where the
+  // updater actually runs guarantees the correct values reach _persist.
+  // The `persisted` guard makes this safe under StrictMode's double-invocation.
+  let persisted = false;
+  setClients(prev => {
+    const next = prev.map(c => {
+      if (c.id !== clientId) return c;
+      return {
+        ...c,
+        assessment_session: {
+          ...c.assessment_session,
+          clientProfile: { ...c.assessment_session.clientProfile, ...patch },
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    });
+    if (!persisted) {
+      persisted = true;
+      const c = prev.find(x => x.id === clientId);
+      const mergedProfile = { ...c?.assessment_session?.clientProfile, ...patch };
+      _persist(c?.assessment_session?.id, { clientProfile: mergedProfile });
+    }
+    return next;
+  });
 }
 
 export function updateClientName(setClients, clientId, name) {
-  let sessionId;
-
-  setClients(prev => prev.map(c => {
-    if (c.id !== clientId) return c;
-    sessionId = c.assessment_session?.id;
-    return {
-      ...c,
-      assessment_session: {
-        ...c.assessment_session,
-        clientName: name,
-        updatedAt: new Date().toISOString(),
-      },
-    };
-  }));
-
-  _persist(sessionId, { clientName: name });
+  // Persist from inside the updater — same setTimeout/StrictMode rationale as
+  // updateClientProfile above.
+  let persisted = false;
+  setClients(prev => {
+    const next = prev.map(c => {
+      if (c.id !== clientId) return c;
+      return {
+        ...c,
+        assessment_session: {
+          ...c.assessment_session,
+          clientName: name,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    });
+    if (!persisted) {
+      persisted = true;
+      const c = prev.find(x => x.id === clientId);
+      _persist(c?.assessment_session?.id, { clientName: name });
+    }
+    return next;
+  });
 }
 
 // ─── Session Completion ──────────────────────────────────────────────────────

@@ -34,7 +34,7 @@ export default function LoginPage() {
             <Ico.Shield />
           </div>
           <span className="font-bold text-[15px] tracking-tight text-slate-900">
-            ABA <span style={{ color: '#0D9488' }}>Shield</span>
+            ABA <span style={{ color: '#0D9488' }}>Vault</span>
           </span>
         </div>
 

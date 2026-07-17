@@ -116,7 +116,7 @@ export default function AssessmentReviewPage({
   };
 
   return (
-    <div className="flex flex-col h-full" style={{ fontFamily: 'DM Sans, sans-serif' }}>
+    <div data-testid="assessment-review-page" className="flex flex-col h-full" style={{ fontFamily: 'DM Sans, sans-serif' }}>
 
       {/* Sticky approval summary */}
       <ApprovalBar session={session} />

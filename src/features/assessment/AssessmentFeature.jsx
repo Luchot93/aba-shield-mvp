@@ -250,6 +250,7 @@ export default function AssessmentFeature({
         <button
           onClick={() => setPage('checklist')}
           disabled={stoBlocked}
+          data-testid="ready-to-generate-btn"
           title={stoBlocked
             ? `Add at least one short-term objective (STO) to: ${stoBlockers.map(b => `${b.sectionLabel} (${b.entryName})`).join(', ')}`
             : undefined}
@@ -277,6 +278,7 @@ export default function AssessmentFeature({
         <button
           onClick={handleExport}
           disabled={!exportReady || isExporting}
+          data-testid="export-docx-btn"
           className={`
             flex items-center gap-2 px-4 py-2 text-[12px] font-bold rounded-xl
             transition-all

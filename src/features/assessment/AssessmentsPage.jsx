@@ -112,6 +112,7 @@ function GroupHeader({ group, expanded, onToggle }) {
   return (
     <button
       onClick={onToggle}
+      data-testid={`assessment-group-${client.id}`}
       className="w-full flex items-center gap-3 px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl mb-2 hover:bg-stone-100 transition-colors text-left">
       {/* Avatar */}
       <div
@@ -276,6 +277,7 @@ function NewInterviewModal({ clients, onSelect, onClose }) {
             <li key={c.id}>
               <button
                 onClick={() => onSelect(c.id)}
+                data-testid={`new-interview-client-${c.id}`}
                 className="w-full flex items-center gap-3 px-5 py-3 hover:bg-teal-50 transition-colors text-left"
               >
                 <div
@@ -430,6 +432,7 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
         </h1>
         <button
           onClick={() => setShowNewModal(true)}
+          data-testid="new-interview-btn"
           className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity"
           style={{ background: '#0D9488' }}>
           <Ico.Plus /> New Interview
@@ -517,6 +520,7 @@ export default function AssessmentsPage({ clients, staff, currentUser, onOpenAss
                     {/* Initial assessment card — unchanged visually */}
                     {typeFilter !== 'reassessment' && (
                       <div
+                        data-testid={`open-assessment-${client.id}`}
                         onClick={() => { if (!assessmentOpeningId) onOpenAssessment(client.id); }}
                         className="bg-white border border-stone-200 rounded-xl p-5 mb-3 cursor-pointer hover:shadow-md hover:-translate-y-px transition-all duration-150">
 

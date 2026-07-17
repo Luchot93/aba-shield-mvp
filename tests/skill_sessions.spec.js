@@ -1,9 +1,15 @@
 import { test, expect } from '@playwright/test';
+import { FLAGS } from '../src/constants/featureFlags.js';
+import { loginAsAdmin } from './helpers/auth.js';
 
-async function loginAsAdmin(page) {
-  await page.goto('/');
-  await page.click('button:has-text("Sign in")');
-  await page.waitForSelector('[data-testid="metrics-page"]');
+// This file mixes two Phase-2 concerns: Sofia's session logs (FLAGS.SESSION_LOG)
+// and her reassessment tab (FLAGS.REASSESSMENT). They gate independently, so the
+// describe is split — each block auto-skips while its flag is off.
+const gated = (flag) => (flag ? test.describe : test.describe.skip);
+
+// Both feature panels live inside the client detail view, reached via Pipeline.
+async function loginAndOpenPipeline(page) {
+  await loginAsAdmin(page);
   await page.getByRole('button', { name: 'Pipeline' }).click();
   await page.waitForSelector('[data-testid="new-client-btn"]');
 }
@@ -13,10 +19,10 @@ async function openClientSessionLogs(page, clientName) {
   await page.getByRole('button', { name: /Session Logs/i }).click();
 }
 
-test.describe('Sofia Ramirez — Skill Session Logs', () => {
+gated(FLAGS.SESSION_LOG)('Sofia Ramirez — Skill Session Logs', () => {
 
   test.beforeEach(async ({ page }) => {
-    await loginAsAdmin(page);
+    await loginAndOpenPipeline(page);
   });
 
   test('Skill Sessions panel header is visible', async ({ page }) => {
@@ -54,6 +60,14 @@ test.describe('Sofia Ramirez — Skill Session Logs', () => {
   test('Skill sessions do NOT show "No skill sessions logged yet"', async ({ page }) => {
     await openClientSessionLogs(page, 'Sofia Ramirez');
     await expect(page.getByText('No skill sessions logged yet.')).not.toBeVisible();
+  });
+
+});
+
+gated(FLAGS.REASSESSMENT)('Sofia Ramirez — Reassessment Tab', () => {
+
+  test.beforeEach(async ({ page }) => {
+    await loginAndOpenPipeline(page);
   });
 
   test('Reassessment tab shows clinical summary for Sofia (completed status)', async ({ page }) => {

@@ -8,6 +8,12 @@ const DOT_COLORS = {
   complete: 'bg-emerald-500 border-2 border-emerald-500',
 };
 
+const STATE_LABELS = {
+  empty:    'no data',
+  partial:  'in progress',
+  complete: 'complete',
+};
+
 export default function SectionSidebar({ session, activeSection, onSelectSection, sectionOrder }) {
   if (!session) return null;
 
@@ -57,17 +63,19 @@ export default function SectionSidebar({ session, activeSection, onSelectSection
             <button
               key={key}
               onClick={() => onSelectSection(key)}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-all duration-100 ${
+              aria-current={isActive ? 'true' : undefined}
+              aria-label={`${SECTION_TITLES[key]}, ${STATE_LABELS[completionState] ?? STATE_LABELS.empty}${hasTranscript ? ', has transcript' : ''}${hasNotes ? ', has notes' : ''}`}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-all duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-400 ${
                 isActive
                   ? 'bg-teal-50 border-l-2 border-teal-500 text-teal-700 font-medium'
                   : 'border-l-2 border-transparent text-slate-600 hover:bg-stone-50 hover:text-slate-800'
               }`}>
 
               {/* Completion dot */}
-              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${DOT_COLORS[completionState] ?? DOT_COLORS.empty}`}/>
+              <span aria-hidden="true" className={`w-2 h-2 rounded-full flex-shrink-0 ${DOT_COLORS[completionState] ?? DOT_COLORS.empty}`}/>
 
               {/* Index */}
-              <span className="text-[10px] text-slate-400 flex-shrink-0 w-4 tabular-nums">
+              <span aria-hidden="true" className="text-[10px] text-slate-400 flex-shrink-0 w-4 tabular-nums">
                 {idx + 1}
               </span>
 
@@ -77,7 +85,7 @@ export default function SectionSidebar({ session, activeSection, onSelectSection
               </span>
 
               {/* Indicators */}
-              <span className="flex items-center gap-1 flex-shrink-0">
+              <span aria-hidden="true" className="flex items-center gap-1 flex-shrink-0">
                 {hasTranscript && (
                   <span className="text-teal-500"><Ico.Mic /></span>
                 )}

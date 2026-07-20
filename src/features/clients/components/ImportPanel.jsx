@@ -248,7 +248,7 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
             <h2 className="text-[15px] font-bold text-slate-900" style={{ fontFamily:'Syne, sans-serif' }}>Import Clients</h2>
             <p className="text-xs text-slate-500 mt-0.5">Batch-add clients to Intake from CSV or Excel</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-stone-100 text-slate-400 hover:text-slate-600 transition-colors"><Ico.X/></button>
+          <button onClick={onClose} aria-label="Close import panel" className="p-1.5 rounded-lg hover:bg-stone-100 text-slate-400 hover:text-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400"><Ico.X/></button>
         </div>
         {/* Step bar */}
         <div className="flex items-center gap-1 px-6 py-2.5 border-b border-stone-100 flex-shrink-0" style={{ background:'#FAFAF8' }}>

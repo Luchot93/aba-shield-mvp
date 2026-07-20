@@ -1,4 +1,6 @@
 import { supabase } from './supabase.js'
+import { IS_E2E } from './e2e/flag.js'
+import * as store from './e2e/store.js'
 
 const PHASE2_DEFAULTS = {
   assessment_session: null,
@@ -14,6 +16,7 @@ function enrichClient(row) {
 }
 
 export async function getClients(userId) {
+  if (IS_E2E) return store.listClients(userId).map(enrichClient)
   const { data, error } = await supabase
     .from('clients')
     .select('*')
@@ -24,6 +27,7 @@ export async function getClients(userId) {
 }
 
 export async function createClient(userId, fields) {
+  if (IS_E2E) return enrichClient(store.insertClient({ ...fields, user_id: userId }))
   const { data, error } = await supabase
     .from('clients')
     .insert({ ...fields, user_id: userId })
@@ -34,6 +38,7 @@ export async function createClient(userId, fields) {
 }
 
 export async function createClients(userId, rows) {
+  if (IS_E2E) return store.insertClients(rows.map(fields => ({ ...fields, user_id: userId }))).map(enrichClient)
   const { data, error } = await supabase
     .from('clients')
     .insert(rows.map(fields => ({ ...fields, user_id: userId })))
@@ -43,6 +48,7 @@ export async function createClients(userId, rows) {
 }
 
 export async function deleteClient(clientId) {
+  if (IS_E2E) return store.removeClient(clientId)
   const { error } = await supabase
     .from('clients')
     .delete()
@@ -51,6 +57,7 @@ export async function deleteClient(clientId) {
 }
 
 export async function getProfile(userId) {
+  if (IS_E2E) return store.getProfileFor(userId)
   const { data, error } = await supabase
     .from('profiles')
     .select('role, full_name')
@@ -100,6 +107,7 @@ function fromDbRow(row) {
 }
 
 export async function getAssessmentSessionsByBcba(bcbaId) {
+  if (IS_E2E) return store.sessionsByBcba(bcbaId).map(fromDbRow)
   const { data, error } = await supabase
     .from('assessment_sessions')
     .select('*')
@@ -109,6 +117,7 @@ export async function getAssessmentSessionsByBcba(bcbaId) {
 }
 
 export async function getAssessmentSession(clientId) {
+  if (IS_E2E) return fromDbRow(store.sessionByClient(clientId))
   const { data, error } = await supabase
     .from('assessment_sessions')
     .select('*')
@@ -119,6 +128,7 @@ export async function getAssessmentSession(clientId) {
 }
 
 export async function createAssessmentSession(clientId, bcbaId, patch) {
+  if (IS_E2E) return fromDbRow(store.insertSession({ client_id: clientId, bcba_id: bcbaId, ...toDbPatch(patch) }))
   const { data, error } = await supabase
     .from('assessment_sessions')
     .insert({ client_id: clientId, bcba_id: bcbaId, ...toDbPatch(patch) })
@@ -129,6 +139,7 @@ export async function createAssessmentSession(clientId, bcbaId, patch) {
 }
 
 export async function updateAssessmentSession(sessionId, patch) {
+  if (IS_E2E) return store.updateSession(sessionId, { ...toDbPatch(patch), updated_at: new Date().toISOString() })
   const { error } = await supabase
     .from('assessment_sessions')
     .update({ ...toDbPatch(patch), updated_at: new Date().toISOString() })

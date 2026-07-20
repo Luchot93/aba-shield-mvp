@@ -63,7 +63,7 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
             <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white" style={{ background:'#0D9488' }}>
               <Ico.Shield />
             </div>
-            <span className="text-white font-bold text-[15px] tracking-tight">ABA <span style={{ color:'#2DD4BF' }}>Shield</span></span>
+            <span className="text-white font-bold text-[15px] tracking-tight">ABA <span style={{ color:'#2DD4BF' }}>Vault</span></span>
           </div>
 
           <nav className="flex items-center gap-0.5 flex-1">

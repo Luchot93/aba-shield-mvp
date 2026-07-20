@@ -235,6 +235,7 @@ export default function DemographicsForm({ clientId, client, session, setClients
           <textarea
             value={draft.reasonForReferral ?? ''}
             onChange={set('reasonForReferral')}
+            data-testid="assessment-field-reason"
             placeholder="Brief summary of referral reason…"
             rows={3}
             className="w-full px-3 py-2 text-[13px] bg-stone-50 border border-stone-200 rounded-lg outline-none

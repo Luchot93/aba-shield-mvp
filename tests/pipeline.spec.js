@@ -1,16 +1,21 @@
 import { test, expect } from '@playwright/test';
+import { FLAGS } from '../src/constants/featureFlags.js';
+import { loginAsAdmin as baseLogin } from './helpers/auth.js';
 
-// Helper: log in as admin before interacting with the app.
-// Admin lands on Metrics after login; navigate to Pipeline so pipeline tests start in the right place.
+// Every describe in this file exercises Phase-2 surfaces gated by a feature flag
+// (Pipeline, Staff, Metrics, Reassessment). Each block auto-skips while its flag is
+// off in Alpha and runs unmodified once the flag flips true.
+const gated = (flag) => (flag ? test.describe : test.describe.skip);
+
+// Shared helper lands on Clients; these tests then drive the Pipeline surface, so
+// navigate there and wait for the Kanban's new-client button.
 async function loginAsAdmin(page) {
-  await page.goto('/');
-  await page.click('button:has-text("Sign in")');
-  await page.waitForSelector('[data-testid="metrics-page"]');
+  await baseLogin(page);
   await page.getByRole('button', { name: 'Pipeline' }).click();
   await page.waitForSelector('[data-testid="new-client-btn"]');
 }
 
-test.describe('ABA Shield — Pipeline Kanban', () => {
+gated(FLAGS.PIPELINE)('ABA Shield — Pipeline Kanban', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
@@ -364,8 +369,11 @@ test.describe('ABA Shield — Pipeline Kanban', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  ABA Shield — Clients Page
+//  Gated under PIPELINE: this block asserts V0/pipeline artifacts (14 seed clients,
+//  filter chips, stage pills, client-profile-panel, 7 table headers) that don't
+//  exist in the Alpha Clients page. Live Alpha coverage lives in tests/clients.spec.js.
 // ─────────────────────────────────────────────────────────────────────────────
-test.describe('ABA Shield — Clients Page', () => {
+gated(FLAGS.PIPELINE)('ABA Shield — Clients Page', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
@@ -523,7 +531,7 @@ test.describe('ABA Shield — Clients Page', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 //  ABA Shield — Staff Page
 // ─────────────────────────────────────────────────────────────────────────────
-test.describe('ABA Shield — Staff Page', () => {
+gated(FLAGS.STAFF)('ABA Shield — Staff Page', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
@@ -693,7 +701,7 @@ test.describe('ABA Shield — Staff Page', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 //  ABA Shield — Notifications
 // ─────────────────────────────────────────────────────────────────────────────
-test.describe('ABA Shield — Notifications', () => {
+gated(FLAGS.PIPELINE)('ABA Shield — Notifications', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
@@ -784,7 +792,7 @@ test.describe('ABA Shield — Notifications', () => {
 
 });
 
-test.describe('ABA Shield — Metrics page', () => {
+gated(FLAGS.METRICS)('ABA Shield — Metrics page', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
@@ -831,46 +839,16 @@ test.describe('ABA Shield — Metrics page', () => {
 
 });
 
-test.describe('ABA Shield — Login gate', () => {
-
-  test('login page renders when not authenticated', async ({ page }) => {
-    await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
-    await expect(page.locator('[data-testid="new-client-btn"]')).not.toBeVisible();
-  });
-
-  test('correct credentials show the app', async ({ page }) => {
-    await page.goto('/');
-    await page.fill('input[type="email"]', 'admin@abashield.com');
-    await page.fill('input[type="password"]', 'admin123');
-    await page.click('button:has-text("Sign in")');
-    // Admin lands on Metrics after login
-    await expect(page.locator('[data-testid="metrics-page"]')).toBeVisible();
-  });
-
-  test('wrong credentials show error', async ({ page }) => {
-    await page.goto('/');
-    await page.fill('input[type="email"]', 'wrong@email.com');
-    await page.fill('input[type="password"]', 'wrongpass');
-    await page.click('button:has-text("Sign in")');
-    await expect(page.locator('text=Invalid email or password')).toBeVisible();
-  });
-
-  test('role switcher is visible after login', async ({ page }) => {
-    await page.goto('/');
-    await page.fill('input[type="email"]', 'admin@abashield.com');
-    await page.fill('input[type="password"]', 'admin123');
-    await page.click('button:has-text("Sign in")');
-    await expect(page.locator('text=Testing as:')).toBeVisible();
-  });
-
-});
+// NOTE: The former "ABA Shield — Login gate" describe was removed here. It asserted
+// V0 demo-auth artifacts (admin123 password, metrics-page landing, "Testing as:"
+// role switcher, "Invalid email or password") that don't exist in Alpha's real
+// Supabase auth. Live login coverage now lives in tests/auth.spec.js.
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  ABA Shield — Reassessment Tab (In Services — Charlotte Davis c10)
 //  c10 has 1 in-progress reassessment cycle (Cycle 1, Dr. Ana Reyes)
 // ─────────────────────────────────────────────────────────────────────────────
-test.describe('ABA Shield — Reassessment Tab (cycle present)', () => {
+gated(FLAGS.REASSESSMENT)('ABA Shield — Reassessment Tab (cycle present)', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
@@ -972,7 +950,7 @@ test.describe('ABA Shield — Reassessment Tab (cycle present)', () => {
 //  ABA Shield — Reassessment Tab (In Services — James Martinez c11)
 //  c11 has NO reassessment sessions → empty state
 // ─────────────────────────────────────────────────────────────────────────────
-test.describe('ABA Shield — Reassessment Tab (empty state)', () => {
+gated(FLAGS.REASSESSMENT)('ABA Shield — Reassessment Tab (empty state)', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);

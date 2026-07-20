@@ -1,22 +1,23 @@
 import { test, expect } from '@playwright/test';
+import { FLAGS } from '../src/constants/featureFlags.js';
+import { loginAsAdmin } from './helpers/auth.js';
 
-async function loginAsAdmin(page) {
-  await page.goto('/');
-  await page.click('button:has-text("Sign in")');
-  await page.waitForSelector('[data-testid="metrics-page"]');
-  await page.getByRole('button', { name: 'Pipeline' }).click();
-  await page.waitForSelector('[data-testid="new-client-btn"]');
-}
+// Reassessment is Phase-2 (FLAGS.REASSESSMENT, off in Alpha). Whole block
+// auto-skips while the flag is off and runs unmodified once it flips true.
+const gated = (flag) => (flag ? test.describe : test.describe.skip);
 
 async function openClientTab(page, clientName, tabName) {
   await page.getByText(clientName).first().click();
   await page.getByRole('button', { name: new RegExp(tabName) }).click();
 }
 
-test.describe('Reassessment — Submission Checklist (Reauth tab)', () => {
+gated(FLAGS.REASSESSMENT)('Reassessment — Submission Checklist (Reauth tab)', () => {
 
   test.beforeEach(async ({ page }) => {
     await loginAsAdmin(page);
+    // Client detail (where the Reassessment tab lives) is reached via Pipeline.
+    await page.getByRole('button', { name: 'Pipeline' }).click();
+    await page.waitForSelector('[data-testid="new-client-btn"]');
   });
 
   // ── Reassessment tab: locked state (Charlotte Davis — status: in_progress) ─

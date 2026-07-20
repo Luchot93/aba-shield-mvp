@@ -49,7 +49,7 @@ export default function SetPasswordPage({ invitedEmail, inviteError, onDone }) {
             <Ico.Shield />
           </div>
           <span className="font-bold text-[15px] tracking-tight text-slate-900">
-            ABA <span style={{ color: '#0D9488' }}>Shield</span>
+            ABA <span style={{ color: '#0D9488' }}>Vault</span>
           </span>
         </div>
 
@@ -77,7 +77,7 @@ export default function SetPasswordPage({ invitedEmail, inviteError, onDone }) {
               style={{ fontFamily: 'Syne, sans-serif' }}>
               Set your password
             </h1>
-            <p className="text-sm text-slate-400 mb-6">You've been invited to ABA Shield</p>
+            <p className="text-sm text-slate-400 mb-6">You've been invited to ABA Vault</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email — read-only, pre-filled with the invited (session) address */}

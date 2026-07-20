@@ -213,9 +213,9 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
             data-testid="clients-search"
             className="w-full pl-9 pr-8 py-2 text-sm border border-stone-200 rounded-xl bg-white outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 text-slate-700 placeholder:text-slate-400"/>
           {search && (
-            <button onClick={() => setSearch('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5 rounded">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+            <button onClick={() => setSearch('')} aria-label="Clear search"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400">
+              <svg aria-hidden="true" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
               </svg>
             </button>
@@ -440,7 +440,8 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
                         onClick={e => { e.stopPropagation(); setDeleteTarget(c); }}
                         data-testid={`delete-client-${c.id}`}
                         title="Delete client"
-                        className="p-1.5 rounded-lg text-slate-500 bg-stone-100 opacity-0 group-hover:opacity-100 hover:bg-red-100 hover:text-red-600 transition-all">
+                        aria-label={`Delete ${c.name}`}
+                        className="p-1.5 rounded-lg text-slate-500 bg-stone-100 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:bg-red-100 hover:text-red-600 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400">
                         <Ico.Trash/>
                       </button>
                     </td>
@@ -536,12 +537,13 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
 
       {/* P-01: dismissable toast */}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-3 rounded-xl shadow-xl text-sm font-medium z-[100]"
+        <div role={toast.type === 'error' ? 'alert' : 'status'} aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-3 rounded-xl shadow-xl text-sm font-medium z-[100]"
           style={{ background: toast.type === 'error' ? '#B91C1C' : '#0F766E', color:'#fff' }} data-testid="import-toast">
-          {toast.type === 'error' ? <Ico.Warn/> : <Ico.Check/>}
+          <span aria-hidden="true">{toast.type === 'error' ? <Ico.Warn/> : <Ico.Check/>}</span>
           <span>{toast.msg}</span>
-          <button onClick={dismissToast} className="ml-1 opacity-70 hover:opacity-100 transition-opacity">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+          <button onClick={dismissToast} aria-label="Dismiss notification" className="ml-1 opacity-70 hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 rounded">
+            <svg aria-hidden="true" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>

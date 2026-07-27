@@ -4,6 +4,10 @@ test-results/
 playwright-report/
 .DS_Store
 *.local
+.env
+.env.*
+!.env.example
+!.env.production
 .claude/
 Re_ Crm system workflow /
 Re_ Crm system workflow/

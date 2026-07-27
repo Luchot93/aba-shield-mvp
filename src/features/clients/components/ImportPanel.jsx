@@ -124,7 +124,7 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
       setMapping(autoMap);
       setStep('map');
     } catch(e) {
-      console.error(e);
+      console.error('Failed to parse import file:', e?.message);
       setParseError('Failed to read the file. Make sure it is a valid CSV or Excel file and try again.');
     }
     setLoading(false);

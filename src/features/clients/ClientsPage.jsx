@@ -486,7 +486,7 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
               setClients(prev => [newRow, ...prev]);
               setShowNew(false);
             } catch (err) {
-              console.error('Failed to create client:', err);
+              console.error('Failed to create client:', err?.message);
               showToast('Failed to save client. Please try again.', 'error');
             }
           }}
@@ -519,7 +519,7 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
                 showToast(`${label} added to client directory`);
               }
             } catch (err) {
-              console.error('Failed to import clients:', err);
+              console.error('Failed to import clients:', err?.message);
               showToast('Failed to save imported clients. Please try again.', 'error');
             }
           }}

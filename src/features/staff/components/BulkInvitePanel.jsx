@@ -170,7 +170,7 @@ export default function BulkInvitePanel({ onClose, onImport, existingStaff }) {
       setMapping(autoMap);
       setStep('map');
     } catch (e) {
-      console.error(e);
+      console.error('Failed to parse invite file:', e?.message);
       setParseError('Failed to read the file. Make sure it is a valid CSV or Excel file and try again.');
     }
     setLoading(false);

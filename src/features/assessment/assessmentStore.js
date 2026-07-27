@@ -54,7 +54,7 @@ function _persist(sessionId, patch) {
       window.dispatchEvent(new CustomEvent('aba:save-success'));
     })
     .catch(err => {
-      console.error('[assessmentStore] Supabase save failed:', err);
+      console.error('[assessmentStore] Supabase save failed:', err?.message);
       window.dispatchEvent(new CustomEvent('aba:save-error'));
     });
 }

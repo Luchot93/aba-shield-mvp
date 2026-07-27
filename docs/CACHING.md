@@ -10,23 +10,22 @@ https://aba-shield-mvp.vercel.app):
 | Resource | Cache-Control | x-vercel-cache |
 |----------|---------------|----------------|
 | `/` (HTML root) | `public, max-age=0, must-revalidate` | HIT |
-| `/assets/index-B5wDTa8_.js` | `public, max-age=0, must-revalidate` | HIT |
-| `/assets/index-C3kQKu1a.css` | `public, max-age=0, must-revalidate` | HIT |
+| `/assets/index-B5wDTa8_.js` | `public, max-age=31536000, immutable` | HIT |
+| `/assets/index-C3kQKu1a.css` | `public, max-age=31536000, immutable` | HIT |
 
-All three are cached at the edge (`x-vercel-cache: HIT`) and carry an `etag`, so repeat loads
-revalidate cheaply via `304 Not Modified` — the ~2.3 MB JS bundle is not re-downloaded and
-content is never stale.
+All three are cached at the edge (`x-vercel-cache: HIT`) and carry an `etag`. The HTML root
+revalidates cheaply via `304 Not Modified`; the content-hashed assets are now served `immutable`,
+so the browser reuses them without a revalidation round-trip. Content is never stale.
 
 **Fresh HTML — working as intended.** `must-revalidate` on the HTML root means the browser
 always checks for a new version, so users pick up the latest deploy immediately.
 
-**Gap — hashed assets are not `immutable` (tracked in ACD-65).** Content-hashed files
-(`index-B5wDTa8_.js`) can safely be cached forever — a content change changes the filename —
-but production serves them with Vercel's generic `max-age=0, must-revalidate` default instead of
-`public, max-age=31536000, immutable`. `vercel.json` has only a rewrites catch-all and no
-`headers` block, so nothing declares the assets immutable. Impact is minor: a few revalidation
-round-trips on cold loads / hard refreshes only (SPA — not per in-app navigation), more
-noticeable on high-latency connections. Correctness is unaffected. Fix deferred to ACD-65.
+**Hashed assets are `immutable` (fixed in ACD-65, 2026-07-27).** Content-hashed files
+(`index-B5wDTa8_.js`) can safely be cached forever — a content change changes the filename — so
+`vercel.json` now declares a `headers` block giving `/assets/(.*)` the value
+`public, max-age=31536000, immutable`. Repeat loads and hard refreshes reuse the cached bundle
+directly instead of paying a revalidation round-trip. The HTML root is deliberately left out of
+that rule so it keeps revalidating and new deploys ship instantly.
 
 ## Data loading (App.jsx)
 

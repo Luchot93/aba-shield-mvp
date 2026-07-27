@@ -359,7 +359,6 @@ export async function buildGraphsFromSession(session, { sessionLogs = [], ctLogs
 
     // Step 1 — baseline vs mastery target bar chart
     const graphKey = `behavior_${normalize(name)}`;
-    console.log(`[graphBuilder] ${graphKey} input:`, JSON.stringify({ name, baselineCount, targetCount, frequencyUnit }));
     try {
       result[graphKey] = renderMaladaptiveBehaviorChart(
         name,
@@ -367,7 +366,6 @@ export async function buildGraphsFromSession(session, { sessionLogs = [], ctLogs
         targetCount,
         frequencyUnit,
       );
-      console.log(`[graphBuilder] ${graphKey} result:`, result[graphKey]?.slice(0, 30) ?? 'null');
       if (!result[graphKey]) {
         console.warn(`[graphBuilder] ${graphKey} skipped — missing: valid behaviorName/baselineCount`);
       }
@@ -381,10 +379,8 @@ export async function buildGraphsFromSession(session, { sessionLogs = [], ctLogs
     const stoKey   = `sto_${normalize(name)}`;
     const stoSteps = (bt.stoSteps ?? []).filter(s => s.targetFrequency !== '' && s.targetFrequency != null);
     if (baselineCount > 0 && stoSteps.length > 0) {
-      console.log(`[graphBuilder] ${stoKey} input:`, JSON.stringify({ name, baselineCount, targetCount, stoSteps }));
       try {
         result[stoKey] = renderSTOTrajectoryChart(name, baselineCount, null, targetCount, stoSteps);
-        console.log(`[graphBuilder] ${stoKey} result:`, result[stoKey]?.slice(0, 30) ?? 'null');
       } catch (err) {
         console.warn(`Chart failed: ${stoKey}`, err);
       }
@@ -414,10 +410,8 @@ export async function buildGraphsFromSession(session, { sessionLogs = [], ctLogs
       masteryCriteriaPercent: g.masteryCriteriaPercent ?? '80',
     }));
 
-    console.log('[graphBuilder] replacement_behaviors input:', JSON.stringify(skillTargets));
     try {
       result['replacement_behaviors'] = renderReplacementBehaviorChart(skillTargets);
-      console.log('[graphBuilder] replacement_behaviors result:', result['replacement_behaviors']?.slice(0, 30) ?? 'null');
       if (!result['replacement_behaviors']) {
         console.warn('[graphBuilder] replacement_behaviors skipped — missing: no skillGoals with a valid targetSkill');
       }
@@ -461,14 +455,11 @@ export async function buildGraphsFromSession(session, { sessionLogs = [], ctLogs
 
   if (ctTargets && ctTargets.length > 0) {
     for (const t of ctTargets) {
+      // The graph key is derived from goalName, not standardKey (premack /
+      // reinforcement), which only identifies the two default built-in targets.
       const key = `caregiver_target_${normalize(t.goalName || t.id || String(ctTargets.indexOf(t)))}`;
-      // standardKey (premack / reinforcement) identifies the two built-in targets seeded
-      // by default; logged here so the console trail is legible even though the graph
-      // key itself is derived from goalName, not standardKey.
-      console.log(`[graphBuilder] ${key} input:`, JSON.stringify({ standardKey: t.standardKey ?? null, goalName: t.goalName, baselinePercent: t.baselinePercent, ltoPercent: t.ltoPercent, stoSteps: t.stoSteps }));
       try {
         result[key] = renderCaregiverTrainingTargetChart(t);
-        console.log(`[graphBuilder] ${key} result:`, result[key]?.slice(0, 30) ?? 'null');
         if (!result[key]) {
           console.warn(`[graphBuilder] ${key} skipped — missing: valid goalName/baselinePercent`);
         }

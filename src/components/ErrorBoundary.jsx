@@ -1,4 +1,5 @@
 import React from 'react';
+import * as Sentry from '@sentry/react';
 
 /**
  * Generic React Error Boundary.
@@ -20,6 +21,7 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, info) {
     console.error(`[ErrorBoundary:${this.props.label ?? 'App'}]`, error, info);
+    Sentry.captureException(error, { extra: { componentStack: info?.componentStack } });
   }
 
   render() {

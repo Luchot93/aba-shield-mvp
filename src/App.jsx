@@ -17,6 +17,7 @@ import LoginPage from './auth/LoginPage.jsx';
 import SetPasswordPage from './auth/SetPasswordPage.jsx';
 import ClientProfilePanel from './features/clients/components/ClientProfilePanel.jsx';
 import { FLAGS } from './constants/featureFlags.js';
+import { setSentryUser, clearSentryUser } from './lib/sentry.js';
 
 // Two ways to enter the set-password flow, even though the invite link already
 // created a session:
@@ -92,6 +93,11 @@ export default function App() {
       })
       .catch(err => console.error('Failed to load clients:', err))
       .finally(() => setClientsLoading(false));
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (currentUser?.id) setSentryUser(currentUser.id);
+    else clearSentryUser();
   }, [currentUser?.id]);
 
   const handleLogout = async () => {

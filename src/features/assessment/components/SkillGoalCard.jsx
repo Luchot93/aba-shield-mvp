@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import * as Sentry from '@sentry/react';
 import { createPortal } from 'react-dom';
 import { useAutoSave } from '../../../hooks/useAutoSave.js';
 import { updateSkillGoal, removeSkillGoal, addSkillStoStep, updateSkillStoStep, removeSkillStoStep } from '../assessmentStore.js';
@@ -420,15 +421,32 @@ export default function SkillGoalCard({ clientId, goal, index, setClients, onDra
         // The Anthropic API key lives in .env.local (server-side only) and is
         // never exposed to the browser bundle.
         const accessToken = (await supabase.auth.getSession()).data.session?.access_token;
-        const res = await fetch('/api/generate-definition', {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({ skillName: val }),
-        });
+        let res;
+        try {
+          res = await fetch('/api/generate-definition', {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ skillName: val }),
+          });
+        } catch (netErr) {
+          // Network/transport error — no HTTP status. Report keys/status only, never prompt content.
+          Sentry.captureMessage('api/generate-definition failed: network error', {
+            level: 'error',
+            extra: { sectionKey: 'skill-definition', status: null },
+          });
+          throw netErr;
+        }
         const data = await res.json();
+        if (!res.ok) {
+          // Report keys/status only, never prompt content. Covers 429 and all other non-ok.
+          Sentry.captureMessage(`api/generate-definition failed: ${res.status}`, {
+            level: 'error',
+            extra: { sectionKey: 'skill-definition', status: res.status },
+          });
+        }
         // Rate limited: show the server's friendly message inline, no retry.
         if (res.status === 429) {
           setAiError(data.error ?? 'Rate limit reached. Please wait a few minutes and try again.');

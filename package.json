@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@floating-ui/dom": "^1.7.6",
+    "@sentry/react": "^10.68.0",
     "@supabase/supabase-js": "^2.110.0",
     "@tiptap/pm": "^3.23.6",
     "@tiptap/react": "^3.23.6",

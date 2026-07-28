@@ -26,6 +26,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
+import * as Sentry from '@sentry/react';
 import { buildSectionPrompts } from './buildSectionPrompts.js';
 import { SECTION_ORDER, SECTION_TITLES } from '../sectionConfig.js';
 import { supabase } from '../../../lib/supabase.js';
@@ -69,21 +70,36 @@ export async function generateDraft(session, { clientName = 'the client', onProg
 
     const accessToken = (await supabase.auth.getSession()).data.session?.access_token;
 
-    const res = await fetch('/api/generate', {
-      method:  'POST',
-      headers: {
-        'content-type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        sectionKey,
-        sectionPrompt: prompts[sectionKey],
-        clientName,
-        sectionTitle,
-      }),
-    });
+    let res;
+    try {
+      res = await fetch('/api/generate', {
+        method:  'POST',
+        headers: {
+          'content-type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          sectionKey,
+          sectionPrompt: prompts[sectionKey],
+          clientName,
+          sectionTitle,
+        }),
+      });
+    } catch (err) {
+      // Network/transport error — no HTTP status. Report keys/status only, never prompt content.
+      Sentry.captureMessage('api/generate failed: network error', {
+        level: 'error',
+        extra: { sectionKey, status: null },
+      });
+      throw err;
+    }
 
     if (!res.ok) {
+      // Report keys/status only, never prompt content. Covers 429 and all other non-ok.
+      Sentry.captureMessage(`api/generate failed: ${res.status}`, {
+        level: 'error',
+        extra: { sectionKey, status: res.status },
+      });
       let errMsg = `HTTP ${res.status}`;
       try {
         const body = await res.json();

@@ -4,124 +4,152 @@ _Last updated: 2026-09-28_
 
 ## 1. Goal we are moving towards
 
-Fix a real security bug in the Supabase RLS model: `clients` was using an
-ownership-based policy (`auth.uid() = user_id` — "whoever created the row"),
-which let any staff member see clients they weren't assigned to. The target
-model is role/assignment-based:
+[ACD-68](https://awcbehavioralhealth.atlassian.net/browse/ACD-68) ("A2: Save
+checklist ticks, uploaded documents, and activity history for real"), part of
+Epic [ACD-6](https://awcbehavioralhealth.atlassian.net/browse/ACD-6) "CRM /
+Client Pipeline — Field-Level PRD Rollout." **Pipeline (Trench 5) reactivation
+is now confirmed underway** — this supersedes CLAUDE.md's original "What This
+Repo Is NOT" framing for Pipeline, which was written for the Alpha-only scope.
+The user is doing this ticket-by-ticket, backend-first, before flipping
+`FLAGS.PIPELINE`: ACD-67 (client/staff RLS, done prior session) → **ACD-68
+(this session)** → ACD-69 (A3: missing DB fields, next) → ACD-90 (E1:
+automated RLS tests, next).
 
-- Admins can see and manage every client.
-- BCBA/BCaBA/RBT can only see (and edit the working fields of) clients where
-  they are the assigned `bcba_id` or `rbt_id` — not the full clinic pipeline.
-- Only an admin can ever change *who* a client is assigned to (`bcba_id` /
-  `rbt_id`), even for the currently-assigned staff member.
-- Staff Directory + assignment dropdown need every authenticated user to be
-  able to *read* the `staff` and `profiles` tables (previously locked to
-  "own row only"), while writes to `staff` stay admin-only.
+Problem ACD-68 solves: per-client checklist state, uploaded documents, and the
+activity/audit log were never persisted in Postgres — `PHASE2_DEFAULTS` /
+`enrichClient()` in `src/lib/db.js` injected empty `documents: []`,
+`activity_log: []`, `reassessment_sessions: []`,
+`caregiver_training_session_logs: []` onto every client purely client-side, so
+any tick/upload/log entry vanished on refresh. This matches the backend
+architecture direction already on record (dedicated tables + per-row RLS
+instead of JSON blobs on `clients`, one trench at a time).
 
-This mapped to a story with acceptance criteria: admin can view/edit all
-clients; BCBA/BCaBA/RBT view-only-outside-assignment but full edit rights on
-their own assigned clients; non-admin reassignment attempts rejected with a
-clear error; Staff Directory readable by all logged-in users; staff
-add/edit/remove admin-only. QA + automated RLS test coverage (Story **E1**)
-were explicitly called out as follow-up, not part of this session's scope.
-
-**Status: shipped.** This goal is done from a code/infra standpoint; what's
-left is verification (see §5), not further building.
+**Status: schema-only work shipped.** Tables + RLS + storage bucket are live.
+Frontend wiring (checklist/document/activity-log UI actually calling these
+tables) is explicitly NOT part of this ticket and has not been started.
 
 ## 2. Current state of the code
 
 **Live in production** on Supabase project `ABA_VAULT_MVP`
-(`qravuejkiluimaihhbrf`) — applied directly via `apply_migration` earlier in
-the session, then the migration file was committed and merged so the repo
-matches what's live.
+(`qravuejkiluimaihhbrf`) — applied via `apply_migration` before committing, so
+the repo matches what's live.
 
-- Migration file: `supabase/migrations/20260928120000_client_staff_assignment_rls.sql`
-- `public.is_admin()` — `security definer` helper, checks
-  `profiles.role = 'admin'` for `auth.uid()`. Used by all policies below and
-  by the reassignment trigger.
-- `clients`: `"own clients"` (FOR ALL, ownership-based) replaced with 4
-  explicit policies — SELECT and UPDATE scoped to admin-or-assigned
-  (`bcba_id = auth.uid()` OR `rbt_id = auth.uid()`), INSERT/DELETE recreated
-  unchanged (`auth.uid() = user_id`).
-- Trigger `trg_enforce_client_assignment_admin_only` — `BEFORE UPDATE`,
-  blocks non-admins from changing `bcba_id`/`rbt_id` with a clear error,
-  regardless of what the UPDATE policy otherwise allows.
-- `staff`: `"own staff"` (FOR ALL) replaced with SELECT open to all
-  authenticated users + admin-only insert/update/delete.
-- `profiles`: `"read own profile"` replaced with SELECT open to all
-  authenticated users. No write policy added — matches pre-existing app
-  behavior (no self-service profile editing).
-- Verified via `pg_policies` (all 9 policies present as designed) and the
-  Supabase security advisor (one pre-existing-pattern finding on
-  `is_admin()`'s RPC exposure, reviewed and intentionally left alone).
+- Migration file:
+  `supabase/migrations/20260928130000_client_checklist_documents_activity.sql`
+- `public.can_access_client(target_client_id uuid)` — new `security definer`
+  helper, wraps the existing `is_admin()` plus `bcba_id = auth.uid() or
+  rbt_id = auth.uid()`. Reused by all three tables' policies and the storage
+  policies, instead of inlining the same `exists(...)` check nine times.
+- `checklist_items` (id, client_id fk→clients cascade, stage, item_key, label,
+  is_complete, completed_by fk→auth.users, completed_at, created_at, unique
+  on (client_id, stage, item_key)) — SELECT/INSERT/UPDATE policies, no
+  DELETE. Toggleable (tick/un-tick is an UPDATE on the unique-keyed row).
+- `documents` (id, client_id fk cascade, stage, storage_path, file_name,
+  mime_type, uploaded_by fk→auth.users, uploaded_at) — SELECT/INSERT only.
+  **No UPDATE policy** — permanent once created, by design (see §4).
+- `activity_log` (id, client_id fk cascade, actor_id fk→auth.users, action,
+  detail jsonb, created_at) — SELECT/INSERT only, same permanent-record
+  reasoning as `documents`.
+- All three scoped via `can_access_client()`: admin sees/writes everything;
+  BCBA/BCaBA/RBT only for a client they're actually assigned to
+  (`bcba_id`/`rbt_id`) — narrower than the directory-wide `staff`/`profiles`
+  read policies from the prior ACD-67 migration.
+- New private Storage bucket `client-documents` (separate from
+  `assessment-documents`): 25MB limit, `application/pdf`,
+  `.docx`, `image/png`, `image/jpeg`. Objects keyed by
+  `{client_id}/{filename}` (not `{uid}/...` like `assessment-documents`,
+  because access here is shared across whichever staff are assigned to that
+  client). SELECT + INSERT policies on `storage.objects` cast
+  `(storage.foldername(name))[1]` to uuid and run it through
+  `can_access_client()`.
+- Verified via `list_tables` (`rls_enabled: true` on all three) and
+  `get_advisors` (security) — no new findings beyond the same accepted
+  `is_admin()`-pattern warning, now also covering `can_access_client()` (anon
+  always gets `false`; not a real vulnerability, same reasoning as last
+  session).
 
-**Git/PR trail (all merged, nothing pending review):**
-- PR #67 `client-staff-assignment-rls` → `dev` — merged. CI build +
-  Playwright e2e + Vercel preview all passed.
-- PR #68 `dev` → `main` — merged. `main` and `dev` are both at `68f445f`
-  locally and on origin, fully in sync.
+**Git/PR trail:**
+- PR [#69](https://github.com/Luchot93/aba-shield-mvp/pull/69)
+  `ACD-68-client-checklist-documents-activity` → `dev` — merged by me (user
+  approved via chat). CI (build + Playwright) + Vercel preview all passed.
+- PR [#70](https://github.com/Luchot93/aba-shield-mvp/pull/70) `dev` → `main`
+  — merged by the user directly on GitHub.
+- **Incident, recovered:** merging PR #70 on GitHub also deleted the `dev`
+  branch on origin (user clicked the post-merge "Delete branch" button,
+  not realizing `dev` is the persistent integration branch, not a feature
+  branch — repo-level `delete_branch_on_merge` is `false`, so this was a
+  one-off manual click, not a standing setting). Recreated `origin/dev`
+  immediately from local at the exact same commit (`6e637ff`) — zero data
+  loss, confirmed via `git ls-remote`.
+- **Unrelated finding, also resolved:** `main` had a commit (`6ac8818`,
+  "chore: install impeccable design-review skill", predates this session)
+  that was committed straight to `main` and never reached `dev`. Cherry-picked
+  it onto `dev` (new commit `a19d6c6`, pushed directly — purely additive
+  `.agents/skills/impeccable/` files, no conflicts). Confirmed via
+  `git diff origin/main..origin/dev` (two-dot, full content comparison) that
+  `main` and `dev` are now byte-identical — no further PR needed for this.
 
-No frontend code was touched in this session — purely database/RLS +
-process docs (`handoff.md`, `CLAUDE.md`).
+**No frontend code was touched this session** — purely Supabase schema/RLS +
+process docs.
 
-## 3. Files actively editing
+## 3. Files actively being edited
 
-None in flight — everything from this session is committed and merged into
-both `dev` and `main`. Local branches are fast-forwarded to origin, working
-tree is clean. Next session starts from a clean slate.
+None in flight — everything is committed, pushed, and merged into both `dev`
+and `main`, which are in sync. Working tree is clean. Next session starts
+from a clean slate.
 
 ## 4. Everything tried that failed / walked back
 
-Nothing failed technically (migration applied clean on first attempt, both
-PRs passed CI on the first push), but the *requirements* went through real
-back-and-forth worth recording so it isn't re-litigated next session:
-
-- Initially drafted the `clients` UPDATE policy as "admin or assigned
-  bcba/rbt" (assigned staff can edit general fields). A stricter reading of
-  the story description ("no edits available for them, only the admin")
-  briefly suggested non-admins should be fully view-only. Flagged the
-  tradeoff (a fully admin-only UPDATE policy would make the
-  reassignment-guard trigger unreachable for non-admins, degrading the
-  "clear error" requirement to a silent no-op). Clarified: the admin-only
-  restriction is specifically about the *assignment* fields
-  (`bcba_id`/`rbt_id`), not all fields — BCBAs/RBTs need full edit rights on
-  their assigned clients' working fields (stage progression, notes, session
-  records). **Landed back on the original design** — that's what's live.
-- For `profiles`, chose Option A (zero self-service writes, matches current
-  app behavior) over Option B (let a user edit their own `full_name`).
-  Option B was **not** built — new scope if ever wanted later.
-- Considered tightening `is_admin()`'s RPC exposure to close a security
-  advisor warning. Concluded it's not a real vulnerability (anon always
-  gets `false`; authenticated users can already see their own role via the
-  now-open `profiles` SELECT policy). **Decision: leave it alone.**
-- Initial assumption when asked to "push into dev" was that the PR's merge
-  approval would gate when the security fix takes effect. Clarified this is
-  wrong for how this repo actually works: the DB change was already applied
-  live via the Supabase MCP *before* the PR existed — merging the PR is
-  about keeping the migration-history paper trail in sync, not activating
-  the fix. Worth remembering for future DB-change sessions.
+- Ticket spec initially wrote the RLS check as an inline `exists(select 1
+  from clients c where c.id = <table>.client_id and (c.bcba_id = auth.uid()
+  or c.rbt_id = auth.uid() or (select role from profiles where id =
+  auth.uid()) = 'admin'))`, repeated per policy. Replaced with the
+  `can_access_client()` helper (reusing the existing `is_admin()`) instead —
+  same logic, defined once, and it's what makes the storage policy possible
+  at all (no `client_id` column on `storage.objects`; the path has to be
+  parsed and checked the same way). **User confirmed this deviation was
+  fine** before I applied the migration.
+- Initial migration draft gave `documents` and `activity_log` the same
+  SELECT/INSERT/UPDATE symmetry as `checklist_items`. Walked back after
+  asking the user directly: only `checklist_items` needs to be toggled after
+  creation (a checkbox flips back and forth); an uploaded document or a
+  logged action should be a **permanent record** — no UPDATE policy on
+  either table. **Landed on**: `checklist_items` gets UPDATE,
+  `documents`/`activity_log` do not.
+- Accidentally deleted `origin/dev` when merging PR #70 (see §2). Not a
+  code/design failure, but worth remembering: **don't click "Delete branch"
+  after merging a PR whose head is `dev`** (or `main`) — that button is safe
+  for feature branches, not for persistent branches. Recovered with a plain
+  `git push origin dev` from local.
+- Confirmed (again, as in the ACD-67 session) that DB changes take effect the
+  moment they're applied via the Supabase MCP, not when the PR merges — the
+  PR trail is bookkeeping for the migration-history paper trail, not the
+  activation event.
 
 ## 5. Next steps
 
-1. **Manual QA against the acceptance criteria** (not yet done): log in as
-   a BCBA and confirm only assigned clients are visible; log in as admin
-   and confirm all clients are visible; attempt to reassign a client's
-   BCBA/RBT as a non-admin and confirm it's rejected with the trigger's
-   error message; confirm Staff Directory loads for a non-admin.
-2. **Frontend check**: this was a database-layer-only change. Worth
-   confirming no frontend code path assumes the old ownership model (e.g.
-   queries filtering by `user_id` instead of relying on RLS), especially
-   around `FLAGS.STAFF`-gated Staff Directory UI and the assignment
-   dropdown mentioned in the story.
-3. **Swap the placeholder ticket ref** — the migration header comment and
-   commit message both have `ACD-XX` since no real Jira ticket number was
-   ever given. Update if/when the actual ticket ID is known (cosmetic only,
-   doesn't affect behavior).
-4. **Automated RLS test coverage** — called out in the original story as
-   "Story E1", explicitly deferred, not started.
-5. Per existing project memory: `ACD-44` (wiring CI) is blocked on `ACD-46`
-   (Phase-2 feature audit) — unrelated to this migration, but relevant if
-   item 4 above gets folded into that CI work.
-6. Optional, explicitly declined: revoke `anon` execute on
-   `public.is_admin()` to silence the advisor warning. Not necessary, but
-   trivial if ever wanted.
+1. **ACD-69** ("A3: Add missing database fields the app already expects —
+   denial info, staff contact details") is next in the ACD-6 sequence, and
+   was blocked by ACD-68 — now unblocked.
+2. **ACD-90** ("E1: Add automated tests proving staff can only see their own
+   data") was also blocked by ACD-68 — now unblocked. Also matches the
+   long-deferred "Story E1" automated RLS coverage noted after the ACD-67
+   session.
+3. **Frontend wiring is still entirely unstarted**: no `db.js` functions for
+   checklist_items/documents/activity_log, nothing in `ClientDetailPage.jsx`
+   or elsewhere calls these new tables yet. `FLAGS.PIPELINE` stays `false`
+   until this exists and the user explicitly says to flip it.
+4. **CLAUDE.md is now stale** on the Pipeline/Trench-5 exclusion — it still
+   says "do not add, reference, or assume [Pipeline] exists in this repo."
+   Worth revisiting/updating CLAUDE.md itself to reflect that Pipeline
+   reactivation is confirmed underway, so a future session (or a different
+   agent reading CLAUDE.md cold) doesn't re-litigate the same scope question
+   this session opened with. Not done yet — flagged, not actioned, pending
+   the user's call.
+5. Manual QA against the ACD-67 acceptance criteria (admin sees all clients,
+   BCBA/RBT see only assigned, non-admin reassignment rejected, Staff
+   Directory loads) is still outstanding from the prior session — carried
+   forward, still not done.
+6. Optional, explicitly declined last session: revoke `anon` execute on
+   `public.is_admin()` to silence the advisor warning. Same applies to the
+   new `can_access_client()` now. Not necessary, trivial if ever wanted.

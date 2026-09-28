@@ -208,3 +208,34 @@ Current functions (Trench 2):
 5. Never delete files that contain gated Phase 2 code.
 6. Clinical accuracy matters. Never fabricate or infer clinical data.
 7. All work happens in this repo directory — not in ABA_Shield_V0.
+8. Session handoff file. `handoff.md` (repo root) is the continuity log
+   between sessions — see "Session Handoff" below for what it must contain
+   and when to read/write it.
+
+## Session Handoff
+
+`handoff.md` at the repo root records the state of work across sessions so a
+new session doesn't have to re-derive context or re-litigate decisions that
+were already made and walked back.
+
+- **At the start of a session**, read `handoff.md` first if it exists, before
+  starting new work, so prior context (especially section 4 below) is known.
+- **At the end of a session** (i.e. when the user signals the session is
+  wrapping up, per rule 1), rewrite `handoff.md` — don't append; it reflects
+  current state, not a running log. Update the `_Last updated:_` date. It
+  must contain exactly these 5 sections, in this order:
+  1. **The goal we are moving towards** — the actual problem/story being
+     solved, not just "what we did."
+  2. **Current state of the code** — what's actually applied/committed vs.
+     merely drafted; for DB work, note whether it's live in Supabase or only
+     a local file.
+  3. **Files actively being edited** — the specific paths touched or being
+     touched this session.
+  4. **Everything tried that failed** — including requirements that were
+     proposed, walked back, or reversed mid-session, not just code that
+     errored. This is what prevents re-litigating settled decisions.
+  5. **Next steps** — concrete, ordered, and honest about what's genuinely
+     unstarted vs. in progress.
+- Only touch `handoff.md` for this purpose — it's not a place for design
+  docs, and it isn't committed to git automatically (commits are manual per
+  rule 2).

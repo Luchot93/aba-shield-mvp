@@ -156,7 +156,11 @@ export default function App() {
     }
   }, [clients, currentUser, openingAssessmentId, setClients, addNotif]);
 
-  // Seed notifications on mount based on client auth expiry and staff cert expiry
+  // Seed notifications on mount based on client auth expiry and staff cert expiry.
+  // ACD-70: this is demo-data only (hardcoded `today`, SEED_CLIENTS()/SEED_STAFF()) and
+  // in-app-only (no email). It is superseded by the real cron (api/check-auth-expiry.js,
+  // fires on real auth_expiry_date + emails via send-notification-email) once
+  // FLAGS.PIPELINE activates -- left in place until then per "never delete gated code".
   useEffect(() => {
     if (!FLAGS.PIPELINE) return;
     const today = new Date('2026-05-14');

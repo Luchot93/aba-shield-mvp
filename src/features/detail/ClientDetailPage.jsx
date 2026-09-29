@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 import { STAGES, SM, NEXT_STAGE } from '../../constants/stages.js';
 import { getStageItems } from '../../constants/checklist.js';
 import { itemComplete, itemBlocks } from '../../utils/checklist.js';
-import { mkNotif } from '../../utils/notifications.js';
+import { mkNotif, sendStageChangeEmail } from '../../utils/notifications.js';
 import { isAdmin, canEdit } from '../../utils/permissions.js';
 import { Ico } from '../../components/icons.jsx';
 import StagePill from '../../components/StagePill.jsx';
@@ -331,13 +331,11 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     patchClient({ stage: toStage, stage_entered_at: new Date().toISOString(), ...extraPatch });
     pushLog(`Moved to ${SM[toStage].label}`);
     const isAuth = toStage === 'authorized';
-    addNotif(mkNotif(
-      isAuth
-        ? `${client.name} — Authorization approved, ready for staffing`
-        : `${client.name} moved to ${SM[toStage].label}`,
-      client.name,
-      'normal'
-    ));
+    const stageChangeSubject = isAuth
+      ? `${client.name} — Authorization approved, ready for staffing`
+      : `${client.name} moved to ${SM[toStage].label}`;
+    addNotif(mkNotif(stageChangeSubject, client.name, 'normal'));
+    sendStageChangeEmail(client, stageChangeSubject, stageChangeSubject).catch(() => {});
     // Simulate parent email notification when parent_email is set
     if (client.parent_email) {
       addNotif(mkNotif(
@@ -356,7 +354,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     patchClient({ stage: 'denied', stage_entered_at: new Date().toISOString(), denial_reason: reason || null, denial_from_stage: client.stage, denial_count: (client.denial_count ?? 0) + 1 });
     const entry = { id:`log_${Date.now()}`, action:'Moved to Denied', ...(reason ? { reason } : {}), ts:new Date().toISOString(), by:currentUser.name };
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, activity_log:[entry, ...c.activity_log] } : c));
-    addNotif(mkNotif(`${client.name} — Authorization denied by insurer`, client.name, 'urgent'));
+    const denySubject = `${client.name} — Authorization denied by insurer`;
+    addNotif(mkNotif(denySubject, client.name, 'urgent'));
+    sendStageChangeEmail(client, denySubject, denySubject).catch(() => {});
     if (onClientAdvanced) onClientAdvanced(client.id);
     setConfirmDeny(false);
     setDenyReason('');
@@ -387,7 +387,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
           activity_log: [{ id:`log_${Date.now()}`, action:'Returned to Submitted after denial — auth fields reset', ts:new Date().toISOString(), by:currentUser.name }, ...c.activity_log],
         };
       }));
-      addNotif(mkNotif(`${client.name} — returned to Submitted for resubmission`, client.name, 'normal'));
+      const resubmitSubject = `${client.name} — returned to Submitted for resubmission`;
+      addNotif(mkNotif(resubmitSubject, client.name, 'normal'));
+      sendStageChangeEmail(client, resubmitSubject, resubmitSubject).catch(() => {});
     } else {
       doAdvance(returnStage);
       return;

@@ -5,6 +5,7 @@ import { getStageItems } from '../../constants/checklist.js';
 import { itemComplete, itemBlocks } from '../../utils/checklist.js';
 import { mkNotif, sendStageChangeEmail } from '../../utils/notifications.js';
 import { isAdmin, canEdit } from '../../utils/permissions.js';
+import { FLAGS } from '../../constants/featureFlags.js';
 import { Ico } from '../../components/icons.jsx';
 import StagePill from '../../components/StagePill.jsx';
 import Avatar from '../../components/Avatar.jsx';
@@ -1127,7 +1128,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <StagePill stage={client.stage}/>
-              {isReauthCycle && (
+              {FLAGS.REAUTH && isReauthCycle && (
                 <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full whitespace-nowrap">
                   ↻ Reauth Cycle {client.reauth_cycle}
                 </span>
@@ -1208,7 +1209,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               </div>
             )}
 
-            {isReauthCycle && !serviceTabsActive && (
+            {FLAGS.REAUTH && isReauthCycle && !serviceTabsActive && (
               <div className="bg-teal-50 border border-teal-200 rounded-xl px-4 py-2 mb-3 flex items-center gap-2">
                 <span className="text-teal-600 text-base leading-none">↻</span>
                 <span className="text-sm font-semibold text-teal-700">Reauth Cycle {client.reauth_cycle}</span>
@@ -1227,7 +1228,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                       ? `${SM[viewStage]?.label} checklist`
                       : client.stage === 'denied'
                       ? 'Resolution checklist'
-                      : isReauthCycle && client.stage === 'services'
+                      : FLAGS.REAUTH && isReauthCycle && client.stage === 'services'
                       ? 'Reauthorization cycle'
                       : nextStage
                       ? `To advance to ${SM[nextStage].label}`
@@ -1285,7 +1286,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               })()}
 
               {/* Reauth countdown banner — shown in Services stage when auth end date is known */}
-              {client.stage === 'services' && (() => {
+              {FLAGS.REAUTH && client.stage === 'services' && (() => {
                 const authEnd = client.checklist?.submitted?.auth_end_date;
                 if (!authEnd) return null;
                 const daysLeft = Math.ceil((new Date(authEnd + 'T00:00:00').getTime() - Date.now()) / 86_400_000);
@@ -1479,7 +1480,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               {/* Scrollable checklist items */}
               <div className="flex-1 overflow-y-auto px-5">
                 {/* Teal CPT box — reauth cycles only, in submitted stage */}
-                {isReauthCycle && stageToShow === 'submitted' && (() => {
+                {FLAGS.REAUTH && isReauthCycle && stageToShow === 'submitted' && (() => {
                   const rh = client.reauth_requested_hours ?? {};
                   if (!Object.values(rh).some(v => v)) return null;
                   return (
@@ -1610,7 +1611,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   </div>
 
                   {/* Reauth countdown — uses submitted auth_end_date or falls back to auth_expiry_date */}
-                  {(() => {
+                  {FLAGS.REAUTH && (() => {
                     const authEnd = client.checklist?.submitted?.auth_end_date ?? client.auth_expiry_date;
                     if (!authEnd) return null;
                     const daysLeft = Math.ceil(
@@ -1688,7 +1689,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         (client.caregiver_training_session_logs?.length ?? 0);
                       const tabs = [
                         { key: 'sessions',      label: 'Session Logs',     count: totalSessions, badge: null },
-                        { key: 'reassessment',  label: 'Reassessment',     count: (client.reassessment_sessions ?? []).length, badge: null },
+                        ...(FLAGS.REASSESSMENT
+                          ? [{ key: 'reassessment', label: 'Reassessment', count: (client.reassessment_sessions ?? []).length, badge: null }]
+                          : []),
                       ];
                       return tabs.map(tab => (
                         <button
@@ -1745,7 +1748,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 )}
 
                 {/* ── Tab 2: Reassessment ── */}
-                {servicesTab === 'reassessment' && (() => {
+                {FLAGS.REASSESSMENT && servicesTab === 'reassessment' && (() => {
                   const allCycles = client.reassessment_sessions ?? [];
                   // Filter to the cycle selected in the shared cycle selector
                   const cycles = allCycles.filter(

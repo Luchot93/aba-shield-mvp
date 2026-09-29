@@ -4,6 +4,8 @@ import StaffCard from './components/StaffCard.jsx';
 import InvitePanel from './components/InvitePanel.jsx';
 import BulkInvitePanel from './components/BulkInvitePanel.jsx';
 import { isAdmin } from '../../utils/permissions.js';
+import { supabase } from '../../lib/supabase.js';
+import { updateStaff } from '../../lib/db.js';
 
 export default function StaffPage({ staff, setStaff, clients, currentUser, onSelectClient }) {
   const [tab,            setTab]            = useState('all');
@@ -65,49 +67,63 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
     return a.name.localeCompare(b.name);
   });
 
-  const handleEdit = (id, data) => {
-    setStaff(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
+  // ACD-102: persists staff-card edits (title, supervisor, cert dates, etc.) to
+  // Supabase instead of only updating local state. On failure, local state is left
+  // untouched so the UI doesn't show a "saved" edit that never made it to the DB.
+  const handleEdit = async (id, data) => {
+    try {
+      const updated = await updateStaff(id, data);
+      setStaff(prev => prev.map(s => s.id === id ? { ...s, ...updated } : s));
+    } catch (err) {
+      showToast(err?.message || 'Failed to save staff changes');
+    }
   };
 
-  // handleInvite — duplicate check is done inside InvitePanel (via existingEmails prop)
-  const handleInvite = form => {
-    const initials = form.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-    const newStaff = {
-      id:                 `s_${Date.now()}`,
-      name:               form.name,
-      initials,
-      email:              form.email,
-      phone:              form.phone || '',
-      role:               form.role,
-      cert_number:        form.cert_number || '',
-      cert_expiry:        form.cert_expiry || '',
-      cert_effective_date:'',
-      npi:                form.npi || '',
-      caqh_id:            '',
-      hire_date:          form.hire_date || '',
-      supervisor:         '',
-      title:              '',
-      status:             'pending',
-    };
-    setStaff(prev => [...prev, newStaff]);
+  // handleInvite — duplicate check is done inside InvitePanel (via existingEmails prop).
+  // ACD-71: calls the manage-staff edge function so this creates a real auth user +
+  // staff row instead of only touching local state. The invite's id is set to the
+  // real returned staff.id (not a synthetic inv_* id) so a later onRevoke(inv.id)
+  // call already carries the correct staffId the edge function expects.
+  const handleInvite = async form => {
+    const { data, error } = await supabase.functions.invoke('manage-staff', {
+      body: { action: 'invite', ...form },
+    });
+
+    if (error || data?.error) {
+      showToast(data?.error || error?.message || 'Invite failed');
+      return;
+    }
+
+    const staffRow = data.staff;
+    const initials = staffRow.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    setStaff(prev => [...prev, { ...staffRow, initials }]);
     const inv = {
-      id:         `inv_${Date.now()}`,
-      name:       form.name,
-      email:      form.email,
-      role:       form.role,
-      invited_at: new Date().toISOString(),
+      id:         staffRow.id,
+      name:       staffRow.name,
+      email:      staffRow.email,
+      role:       staffRow.role,
+      invited_at: staffRow.created_at || new Date().toISOString(),
     };
     setInvites(prev => [inv, ...prev]);
     showToast(`${form.name} invited as ${form.role.toUpperCase()}`);
   };
 
-  // S2: Fix stale closure — capture email BEFORE any state mutations
-  const handleRevoke = id => {
-    const email = invites.find(i => i.id === id)?.email;
-    setInvites(prev => prev.filter(i => i.id !== id));
-    if (email) {
-      setStaff(prev => prev.filter(s => s.email?.toLowerCase() !== email.toLowerCase()));
+  // S2: Fix stale closure — capture email BEFORE any state mutations.
+  // ACD-71: id is the real staff.id (see handleInvite), so it can be passed straight
+  // through to manage-staff as staffId. Non-destructive on the backend (status set to
+  // 'revoked', not deleted) so we mirror that locally rather than filtering the row out.
+  const handleRevoke = async id => {
+    const { data, error } = await supabase.functions.invoke('manage-staff', {
+      body: { action: 'revoke', staffId: id },
+    });
+
+    if (error || data?.error) {
+      showToast(data?.error || error?.message || 'Revoke failed');
+      return;
     }
+
+    setInvites(prev => prev.filter(i => i.id !== id));
+    setStaff(prev => prev.map(s => s.id === id ? { ...s, status: 'revoked' } : s));
   };
 
   // P1: Toast duration scales with import size (150 ms per record, capped at 8 s)

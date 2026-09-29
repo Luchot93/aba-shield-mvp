@@ -164,3 +164,14 @@ export async function getAdminStaff() {
   if (error) throw error
   return data
 }
+
+export async function updateStaff(staffId, patch) {
+  const { data, error } = await supabase
+    .from('staff')
+    .update(patch)
+    .eq('id', staffId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}

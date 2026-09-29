@@ -4,6 +4,7 @@ import { mkChecklist } from '../../constants/checklist.js';
 import { getChecklistStatus } from '../../utils/checklist.js';
 import { mkNotif } from '../../utils/notifications.js';
 import { isAdmin } from '../../utils/permissions.js';
+import { FLAGS } from '../../constants/featureFlags.js';
 import { Ico } from '../../components/icons.jsx';
 import KanbanColumn from './components/KanbanColumn.jsx';
 import NewClientModal from './components/NewClientModal.jsx';
@@ -124,7 +125,7 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
           { key:'all',     label:'Active',            count:summaryTotal,   testid:'summary-chip-total'   },
           { key:'blocked', label:'Blocked',          count:summaryBlocked, testid:'summary-chip-blocked' },
           { key:'denied',  label:'Denied',           count:summaryDenied,  testid:'summary-chip-denied'  },
-          { key:'reauth',  label:'Reauth ≤30 days',  count:summaryReauth,  testid:'summary-chip-reauth'  },
+          ...(FLAGS.REAUTH ? [{ key:'reauth', label:'Reauth ≤30 days', count:summaryReauth, testid:'summary-chip-reauth' }] : []),
         ].map(chip => {
           const active = summaryFilter === chip.key;
           return (

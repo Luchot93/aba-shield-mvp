@@ -146,3 +146,21 @@ export async function updateAssessmentSession(sessionId, patch) {
     .eq('id', sessionId)
   if (error) throw error
 }
+
+export async function getStaffByUserIds(userIds) {
+  const ids = [...new Set(userIds.filter(Boolean))]
+  if (!ids.length) return []
+  const { data, error } = await supabase.from('staff').select('*').in('user_id', ids)
+  if (error) throw error
+  return data
+}
+
+export async function getAdminStaff() {
+  const { data: admins, error: adminsError } = await supabase.from('profiles').select('id').eq('role', 'admin')
+  if (adminsError) throw adminsError
+  const adminIds = admins.map(a => a.id)
+  if (!adminIds.length) return []
+  const { data, error } = await supabase.from('staff').select('*').in('user_id', adminIds)
+  if (error) throw error
+  return data
+}

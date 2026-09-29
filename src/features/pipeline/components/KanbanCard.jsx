@@ -2,6 +2,7 @@ import React from 'react';
 import { Ico } from '../../../components/icons.jsx';
 import { getChecklistStatus } from '../../../utils/checklist.js';
 import { daysUntil } from '../../../utils/dates.js';
+import { FLAGS } from '../../../constants/featureFlags.js';
 import AssigneeButton from './AssigneeButton.jsx';
 
 export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, onSelectClient, isNew, currentUser }) {
@@ -15,7 +16,7 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
 
   // Auth expiry banner for Services — date-threshold driven
   let authBanner = null;
-  if (client.stage === 'services' && client.auth_expiry_date) {
+  if (FLAGS.REAUTH && client.stage === 'services' && client.auth_expiry_date) {
     const days = daysUntil(client.auth_expiry_date);
     if (days <= 14)      authBanner = { days, urgent: true };
     else if (days <= 30) authBanner = { days, urgent: false };
@@ -54,7 +55,7 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
       )}
 
       {/* Reauth cycle badge — shown on any stage when client is in a reauth cycle */}
-      {(client.reauth_cycle ?? 0) > 0 && (
+      {FLAGS.REAUTH && (client.reauth_cycle ?? 0) > 0 && (
         <div className="px-3 pt-2.5 pb-0">
           <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 border border-teal-100 px-1.5 py-0.5 rounded">
             ↻ Reauth Cycle {client.reauth_cycle}

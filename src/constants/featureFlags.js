@@ -8,6 +8,10 @@ export const FLAGS = {
   PIPELINE:      false,   // Trench 5 — 9-stage Kanban CRM
   SESSION_LOG:   false,   // Trench 6 — Behavior/Skill/CT session logging
   REASSESSMENT:  false,   // Trench 7 — 6-month reassessment workflow
+  REAUTH:        false,   // Reauth cycle UI (banners, badges, countdowns) —
+                          // punted for this release per product decision;
+                          // CRM ships with Services as a plain stage, no
+                          // reauth surfaces yet.
   STAFF:         false,   // Trench 8 — Staff directory and cert tracking
   METRICS:       false,   // Trench 9 — Metrics dashboard
   VOICE_CAPTURE: false,   // AssemblyAI voice recording + transcription in the

@@ -4,82 +4,76 @@ _Last updated: 2026-09-29_
 
 ## 1. Goal we are moving towards
 
-[ACD-70](https://awcbehavioralhealth.atlassian.net/browse/ACD-70) ("A4: Send
-real emails for stage changes, checklist completions, and
-authorization-expiry warnings"). Notifications previously only showed up
-in-app; this session added real email delivery via Resend on top of that
-(additive, in-app list unchanged), plus a daily cron for the 30/14-day
-authorization-expiry warnings.
+[ACD-71](https://awcbehavioralhealth.atlassian.net/browse/ACD-71) ("A5:
+Invite/Revoke staff should create/remove real accounts"). Invite Staff and
+Revoke Staff on `StaffPage.jsx` previously only mutated local React state —
+no real login was ever created or removed. This session wired both actions
+to a `manage-staff` Supabase edge function (deployed in a prior session, only
+called from the frontend now), so they create/remove real Supabase auth
+accounts, admin-only.
 
-Problem it solves: staff had no way to be notified of a client stage change
-or an approaching reauthorization deadline unless they were actively looking
-at the app. Two pieces:
-1. **Stage-change emails** — fires on advance/deny/resubmit, to the assigned
-   BCBA/RBT + all admins.
-2. **Auth-expiry cron** — Vercel Cron, daily, emails staff exactly 30 and 14
-   days before `auth_expiry_date` (exact-date match, not `<=`, so each client
-   gets exactly one email per threshold with no dedup bookkeeping needed).
+While wiring invite, a second real gap was found and fixed in the same PR
+(user's explicit call — "we will work and commit both in the same PR"):
+[ACD-102](https://awcbehavioralhealth.atlassian.net/browse/ACD-102)
+("Persist staff-card edits to Supabase"). `StaffCard.jsx`'s edit form
+(title, supervisor, cert effective date, CAQH ID) collected data and called
+`onEdit(id, editForm)`, but that only ever updated local state — the columns
+didn't exist in `public.staff` and no `updateStaff()` function existed to
+write them. Edits silently vanished on refresh.
 
-Both are backend prep for `FLAGS.PIPELINE` (still off in production) — same
-pattern as the last several sessions (ACD-67 → ACD-68 → ACD-69 → **ACD-70**).
-`auth_expiry_date` is only ever set once Pipeline activates, so the cron will
-find zero matches in production today; it's built now so it's ready and
-testable ahead of that flip.
+Both are backend prep for `FLAGS.STAFF` (still off in production) — same
+pattern as recent Pipeline-prep sessions. **User explicitly deferred flipping
+`FLAGS.STAFF` to true to a future session** — not part of this session's
+scope.
 
-**Status: code shipped and merged to `main`.** Real email delivery is
-**untested end-to-end** — see §4.
+**Status: both shipped and merged to `main`.**
 
 ## 2. Current state of the code
 
 **Merged to `main`, live in the sense that it will deploy on Vercel's next
-build** — not yet manually verified against a live production request (see
-§5 next steps).
+build.** `FLAGS.STAFF` is still `false`, so none of this is reachable in the
+production UI yet — it's reachable only by flipping the flag in a future
+session.
 
-- PR [#73](https://github.com/Luchot93/aba-shield-mvp/pull/73)
-  `ACD-70-real-email-notifications` → `dev` — merged.
-- PR [#74](https://github.com/Luchot93/aba-shield-mvp/pull/74) `dev` → `main`
-  — merged. Confirmed `main`/`dev` byte-identical (`git diff origin/main..
-  origin/dev` empty) after merge; local `main`/`dev` fast-forwarded to match.
-- New Supabase edge function `supabase/functions/send-notification-email/
-  index.ts` — sends via Resend, logs every attempt (sent/failed) to a new
-  `email_notifications` table (migration
-  `20260929100000_email_notifications_table.sql`). RLS: staff can only read
-  their own rows; write access is service-role only (no anon/authenticated
-  insert policy, matching the `profiles`-table pattern elsewhere).
-- `src/utils/notifications.js`: `sendStageChangeEmail()` — fire-and-forget,
-  swallows failures so a failed send never blocks the UI action that
-  triggered it. Wired into `ClientDetailPage.jsx`'s advance/deny/resubmit
-  flows alongside the existing in-app `addNotif()` calls.
-- New `api/check-auth-expiry.js` (Vercel serverless function) + `vercel.json`
-  cron entry (`"0 3 * * *"`). Uses `SUPABASE_SERVICE_ROLE_KEY` directly
-  (cross-user DB reads the anon key can't do). Protected by `CRON_SECRET`,
-  which Vercel sends automatically as `Authorization: Bearer $CRON_SECRET`
-  for configured cron invocations. Reuses `send-notification-email` for the
-  actual send, same as the frontend path.
-- `src/App.jsx`: the old demo-data seed-notification `useEffect` (hardcoded
-  date, in-app-only) is commented as superseded by the real cron once
-  Pipeline activates — left in place, not deleted, per "never delete gated
-  code."
-- `.env.example` documents the three new server-side vars: `SUPABASE_URL`
-  (bare, unprefixed — read server-side by `api/*.js`), `SUPABASE_SERVICE_
-  ROLE_KEY`, `CRON_SECRET`.
-- Confirmed via Vercel MCP: `CRON_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`,
-  `SUPABASE_URL` are all set correctly in the Vercel project's env vars with
-  correct scoping (production/preview/development as appropriate).
-
-**Two Jira scope gaps found and resolved this session** (ACD-70's AC text
-predates what was actually decided/built):
-- **"Document-signature request"** trigger — split out entirely. Investigated
-  the `documents` table/upload flow and found it's **not wired to Supabase at
-  all** — uploads are pure local React state (`pushDoc()` in
-  `ClientDetailPage.jsx`), never persisted. Created
-  [ACD-100](https://awcbehavioralhealth.atlassian.net/browse/ACD-100) ("Wire
-  client documents to real Supabase storage + table"), linked as **Blocks**
-  ACD-70, since a signature-request notification is meaningless until
-  documents actually persist.
-- **"Checklist completion"** trigger — not built (stage-change was built
-  instead, a scope substitution). Commented on ACD-70: not needed at this
-  level, deferred for later evaluation.
+- PR [#75](https://github.com/Luchot93/aba-shield-mvp/pull/75)
+  `ACD-71-invite-revoke-staff-accounts` → `dev` — merged.
+- PR [#76](https://github.com/Luchot93/aba-shield-mvp/pull/76) `dev` → `main`
+  — merged. Local `main`/`dev` fast-forwarded to match origin after merge
+  (both were merged via GitHub outside local git, so local refs went stale
+  and were synced at session close).
+- **ACD-71 — `src/features/staff/StaffPage.jsx`:**
+  - `handleInvite` now calls `supabase.functions.invoke('manage-staff', {
+    body: { action: 'invite', ...form } })`. On success, the invite's local
+    `id` is set to the edge function's real returned `staff.id` (not a
+    synthetic `inv_${Date.now()}`), so a later `onRevoke(inv.id)` call
+    already carries a valid `staffId` — no changes needed in
+    `InvitePanel.jsx`.
+  - `handleRevoke` calls the same function with `action: 'revoke'`. Backend
+    is non-destructive (`staff.status = 'revoked'`, row kept so past client
+    assignments still resolve) — frontend now mirrors that by mapping
+    `status: 'revoked'` locally instead of filtering the row out.
+  - Both show a toast and leave state untouched on failure — no "looks
+    saved but isn't" UI state.
+  - `handleBulkImport` and `FLAGS.STAFF` itself were explicitly left
+    untouched (out of scope).
+- **ACD-102:**
+  - Migration `supabase/migrations/20260929130000_staff_edit_form_fields.sql`
+    — purely additive: `alter table public.staff add column title text, add
+    column supervisor text, add column cert_effective_date date, add column
+    caqh_id text`. Applied live via Supabase MCP. No RLS changes needed —
+    existing `staff update admin only` policy already covers new columns.
+  - `src/lib/db.js`: new `updateStaff(staffId, patch)` — unguarded (no
+    `IS_E2E` check), matching the existing precedent set by
+    `getStaffByUserIds`/`getAdminStaff` in the same file.
+  - `StaffPage.jsx`'s `handleEdit` is now `async`, calls `updateStaff()`,
+    merges the returned row into local state on success, toasts on failure.
+- Also merged in this same PR (pre-existing, not new this session):
+  `supabase/functions/manage-staff/index.ts` and migration
+  `20260929120000_auto_create_admin_staff_row.sql` (auto-creates a `staff`
+  row when a profile is promoted to admin outside the invite flow — closes
+  the gap where 5 real accounts had no matching staff row).
+- `get_advisors` (security) checked after the ACD-102 migration — no new
+  warnings introduced.
 
 ## 3. Files actively being edited
 
@@ -89,56 +83,37 @@ from a clean slate.
 
 ## 4. Everything tried that failed / walked back
 
-- **Resend domain verification is blocked.** `FROM_ADDRESS` in the edge
-  function points at a placeholder domain (`ourclinic-domain.com`) that we
-  don't own, so every real send attempt gets `403 domain is not verified`
-  from Resend. This is correctly logged as `status: 'failed'` in
-  `email_notifications` — nothing is silently dropped — but **no real email
-  has ever been sent or received end-to-end**, for either the stage-change
-  path or the cron path. User explicitly decided: don't try to fix this now
-  (we don't own a real domain to point DNS at yet), ship the code, test later
-  once DNS is available. Tracked as its own ticket:
-  [ACD-101](https://awcbehavioralhealth.atlassian.net/browse/ACD-101)
-  ("Verify a real sending domain in Resend"), commented on ACD-70 with the
-  caveat.
-- Considered `pg_cron` (Supabase-side scheduling) for the auth-expiry job,
-  rejected in favor of Vercel Cron — not enabled on the project, and Vercel
-  Cron fits the existing serverless-function convention (`api/generate.js`,
-  `api/_lib/`) without introducing new Supabase infrastructure.
-- Considered `<=30 days` for the expiry query, rejected in favor of exact
-  date-equality (`= today+30`) — avoids a client getting the same email
-  repeated on every day it's "within" the window, with no extra "already
-  notified" table needed.
-- Reused the existing `send-notification-email` edge function from a second
-  caller (`api/check-auth-expiry.js`) rather than duplicating send logic —
-  works because a service-role key is itself a valid JWT, satisfying the
-  edge function's `verify_jwt: true`.
+- Initially wondered (out loud, to the user) whether invite-time fields
+  (`cert_effective_date`, `caqh_id`, `supervisor`, `title`) needed to be
+  added to the invite payload/wiring. Verified by reading
+  `InvitePanel.jsx`'s `EMPTY` form object directly — these were never
+  invite-time fields at all; they only ever exist on the post-invite
+  `StaffCard.jsx` edit form. Corrected this to the user rather than
+  building unnecessary invite-form changes. The two flows (invite vs. edit)
+  are entirely separate, and the real gap was persistence of the *edit*
+  flow only.
+- No rejected technical approaches this session — the fix path (missing
+  columns + missing `updateStaff()` + local-only `handleEdit`) was
+  straightforward once diagnosed, and followed the exact precedent already
+  established by the ACD-69 denial/staff-contact-fields migration.
 
 ## 5. Next steps
 
-1. **ACD-101 (Resend domain verification)** — blocked until DNS access to a
-   real domain is available. Once ready: add the domain in Resend, add the
-   SPF/DKIM/DMARC records, wait for verification, update `FROM_ADDRESS`,
-   then trigger one real stage change and confirm delivery + a `'sent'` row
-   in `email_notifications`.
-2. **Live-test the cron** once deployed: `curl` `/api/check-auth-expiry` with
-   `Authorization: Bearer $CRON_SECRET` against production, expect
-   `{"sent":0,"failed":0}` (correct — no real client has `auth_expiry_date`
-   set yet since Pipeline is off).
-3. **ACD-100 (wire documents to real Supabase storage + table)** — not
-   started. Needed before any document-signature-request notification is
-   buildable. Also needed for its own sake: uploaded documents currently
-   vanish on refresh/logout since nothing persists them.
-4. **ACD-69 frontend wiring** (no ticket number yet, unstarted, carried
-   forward again) — `updateClient()`/staff persistence functions still don't
-   exist in `db.js`; denial fields and staff invites still won't survive a
-   refresh. Confirm with the user whether this becomes its own Jira ticket
-   before starting.
+1. **Flip `FLAGS.STAFF` to `true`** — explicitly deferred by the user to a
+   future session. Once flipped, expect to fix TypeErrors per the repo's
+   standard flag-activation pattern, and do a manual pass through Invite →
+   Edit → Revoke to confirm all three round-trip through Supabase correctly
+   with the flag live.
+2. **ACD-100** (wire documents to real Supabase storage + table) — not
+   started, carried forward.
+3. **ACD-101** (Resend domain verification) — still blocked on DNS access to
+   a real domain, carried forward.
+4. **ACD-69 frontend wiring** (no ticket number yet) — carried forward
+   again; confirm with the user whether this becomes its own ticket before
+   starting.
 5. **ACD-90** ("E1: Add automated tests proving staff can only see their own
-   data") — still unblocked and pending, carried forward from prior
-   sessions.
+   data") — still unblocked and pending, carried forward.
 6. **CLAUDE.md is still stale** on the Pipeline/Trench-5 exclusion — still
    flagged, not actioned, carried forward unchanged.
-7. **Manual QA against the ACD-67 acceptance criteria** (admin sees all
-   clients, BCBA/RBT see only assigned, non-admin reassignment rejected,
-   Staff Directory loads) — still outstanding, carried forward again.
+7. **Manual QA against the ACD-67 acceptance criteria** — still outstanding,
+   carried forward again.

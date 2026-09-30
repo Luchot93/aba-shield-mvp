@@ -5,6 +5,7 @@ import { getStageItems } from '../../constants/checklist.js';
 import { itemComplete, itemBlocks } from '../../utils/checklist.js';
 import { mkNotif, sendStageChangeEmail } from '../../utils/notifications.js';
 import { isAdmin, canEdit } from '../../utils/permissions.js';
+import { updateClient, logActivity, setChecklistItem, uploadDocument, addCaseNote } from '../../lib/db.js';
 import { FLAGS } from '../../constants/featureFlags.js';
 import { Ico } from '../../components/icons.jsx';
 import StagePill from '../../components/StagePill.jsx';
@@ -265,23 +266,53 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const visibleDocs = client.documents;
 
   /* ── mutation helpers ── */
-  const patchClient = patch =>
+  const patchClient = patch => {
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, ...patch } : c));
+    updateClient(client.id, patch).catch(err => {
+      console.error('Failed to save client update:', err);
+      addNotif(mkNotif(`Failed to save changes for ${client.name} — please retry.`, client.name, 'urgent'));
+    });
+  };
 
-  const patchCL = (sec, key, val) =>
+  const patchCL = (sec, key, val) => {
     setClients(prev => prev.map(c => {
       if (c.id !== client.id) return c;
       return { ...c, checklist: { ...c.checklist, [sec]: { ...c.checklist[sec], [key]: val } } };
     }));
+    setChecklistItem(client.id, sec, key, val).catch(err => {
+      console.error('Failed to save checklist item:', err);
+      addNotif(mkNotif(`Failed to save "${key}" — please retry.`, client.name, 'urgent'));
+    });
+  };
 
   const pushDoc = (type, label, dataUrl, fieldLabel) => {
     const doc = { id:`doc_${Date.now()}`, type, label, uploaded_at:new Date().toISOString(), by:currentUser.name, stage:client.stage, ...(dataUrl ? { dataUrl } : {}), ...(fieldLabel ? { field: fieldLabel } : {}) };
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, documents:[...c.documents, doc] } : c));
   };
 
-  const pushLog = action => {
+  const pushDocUpload = (file, docType, fieldLabel) => {
+    const localId = `doc_${Date.now()}`;
+    const doc = { id:localId, type:docType, label:file.name, uploaded_at:new Date().toISOString(), by:currentUser.name, stage:client.stage, ...(fieldLabel ? { field: fieldLabel } : {}) };
+    setClients(prev => prev.map(c => c.id === client.id ? { ...c, documents:[...c.documents, doc] } : c));
+    uploadDocument(client.id, client.stage, file, docType, fieldLabel)
+      .then(saved => {
+        setClients(prev => prev.map(c => {
+          if (c.id !== client.id) return c;
+          return { ...c, documents: c.documents.map(d => d.id === localId ? { ...d, id: saved.id } : d) };
+        }));
+      })
+      .catch(err => {
+        console.error('Failed to save document upload:', err);
+        addNotif(mkNotif(`Failed to save "${file.name}" — please retry.`, client.name, 'urgent'));
+      });
+  };
+
+  const pushLog = (action, detail) => {
     const entry = { id:`log_${Date.now()}`, action, ts:new Date().toISOString(), by:currentUser.name };
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, activity_log:[entry, ...c.activity_log] } : c));
+    logActivity(client.id, action, detail).catch(err => {
+      console.error('Failed to save activity log entry:', err);
+    });
   };
 
   /* ── session log handlers ── */
@@ -317,9 +348,22 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
   const addNote = () => {
     if (!noteText.trim()) return;
-    const note = { id:`note_${Date.now()}`, text:noteText.trim(), author:currentUser.name, timestamp:new Date().toISOString(), stage:client.stage };
+    const text = noteText.trim();
+    const localId = `note_${Date.now()}`;
+    const note = { id:localId, text, author:currentUser.name, timestamp:new Date().toISOString(), stage:client.stage };
     setClients(prev => prev.map(c => c.id === client.id ? { ...c, case_notes:[note, ...(c.case_notes||[])] } : c));
     setNoteText('');
+    addCaseNote(client.id, client.stage, text)
+      .then(saved => {
+        setClients(prev => prev.map(c => {
+          if (c.id !== client.id) return c;
+          return { ...c, case_notes: (c.case_notes||[]).map(n => n.id === localId ? { ...n, id: saved.id } : n) };
+        }));
+      })
+      .catch(err => {
+        console.error('Failed to save case note:', err);
+        addNotif(mkNotif('Failed to save note — please retry.', client.name, 'urgent'));
+      });
   };
 
   const doAdvance = toStage => {
@@ -353,8 +397,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const doDeny = () => {
     const reason = denyReason.trim();
     patchClient({ stage: 'denied', stage_entered_at: new Date().toISOString(), denial_reason: reason || null, denial_from_stage: client.stage, denial_count: (client.denial_count ?? 0) + 1 });
-    const entry = { id:`log_${Date.now()}`, action:'Moved to Denied', ...(reason ? { reason } : {}), ts:new Date().toISOString(), by:currentUser.name };
-    setClients(prev => prev.map(c => c.id === client.id ? { ...c, activity_log:[entry, ...c.activity_log] } : c));
+    pushLog('Moved to Denied', reason ? { reason } : undefined);
     const denySubject = `${client.name} — Authorization denied by insurer`;
     addNotif(mkNotif(denySubject, client.name, 'urgent'));
     sendStageChangeEmail(client, denySubject, denySubject).catch(() => {});
@@ -377,17 +420,22 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
       // Clear auth fields for fresh submission
       const cleared = {};
       SUBMITTED_AUTH_FIELDS.forEach(k => { cleared[k] = k === 'approval_uploaded' ? false : ''; });
+      const enteredAt = new Date().toISOString();
       setClients(prev => prev.map(c => {
         if (c.id !== client.id) return c;
         return {
           ...c,
           stage: returnStage,
-          stage_entered_at: new Date().toISOString(),
+          stage_entered_at: enteredAt,
           submitted_prior: Object.keys(priorSnap).length ? priorSnap : c.submitted_prior,
           checklist: { ...c.checklist, submitted: { ...c.checklist.submitted, ...cleared } },
-          activity_log: [{ id:`log_${Date.now()}`, action:'Returned to Submitted after denial — auth fields reset', ts:new Date().toISOString(), by:currentUser.name }, ...c.activity_log],
         };
       }));
+      updateClient(client.id, { stage: returnStage, stage_entered_at: enteredAt }).catch(err => {
+        console.error('Failed to save client update:', err);
+        addNotif(mkNotif(`Failed to save changes for ${client.name} — please retry.`, client.name, 'urgent'));
+      });
+      pushLog('Returned to Submitted after denial — auth fields reset');
       const resubmitSubject = `${client.name} — returned to Submitted for resubmission`;
       addNotif(mkNotif(resubmitSubject, client.name, 'normal'));
       sendStageChangeEmail(client, resubmitSubject, resubmitSubject).catch(() => {});
@@ -578,13 +626,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                           onChange={e => {
                             const file = e.target.files?.[0];
                             if (!file) return;
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              patchCL(item.clSec, item.key, true);
-                              pushDoc(item.docType ?? item.key, file.name, reader.result, item.label);
-                              pushLog(`Uploaded: ${item.label} — ${file.name}`);
-                            };
-                            reader.readAsDataURL(file);
+                            patchCL(item.clSec, item.key, true);
+                            pushDocUpload(file, item.docType ?? item.key, item.label);
+                            pushLog(`Uploaded: ${item.label} — ${file.name}`);
                           }}
                         />
                       </label>

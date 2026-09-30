@@ -1,6 +1,5 @@
 import React, { useState, useCallback } from 'react';
 import { STAGES } from '../../constants/stages.js';
-import { mkChecklist } from '../../constants/checklist.js';
 import { getChecklistStatus } from '../../utils/checklist.js';
 import { mkNotif } from '../../utils/notifications.js';
 import { isAdmin } from '../../utils/permissions.js';
@@ -8,6 +7,7 @@ import { FLAGS } from '../../constants/featureFlags.js';
 import { Ico } from '../../components/icons.jsx';
 import KanbanColumn from './components/KanbanColumn.jsx';
 import NewClientModal from './components/NewClientModal.jsx';
+import { createClient, updateClient, logActivity } from '../../lib/db.js';
 
 export default function PipelinePage({ clients, staff, setClients, setSelectedClient, currentUser, addNotif, onClientAdvanced, recentlyMovedId }) {
   const [showModal,      setShowModal]      = useState(false);
@@ -47,54 +47,82 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
       return c.name.toLowerCase().includes(searchQuery.toLowerCase());
     });
 
-  const handleSaveClient = form => {
+  const handleSaveClient = async form => {
     const { createPipelineEntry, ...clientData } = form;
-    const id = `c${Date.now()}`;
     const now = new Date().toISOString();
-    setClients(prev => [...prev, {
-      ...clientData,
-      id,
-      stage: createPipelineEntry ? 'intake' : null,
-      source: 'crm_created',
-      stage_entered_at: createPipelineEntry ? now : null,
-      pipeline_entry: createPipelineEntry,
-      denial_reason:null, bcba_id:null, rbt_id:null,
-      auth_expiry_date:null, reauth_cycle:0, reauth_requested_hours:{}, auth_cycles_history:[],
-      smart_assessment_session_id:null,
-      checklist:mkChecklist(), documents:[], activity_log:[],
-    }]);
-    setShowModal(false);
-    if (createPipelineEntry) {
-      setNewClientId(id);
-      setTimeout(() => setNewClientId(null), 3000);
+    try {
+      const newRow = await createClient(currentUser.id, {
+        ...clientData,
+        stage: createPipelineEntry ? 'intake' : null,
+        source: 'crm_created',
+        stage_entered_at: createPipelineEntry ? now : null,
+        pipeline_entry: createPipelineEntry,
+      });
+      setClients(prev => [newRow, ...prev]);
+      setShowModal(false);
+      if (createPipelineEntry) {
+        setNewClientId(newRow.id);
+        setTimeout(() => setNewClientId(null), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to create client:', err?.message);
+      addNotif(mkNotif('Failed to save client — please try again.', form.name, 'urgent'));
     }
   };
 
   const handleAddToPipeline = client => {
+    const stageEnteredAt = new Date().toISOString();
     setClients(prev => prev.map(c =>
       c.id === client.id
-        ? { ...c, pipeline_entry:true, stage:'intake', stage_entered_at: new Date().toISOString() }
+        ? { ...c, pipeline_entry:true, stage:'intake', stage_entered_at: stageEnteredAt }
         : c
     ));
     setNewClientId(client.id);
     setTimeout(() => setNewClientId(null), 3000);
+    updateClient(client.id, { pipeline_entry:true, stage:'intake', stage_entered_at: stageEnteredAt }).catch(err => {
+      console.error('Failed to save client update:', err);
+      addNotif(mkNotif(`Failed to save changes for ${client.name} — please retry.`, client.name, 'urgent'));
+    });
+    logActivity(client.id, 'Added to pipeline').catch(err => {
+      console.error('Failed to save activity log entry:', err);
+    });
   };
 
   const handleAssignBCBA = useCallback((clientId, staffId) => {
     setClients(prev => prev.map(c => c.id===clientId ? { ...c, bcba_id:staffId } : c));
+    updateClient(clientId, { bcba_id: staffId }).catch(err => {
+      console.error('Failed to save client update:', err);
+      const c = clients.find(c => c.id === clientId);
+      addNotif(mkNotif(`Failed to save BCBA assignment for ${c?.name ?? 'client'} — please retry.`, c?.name, 'urgent'));
+    });
     if (staffId) {
       const s = staff.find(s => s.id === staffId);
       const c = clients.find(c => c.id === clientId);
-      if (s && c) addNotif(mkNotif(`${s.name} assigned as BCBA to ${c.name}`, c.name, 'normal'));
+      if (s && c) {
+        addNotif(mkNotif(`${s.name} assigned as BCBA to ${c.name}`, c.name, 'normal'));
+        logActivity(clientId, `Assigned BCBA: ${s.name}`).catch(err => {
+          console.error('Failed to save activity log entry:', err);
+        });
+      }
     }
   }, [setClients, staff, clients, addNotif]);
 
   const handleAssignRBT = useCallback((clientId, staffId) => {
     setClients(prev => prev.map(c => c.id===clientId ? { ...c, rbt_id:staffId } : c));
+    updateClient(clientId, { rbt_id: staffId }).catch(err => {
+      console.error('Failed to save client update:', err);
+      const c = clients.find(c => c.id === clientId);
+      addNotif(mkNotif(`Failed to save RBT assignment for ${c?.name ?? 'client'} — please retry.`, c?.name, 'urgent'));
+    });
     if (staffId) {
       const s = staff.find(s => s.id === staffId);
       const c = clients.find(c => c.id === clientId);
-      if (s && c) addNotif(mkNotif(`${s.name} assigned as RBT to ${c.name}`, c.name, 'normal'));
+      if (s && c) {
+        addNotif(mkNotif(`${s.name} assigned as RBT to ${c.name}`, c.name, 'normal'));
+        logActivity(clientId, `Assigned RBT: ${s.name}`).catch(err => {
+          console.error('Failed to save activity log entry:', err);
+        });
+      }
     }
   }, [setClients, staff, clients, addNotif]);
 

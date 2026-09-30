@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { SEED_STAFF, makeAssessmentSession, makeReassessmentSession, makeInitialSections, buildClientProfile } from './constants/seedData.js';
+import { SEED_STAFF, SEED_CLIENTS, makeAssessmentSession, makeReassessmentSession, makeInitialSections, buildClientProfile } from './constants/seedData.js';
 import { mkNotif } from './utils/notifications.js';
 import { supabase } from './lib/supabase.js';
-import { getClients, createClient, getAssessmentSession, createAssessmentSession, getAssessmentSessionsByBcba, getProfile, getStaff } from './lib/db.js';
+import { getClients, createClient, updateClient, logActivity, getAssessmentSession, createAssessmentSession, getAssessmentSessionsByBcba, getProfile, getStaff } from './lib/db.js';
 import FontLoader from './components/FontLoader.jsx';
 import NavBar from './components/NavBar.jsx';
 import PipelinePage from './features/pipeline/PipelinePage.jsx';
@@ -325,21 +325,20 @@ export default function App() {
             setSelectedClient(profileClient);
           } : null}
           onAddToPipeline={!profileClient.pipeline_entry ? () => {
+            const stageEnteredAt = new Date().toISOString();
             setClients(prev => prev.map(c =>
               c.id === profileClient.id
-                ? {
-                    stage: null, stage_entered_at: null, auth_expiry_date: null,
-                    reauth_cycle: 0, pipeline_entry: false, bcba_id: null, rbt_id: null,
-                    service_session_logs: [], reassessment_sessions: [],
-                    caregiver_training_session_logs: [],
-                    ...c,
-                    pipeline_entry: true,
-                    stage: 'intake',
-                    stage_entered_at: new Date().toISOString(),
-                  }
+                ? { ...c, pipeline_entry: true, stage: 'intake', stage_entered_at: stageEnteredAt }
                 : c
             ));
             setProfileClient(null);
+            updateClient(profileClient.id, { pipeline_entry: true, stage: 'intake', stage_entered_at: stageEnteredAt }).catch(err => {
+              console.error('Failed to save client update:', err);
+              addNotif(mkNotif(`Failed to save changes for ${profileClient.name} — please retry.`, profileClient.name, 'urgent'));
+            });
+            logActivity(profileClient.id, 'Added to pipeline').catch(err => {
+              console.error('Failed to save activity log entry:', err);
+            });
           } : null}
         />
       )}

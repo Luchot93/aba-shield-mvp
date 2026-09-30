@@ -7,7 +7,7 @@ import NewClientModal from '../pipeline/components/NewClientModal.jsx';
 import ImportPanel from './components/ImportPanel.jsx';
 import DeleteClientModal from './components/DeleteClientModal.jsx';
 import { FLAGS } from '../../constants/featureFlags.js';
-import { createClient, createClients, deleteClient } from '../../lib/db.js';
+import { createClient, createClients, deleteClient, updateClient, logActivity } from '../../lib/db.js';
 
 // ─── Filter config ────────────────────────────────────────────────────────────
 const FILTER_GROUPS = {
@@ -103,12 +103,20 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
   // U-09: quick add-to-pipeline from table row
   const handleAddToPipeline = (e, clientId) => {
     e.stopPropagation();  // don't open profile panel
+    const stageEnteredAt = new Date().toISOString();
     setClients(prev => prev.map(c =>
       c.id === clientId
-        ? { ...c, pipeline_entry: true, stage: 'intake', stage_entered_at: new Date().toISOString() }
+        ? { ...c, pipeline_entry: true, stage: 'intake', stage_entered_at: stageEnteredAt }
         : c
     ));
     showToast('Client added to Intake pipeline');
+    updateClient(clientId, { pipeline_entry: true, stage: 'intake', stage_entered_at: stageEnteredAt }).catch(err => {
+      console.error('Failed to save client update:', err);
+      showToast('Failed to save changes — please retry.', 'error');
+    });
+    logActivity(clientId, 'Added to pipeline').catch(err => {
+      console.error('Failed to save activity log entry:', err);
+    });
   };
 
   const handleDeleteClient = async () => {

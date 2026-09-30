@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { SEED_STAFF, makeAssessmentSession, makeReassessmentSession, makeInitialSections, buildClientProfile } from './constants/seedData.js';
 import { mkNotif } from './utils/notifications.js';
 import { supabase } from './lib/supabase.js';
-import { getClients, createClient, getAssessmentSession, createAssessmentSession, getAssessmentSessionsByBcba, getProfile } from './lib/db.js';
+import { getClients, createClient, getAssessmentSession, createAssessmentSession, getAssessmentSessionsByBcba, getProfile, getStaff } from './lib/db.js';
 import FontLoader from './components/FontLoader.jsx';
 import NavBar from './components/NavBar.jsx';
 import PipelinePage from './features/pipeline/PipelinePage.jsx';
@@ -33,11 +33,15 @@ const IS_INVITE    = /(^|&|#)type=invite(&|$)/.test(INITIAL_HASH)
   || new URLSearchParams(window.location.search).get('invite') === 'true';
 const INVITE_ERROR = /error=|error_description=/.test(INITIAL_HASH);
 
+function toInitials(name) {
+  return (name || '').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase();
+}
+
 export default function App() {
   const [page,            setPage]           = useState('clients');
   const [clients,         setClients]        = useState([]);
   const [clientsLoading,  setClientsLoading] = useState(false);
-  const [staff,           setStaff]          = useState(SEED_STAFF);
+  const [staff,           setStaff]          = useState([]);
   const [notifications,   setNotifications]  = useState([]);
   const [selectedClient,         setSelectedClient]        = useState(null);
   const [selectedClientInitTab,  setSelectedClientInitTab] = useState(null);
@@ -93,6 +97,13 @@ export default function App() {
       })
       .catch(err => console.error('Failed to load clients:', err))
       .finally(() => setClientsLoading(false));
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    getStaff()
+      .then(setStaff)
+      .catch(err => console.error('Failed to load staff:', err));
   }, [currentUser?.id]);
 
   useEffect(() => {
@@ -204,6 +215,7 @@ export default function App() {
 
   const enrichedStaff = staff.map(s => ({
     ...s,
+    initials: s.initials || toInitials(s.name),
     active_case_count: clients.filter(c => c.bcba_id===s.id || c.rbt_id===s.id).length,
   }));
 

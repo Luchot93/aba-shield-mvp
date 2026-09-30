@@ -20,7 +20,6 @@ export async function getClients(userId) {
   const { data, error } = await supabase
     .from('clients')
     .select('*')
-    .eq('user_id', userId)
     .order('created_at', { ascending: false })
   if (error) throw error
   return data.map(enrichClient)
@@ -145,6 +144,22 @@ export async function updateAssessmentSession(sessionId, patch) {
     .update({ ...toDbPatch(patch), updated_at: new Date().toISOString() })
     .eq('id', sessionId)
   if (error) throw error
+}
+
+export async function getStaff() {
+  const { data, error } = await supabase.from('staff').select('*')
+  if (error) throw error
+  return data
+}
+
+export async function createStaff(staffData) {
+  const { data, error } = await supabase
+    .from('staff')
+    .insert(staffData)
+    .select()
+    .single()
+  if (error) throw error
+  return data
 }
 
 export async function getStaffByUserIds(userIds) {

@@ -247,7 +247,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const isReadOnly   = viewStage !== null;
   const stageToShow  = isReadOnly ? viewStage : client.stage;
   const nextStage    = NEXT_STAGE[client.stage];
-  const serviceTabsActive = client.stage === 'services' && !isReadOnly;
+  const serviceTabsActive = client.stage === 'services' && !isReadOnly && (FLAGS.SESSION_LOG || FLAGS.REASSESSMENT);
   const isReauthCycle = (client.reauth_cycle ?? 0) > 0;
   const displayItems = (() => {
     const items = getStageItems(stageToShow);
@@ -1688,7 +1688,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         (client.service_session_logs?.length ?? 0) +
                         (client.caregiver_training_session_logs?.length ?? 0);
                       const tabs = [
-                        { key: 'sessions',      label: 'Session Logs',     count: totalSessions, badge: null },
+                        ...(FLAGS.SESSION_LOG
+                          ? [{ key: 'sessions', label: 'Session Logs', count: totalSessions, badge: null }]
+                          : []),
                         ...(FLAGS.REASSESSMENT
                           ? [{ key: 'reassessment', label: 'Reassessment', count: (client.reassessment_sessions ?? []).length, badge: null }]
                           : []),
@@ -1727,7 +1729,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 </div>
 
                 {/* ── Tab 1: Session Logs ── */}
-                {servicesTab === 'sessions' && (
+                {FLAGS.SESSION_LOG && servicesTab === 'sessions' && (
                   <div className="p-4 space-y-3">
                     <BehaviorSessionLogPanel
                       client={client}

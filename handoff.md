@@ -49,6 +49,16 @@ neither tab or its content is reachable in production.
   dynamic-import overlap).
 - Verified via code trace (not live browser) that no other file (Pipeline/
   Kanban, App.jsx, nav) references these two Services-stage tabs.
+- Filed two follow-up Jira tickets for pre-existing bugs discovered during
+  this session's QA (see section 4) — not part of ACD-73's own scope, but
+  tracked so they aren't lost:
+  [ACD-103](https://awcbehavioralhealth.atlassian.net/browse/ACD-103)
+  (`SEED_CLIENTS` missing import) and
+  [ACD-104](https://awcbehavioralhealth.atlassian.net/browse/ACD-104)
+  (no `updateClient` persistence in `db.js`). Both are parented under the
+  **ACD-6** epic ("CRM / Client Pipeline — Field-Level PRD Rollout") per
+  explicit correction — ACD-6 is the epic this work actually lives under now,
+  not the old "Trench 5" framing used in earlier session notes/CLAUDE.md.
 
 ## 3. Files actively being edited
 
@@ -84,9 +94,11 @@ from a clean slate.
   unblock QA, then **reverted** at session close per the "revert to before
   we began testing" instruction — **the bug is still present in the
   committed codebase.** Logged to project memory
-  (`project_app_missing_seed_clients_import.md`). **Must be fixed before
-  `FLAGS.PIPELINE` is ever flipped to `true` for a real rollout** — it will
-  otherwise crash the entire app for every user, not just Pipeline surfaces.
+  (`project_app_missing_seed_clients_import.md`) and filed as
+  [ACD-103](https://awcbehavioralhealth.atlassian.net/browse/ACD-103).
+  **Must be fixed before `FLAGS.PIPELINE` is ever flipped to `true` for a
+  real rollout** — it will otherwise crash the entire app for every user,
+  not just Pipeline surfaces.
 - **Discovered bug: "Add to pipeline" doesn't persist.** After adding a test
   client to the pipeline via `ClientsPage.jsx`'s `handleAddToPipeline`, a
   full page reload reverted it back to un-added/"Directory" state. Root
@@ -95,9 +107,10 @@ from a clean slate.
   `updateClient` function at all** — no client field (including `stage`)
   can currently be persisted after creation via any code path in the app.
   This was the direct friction that made QA take too long and led to
-  calling off testing. **Not fixed, not yet logged to project memory** —
-  worth a memory entry next session since it'll block any real Pipeline
-  QA/rollout, not just this ticket.
+  calling off testing. Logged to project memory
+  (`project_no_updateClient_persistence.md`) and filed as
+  [ACD-104](https://awcbehavioralhealth.atlassian.net/browse/ACD-104). Not
+  fixed yet.
 - A throwaway test client ("ZZTEST QA Client ACD-73") was created in
   Supabase for QA purposes (user-approved: "create one throwaway, obviously
   fake test client... and delete it afterward") and was successfully
@@ -106,13 +119,16 @@ from a clean slate.
 
 ## 5. Next steps
 
-1. **Log the "Add to pipeline" no-persistence bug to project memory** —
-   discovered this session, not yet written up. `handleAddToPipeline` in
+1. **[ACD-104](https://awcbehavioralhealth.atlassian.net/browse/ACD-104)** —
+   fix the "Add to pipeline" no-persistence bug: `handleAddToPipeline` in
    `ClientsPage.jsx` only updates local state; `db.js` has no `updateClient`
-   function at all. Blocks real Pipeline QA/rollout, not just ACD-73.
-2. **Fix the `SEED_CLIENTS` missing-import bug** in `src/App.jsx` (see
-   section 4) before `FLAGS.PIPELINE` is ever flipped to `true` for real —
-   currently reverted back to broken/uncommitted-fix state in the repo.
+   function at all. Blocks real Pipeline QA/rollout, not just ACD-73. Pull
+   this ticket in whenever Pipeline/Trench-5 work resumes.
+2. **[ACD-103](https://awcbehavioralhealth.atlassian.net/browse/ACD-103)** —
+   fix the `SEED_CLIENTS` missing-import bug in `src/App.jsx` (see section 4)
+   before `FLAGS.PIPELINE` is ever flipped to `true` for real — currently
+   reverted back to broken/uncommitted-fix state in the repo. Pull this
+   ticket in whenever Pipeline/Trench-5 work resumes.
 3. **Manual QA for ACD-73** — still not done: confirm no Session Log/
    Reassessment tabs appear anywhere in the Services stage across several
    clients, confirm no console errors, confirm all other Services-stage

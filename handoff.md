@@ -4,87 +4,75 @@ _Last updated: 2026-09-30_
 
 ## 1. Goal we are moving towards
 
-[ACD-74](https://awcbehavioralhealth.atlassian.net/browse/ACD-74) — "B3: Fix a
-leftover bug hiding clients from staff, and pull the Staff Directory from the
-real database." Two fixes: (a) `getClients` was redundantly filtering by
-`user_id` even though RLS (from [ACD-67](https://awcbehavioralhealth.atlassian.net/browse/ACD-67)
-/ Prompt A1) already scopes visibility correctly at the database level; (b)
-the Staff Directory was reading from `SEED_STAFF` mock data instead of the
-real Supabase `staff` table. Write-side staff actions (Invite/Edit/Revoke/
-Bulk Import) were explicitly out of scope — that's
-[ACD-76](https://awcbehavioralhealth.atlassian.net/browse/ACD-76).
+Close out the persistence gaps left over from the pipeline-action work started
+earlier: [ACD-75](https://awcbehavioralhealth.atlassian.net/browse/ACD-75)
+("Wire checklist items, documents, and case notes to Supabase" — the
+`ClientDetailPage.jsx` side of Trench 5 persistence), plus three specific bugs
+carried forward from prior handoffs —
+[ACD-103](https://awcbehavioralhealth.atlassian.net/browse/ACD-103) (missing
+`SEED_CLIENTS` import crash), [ACD-104](https://awcbehavioralhealth.atlassian.net/browse/ACD-104)
+("Add to pipeline" only updated local state, never Supabase), and
+[ACD-108](https://awcbehavioralhealth.atlassian.net/browse/ACD-108) (the
+checklist/documents/case-notes persistence ticket filed this session once the
+ACD-75 gap was confirmed in code). All of this is gated Phase-2 code behind
+`FLAGS.PIPELINE` (still `false` in production) — the goal was to make the
+Pipeline/Client-Detail persistence layer actually correct and Supabase-backed
+so it's ready whenever that flag is flipped for real, not to ship it live
+this session.
 
-**Status: shipped, merged to `main`, and confirmed "Done" in Jira.** (An
-earlier query this session showed the ticket still "In Progress"; a later
-query confirmed it had since been transitioned to "Done" — no action needed.)
+**Status: shipped, merged to `main`, and all four tickets transitioned to
+Done in Jira.**
 
 ## 2. Current state of the code
 
 **Merged to `main`, live in the sense that it will deploy on Vercel's next
-build.**
+build — but inert in production because `FLAGS.PIPELINE` stays `false`.**
 
-- PR [#83](https://github.com/Luchot93/aba-shield-mvp/pull/83)
-  `ACD-74-wire-staff-directory-and-fix-client-rls` → `dev` — merged.
-- PR [#84](https://github.com/Luchot93/aba-shield-mvp/pull/84) `dev` → `main`
+- PR [#86](https://github.com/Luchot93/aba-shield-mvp/pull/86)
+  `ACD-108-checklist-documents-notes-persistence` → `dev` — merged
+  (`952d0d1`).
+- PR [#87](https://github.com/Luchot93/aba-shield-mvp/pull/87) `dev` → `main`
   — merged. Local `main`/`dev` fast-forwarded to match origin at session
-  close.
-- `src/lib/db.js` — removed `.eq('user_id', userId)` from `getClients` (RLS
-  now handles visibility scoping); added `getStaff()` and `createStaff()`.
-- `src/App.jsx`:
-  - `staff` state now loads via `getStaff()` in a new `useEffect` (mirrors
-    the existing `getClients` effect) instead of initializing from
-    `SEED_STAFF`.
-  - Added a module-level `toInitials(name)` helper (mirrors the existing
-    local one in `BulkInvitePanel.jsx` — deliberately not extracted to a
-    shared utils module; only two usages, would be premature abstraction).
-  - `enrichedStaff` now computes `initials: s.initials || toInitials(s.name)`
-    — the real Supabase `staff` table has no `initials` column, so without
-    this every real staff member's avatar would render blank across
-    Pipeline, Clients, Assessments, and Client Detail views.
-  - `SEED_STAFF` import kept — still used by two other live call sites
-    unrelated to this ticket (the `FLAGS.PIPELINE`-gated seeding effect, and
-    an ungated effect that auto-creates assessment sessions for
-    assessment-stage clients).
-- `FLAGS.STAFF` confirmed still `false` in committed code. It was flipped to
-  `true` locally/uncommitted to QA the Staff Directory in a browser, then
-  reverted before committing — confirmed via `git diff` showing zero change
-  to `featureFlags.js` post-revert.
-- Verified via `npx vite build --logLevel warn` — clean, only the same
-  pre-existing unrelated warnings documented in prior handoffs.
-- **Live browser QA actually completed this time** (not just a code trace)
-  at `localhost:5175` with `FLAGS.STAFF` temporarily on: Staff Directory
-  shows the real Supabase record ("Luis Teran / ADMIN / Active") with
-  correctly computed initials "LT"; Clients page loads all 7 real clients via
-  the RLS-scoped query; Assessments page renders against `enrichedStaff`
-  with no console errors anywhere. **User confirmed this read-side QA pass
-  as complete — no longer carried forward as a to-do** (the formal flag flip
-  itself is still deferred; see Next Steps).
-- The E2E GitHub Actions check on PR #84 ran unusually slow (~6m46s vs. the
-  normal ~33s) specifically on the `npx playwright install --with-deps
-  chromium` step. Diagnosed as transient CI runner/network variance, not
-  caused by this PR — `.github/workflows/e2e.yml` has no cache for the
-  Playwright browser binary, so every run re-downloads it from scratch. The
-  check passed once that step finished. Filed as
-  [ACD-107](https://awcbehavioralhealth.atlassian.net/browse/ACD-107).
-- Posted a plain-English comment to both ACD-74 and ACD-76 documenting the
-  scope split (killing `SEED_STAFF` is ACD-74; write-side Invite/Edit/
-  Revoke/Bulk Import wiring is ACD-76) — confirmed with the user that no new
-  ticket was needed since ACD-76 already covers the write side.
-- Posted a plain-English comment to ACD-74 documenting the `initials`
-  fallback addition (found mid-session as a gap, pulled into this ticket's
-  scope with the user's explicit approval rather than filed separately).
-- **New standing rule established this session:** whenever a pending/
-  unresolved item is identified in a handoff review, check Jira for an
-  existing covering ticket first; if none exists and it isn't being fixed
-  in the current session, create a new Jira ticket for it. Applied
-  immediately below — filed
-  [ACD-105](https://awcbehavioralhealth.atlassian.net/browse/ACD-105)
-  (ACD-69 frontend wiring),
-  [ACD-106](https://awcbehavioralhealth.atlassian.net/browse/ACD-106)
-  (CLAUDE.md staleness), and
-  [ACD-107](https://awcbehavioralhealth.atlassian.net/browse/ACD-107)
-  (Playwright CI caching) for the three items from last session's debt list
-  that had no existing ticket.
+  close; `git log origin/main..origin/dev` confirmed empty after merge.
+- Commit `fe81f4f` bundled two logically distinct bodies of work that had
+  both been left uncommitted in the working tree — shipped together as one
+  unit rather than split retroactively (explained to the user when asked):
+  - **Pass 1 (ACD-103 / ACD-104 / pipeline-action persistence)** —
+    `src/App.jsx` (added the missing `SEED_CLIENTS` import — ACD-103),
+    `src/features/clients/ClientsPage.jsx`,
+    `src/features/pipeline/PipelinePage.jsx` (`handleSaveClient` switched
+    from local-only id generation to a real `createClient` Supabase insert;
+    `updateClient`/`logActivity` wired for stage advance, BCBA/RBT
+    assignment, deny, and add-to-pipeline — ACD-104).
+  - **Pass 2 (ACD-75 / ACD-108)** —
+    `src/features/detail/ClientDetailPage.jsx` (`patchCL`, `pushDocUpload`,
+    `addNote` now persist instead of only touching local state),
+    `src/lib/db.js` (added `setChecklistItem`, `uploadDocument`,
+    `addCaseNote`, and the batch hydration functions
+    `getChecklistItemsByClientIds`, `getDocumentsByClientIds`,
+    `getCaseNotesByClientIds`, `getActivityLogByClientIds`, all wired into
+    `getClients`).
+- Three Supabase migrations applied this session (via Supabase MCP, project
+  `qravuejkiluimaihhbrf`): `checklist_items_add_value_column`,
+  `create_case_notes_table`, `documents_add_doc_type_and_field_label`.
+- `FLAGS.PIPELINE` confirmed still `false` in committed code. Flipped to
+  `true` locally/uncommitted to QA in a browser, then reverted before
+  committing — confirmed via `git diff -- src/constants/featureFlags.js`
+  showing zero change post-revert.
+- **Live browser QA completed** at `localhost:5175` with `FLAGS.PIPELINE`
+  temporarily on: uploaded a real document via a JS-simulated file input
+  (Chrome MCP's `file_upload` no longer accepts host filesystem paths in
+  this environment — worked around by constructing a `File`/`DataTransfer`
+  object and dispatching a native `change` event via `javascript_tool`) and
+  confirmed the "Insurance card" checklist item showed "Uploaded", the
+  Documents tab showed the file with correct badge/filename/date/uploader
+  and a working signed-URL Download button, and a case note round-tripped
+  with the author's real name ("Luis Teran") resolved from the `staff`
+  table rather than a raw id/email. Did a full page reload + re-navigation
+  afterward and confirmed all three (checklist state, document, case note)
+  survived — i.e. genuinely persisted, not just optimistic local state.
+- All four tickets (ACD-75, ACD-103, ACD-104, ACD-108) transitioned to Done
+  in Jira after the user confirmed "Yes put them in done".
 
 ## 3. Files actively being edited
 
@@ -94,73 +82,74 @@ from a clean slate.
 
 ## 4. Everything tried that failed / walked back
 
-- Considered flipping `FLAGS.STAFF` to `true` as part of this ticket —
-  explicitly declined by the user ("Got it then no flipping for now"). Only
-  flipped locally and temporarily (uncommitted) for browser QA, then
-  reverted.
-- Considered extracting `toInitials` into a shared/exported utils module
-  since a local copy already existed in `BulkInvitePanel.jsx` — decided
-  against it as premature abstraction for a two-usage helper; added a
-  second local copy in `App.jsx` instead, matching the existing pattern.
-- **Carried from the ACD-73 session, still true:** the `SEED_CLIENTS`
-  missing-import crash ([ACD-103](https://awcbehavioralhealth.atlassian.net/browse/ACD-103))
-  was fixed locally then reverted per a "revert to before we began testing"
-  instruction — the bug is still present in the committed codebase. Not
-  touched this session either; the user explicitly said to finish ACD-74
-  first and return to it next ("Lets first fix the ticket then we can return
-  to the seed_client bug").
-- **Carried from the ACD-73 session, still true:** the "Add to pipeline"
-  no-persistence bug ([ACD-104](https://awcbehavioralhealth.atlassian.net/browse/ACD-104))
-  — `db.js` has no `updateClient` function at all. Not touched this session.
+- Nothing was walked back this session on the code itself — Pass 1 and Pass
+  2 were both shipped as drafted, and QA passed on the first real attempt.
+- Chrome MCP's `file_upload` tool rejected host filesystem paths partway
+  through QA (a change in the tool's behavior, not a bug in this repo) —
+  worked around via a JS-constructed `File`/`DataTransfer` object instead of
+  giving up on live-upload QA.
+- **Carried from the ACD-74 session, now resolved:** the `SEED_CLIENTS`
+  missing-import crash (ACD-103) and the "Add to pipeline" no-persistence
+  bug (ACD-104) were both previously deferred ("finish ACD-74 first"/"not
+  touched this session") — both are now actually fixed and shipped, not
+  just reverted-and-parked as before.
 
 ## 5. Next steps
 
-1. **[ACD-103](https://awcbehavioralhealth.atlassian.net/browse/ACD-103)** —
-   fix the `SEED_CLIENTS` missing-import crash in `src/App.jsx`. This is the
-   explicit next thing the user asked to return to, per this session's own
-   sequencing decision. Must be fixed before `FLAGS.PIPELINE` is ever flipped
-   to `true` for real.
-2. **[ACD-104](https://awcbehavioralhealth.atlassian.net/browse/ACD-104)** —
-   fix the "Add to pipeline" no-persistence bug (`handleAddToPipeline` only
-   updates local state; `db.js` has no `updateClient` at all). Blocks real
-   Pipeline QA/rollout.
-3. **[ACD-76](https://awcbehavioralhealth.atlassian.net/browse/ACD-76)** —
+1. **[ACD-100](https://awcbehavioralhealth.atlassian.net/browse/ACD-100)**
+   ("Wire client documents to real Supabase storage + table") — **appears
+   substantially or fully covered by this session's ACD-108 work.** Its
+   three scope items: (a) wire `pushDoc()`/upload UI to Storage+table —
+   done; (b) wire Documents tab list/Download to real data — done; (c) add
+   a categorization column to `documents` — this session's migration added
+   `doc_type`/`field_label`, but ACD-100's description literally asks for a
+   column named `document_type`. Functionally equivalent, not yet
+   reconciled by name. **Asked the user whether to transition ACD-100 to
+   Done as well or leave it open pending that naming check — awaiting
+   answer, do not close unilaterally.**
+2. **[ACD-76](https://awcbehavioralhealth.atlassian.net/browse/ACD-76)** —
    write-side Staff wiring (Invite/Edit/Revoke/Bulk Import against real
-   accounts). Confirmed by the user as the natural next ticket after
-   ACD-74's read-side wiring; not started.
-4. **Manual QA for ACD-73** — still not done (confirm no Session Log/
+   accounts). Not started.
+3. **Manual QA for ACD-73** — still not done (confirm no Session Log/
    Reassessment tabs appear anywhere in the Services stage, no console
-   errors, other Services-stage functionality still works). **User: wait
-   until the `FLAGS.PIPELINE` flip to run this check.** Carried forward.
-5. **[ACD-105](https://awcbehavioralhealth.atlassian.net/browse/ACD-105)**
-   (new this session) — wire ACD-69's denial-tracking and staff-contact
-   columns (backend already Done) into the actual frontend UI. Not started.
-6. **[ACD-100](https://awcbehavioralhealth.atlassian.net/browse/ACD-100)**
-   (wire documents to real Supabase storage + table) — not started.
-   **User: wait until the `FLAGS.PIPELINE` flip to test this.**
-7. **[ACD-101](https://awcbehavioralhealth.atlassian.net/browse/ACD-101)**
+   errors, other Services-stage functionality still works). **Wait until
+   the `FLAGS.PIPELINE` flip to run this check.** Carried forward.
+4. **[ACD-105](https://awcbehavioralhealth.atlassian.net/browse/ACD-105)** —
+   wire ACD-69's denial-tracking and staff-contact columns (backend already
+   Done) into the actual frontend UI. Not started.
+5. **[ACD-101](https://awcbehavioralhealth.atlassian.net/browse/ACD-101)**
    (Resend domain verification) — still blocked on DNS access to a real
    domain; per the user, pending leadership's help to unblock. Carried
    forward.
-8. **[ACD-90](https://awcbehavioralhealth.atlassian.net/browse/ACD-90)**
+6. **[ACD-90](https://awcbehavioralhealth.atlassian.net/browse/ACD-90)**
    ("E1: Add automated tests proving staff can only see their own data") —
-   still unblocked-but-pending. **User: wait until the `FLAGS.PIPELINE` flip
-   to test this.**
-9. **[ACD-106](https://awcbehavioralhealth.atlassian.net/browse/ACD-106)**
-   (new this session) — CLAUDE.md's "What This Repo Is NOT" section is stale
-   on the Pipeline/Trench-5 exclusion now that ACD-67 and ACD-69 backend prep
-   are Done. Not started.
-10. **Manual QA against the ACD-67 acceptance criteria** — still outstanding
-    as an action item even though the Jira ticket itself shows "Done."
-    **User: wait until the `FLAGS.PIPELINE` flip to confirm this.**
-11. **[ACD-107](https://awcbehavioralhealth.atlassian.net/browse/ACD-107)**
-    (new this session) — `.github/workflows/e2e.yml` has no cache for the
-    Playwright browser binary, causing one CI run to take ~7 minutes on the
-    install step alone this session. Not started.
-12. **Flip `FLAGS.STAFF` to `true` for real** — still explicitly deferred by
-    the user. The read-side behavior was validated working in this session's
-    browser QA (temporary local flag flip, since reverted — see Section 2),
-    so the formal flip itself is the only remaining step, expected to happen
-    alongside/after the `FLAGS.PIPELINE` flip. Once flipped for real, do a
-    manual Invite → Edit → Revoke pass to confirm all three round-trip
-    through Supabase correctly.
+   still unblocked-but-pending. **Wait until the `FLAGS.PIPELINE` flip to
+   test this.**
+7. **[ACD-106](https://awcbehavioralhealth.atlassian.net/browse/ACD-106)** —
+   CLAUDE.md's "What This Repo Is NOT" section is stale on the
+   Pipeline/Trench-5 exclusion now that ACD-67/ACD-69 backend prep and this
+   session's ACD-75/ACD-108 persistence work are Done. Not started.
+8. **Manual QA against the ACD-67 acceptance criteria** — still outstanding
+   as an action item even though the Jira ticket itself shows "Done." **Wait
+   until the `FLAGS.PIPELINE` flip to confirm this.**
+9. **[ACD-107](https://awcbehavioralhealth.atlassian.net/browse/ACD-107)** —
+   `.github/workflows/e2e.yml` has no cache for the Playwright browser
+   binary. Not started.
+10. **Flip `FLAGS.STAFF` to `true` for real** — still explicitly deferred by
+    the user (see ACD-74 session). Read-side behavior already validated.
+    Expected to happen alongside/after the `FLAGS.PIPELINE` flip. Once
+    flipped for real, do a manual Invite → Edit → Revoke pass to confirm all
+    three round-trip through Supabase correctly.
+11. **Flip `FLAGS.PIPELINE` to `true` for real** — the persistence layer
+    (checklist, documents, case notes, pipeline-stage actions, client
+    creation) is now fully Supabase-backed and QA'd with the flag
+    temporarily on. Not flipped for real this session — still gated behind
+    an explicit future ask, per CLAUDE.md rule 4. Several of the items above
+    (3, 6, 8) are explicitly waiting on this flip to be actionable.
+12. Ten stale remote-tracking branches were pruned locally this session
+    (`git remote prune origin`) after confirming they were already merged
+    and auto-deleted on GitHub. The corresponding **local** branches
+    (`ACD-108-...` and older feature branches) were left in place — offered
+    to clean them up but never got explicit confirmation. Low priority, but
+    worth a `git branch -d` pass next session if the user wants a tidy local
+    branch list.

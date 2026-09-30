@@ -1,60 +1,54 @@
 # Session Handoff
 
-_Last updated: 2026-09-29_
+_Last updated: 2026-09-30_
 
 ## 1. Goal we are moving towards
 
-[ACD-72](https://awcbehavioralhealth.atlassian.net/browse/ACD-72) — reauthorization
-and reassessment are both out of scope for this release. The CRM's 9 pipeline
-stages stay exactly as they are (Services remains a real, permanent stage),
-but none of the reauth-cycle UI (banners, badges, countdowns, summary chip)
-or the Reassessment tab should ship yet. Pure "gate it, don't build or
-delete it" work, same convention as every other flag in
-`src/constants/featureFlags.js`.
+[ACD-73](https://awcbehavioralhealth.atlassian.net/browse/ACD-73) — "B2: Hide
+the not-yet-ready Session Log and Reassessment tabs from the Services stage."
+Same pattern as ACD-72 (reauth UI): pure "gate it, don't build or delete it"
+work. Session Logs is being rebuilt as its own standalone feature and
+Reassessment hasn't been built, so neither tab should be reachable in the
+Services stage yet, for any client or role.
 
 **Status: shipped and merged to `main`.**
 
 ## 2. Current state of the code
 
 **Merged to `main`, live in the sense that it will deploy on Vercel's next
-build.** `FLAGS.REAUTH` (new) and `FLAGS.REASSESSMENT` (pre-existing, reused)
-are both `false`, so none of the gated UI is reachable in production.
+build.** `FLAGS.SESSION_LOG` and `FLAGS.REASSESSMENT` (both pre-existing,
+both `false`) now jointly gate the entire Services-stage tab panel, so
+neither tab or its content is reachable in production.
 
-- PR [#77](https://github.com/Luchot93/aba-shield-mvp/pull/77)
-  `ACD-72-hide-reauthorization-ui` → `dev` — merged.
-- PR [#78](https://github.com/Luchot93/aba-shield-mvp/pull/78) `dev` → `main`
+- PR [#79](https://github.com/Luchot93/aba-shield-mvp/pull/79)
+  `ACD-73-hide-session-log-reassessment-tabs` → `dev` — merged.
+- PR [#80](https://github.com/Luchot93/aba-shield-mvp/pull/80) `dev` → `main`
   — merged. Local `main`/`dev` fast-forwarded to match origin at session
-  close (both merged via GitHub outside local git, so local refs went stale
-  and were synced).
-- `src/constants/featureFlags.js` — added `REAUTH: false` with a comment
-  explaining it's punted per product decision (Services ships as a plain
-  stage, no reauth surfaces yet).
-- `src/features/pipeline/components/KanbanCard.jsx` — gated the auth-expiry
-  banner (`FLAGS.REAUTH && client.stage === 'services' && client.auth_expiry_date`)
-  and the reauth-cycle badge (`FLAGS.REAUTH && (client.reauth_cycle ?? 0) > 0`).
-- `src/features/pipeline/PipelinePage.jsx` — the "Reauth ≤30 days" summary
-  chip is now only added to the chip array when `FLAGS.REAUTH` is true
-  (array-spread pattern, matches existing convention).
-- `src/features/detail/ClientDetailPage.jsx` — gated six reauth-cycle
-  surfaces (header badge, checklist-panel banner, stage-label override, two
-  countdown widgets, teal CPT box) found by literally grepping `isReauthCycle`
-  and `daysLeft` per the user's explicit instruction, plus gated the entire
-  Reassessment tab (tab-bar entry via array-spread + the whole Tab 2 content
-  IIFE) behind the pre-existing `FLAGS.REASSESSMENT` flag, added in response
-  to a follow-up ask mid-session ("The reassessment should be flag too").
-- `client.reauth_cycle` and `handleStartReauth` were explicitly left
-  untouched per user instruction — `reauth_cycle` is still used as a plain
-  data tag (not UI) in the session-log panels/modals
-  (`SkillSessionModal.jsx`, `BehaviorSessionModal.jsx`,
-  `CaregiverTrainingLogModal.jsx` and their progress panels) to bucket
-  entries by cycle number; that's out of scope and wasn't touched.
-- Verified no other reauth/reassessment UI surfaces exist outside these
-  files — `MetricsPage.jsx`'s reauth references are already inert behind
-  `FLAGS.METRICS`, and `AssessmentsPage.jsx`'s `ReassessmentCard` render was
-  already gated behind `FLAGS.REASSESSMENT` before this session started.
-- Verified via `npx vite build --logLevel warn` after each round of edits —
-  only pre-existing, unrelated warnings (App.jsx duplicate-key object
-  literal, chunk size, dynamic-import overlap).
+  close.
+- `src/features/detail/ClientDetailPage.jsx` — three edits:
+  1. `serviceTabsActive` (~line 250) now requires
+     `(FLAGS.SESSION_LOG || FLAGS.REASSESSMENT)` in addition to the existing
+     `client.stage === 'services' && !isReadOnly` check. This is the single
+     boolean that gates the *entire* services-tab panel (tab bar + both tab
+     contents + reauth countdown + cycle selector), so when both flags are
+     false the pre-existing checklist-panel fallback renders instead — same
+     behavior every other stage already gets.
+  2. Tabs array (~line 1690) — Session Logs entry is now only added when
+     `FLAGS.SESSION_LOG` is true (array-spread pattern, matches the
+     Reassessment entry which was already gated this way).
+  3. Tab 1 content (~line 1732) — closed a gap where
+     `servicesTab === 'sessions'` content could render without a
+     corresponding tab button if `FLAGS.REASSESSMENT` were ever true while
+     `FLAGS.SESSION_LOG` stayed false. Not literally named in the original
+     prompt; flagged to the user as a deviation before running — no pushback,
+     stands as gated. Now matches Tab 2's existing pattern exactly.
+- No new flags added — both `FLAGS.SESSION_LOG` (Trench 6) and
+  `FLAGS.REASSESSMENT` (Trench 7) already existed in `featureFlags.js`.
+- Verified via `npx vite build --logLevel warn` — only pre-existing,
+  unrelated warnings (App.jsx duplicate-key object literal, chunk size,
+  dynamic-import overlap).
+- Verified via code trace (not live browser) that no other file (Pipeline/
+  Kanban, App.jsx, nav) references these two Services-stage tabs.
 
 ## 3. Files actively being edited
 
@@ -64,45 +58,81 @@ from a clean slate.
 
 ## 4. Everything tried that failed / walked back
 
-- One judgment call was made and flagged transparently rather than assumed:
-  gating the "Authorization expires in N days" banner in
-  `ClientDetailPage.jsx` (~line 1288) wasn't explicitly named in the user's
-  original surface list, but matched the `daysLeft` grep pattern the user
-  told me to search for. I called this out to the user as a deviation; they
-  did not push back or correct it, so it stands as gated.
-- Considered whether the `start_reassessment` checklist action item
-  (`item.type === 'action' && item.id === 'start_reassessment'` in
-  `ClientDetailPage.jsx`) needed gating. Confirmed via a full read of
-  `src/constants/checklist.js` that `getStageItems()` has no `'services'`
-  case (falls to `default: return []`), so that item is already dead/
-  unreachable code — no change needed, nothing walked back, just confirmed
-  out of scope.
-- No rejected technical approaches — the flag-gating pattern was
-  unambiguous and matched existing precedent throughout the file.
+- **Live browser QA was started, then called off.** Logged into the local
+  dev server (`localhost:5175`) via a Chrome tab the user authenticated
+  manually, with `FLAGS.PIPELINE` temporarily flipped to `true` locally
+  (user-approved, uncommitted) to reach the Services stage. This surfaced
+  two pre-existing bugs unrelated to ACD-73 (see below). The user judged
+  that reaching a fully-testable Services-stage client was taking too long
+  and would be repeated work in upcoming Stage-B prompts anyway, so testing
+  was called off. All QA-only file changes were reverted
+  (`git checkout -- src/App.jsx src/constants/featureFlags.js`), leaving
+  only the intended `ClientDetailPage.jsx` diff. **Manual QA for ACD-73's
+  own acceptance criteria (open Services stage for several clients, confirm
+  tabs absent, confirm no console errors) was never completed** — carried
+  forward as an outstanding QA gap, noted transparently in both PR #79 and
+  PR #80's test-plan checklists.
+- **Discovered bug: `SEED_CLIENTS is not defined` crash when
+  `FLAGS.PIPELINE = true`.** `src/App.jsx` (~line 169, inside a
+  `FLAGS.PIPELINE`-gated `useEffect`) calls `SEED_CLIENTS()`, but only
+  `SEED_STAFF` is imported from `constants/seedData.js` — `SEED_CLIENTS` is
+  exported there (`seedData.js:1727`) but was never added to the import
+  list. This crashes the entire app to a blank screen the instant
+  `FLAGS.PIPELINE` becomes `true`. Never fired in production because that
+  flag has always been `false`. Fixed locally/temporarily (user-approved,
+  "eventually this needs to be taken care of before pushing to prod") to
+  unblock QA, then **reverted** at session close per the "revert to before
+  we began testing" instruction — **the bug is still present in the
+  committed codebase.** Logged to project memory
+  (`project_app_missing_seed_clients_import.md`). **Must be fixed before
+  `FLAGS.PIPELINE` is ever flipped to `true` for a real rollout** — it will
+  otherwise crash the entire app for every user, not just Pipeline surfaces.
+- **Discovered bug: "Add to pipeline" doesn't persist.** After adding a test
+  client to the pipeline via `ClientsPage.jsx`'s `handleAddToPipeline`, a
+  full page reload reverted it back to un-added/"Directory" state. Root
+  cause: `handleAddToPipeline` only calls `setClients` (local React state),
+  never writes to Supabase. Deeper cause: `src/lib/db.js` has **no
+  `updateClient` function at all** — no client field (including `stage`)
+  can currently be persisted after creation via any code path in the app.
+  This was the direct friction that made QA take too long and led to
+  calling off testing. **Not fixed, not yet logged to project memory** —
+  worth a memory entry next session since it'll block any real Pipeline
+  QA/rollout, not just this ticket.
+- A throwaway test client ("ZZTEST QA Client ACD-73") was created in
+  Supabase for QA purposes (user-approved: "create one throwaway, obviously
+  fake test client... and delete it afterward") and was successfully
+  deleted via the UI's delete-confirmation flow before session close.
+  Nothing test-related remains in the database.
 
 ## 5. Next steps
 
-1. **Manual QA for ACD-72** — not yet done: confirm no reauth banners/
-   badges/chips appear anywhere in the Kanban board or client detail page
-   with flags off, confirm Services stage still displays and clients can
-   move into/out of it normally, confirm the Reassessment tab no longer
-   appears in the Services stage detail view. (Checklist items were left
-   unchecked in PR #78's test plan.)
-2. **Flip `FLAGS.STAFF` to `true`** — explicitly deferred by the user in a
+1. **Log the "Add to pipeline" no-persistence bug to project memory** —
+   discovered this session, not yet written up. `handleAddToPipeline` in
+   `ClientsPage.jsx` only updates local state; `db.js` has no `updateClient`
+   function at all. Blocks real Pipeline QA/rollout, not just ACD-73.
+2. **Fix the `SEED_CLIENTS` missing-import bug** in `src/App.jsx` (see
+   section 4) before `FLAGS.PIPELINE` is ever flipped to `true` for real —
+   currently reverted back to broken/uncommitted-fix state in the repo.
+3. **Manual QA for ACD-73** — still not done: confirm no Session Log/
+   Reassessment tabs appear anywhere in the Services stage across several
+   clients, confirm no console errors, confirm all other Services-stage
+   functionality (checklist panel, etc.) still works. Flagged as an open
+   checklist item in PR #79 and PR #80.
+4. **Flip `FLAGS.STAFF` to `true`** — explicitly deferred by the user in a
    prior session, still not started. Once flipped, expect to fix TypeErrors
    per the repo's standard flag-activation pattern, and do a manual pass
    through Invite → Edit → Revoke to confirm all three round-trip through
    Supabase correctly with the flag live.
-3. **ACD-100** (wire documents to real Supabase storage + table) — not
+5. **ACD-100** (wire documents to real Supabase storage + table) — not
    started, carried forward.
-4. **ACD-101** (Resend domain verification) — still blocked on DNS access to
+6. **ACD-101** (Resend domain verification) — still blocked on DNS access to
    a real domain, carried forward.
-5. **ACD-69 frontend wiring** (no ticket number yet) — carried forward
+7. **ACD-69 frontend wiring** (no ticket number yet) — carried forward
    again; confirm with the user whether this becomes its own ticket before
    starting.
-6. **ACD-90** ("E1: Add automated tests proving staff can only see their own
+8. **ACD-90** ("E1: Add automated tests proving staff can only see their own
    data") — still unblocked and pending, carried forward.
-7. **CLAUDE.md is still stale** on the Pipeline/Trench-5 exclusion — still
+9. **CLAUDE.md is still stale** on the Pipeline/Trench-5 exclusion — still
    flagged, not actioned, carried forward unchanged.
-8. **Manual QA against the ACD-67 acceptance criteria** — still outstanding,
-   carried forward again.
+10. **Manual QA against the ACD-67 acceptance criteria** — still
+    outstanding, carried forward again.

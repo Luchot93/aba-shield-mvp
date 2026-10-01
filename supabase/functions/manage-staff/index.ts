@@ -109,9 +109,15 @@ async function handleInvite(admin: ReturnType<typeof createClient>, payload: Rec
       phone: phone ?? null,
       role: role ?? 'bcba',
       cert_number: cert_number ?? null,
-      cert_expiry: cert_expiry ?? null,
+      // cert_expiry/hire_date are `date` columns -- the invite form sends ''
+      // (not undefined) when left blank, and '??' only catches null/undefined,
+      // so an empty string was reaching Postgres as `invalid input syntax for
+      // type date: ""`, failing the staff insert AFTER the auth user was
+      // already created (orphaned auth.users + profiles row, no staff row,
+      // invisible anywhere in the UI). '|| null' catches the empty-string case.
+      cert_expiry: cert_expiry || null,
       npi: npi ?? null,
-      hire_date: hire_date ?? null,
+      hire_date: hire_date || null,
       status: 'pending',
     })
     .select()
@@ -137,6 +143,12 @@ async function handleInvite(admin: ReturnType<typeof createClient>, payload: Rec
   return jsonResponse({ staff: staffRow })
 }
 
+// Revoke is only reachable in the UI for invites that haven't been accepted
+// yet, so there's no session/case data tied to this user anywhere else --
+// it fully deletes the account rather than deactivating it.
+// staff.user_id -> auth.users is ON DELETE NO ACTION, so the staff row must
+// be deleted BEFORE the auth user, or the auth delete fails with a DB error
+// because the staff row still references it.
 async function handleRevoke(admin: ReturnType<typeof createClient>, payload: Record<string, unknown>) {
   const { staffId } = payload as { staffId?: string }
   if (!staffId) return jsonResponse({ error: 'staffId is required' }, 400)
@@ -149,17 +161,17 @@ async function handleRevoke(admin: ReturnType<typeof createClient>, payload: Rec
 
   if (staffLookupError || !staffRow) return jsonResponse({ error: 'staff record not found' }, 404)
 
-  if (staffRow.user_id) {
-    const { error: deleteError } = await admin.auth.admin.deleteUser(staffRow.user_id)
-    if (deleteError) return jsonResponse({ error: `revoke failed: ${deleteError.message}` }, 500)
-  }
-
-  const { error: updateError } = await admin
+  const { error: deleteStaffError } = await admin
     .from('staff')
-    .update({ status: 'revoked' })
+    .delete()
     .eq('id', staffId)
 
-  if (updateError) return jsonResponse({ error: `login revoked but status update failed: ${updateError.message}` }, 500)
+  if (deleteStaffError) return jsonResponse({ error: `revoke failed: ${deleteStaffError.message}` }, 500)
+
+  if (staffRow.user_id) {
+    const { error: deleteUserError } = await admin.auth.admin.deleteUser(staffRow.user_id)
+    if (deleteUserError) return jsonResponse({ error: `staff record removed but account deletion failed: ${deleteUserError.message}` }, 500)
+  }
 
   return jsonResponse({ success: true })
 }

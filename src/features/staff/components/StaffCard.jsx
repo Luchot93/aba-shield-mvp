@@ -92,7 +92,14 @@ export default function StaffCard({ member, clients, onEdit, currentUser, onSele
     const warnings = getEditWarnings(editForm);
     setEditWarn(warnings);
     // Warnings are shown inline but don't block saving
-    onEdit(member.id, editForm);
+    // Postgres `date` columns reject '' — empty date inputs must be null, not ''.
+    const payload = {
+      ...editForm,
+      cert_effective_date: editForm.cert_effective_date || null,
+      cert_expiry:         editForm.cert_expiry         || null,
+      hire_date:            editForm.hire_date          || null,
+    };
+    onEdit(member.id, payload);
     setEditing(false);
     setEditWarn({});
   };

@@ -3,11 +3,13 @@ import { Ico } from '../../../components/icons.jsx';
 import { getChecklistStatus } from '../../../utils/checklist.js';
 import { daysUntil } from '../../../utils/dates.js';
 import { FLAGS } from '../../../constants/featureFlags.js';
+import { STAGES } from '../../../constants/stages.js';
 import AssigneeButton from './AssigneeButton.jsx';
 
 export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, onSelectClient, isNew, currentUser }) {
   const bcba     = staff.find(s => s.id === client.bcba_id) || null;
   const rbt      = staff.find(s => s.id === client.rbt_id)  || null;
+  const showBCBA = STAGES.indexOf(client.stage) >= STAGES.indexOf('auth_assessment');
   const showRBT  = client.stage === 'staffing' || client.stage === 'services';
   const status   = getChecklistStatus(client, staff);
   const isDenied      = client.stage === 'denied';
@@ -94,15 +96,17 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
           <div className="text-xs text-slate-500 mt-0.5">{client.insurer_name}</div>
         </div>
 
-        {/* BCBA row */}
-        <AssigneeButton
-          label="BCBA"
-          assignee={bcba}
-          role="bcba"
-          staff={staff}
-          onAssign={id => onAssignBCBA(client.id, id)}
-          currentUser={currentUser}
-        />
+        {/* BCBA row — only Auth/Assessment stage or later */}
+        {showBCBA && (
+          <AssigneeButton
+            label="BCBA"
+            assignee={bcba}
+            role="bcba"
+            staff={staff}
+            onAssign={id => onAssignBCBA(client.id, id)}
+            currentUser={currentUser}
+          />
+        )}
 
         {/* RBT row — only staffing + services */}
         {showRBT && (

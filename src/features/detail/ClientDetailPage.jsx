@@ -731,7 +731,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               };
 
               const handleSave = () => {
-                patchCL(item.clSec, item.key, draft);
+                if (item.clientField) patchClient({ [item.clientField]: draft });
+                else patchCL(item.clSec, item.key, draft);
                 setFormDrafts(d => { const n = { ...d }; delete n[item.key]; return n; });
                 if (draft !== savedVal) pushLog(`Updated: ${item.label} — ${fmtTime(draft) || draft}`);
                 // Flash "Saved" for 2 seconds
@@ -843,7 +844,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         })()}
                         {/* Suggest date offset from another saved field (e.g. appeal_deadline from denial_date + 30) */}
                         {item.suggestFromField && !savedVal && !formDrafts[item.key] && (() => {
-                          const sourceVal = client.checklist?.[item.clSec]?.[item.suggestFromField];
+                          const sourceVal = item.clientField ? client[item.suggestFromField] : client.checklist?.[item.clSec]?.[item.suggestFromField];
                           if (!sourceVal) return null;
                           const base = new Date(sourceVal + 'T00:00:00');
                           base.setDate(base.getDate() + (item.suggestOffsetDays ?? 30));
@@ -852,7 +853,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                           return (
                             <button
                               onClick={() => {
-                                patchCL(item.clSec, item.key, suggested);
+                                if (item.clientField) patchClient({ [item.clientField]: suggested });
+                                else patchCL(item.clSec, item.key, suggested);
                                 pushLog(`Updated: ${item.label} — ${suggested}`);
                                 setSavedFields(prev => new Set(prev).add(item.key));
                                 clearTimeout(saveTimers.current[item.key]);
@@ -864,7 +866,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                               <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                               </svg>
-                              Suggest: {fmtSuggested} ({item.suggestOffsetDays} days from denial date)
+                              Suggest: {fmtSuggested} ({item.suggestOffsetDays} days from {item.suggestFromLabel})
                             </button>
                           );
                         })()}

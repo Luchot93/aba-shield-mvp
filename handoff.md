@@ -13,13 +13,15 @@ and Supabase-backed (real `auth.users` accounts via a `manage-staff` edge
 function) so it's ready whenever that flag is flipped for real, not to ship
 it live this session.
 
-**Status: shipped, merged to `dev`. PR into `main` about to be opened.**
+**Status: shipped, merged to both `dev` and `main`. Session closed.**
 
 ## 2. Current state of the code
 
 **Merged to `dev` (PR [#89](https://github.com/Luchot93/aba-shield-mvp/pull/89),
-commit `f647b40`). Not yet in `main`.** Inert in production either way
-because `FLAGS.STAFF` stays `false`.
+commit `f647b40`) and promoted to `main` (PR
+[#90](https://github.com/Luchot93/aba-shield-mvp/pull/90)).** Local `main`
+and `dev` fast-forwarded to match origin at session close; both branches are
+in sync. Inert in production because `FLAGS.STAFF` stays `false`.
 
 - `supabase/functions/manage-staff/index.ts` — `handleInvite` creates a real
   `auth.users` account (`inviteUserByEmail`) and a matching `staff` row
@@ -68,9 +70,9 @@ because `FLAGS.STAFF` stays `false`.
 
 ## 3. Files actively being edited
 
-None in flight — everything is committed and merged into `dev`. Working
-tree is clean. Next session (or the rest of this one) starts from opening
-the `dev` → `main` PR.
+None in flight — everything is committed, pushed, and merged into both `dev`
+and `main`, which are in sync. Working tree is clean. Next session starts
+from a clean slate.
 
 ## 4. Everything tried that failed / walked back
 
@@ -94,62 +96,60 @@ the `dev` → `main` PR.
 
 ## 5. Next steps
 
-1. **Open the `dev` → `main` PR for this session's ACD-76 work** — in
-   progress right now as this handoff is being written.
-2. **[ACD-109](https://awcbehavioralhealth.atlassian.net/browse/ACD-109)** —
+1. **[ACD-109](https://awcbehavioralhealth.atlassian.net/browse/ACD-109)** —
    Supabase Auth's default email rate limit blocks real invite/bulk-import
    use. Needs a transactional email provider (Mailchimp or similar is the
    current guess); explicitly deferred pending leadership confirmation
    before committing to a vendor. Not started.
-3. **[ACD-110](https://awcbehavioralhealth.atlassian.net/browse/ACD-110)** —
+2. **[ACD-110](https://awcbehavioralhealth.atlassian.net/browse/ACD-110)** —
    rewrite the Playwright "Staff Page" suite for the real-backend flow
    (mock `manage-staff` at the test-seam level instead of hitting real
    Supabase Auth; rebuild fixtures instead of the old hardcoded 12-person
    seed; add coverage for friendly error translation, bulk-import results
    UI, and empty-date-as-null handling). **Do not build until `FLAGS.STAFF`
    is actually flipped** — tracked as part of ACD-99. Not started.
-4. **[ACD-100](https://awcbehavioralhealth.atlassian.net/browse/ACD-100)**
+3. **[ACD-100](https://awcbehavioralhealth.atlassian.net/browse/ACD-100)**
    ("Wire client documents to real Supabase storage + table") — appears
    substantially or fully covered by the prior session's ACD-108 work,
    modulo a column-naming mismatch (`doc_type`/`field_label` vs. the
    ticket's literal ask for `document_type`). Still awaiting the user's
    answer on whether to close it or leave it open pending that naming
    check — carried forward again, do not close unilaterally.
-5. **Manual QA for ACD-73** — confirm no Session Log/Reassessment tabs
+4. **Manual QA for ACD-73** — confirm no Session Log/Reassessment tabs
    appear anywhere in the Services stage, no console errors, other
    Services-stage functionality still works. **Wait until the
    `FLAGS.PIPELINE` flip.** Carried forward.
-6. **[ACD-105](https://awcbehavioralhealth.atlassian.net/browse/ACD-105)** —
+5. **[ACD-105](https://awcbehavioralhealth.atlassian.net/browse/ACD-105)** —
    wire ACD-69's denial-tracking and staff-contact columns (backend already
    Done) into the actual frontend UI. Not started.
-7. **[ACD-101](https://awcbehavioralhealth.atlassian.net/browse/ACD-101)**
+6. **[ACD-101](https://awcbehavioralhealth.atlassian.net/browse/ACD-101)**
    (Resend domain verification) — still blocked on DNS access to a real
    domain; pending leadership's help to unblock. Carried forward.
-8. **[ACD-90](https://awcbehavioralhealth.atlassian.net/browse/ACD-90)**
+7. **[ACD-90](https://awcbehavioralhealth.atlassian.net/browse/ACD-90)**
    ("E1: Add automated tests proving staff can only see their own data") —
    still unblocked-but-pending. **Wait until the `FLAGS.PIPELINE` flip.**
-9. **[ACD-106](https://awcbehavioralhealth.atlassian.net/browse/ACD-106)** —
+8. **[ACD-106](https://awcbehavioralhealth.atlassian.net/browse/ACD-106)** —
    CLAUDE.md's "What This Repo Is NOT" section is stale on the
    Pipeline/Trench-5 exclusion. Not started.
-10. **Manual QA against the ACD-67 acceptance criteria** — still outstanding
-    even though the Jira ticket itself shows "Done." **Wait until the
-    `FLAGS.PIPELINE` flip.**
-11. **[ACD-107](https://awcbehavioralhealth.atlassian.net/browse/ACD-107)** —
+9. **Manual QA against the ACD-67 acceptance criteria** — still outstanding
+   even though the Jira ticket itself shows "Done." **Wait until the
+   `FLAGS.PIPELINE` flip.**
+10. **[ACD-107](https://awcbehavioralhealth.atlassian.net/browse/ACD-107)** —
     `.github/workflows/e2e.yml` has no cache for the Playwright browser
     binary. Not started.
-12. **[ACD-99](https://awcbehavioralhealth.atlassian.net/browse/ACD-99)** —
+11. **[ACD-99](https://awcbehavioralhealth.atlassian.net/browse/ACD-99)** —
     "C1: Flip the feature flags to launch the pipeline and staff management
     for real" (`FLAGS.PIPELINE` and `FLAGS.STAFF`). Staff's write-side
     (invite/edit/revoke/bulk import, this session) and read-side (prior
     session) are both validated; Pipeline's persistence layer (checklist,
     documents, case notes, pipeline-stage actions, client creation) is also
     validated from the prior session. Not flipped for real — still gated
-    behind an explicit future ask per CLAUDE.md rule 4. Items 5, 8, and 10
+    behind an explicit future ask per CLAUDE.md rule 4. Items 4, 7, and 9
     above are explicitly waiting on this flip to be actionable, and ACD-110
     should be done as part of this effort.
-13. Local branch cleanup still pending from two sessions ago (stale
+12. Local branch cleanup still pending from two sessions ago (stale
     `ACD-108-...` and older local feature branches, never explicitly
     confirmed for deletion) — low priority, worth a `git branch -d` pass
-    whenever the user wants a tidy local branch list. The new
-    `ACD-76-invite-edit-revoke-bulk-import` branch will need the same
-    treatment once its PR into `main` is merged.
+    whenever the user wants a tidy local branch list. The
+    `ACD-76-invite-edit-revoke-bulk-import` branch can now be added to that
+    cleanup too, since its PR into `main` is merged.

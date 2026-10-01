@@ -4,67 +4,88 @@ _Last updated: 2026-10-01_
 
 ## 1. Goal we are moving towards
 
-[ACD-78](https://awcbehavioralhealth.atlassian.net/browse/ACD-78) ("D1") —
-at Intake, some clients don't have their diagnosis paperwork (CDE) ready
-yet. Add a "Diagnosis Pending" checkbox so the case isn't stuck waiting on
-that document, with a persistent reminder badge until a real diagnosis is
-recorded (that happens later, at the Assessment stage). Also replace the
-old single "insurance verified" checkbox with a more accurate 3-way status:
-Not Verified / Requested / Verified — only "Verified" should unblock the
-stage.
+[ACD-79](https://awcbehavioralhealth.atlassian.net/browse/ACD-79) ("D2") —
+at the Auth/Assessment stage, "Authorization submitted to insurer" and "CPT
+97151 authorization received" were satisfiable by a bare checkbox, with no
+real proof the submission actually happened. Add typed fields (ROI
+confirmation, reference number, submission date, submission method, units
+requested/approved, auto-suggested expected response date) and require them
+before the checklist counts those items as complete. Also fixes a bug where
+staff could assign a BCBA to a client still at Intake, before that's
+supposed to be allowed.
 
-**Status: shipped, merged to both `dev` and `main`. Session closed.**
+**Status: shipped, merged to both `dev` and `main`. Ticket moved to Done.
+Session closed.**
 
 ## 2. Current state of the code
 
-**Merged to `dev` (PR [#93](https://github.com/Luchot93/aba-shield-mvp/pull/93))
+**Merged to `dev` (PR [#95](https://github.com/Luchot93/aba-shield-mvp/pull/95))
 and promoted to `main` (PR
-[#94](https://github.com/Luchot93/aba-shield-mvp/pull/94), commit
-`2a7c0be`).** Local `main` and `dev` fast-forwarded to match origin at
-session close; both branches are in sync.
+[#96](https://github.com/Luchot93/aba-shield-mvp/pull/96)).** Local `main`
+and `dev` fast-forwarded to match origin at session close; both branches are
+in sync.
 
-- `src/constants/checklist.js` — Intake stage items: the `cde` file_upload
-  item gained `orClientField: 'diagnosis_pending'`; a new `diagnosis_pending`
-  checkbox item (`optional: true`, `clientField: 'diagnosis_pending'`) sits
-  directly below it. The old `insurance_verified` checkbox item was replaced
-  with a `select` item `insurance_verification_status`
-  (`clientField: 'insurance_verification_status'`, `completeValue: 'verified'`,
-  options `not_verified` / `requested` / `verified`).
-- `src/utils/checklist.js` — `itemComplete()`: added a `clientField` read
-  path (falls back to the old nested `checklist[clSec][key]` lookup when
-  absent) so items can read/write top-level `client` fields instead of the
-  checklist JSON blob. `checkbox` items with `optional: true` now always
-  count as complete (used by `diagnosis_pending`, which is a flag, not a
-  requirement). `file_upload` now checks `orClientField` as an alternate
-  satisfy-path before falling back to "missing." Added a `select` case
-  (`val === item.completeValue`).
-- `src/features/detail/ClientDetailPage.jsx` — renders the new checkbox and
-  3-button select control (Not Verified / Requested / Verified, each with
-  its own active-state color: slate / amber / emerald) in the Intake
-  checklist; added the "⏳ Diagnosis Pending" badge to the client header,
-  shown whenever `client.diagnosis_pending === true` and `client.diagnosis`
-  is not set.
-- `src/features/pipeline/components/KanbanCard.jsx` — same "⏳ Diagnosis
-  Pending" badge condition added to the card, so the reminder is visible on
-  every pipeline stage, not just the detail page.
-- **Manual QA completed**, run against the Pipeline UI with
-  `FLAGS.PIPELINE` temporarily flipped to `true` **locally only**, using the
-  project's backend-free E2E mock mode (`VITE_E2E=1 VITE_DEMO_MODE=true` —
-  the same mode Playwright's `webServer` uses), so no writes touched the
-  real Supabase database:
-  - Checked `diagnosis_pending` on a client with no `diagnosis` → CDE item
-    renders "Not needed" and is counted complete via `orClientField`; "X of
-    Y complete" counter incremented accordingly.
-  - Confirmed the badge rendered on both `ClientDetailPage`'s header and the
-    matching `KanbanCard`.
-  - Confirmed the badge stayed hidden for a client that already had a
-    `diagnosis` set.
-  - Cycled the insurance select through all three states: "Requested" shows
-    amber active styling and does **not** satisfy the gate (count
-    unchanged); "Verified" shows emerald active styling and **does** satisfy
-    it (count increments); "Not Verified" is the slate/inactive default.
-  - `FLAGS.PIPELINE` reverted to `false` before commit — confirmed via
-    `git diff` showing zero changes to `featureFlags.js`.
+- **Migration** `supabase/migrations/20261001190000_client_cpt97151_auth_fields.sql`
+  — applied live to Supabase via MCP and committed. Adds
+  `cpt97151_submission_date`, `cpt97151_reference_number`,
+  `cpt97151_submission_method`, `cpt97151_units_requested`,
+  `cpt97151_expected_response_date`, `cpt97151_units_approved` (with a
+  `> 0` check) to `public.clients`. Purely additive, all nullable.
+- `src/constants/checklist.js` — Auth/Assessment stage items: new
+  `clientField`-backed form fields for submission date, reference number,
+  submission method (select), units requested, expected response date
+  (`suggestFromField: cpt97151_submission_date`, `suggestOffsetDays: 7`,
+  `suggestFromLabel: 'submission date'`), and units approved. The
+  pre-existing `appeal_deadline` item also gained `suggestFromLabel: 'denial
+  date'` so the suggest-button text names its actual source field instead
+  of being hardcoded.
+- `src/utils/checklist.js` — `itemComplete()`: `auth_submitted` now requires
+  the checkbox AND `roi_confirmed === true` AND a non-blank
+  `cpt97151_reference_number` AND `cpt97151_submission_date`.
+  `cpt_97151_received` now requires the checkbox AND
+  `cpt97151_approval_doc === true`. Both were previously satisfied by the
+  bare checkbox alone.
+- `src/features/detail/ClientDetailPage.jsx` — two fixes: (1) the
+  save-handler and (2) the suggest-date read/write logic now correctly
+  branch on `item.clientField` (writing to the dedicated column via
+  `patchClient()`) vs. the generic checklist JSON (`patchCL(clSec, key,
+  value)`) — previously every suggest-field write went through the JSON
+  path regardless of `clientField`, which silently no-opped for the new
+  typed columns. Also fixed the suggest-button label to read
+  `item.suggestFromLabel` instead of a hardcoded "denial date" string.
+- `src/features/pipeline/components/KanbanCard.jsx` /
+  `src/features/pipeline/PipelinePage.jsx` — BCBA "+ Assign" row now only
+  renders once `STAGES.indexOf(client.stage) >= STAGES.indexOf('auth_assessment')`;
+  `handleAssignBCBA` in `PipelinePage.jsx` rejects the assignment with a
+  notification (`"BCBA can't be assigned until {name} reaches
+  Auth/Assessment."`) if called against an earlier-stage client as a
+  backstop to the hidden button. RBT assignment visibility (Staffing/
+  Services only) was untouched.
+- **Also bundled this session**: backfilled 4 local migration files for
+  **ACD-68** and **ACD-78** — those tickets' DB changes were applied
+  directly to the remote Supabase project via MCP in prior sessions but no
+  local migration file was ever committed, so git history didn't match
+  what's actually live. Reconstructed from the live schema
+  (`information_schema.columns`/`pg_constraint`/`pg_policy`), documentation
+  only, nothing re-run against the DB. Kept as a separate commit from the
+  ACD-79 feature work. Noted on both the PR and the Jira ticket.
+- **Manual QA completed** against the live-code-feel E2E mock mode
+  (`VITE_E2E=1 VITE_DEMO_MODE=true`), with `FLAGS.PIPELINE` temporarily
+  flipped to `true` **locally only**, reverted before commit (confirmed via
+  `git diff` showing zero changes to `featureFlags.js`):
+  - The `auth_submitted`/`cpt_97151_received` AND-gate logic was verified
+    via a standalone Node script importing `itemComplete()` directly (8
+    assertions — true/false/partial/whitespace-only edge cases, all pass)
+    rather than through file-upload UI clicks, because this sandboxed
+    browser's `file_upload` tool rejects local filesystem paths. The
+    document-upload modal itself was confirmed to open correctly.
+  - BCBA assign row confirmed hidden on Intake-stage cards and visible from
+    Auth/Assessment onward, checked across the full Kanban board. RBT
+    assignment visibility confirmed unaffected.
+  - Both the pre-existing (`appeal_deadline`, checklist-JSON-based) and new
+    (`cpt97151_expected_response_date`, `clientField`-based) suggest-date
+    paths verified live with real data entry and saves on two different
+    clients.
 - `npx vite build` — clean, no new errors or warnings introduced.
 
 ## 3. Files actively being edited
@@ -75,21 +96,25 @@ starts from a clean slate.
 
 ## 4. Everything tried that failed / walked back
 
-- Nothing on the code itself was walked back — the OR-gate approach for
-  `diagnosis_pending` and the 3-state select for insurance verification
-  were both shipped as drafted once QA passed.
-- The `computer` screenshot tool returned blank/white images throughout
-  this session's QA (on both port 5176 and 5177) despite the DOM being
-  populated — worked around entirely via `read_page` (accessibility tree)
-  and direct DOM/`innerText` inspection instead of visual screenshots; no
-  functional impact on the QA itself.
-- First attempt at creating a QA test client failed silently (modal stayed
-  open) because DOB / Insurer Name / Member ID are required but weren't
-  filled in initially — not a bug, just an incomplete first attempt.
-- After creating the QA test client with "Add to pipeline" checked, it
-  landed in the Directory with a separate "+ Add to pipeline" button rather
-  than going straight into the Intake stage — required an explicit second
-  click. Also not a bug; just the existing two-step flow.
+- Nothing on the code itself was walked back — both fixes (AND-gate
+  tightening, BCBA stage guard) and the `clientField` branching fix were
+  shipped as drafted once QA passed.
+- `mcp__Claude_in_Chrome__file_upload` rejected a local path
+  (`/tmp/test-roi.pdf`) with "no longer accepts host filesystem paths" —
+  confirmed via ToolSearch this is an environment-level restriction, not
+  something fixable via a different tool-call shape. Pivoted to a
+  standalone Node script testing `itemComplete()` directly instead of
+  UI-clicking the upload — this actually exercised more edge cases
+  (whitespace-only reference numbers, checkbox-true-but-dependency-false,
+  etc.) than a manual upload click would have.
+- An apparent blank/white screenshot early in QA turned out to be a
+  screenshot-timing artifact, not a real bug — `get_page_text` on the same
+  page showed the login screen had rendered correctly; a follow-up
+  screenshot confirmed it. No code or environment fix was needed.
+- Initially undercounted the backfilled migration files as "three" when
+  describing them to the user (there are four — three from ACD-68, one from
+  ACD-78); corrected before committing so all four landed in the same
+  commit together.
 
 ## 5. Next steps
 
@@ -140,9 +165,15 @@ starts from a clean slate.
     still gated behind an explicit future ask per CLAUDE.md rule 4. Items 6,
     8, and 10 above are explicitly waiting on this flip to be actionable,
     and ACD-110 should be done as part of this effort.
-13. Local branch cleanup still pending from prior sessions (stale
-    `ACD-108-...` and older local feature branches, never explicitly
-    confirmed for deletion) — low priority, worth a `git branch -d` pass
-    whenever the user wants a tidy local branch list. The
-    `ACD-78-diagnosis-pending-insurance-status` branch can now be added to
-    that cleanup too, since its PR into `main` is merged.
+13. Local branch cleanup still pending from prior sessions (stale local
+    feature branches never explicitly confirmed for deletion) — low
+    priority, worth a `git branch -d` pass whenever the user wants a tidy
+    local branch list. `ACD-78-diagnosis-pending-insurance-status` and
+    `ACD-79-authorization-proof-fields` can both be added to that cleanup
+    now, since their PRs into `main` are merged.
+14. The suggest-date label fix (`suggestFromLabel`) only covers the two
+    items that currently use `suggestFromField` (`appeal_deadline`,
+    `cpt97151_expected_response_date`). If a future stage adds another
+    `suggestFromField` item, remember to set `suggestFromLabel` on it too —
+    there's no fallback/default text if it's omitted (renders as
+    `undefined`).

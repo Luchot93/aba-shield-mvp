@@ -89,6 +89,11 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
   };
 
   const handleAssignBCBA = useCallback((clientId, staffId) => {
+    const target = clients.find(c => c.id === clientId);
+    if (target && STAGES.indexOf(target.stage) < STAGES.indexOf('auth_assessment')) {
+      addNotif(mkNotif(`BCBA can't be assigned until ${target.name} reaches Auth/Assessment.`, target.name, 'urgent'));
+      return;
+    }
     setClients(prev => prev.map(c => c.id===clientId ? { ...c, bcba_id:staffId } : c));
     updateClient(clientId, { bcba_id: staffId }).catch(err => {
       console.error('Failed to save client update:', err);

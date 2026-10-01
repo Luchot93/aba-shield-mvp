@@ -382,6 +382,18 @@ export async function getActivityLog(clientId) {
   return data
 }
 
+export async function getSentEmailNotifications(clientIds) {
+  const ids = [...new Set(clientIds.filter(Boolean))]
+  if (!ids.length) return []
+  const { data, error } = await supabase
+    .from('email_notifications')
+    .select('client_id, subject')
+    .in('client_id', ids)
+    .eq('status', 'sent')
+  if (error) throw error
+  return data
+}
+
 export async function logActivity(clientId, action, detail) {
   const { data: { user } } = await supabase.auth.getUser()
   const { data, error } = await supabase

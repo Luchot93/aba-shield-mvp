@@ -1,155 +1,155 @@
 # Session Handoff
 
-_Last updated: 2026-09-30_
+_Last updated: 2026-10-01_
 
 ## 1. Goal we are moving towards
 
-Close out the persistence gaps left over from the pipeline-action work started
-earlier: [ACD-75](https://awcbehavioralhealth.atlassian.net/browse/ACD-75)
-("Wire checklist items, documents, and case notes to Supabase" — the
-`ClientDetailPage.jsx` side of Trench 5 persistence), plus three specific bugs
-carried forward from prior handoffs —
-[ACD-103](https://awcbehavioralhealth.atlassian.net/browse/ACD-103) (missing
-`SEED_CLIENTS` import crash), [ACD-104](https://awcbehavioralhealth.atlassian.net/browse/ACD-104)
-("Add to pipeline" only updated local state, never Supabase), and
-[ACD-108](https://awcbehavioralhealth.atlassian.net/browse/ACD-108) (the
-checklist/documents/case-notes persistence ticket filed this session once the
-ACD-75 gap was confirmed in code). All of this is gated Phase-2 code behind
-`FLAGS.PIPELINE` (still `false` in production) — the goal was to make the
-Pipeline/Client-Detail persistence layer actually correct and Supabase-backed
-so it's ready whenever that flag is flipped for real, not to ship it live
-this session.
+[ACD-76](https://awcbehavioralhealth.atlassian.net/browse/ACD-76) ("B5") —
+make Invite, Edit, Revoke, and Bulk Import on the Staff page actually work
+against real accounts, instead of the local-state-only mock left over from
+earlier trenches. This is gated Phase-2 code behind `FLAGS.STAFF` (still
+`false` in production) — the goal was to make the Staff write-path correct
+and Supabase-backed (real `auth.users` accounts via a `manage-staff` edge
+function) so it's ready whenever that flag is flipped for real, not to ship
+it live this session.
 
-**Status: shipped, merged to `main`, and all four tickets transitioned to
-Done in Jira.**
+**Status: shipped, merged to `dev`. PR into `main` about to be opened.**
 
 ## 2. Current state of the code
 
-**Merged to `main`, live in the sense that it will deploy on Vercel's next
-build — but inert in production because `FLAGS.PIPELINE` stays `false`.**
+**Merged to `dev` (PR [#89](https://github.com/Luchot93/aba-shield-mvp/pull/89),
+commit `f647b40`). Not yet in `main`.** Inert in production either way
+because `FLAGS.STAFF` stays `false`.
 
-- PR [#86](https://github.com/Luchot93/aba-shield-mvp/pull/86)
-  `ACD-108-checklist-documents-notes-persistence` → `dev` — merged
-  (`952d0d1`).
-- PR [#87](https://github.com/Luchot93/aba-shield-mvp/pull/87) `dev` → `main`
-  — merged. Local `main`/`dev` fast-forwarded to match origin at session
-  close; `git log origin/main..origin/dev` confirmed empty after merge.
-- Commit `fe81f4f` bundled two logically distinct bodies of work that had
-  both been left uncommitted in the working tree — shipped together as one
-  unit rather than split retroactively (explained to the user when asked):
-  - **Pass 1 (ACD-103 / ACD-104 / pipeline-action persistence)** —
-    `src/App.jsx` (added the missing `SEED_CLIENTS` import — ACD-103),
-    `src/features/clients/ClientsPage.jsx`,
-    `src/features/pipeline/PipelinePage.jsx` (`handleSaveClient` switched
-    from local-only id generation to a real `createClient` Supabase insert;
-    `updateClient`/`logActivity` wired for stage advance, BCBA/RBT
-    assignment, deny, and add-to-pipeline — ACD-104).
-  - **Pass 2 (ACD-75 / ACD-108)** —
-    `src/features/detail/ClientDetailPage.jsx` (`patchCL`, `pushDocUpload`,
-    `addNote` now persist instead of only touching local state),
-    `src/lib/db.js` (added `setChecklistItem`, `uploadDocument`,
-    `addCaseNote`, and the batch hydration functions
-    `getChecklistItemsByClientIds`, `getDocumentsByClientIds`,
-    `getCaseNotesByClientIds`, `getActivityLogByClientIds`, all wired into
-    `getClients`).
-- Three Supabase migrations applied this session (via Supabase MCP, project
-  `qravuejkiluimaihhbrf`): `checklist_items_add_value_column`,
-  `create_case_notes_table`, `documents_add_doc_type_and_field_label`.
-- `FLAGS.PIPELINE` confirmed still `false` in committed code. Flipped to
-  `true` locally/uncommitted to QA in a browser, then reverted before
-  committing — confirmed via `git diff -- src/constants/featureFlags.js`
-  showing zero change post-revert.
-- **Live browser QA completed** at `localhost:5175` with `FLAGS.PIPELINE`
-  temporarily on: uploaded a real document via a JS-simulated file input
-  (Chrome MCP's `file_upload` no longer accepts host filesystem paths in
-  this environment — worked around by constructing a `File`/`DataTransfer`
-  object and dispatching a native `change` event via `javascript_tool`) and
-  confirmed the "Insurance card" checklist item showed "Uploaded", the
-  Documents tab showed the file with correct badge/filename/date/uploader
-  and a working signed-URL Download button, and a case note round-tripped
-  with the author's real name ("Luis Teran") resolved from the `staff`
-  table rather than a raw id/email. Did a full page reload + re-navigation
-  afterward and confirmed all three (checklist state, document, case note)
-  survived — i.e. genuinely persisted, not just optimistic local state.
-- All four tickets (ACD-75, ACD-103, ACD-104, ACD-108) transitioned to Done
-  in Jira after the user confirmed "Yes put them in done".
+- `supabase/functions/manage-staff/index.ts` — `handleInvite` creates a real
+  `auth.users` account (`inviteUserByEmail`) and a matching `staff` row
+  before promoting `profiles.role`, ordered specifically so a promotion to
+  `admin` can't race the `handle_admin_promoted()` trigger into creating a
+  duplicate bare-bones `staff` row. `handleRevoke` fully deletes the account
+  (staff row first, then `auth.users`, since `staff.user_id` is `ON DELETE
+  NO ACTION`) rather than deactivating it, since revoke is only reachable
+  for invites that haven't been accepted yet.
+- Fixed a real bug in both the invite and edit paths: the invite/edit forms
+  send `''` (not `undefined`) for blank `date`-typed columns
+  (`cert_expiry`, `hire_date`, `cert_effective_date`), which Postgres
+  rejects as `invalid input syntax for type date: ""`. `?? null` doesn't
+  catch empty string; switched to `|| null` in `manage-staff/index.ts` and
+  `src/features/staff/components/StaffCard.jsx`.
+- New `src/features/staff/functionError.js` — `extractFunctionError()` works
+  around `supabase.functions.invoke()` throwing before the response body is
+  parsed (the real `{ error: '...' }` message lives in `error.context`, a
+  `Response`, and must be `.json()`'d). `friendlyInviteError()` and the new
+  `friendlyRevokeError()` translate raw backend/Postgres/Auth error text
+  into clinic-admin-readable copy (e.g. "rate limit" → "Email rate limit
+  reached — try again later"); both share a `rateLimitMessage()` helper.
+- `src/features/staff/StaffPage.jsx` — pending invites now derive from the
+  persisted `staff` list (`status === 'pending'`) instead of separate local
+  state, so they survive a page reload. `handleRevoke` now runs its raw
+  error through `friendlyRevokeError()` instead of showing raw backend text.
+- `src/features/staff/components/BulkInvitePanel.jsx` — makes real per-row
+  `manage-staff` invite calls instead of fabricating local rows; tracks
+  succeeded/failed per row and renders a results summary; stays open until
+  the user dismisses it instead of auto-closing.
+- **Live QA completed**, all against real Supabase Auth using alias
+  variants of the admin's own email (`luis.teranarguello+staffqaN@gmail.com`):
+  invite → pending persists across reload; edit-save with blank dates → no
+  Postgres error; revoke through the real UI → both the `staff` row and the
+  `auth.users` account confirmed deleted; a separately-created orphaned test
+  account was deleted directly and the `profiles` row cascade-deleted
+  automatically (FK is `ON DELETE CASCADE`), confirming no manual profile
+  cleanup is needed on revoke.
+- Bulk Import was tested twice with real CSV batches and hit Supabase
+  Auth's default email rate limit both times — this is the real, now-
+  confirmed blocker, not a code bug. Filed
+  [ACD-109](https://awcbehavioralhealth.atlassian.net/browse/ACD-109)
+  ("Staff invites fail with Supabase Auth email rate limit — needs
+  transactional email provider"), linked to ACD-76 via "Relates".
+- `npx vite build` — clean, no new errors or warnings introduced.
 
 ## 3. Files actively being edited
 
-None in flight — everything is committed, pushed, and merged into both `dev`
-and `main`, which are in sync. Working tree is clean. Next session starts
-from a clean slate.
+None in flight — everything is committed and merged into `dev`. Working
+tree is clean. Next session (or the rest of this one) starts from opening
+the `dev` → `main` PR.
 
 ## 4. Everything tried that failed / walked back
 
-- Nothing was walked back this session on the code itself — Pass 1 and Pass
-  2 were both shipped as drafted, and QA passed on the first real attempt.
-- Chrome MCP's `file_upload` tool rejected host filesystem paths partway
-  through QA (a change in the tool's behavior, not a bug in this repo) —
-  worked around via a JS-constructed `File`/`DataTransfer` object instead of
-  giving up on live-upload QA.
-- **Carried from the ACD-74 session, now resolved:** the `SEED_CLIENTS`
-  missing-import crash (ACD-103) and the "Add to pipeline" no-persistence
-  bug (ACD-104) were both previously deferred ("finish ACD-74 first"/"not
-  touched this session") — both are now actually fixed and shipped, not
-  just reverted-and-parked as before.
+- Chrome MCP's `file_upload` tool stopped accepting host filesystem paths
+  mid-session (a change in the tool's behavior, not a bug in this repo) —
+  worked around by using `javascript_tool` to construct a `File`/
+  `DataTransfer` object in-page and dispatch a `change` event directly,
+  rather than giving up on live bulk-import QA.
+- Nothing on the code itself was walked back — the invite/edit/revoke/bulk
+  fixes were all shipped as drafted once QA passed.
+- Considered rewriting the stale Playwright "Staff Page" suite in
+  `tests/pipeline.spec.js` as part of this session, since its tests
+  (hardcoded seed counts/IDs, synchronous-after-submit invite assertions)
+  are now incompatible with the real-backend flow shipped here. Decided
+  **not** to build that now, since `FLAGS.STAFF` is off and the suite is
+  currently skipped in CI (`gated(FLAGS.STAFF)` → `test.describe.skip`) —
+  instead filed [ACD-110](https://awcbehavioralhealth.atlassian.net/browse/ACD-110)
+  and linked it to [ACD-99](https://awcbehavioralhealth.atlassian.net/browse/ACD-99)
+  ("flip FLAGS.PIPELINE/FLAGS.STAFF for real"), so the rewrite happens
+  alongside that flip rather than being speculatively built now.
 
 ## 5. Next steps
 
-1. **[ACD-100](https://awcbehavioralhealth.atlassian.net/browse/ACD-100)**
-   ("Wire client documents to real Supabase storage + table") — **appears
-   substantially or fully covered by this session's ACD-108 work.** Its
-   three scope items: (a) wire `pushDoc()`/upload UI to Storage+table —
-   done; (b) wire Documents tab list/Download to real data — done; (c) add
-   a categorization column to `documents` — this session's migration added
-   `doc_type`/`field_label`, but ACD-100's description literally asks for a
-   column named `document_type`. Functionally equivalent, not yet
-   reconciled by name. **Asked the user whether to transition ACD-100 to
-   Done as well or leave it open pending that naming check — awaiting
-   answer, do not close unilaterally.**
-2. **[ACD-76](https://awcbehavioralhealth.atlassian.net/browse/ACD-76)** —
-   write-side Staff wiring (Invite/Edit/Revoke/Bulk Import against real
-   accounts). Not started.
-3. **Manual QA for ACD-73** — still not done (confirm no Session Log/
-   Reassessment tabs appear anywhere in the Services stage, no console
-   errors, other Services-stage functionality still works). **Wait until
-   the `FLAGS.PIPELINE` flip to run this check.** Carried forward.
-4. **[ACD-105](https://awcbehavioralhealth.atlassian.net/browse/ACD-105)** —
+1. **Open the `dev` → `main` PR for this session's ACD-76 work** — in
+   progress right now as this handoff is being written.
+2. **[ACD-109](https://awcbehavioralhealth.atlassian.net/browse/ACD-109)** —
+   Supabase Auth's default email rate limit blocks real invite/bulk-import
+   use. Needs a transactional email provider (Mailchimp or similar is the
+   current guess); explicitly deferred pending leadership confirmation
+   before committing to a vendor. Not started.
+3. **[ACD-110](https://awcbehavioralhealth.atlassian.net/browse/ACD-110)** —
+   rewrite the Playwright "Staff Page" suite for the real-backend flow
+   (mock `manage-staff` at the test-seam level instead of hitting real
+   Supabase Auth; rebuild fixtures instead of the old hardcoded 12-person
+   seed; add coverage for friendly error translation, bulk-import results
+   UI, and empty-date-as-null handling). **Do not build until `FLAGS.STAFF`
+   is actually flipped** — tracked as part of ACD-99. Not started.
+4. **[ACD-100](https://awcbehavioralhealth.atlassian.net/browse/ACD-100)**
+   ("Wire client documents to real Supabase storage + table") — appears
+   substantially or fully covered by the prior session's ACD-108 work,
+   modulo a column-naming mismatch (`doc_type`/`field_label` vs. the
+   ticket's literal ask for `document_type`). Still awaiting the user's
+   answer on whether to close it or leave it open pending that naming
+   check — carried forward again, do not close unilaterally.
+5. **Manual QA for ACD-73** — confirm no Session Log/Reassessment tabs
+   appear anywhere in the Services stage, no console errors, other
+   Services-stage functionality still works. **Wait until the
+   `FLAGS.PIPELINE` flip.** Carried forward.
+6. **[ACD-105](https://awcbehavioralhealth.atlassian.net/browse/ACD-105)** —
    wire ACD-69's denial-tracking and staff-contact columns (backend already
    Done) into the actual frontend UI. Not started.
-5. **[ACD-101](https://awcbehavioralhealth.atlassian.net/browse/ACD-101)**
+7. **[ACD-101](https://awcbehavioralhealth.atlassian.net/browse/ACD-101)**
    (Resend domain verification) — still blocked on DNS access to a real
-   domain; per the user, pending leadership's help to unblock. Carried
-   forward.
-6. **[ACD-90](https://awcbehavioralhealth.atlassian.net/browse/ACD-90)**
+   domain; pending leadership's help to unblock. Carried forward.
+8. **[ACD-90](https://awcbehavioralhealth.atlassian.net/browse/ACD-90)**
    ("E1: Add automated tests proving staff can only see their own data") —
-   still unblocked-but-pending. **Wait until the `FLAGS.PIPELINE` flip to
-   test this.**
-7. **[ACD-106](https://awcbehavioralhealth.atlassian.net/browse/ACD-106)** —
+   still unblocked-but-pending. **Wait until the `FLAGS.PIPELINE` flip.**
+9. **[ACD-106](https://awcbehavioralhealth.atlassian.net/browse/ACD-106)** —
    CLAUDE.md's "What This Repo Is NOT" section is stale on the
-   Pipeline/Trench-5 exclusion now that ACD-67/ACD-69 backend prep and this
-   session's ACD-75/ACD-108 persistence work are Done. Not started.
-8. **Manual QA against the ACD-67 acceptance criteria** — still outstanding
-   as an action item even though the Jira ticket itself shows "Done." **Wait
-   until the `FLAGS.PIPELINE` flip to confirm this.**
-9. **[ACD-107](https://awcbehavioralhealth.atlassian.net/browse/ACD-107)** —
-   `.github/workflows/e2e.yml` has no cache for the Playwright browser
-   binary. Not started.
-10. **Flip `FLAGS.STAFF` to `true` for real** — still explicitly deferred by
-    the user (see ACD-74 session). Read-side behavior already validated.
-    Expected to happen alongside/after the `FLAGS.PIPELINE` flip. Once
-    flipped for real, do a manual Invite → Edit → Revoke pass to confirm all
-    three round-trip through Supabase correctly.
-11. **Flip `FLAGS.PIPELINE` to `true` for real** — the persistence layer
-    (checklist, documents, case notes, pipeline-stage actions, client
-    creation) is now fully Supabase-backed and QA'd with the flag
-    temporarily on. Not flipped for real this session — still gated behind
-    an explicit future ask, per CLAUDE.md rule 4. Several of the items above
-    (3, 6, 8) are explicitly waiting on this flip to be actionable.
-12. Ten stale remote-tracking branches were pruned locally this session
-    (`git remote prune origin`) after confirming they were already merged
-    and auto-deleted on GitHub. The corresponding **local** branches
-    (`ACD-108-...` and older feature branches) were left in place — offered
-    to clean them up but never got explicit confirmation. Low priority, but
-    worth a `git branch -d` pass next session if the user wants a tidy local
-    branch list.
+   Pipeline/Trench-5 exclusion. Not started.
+10. **Manual QA against the ACD-67 acceptance criteria** — still outstanding
+    even though the Jira ticket itself shows "Done." **Wait until the
+    `FLAGS.PIPELINE` flip.**
+11. **[ACD-107](https://awcbehavioralhealth.atlassian.net/browse/ACD-107)** —
+    `.github/workflows/e2e.yml` has no cache for the Playwright browser
+    binary. Not started.
+12. **[ACD-99](https://awcbehavioralhealth.atlassian.net/browse/ACD-99)** —
+    "C1: Flip the feature flags to launch the pipeline and staff management
+    for real" (`FLAGS.PIPELINE` and `FLAGS.STAFF`). Staff's write-side
+    (invite/edit/revoke/bulk import, this session) and read-side (prior
+    session) are both validated; Pipeline's persistence layer (checklist,
+    documents, case notes, pipeline-stage actions, client creation) is also
+    validated from the prior session. Not flipped for real — still gated
+    behind an explicit future ask per CLAUDE.md rule 4. Items 5, 8, and 10
+    above are explicitly waiting on this flip to be actionable, and ACD-110
+    should be done as part of this effort.
+13. Local branch cleanup still pending from two sessions ago (stale
+    `ACD-108-...` and older local feature branches, never explicitly
+    confirmed for deletion) — low priority, worth a `git branch -d` pass
+    whenever the user wants a tidy local branch list. The new
+    `ACD-76-invite-edit-revoke-bulk-import` branch will need the same
+    treatment once its PR into `main` is merged.

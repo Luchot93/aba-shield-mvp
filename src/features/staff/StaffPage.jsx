@@ -6,6 +6,7 @@ import BulkInvitePanel from './components/BulkInvitePanel.jsx';
 import { isAdmin } from '../../utils/permissions.js';
 import { supabase } from '../../lib/supabase.js';
 import { updateStaff } from '../../lib/db.js';
+import { extractFunctionError, friendlyInviteError, friendlyRevokeError } from './functionError.js';
 
 export default function StaffPage({ staff, setStaff, clients, currentUser, onSelectClient }) {
   const [tab,            setTab]            = useState('all');
@@ -14,7 +15,6 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
   const [sort,           setSort]           = useState('name');   // UX7: sort control
   const [showInvite,     setShowInvite]     = useState(false);
   const [showBulkImport, setShowBulkImport] = useState(false);
-  const [invites,        setInvites]        = useState([]);
   const [toast,          setToast]          = useState(null);
 
   const today  = Date.now();
@@ -30,6 +30,14 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
     ...s,
     active_case_count: clients.filter(c => c.bcba_id === s.id || c.rbt_id === s.id).length,
   }));
+
+  // ACD-76 fix: derived from the persisted `staff` prop (loaded via getStaff())
+  // instead of separate local state, so pending invites survive a page reload
+  // instead of only existing for the current session.
+  const invites = staff
+    .filter(s => s.status === 'pending')
+    .map(s => ({ id: s.id, name: s.name, email: s.email, role: s.role, invited_at: s.created_at }))
+    .sort((a, b) => new Date(b.invited_at) - new Date(a.invited_at));
 
   // S3: BCaBAs are now included in the BCBAs tab (they were previously invisible)
   const byTab = enriched.filter(s =>
@@ -90,47 +98,44 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
     });
 
     if (error || data?.error) {
-      showToast(data?.error || error?.message || 'Invite failed');
+      const raw = data?.error || await extractFunctionError(error, 'Invite failed');
+      showToast(friendlyInviteError(raw));
       return;
     }
 
     const staffRow = data.staff;
     const initials = staffRow.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
     setStaff(prev => [...prev, { ...staffRow, initials }]);
-    const inv = {
-      id:         staffRow.id,
-      name:       staffRow.name,
-      email:      staffRow.email,
-      role:       staffRow.role,
-      invited_at: staffRow.created_at || new Date().toISOString(),
-    };
-    setInvites(prev => [inv, ...prev]);
     showToast(`${form.name} invited as ${form.role.toUpperCase()}`);
   };
 
-  // S2: Fix stale closure — capture email BEFORE any state mutations.
   // ACD-71: id is the real staff.id (see handleInvite), so it can be passed straight
-  // through to manage-staff as staffId. Non-destructive on the backend (status set to
-  // 'revoked', not deleted) so we mirror that locally rather than filtering the row out.
+  // through to manage-staff as staffId. Revoke is only reachable for invites that
+  // haven't been accepted yet, so it fully deletes the account (auth user + staff
+  // row) on the backend rather than deactivating it — mirror that by dropping the
+  // row locally instead of marking it 'revoked'.
   const handleRevoke = async id => {
     const { data, error } = await supabase.functions.invoke('manage-staff', {
       body: { action: 'revoke', staffId: id },
     });
 
     if (error || data?.error) {
-      showToast(data?.error || error?.message || 'Revoke failed');
+      const raw = data?.error || await extractFunctionError(error, 'Revoke failed');
+      showToast(friendlyRevokeError(raw));
       return;
     }
 
-    setInvites(prev => prev.filter(i => i.id !== id));
-    setStaff(prev => prev.map(s => s.id === id ? { ...s, status: 'revoked' } : s));
+    setStaff(prev => prev.filter(s => s.id !== id));
   };
 
-  // P1: Toast duration scales with import size (150 ms per record, capped at 8 s)
-  const handleBulkImport = ({ staffRecords, inviteRecords }) => {
+  // ACD-76: staffRecords come from real manage-staff invite calls (BulkInvitePanel),
+  // not fabricated local rows — merge them in as-is. Pending invites are derived
+  // from `staff` above, so no separate invites list to update here. The panel shows
+  // its own per-row success/failure results and stays open until the user dismisses
+  // it, so this no longer closes the modal.
+  const handleBulkImport = ({ staffRecords }) => {
+    if (!staffRecords.length) return;
     setStaff(prev => [...prev, ...staffRecords]);
-    setInvites(prev => [...inviteRecords, ...prev]);
-    setShowBulkImport(false);
     const count    = staffRecords.length;
     const duration = Math.max(3000, Math.min(count * 150, 8000));
     showToast(`${count} staff member${count !== 1 ? 's' : ''} imported`, duration);

@@ -3,6 +3,9 @@ import { Ico } from '../../../components/icons.jsx';
 import { loadCdnScript } from '../../../utils/cdn.js';
 import { normalizeDate } from '../../../utils/dates.js';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock.js';
+import { supabase } from '../../../lib/supabase.js';
+import { updateStaff } from '../../../lib/db.js';
+import { extractFunctionError, friendlyInviteError } from '../functionError.js';
 
 // ─── Role normalization ───────────────────────────────────────────────────────
 const ROLE_MAP = {
@@ -97,6 +100,7 @@ export default function BulkInvitePanel({ onClose, onImport, existingStaff }) {
   const [loading,    setLoading]   = useState(false);
   const [dragOver,   setDragOver]  = useState(false);
   const [sending,    setSending]   = useState(null); // null | { current, total }
+  const [results,    setResults]   = useState(null); // null | { succeeded, failed, total }
   const [parseError, setParseError] = useState(null);
   const fileRef = useRef(null);
 
@@ -243,54 +247,69 @@ export default function BulkInvitePanel({ onClose, onImport, existingStaff }) {
     setStep('preview');
   };
 
-  // ── Step 3: import (async — processes one invite at a time so the counter updates) ──
+  // ── Step 3: import (real invites — one manage-staff call per row so the
+  // counter reflects actual progress, not a simulated delay) ──────────────
   const doImport = async () => {
-    const ts   = Date.now();
-    const good = validated.filter(r => r._valid);
+    const good  = validated.filter(r => r._valid);
     const total = good.length;
 
     setSending({ current: 0, total });
 
-    const staffRecords  = [];
-    const inviteRecords = [];
+    const succeeded = [];
+    const failed    = [];
 
     for (let i = 0; i < good.length; i++) {
       const r = good[i];
-      // Yield to the browser so the counter re-renders between each invite
-      await new Promise(resolve => setTimeout(resolve, 35));
+
+      const { data, error } = await supabase.functions.invoke('manage-staff', {
+        body: {
+          action:      'invite',
+          name:        r.name,
+          email:       r.email,
+          phone:       r.phone,
+          role:        r._normalizedRole,
+          cert_number: r.cert_number,
+          cert_expiry: r.cert_expiry,
+          npi:         r.npi,
+          hire_date:   r.hire_date,
+        },
+      });
+
+      if (error || data?.error) {
+        const raw = data?.error || await extractFunctionError(error, 'Invite failed');
+        failed.push({ name: r.name, email: r.email, reason: friendlyInviteError(raw) });
+        setSending({ current: i + 1, total });
+        continue;
+      }
+
+      let staffRow = data.staff;
+
+      // manage-staff's invite action doesn't accept these — they're saved as a
+      // follow-up edit so optional CSV columns aren't silently dropped. If this
+      // patch fails, the invite itself still succeeded, so it's not counted as
+      // a failure — the fields just need a manual edit afterward.
+      const extras = {};
+      if (r.title)               extras.title               = r.title;
+      if (r.cert_effective_date) extras.cert_effective_date  = r.cert_effective_date;
+      if (r.caqh_id)             extras.caqh_id              = r.caqh_id;
+      if (r.supervisor)          extras.supervisor           = r.supervisor;
+
+      if (Object.keys(extras).length) {
+        try {
+          staffRow = await updateStaff(staffRow.id, extras);
+        } catch { /* invite already succeeded; extras can be fixed via manual edit */ }
+      }
+
+      succeeded.push({ ...staffRow, initials: toInitials(staffRow.name) });
       setSending({ current: i + 1, total });
-
-      staffRecords.push({
-        id:                  `s_${ts}_${i}`,
-        name:                r.name,
-        initials:            toInitials(r.name),
-        email:               r.email,
-        phone:               r.phone || '',
-        role:                r._normalizedRole,
-        title:               r.title || '',
-        cert_number:         r.cert_number || '',
-        cert_expiry:         r.cert_expiry || '',
-        cert_effective_date: r.cert_effective_date || '',
-        npi:                 r.npi || '',
-        caqh_id:             r.caqh_id || '',
-        hire_date:           r.hire_date || '',
-        supervisor:          r.supervisor || '',
-        status:              'pending',
-      });
-
-      inviteRecords.push({
-        id:         `inv_${ts}_${i}`,
-        name:       r.name,
-        email:      r.email,
-        role:       r._normalizedRole,
-        invited_at: new Date().toISOString(),
-      });
     }
 
-    // Brief pause so the "N of N" final state is visible before closing
-    await new Promise(resolve => setTimeout(resolve, 400));
     setSending(null);
-    onImport({ staffRecords, inviteRecords });
+    setResults({ succeeded, failed, total });
+
+    if (succeeded.length) {
+      onImport({ staffRecords: succeeded });
+    }
   };
 
   // ── Derived counts ───────────────────────────────────────────────────────
@@ -571,7 +590,47 @@ export default function BulkInvitePanel({ onClose, onImport, existingStaff }) {
           )}
 
           {/* ── STEP 3: Preview & Invite ───────────────────────────────── */}
-          {step === 'preview' && (
+          {step === 'preview' && results && (
+            <div data-testid="bulk-invite-results">
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-xl mb-4 border ${
+                results.failed.length === 0 ? 'bg-teal-50 border-teal-200' : 'bg-amber-50 border-amber-200'
+              }`}>
+                <span className="text-sm font-semibold text-slate-800">
+                  {results.succeeded.length} of {results.total} invitation{results.total !== 1 ? 's' : ''} sent successfully
+                  {results.failed.length > 0 && <span className="text-amber-700"> · {results.failed.length} failed</span>}
+                </span>
+              </div>
+
+              {results.failed.length > 0 && (
+                <div className="rounded-xl border border-stone-200 overflow-hidden overflow-x-auto">
+                  <table className="w-full text-xs border-collapse" style={{ minWidth: '480px' }}>
+                    <thead>
+                      <tr style={{ background: '#FAFAF8', borderBottom: '1px solid #E7E5E0' }}>
+                        {['Full name', 'Email', 'Reason'].map(h => (
+                          <th key={h} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-widest text-slate-400">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {results.failed.map((f, i) => (
+                        <tr key={i} style={{ borderBottom: '1px solid #F5F4F0' }}>
+                          <td className="px-3 py-2 font-medium text-slate-800 max-w-[160px] truncate">
+                            {f.name || <em className="not-italic text-red-400">—</em>}
+                          </td>
+                          <td className="px-3 py-2 text-slate-600 max-w-[180px] truncate" style={{ fontFamily: 'DM Mono, monospace' }}>
+                            {f.email || <em className="not-italic text-red-400">—</em>}
+                          </td>
+                          <td className="px-3 py-2 text-red-600">{f.reason}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 'preview' && !results && (
             <div data-testid="bulk-invite-preview">
 
               {/* All already in system */}
@@ -728,6 +787,16 @@ export default function BulkInvitePanel({ onClose, onImport, existingStaff }) {
                   {Math.round((sending.current / sending.total) * 100)}%
                 </span>
               </div>
+            ) : results ? (
+              /* ── Done ── */
+              <>
+                <span/>
+                <button onClick={onClose} data-testid="bulk-invite-done"
+                  className="px-5 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity"
+                  style={{ background: '#0D9488' }}>
+                  Done
+                </button>
+              </>
             ) : (
               /* ── Normal footer ── */
               <>

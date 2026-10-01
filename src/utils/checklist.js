@@ -26,6 +26,17 @@ export function itemComplete(item, client, staff) {
   switch (item.type) {
     case 'checkbox':
       if (item.optional) return true;
+      if (item.key === 'auth_submitted') {
+        const sec = client.checklist?.auth_assessment ?? {};
+        return val === true
+          && sec.roi_confirmed === true
+          && !!client.cpt97151_reference_number?.trim()
+          && !!client.cpt97151_submission_date;
+      }
+      if (item.key === 'cpt_97151_received') {
+        const sec = client.checklist?.auth_assessment ?? {};
+        return val === true && sec.cpt97151_approval_doc === true;
+      }
       return val === true;
     case 'upload': return val === true;
     case 'file_upload':

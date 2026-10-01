@@ -379,7 +379,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     const stageChangeSubject = isAuth
       ? `${client.name} — Authorization approved, ready for staffing`
       : `${client.name} moved to ${SM[toStage].label}`;
-    addNotif(mkNotif(stageChangeSubject, client.name, 'normal'));
+    addNotif(mkNotif(stageChangeSubject, client.name, 'normal', client.id));
     sendStageChangeEmail(client, stageChangeSubject, stageChangeSubject).catch(() => {});
     // Simulate parent email notification when parent_email is set
     if (client.parent_email) {
@@ -399,7 +399,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     patchClient({ stage: 'denied', stage_entered_at: new Date().toISOString(), denial_reason: reason || null, denial_from_stage: client.stage, denial_count: (client.denial_count ?? 0) + 1 });
     pushLog('Moved to Denied', reason ? { reason } : undefined);
     const denySubject = `${client.name} — Authorization denied by insurer`;
-    addNotif(mkNotif(denySubject, client.name, 'urgent'));
+    addNotif(mkNotif(denySubject, client.name, 'urgent', client.id));
     sendStageChangeEmail(client, denySubject, denySubject).catch(() => {});
     if (onClientAdvanced) onClientAdvanced(client.id);
     setConfirmDeny(false);
@@ -437,7 +437,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
       });
       pushLog('Returned to Submitted after denial — auth fields reset');
       const resubmitSubject = `${client.name} — returned to Submitted for resubmission`;
-      addNotif(mkNotif(resubmitSubject, client.name, 'normal'));
+      addNotif(mkNotif(resubmitSubject, client.name, 'normal', client.id));
       sendStageChangeEmail(client, resubmitSubject, resubmitSubject).catch(() => {});
     } else {
       doAdvance(returnStage);

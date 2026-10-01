@@ -1,8 +1,21 @@
 import { supabase } from '../lib/supabase.js';
-import { getStaffByUserIds, getAdminStaff } from '../lib/db.js';
+import { getStaffByUserIds, getAdminStaff, getSentEmailNotifications } from '../lib/db.js';
 
-export function mkNotif(subject, clientName = '', urgency = 'normal') {
-  return { id: `n_${Date.now()}_${Math.random()}`, subject, clientName, timestamp: new Date().toISOString(), read: false, urgency };
+// clientId is only passed by call sites that pair this notification with a
+// real sendStageChangeEmail() call -- it's how getEmailedKeys() below
+// correlates a local notification with its email_notifications row.
+export function mkNotif(subject, clientName = '', urgency = 'normal', clientId = null) {
+  return { id: `n_${Date.now()}_${Math.random()}`, subject, clientName, timestamp: new Date().toISOString(), read: false, urgency, clientId };
+}
+
+// Returns a Set of "clientId::subject" keys for every email that was
+// confirmed sent (status = 'sent'), so the UI can show an "emailed"
+// indicator next to the matching in-app notification. Subject text is the
+// same string passed to both mkNotif() and sendStageChangeEmail() at each
+// call site, so it's a reliable correlation key alongside clientId.
+export async function getEmailedKeys(clientIds) {
+  const rows = await getSentEmailNotifications(clientIds);
+  return new Set(rows.map(r => `${r.client_id}::${r.subject}`));
 }
 
 // Real email delivery is a separate, opt-in step on top of the in-app

@@ -505,7 +505,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const CheckRow = ({ item, readOnly }) => {
     const complete = itemComplete(item, client, staff);
     const blocks   = !readOnly && itemBlocks(item, client, staff);
-    const clVal    = client.checklist[item.clSec]?.[item.key];
+    const clVal    = item.clientField ? client[item.clientField] : client.checklist[item.clSec]?.[item.key];
 
     if (item.type === 'section_label') return (
       <div className="flex items-center gap-2 -mx-5 px-5 pt-4 pb-1">
@@ -516,11 +516,12 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
     // ── Card-style checkbox ────────────────────────────────────────────────
     if (item.type === 'checkbox') {
+      const checked = clVal === true;
       const assignedBcba = item.key === 'bcba_matches_auth' ? staff.find(s => s.id === client.bcba_id) : null;
       return (
         <div
           className={`mb-2 flex items-start gap-3 px-4 py-3 rounded-lg border transition-colors select-none
-            ${complete
+            ${checked
               ? 'bg-emerald-50 border-emerald-200'
               : blocks
                 ? 'bg-red-50/60 border-red-200'
@@ -528,20 +529,21 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
             } ${!readOnly ? 'cursor-pointer' : ''}`}
           onClick={!readOnly ? () => {
             const newVal = !clVal;
-            patchCL(item.clSec, item.key, newVal);
+            if (item.clientField) patchClient({ [item.clientField]: newVal });
+            else patchCL(item.clSec, item.key, newVal);
             if (newVal) pushLog(`Checked: ${item.label}`);
           } : undefined}
         >
           <div className={`mt-0.5 flex-shrink-0 w-4 h-4 rounded flex items-center justify-center border transition-colors
-            ${complete ? 'bg-teal-600 border-teal-600' : 'border-stone-300 bg-white'}`}>
-            {complete && (
+            ${checked ? 'bg-teal-600 border-teal-600' : 'border-stone-300 bg-white'}`}>
+            {checked && (
               <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 10">
                 <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className={`text-sm font-semibold leading-snug ${complete ? 'line-through text-slate-400' : 'text-slate-700'}`}>
+            <p className={`text-sm font-semibold leading-snug ${checked ? 'line-through text-slate-400' : 'text-slate-700'}`}>
               {item.label}
             </p>
             {item.sublabel && (
@@ -601,38 +603,75 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
           <div className="flex-1 min-w-0">
             {/* placeholder — checkbox and upload now handled above */}
 
-            {item.type === 'file_upload' && (
-              <div className="flex items-center justify-between gap-3">
-                <span className={`text-sm ${clVal === true ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{item.label}</span>
-                {clVal === true
-                  ? <span className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg flex-shrink-0"
-                      style={{ background:'rgba(20,184,166,0.1)', color:'#0D9488', border:'1px solid rgba(20,184,166,0.25)' }}>
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
-                      </svg>
-                      Uploaded
-                    </span>
-                  : readOnly
-                    ? <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-400 bg-stone-50 border border-stone-200 rounded-lg flex-shrink-0">Not uploaded</span>
-                    : <label className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-stone-200 text-slate-600 bg-white hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50/40 cursor-pointer transition-all flex-shrink-0">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 10l-4-4-4 4M12 6v10"/>
+            {item.type === 'file_upload' && (() => {
+              const orSatisfied = item.orClientField && client[item.orClientField] === true;
+              return (
+                <div className="flex items-center justify-between gap-3">
+                  <span className={`text-sm ${clVal === true ? 'text-slate-400 line-through' : orSatisfied ? 'text-slate-400' : 'text-slate-800'}`}>{item.label}</span>
+                  {clVal === true
+                    ? <span className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg flex-shrink-0"
+                        style={{ background:'rgba(20,184,166,0.1)', color:'#0D9488', border:'1px solid rgba(20,184,166,0.25)' }}>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
                         </svg>
-                        Upload
-                        <input
-                          type="file"
-                          accept={item.accept ?? '.docx,.pdf'}
-                          className="hidden"
-                          onChange={e => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-                            patchCL(item.clSec, item.key, true);
-                            pushDocUpload(file, item.docType ?? item.key, item.label);
-                            pushLog(`Uploaded: ${item.label} — ${file.name}`);
-                          }}
-                        />
-                      </label>
-                }
+                        Uploaded
+                      </span>
+                    : orSatisfied
+                      ? <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-400 bg-stone-50 border border-stone-200 rounded-lg flex-shrink-0 cursor-not-allowed" title="Not needed — Diagnosis Pending is checked">Not needed</span>
+                      : readOnly
+                        ? <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-400 bg-stone-50 border border-stone-200 rounded-lg flex-shrink-0">Not uploaded</span>
+                        : <label className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-stone-200 text-slate-600 bg-white hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50/40 cursor-pointer transition-all flex-shrink-0">
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 10l-4-4-4 4M12 6v10"/>
+                            </svg>
+                            Upload
+                            <input
+                              type="file"
+                              accept={item.accept ?? '.docx,.pdf'}
+                              className="hidden"
+                              onChange={e => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                patchCL(item.clSec, item.key, true);
+                                pushDocUpload(file, item.docType ?? item.key, item.label);
+                                pushLog(`Uploaded: ${item.label} — ${file.name}`);
+                              }}
+                            />
+                          </label>
+                  }
+                </div>
+              );
+            })()}
+
+            {item.type === 'select' && (
+              <div>
+                <label className="text-sm text-slate-800 block mb-1.5">{item.label}</label>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {item.options.map(opt => {
+                    const active = clVal === opt.value;
+                    return (
+                      <button key={opt.value} type="button" disabled={readOnly}
+                        onClick={() => {
+                          if (readOnly || active) return;
+                          if (item.clientField) patchClient({ [item.clientField]: opt.value });
+                          pushLog(`${item.label} → ${opt.label}`);
+                        }}
+                        data-testid={`select-${item.key}-${opt.value}`}
+                        className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
+                          active
+                            ? opt.value === item.completeValue
+                              ? 'bg-emerald-600 border-emerald-600 text-white'
+                              : opt.value === 'requested'
+                                ? 'bg-amber-500 border-amber-500 text-white'
+                                : 'bg-slate-500 border-slate-500 text-white'
+                            : 'bg-white border-stone-200 text-slate-600 hover:border-teal-300 hover:bg-teal-50/40'
+                        } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}>
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {item.sublabel && (<p className="mt-1.5 text-[11px] text-slate-400 leading-snug">{item.sublabel}</p>)}
               </div>
             )}
 
@@ -1175,6 +1214,11 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               {FLAGS.REAUTH && isReauthCycle && (
                 <span className="text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-100 px-2 py-0.5 rounded-full whitespace-nowrap">
                   ↻ Reauth Cycle {client.reauth_cycle}
+                </span>
+              )}
+              {client.diagnosis_pending === true && !client.diagnosis && (
+                <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+                  ⏳ Diagnosis Pending
                 </span>
               )}
             </div>

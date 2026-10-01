@@ -13,6 +13,7 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
   const isDenied      = client.stage === 'denied';
   const denialCount   = client.denial_count ?? 0;
   const showDenialTag = denialCount > 0 && !isDenied; // only on non-denied cards (denied stage has its own banner)
+  const showDiagnosisPendingTag = client.diagnosis_pending === true && !client.diagnosis;
 
   // Auth expiry banner for Services — date-threshold driven
   let authBanner = null;
@@ -59,6 +60,15 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
         <div className="px-3 pt-2.5 pb-0">
           <span className="text-[10px] font-semibold text-teal-700 bg-teal-50 border border-teal-100 px-1.5 py-0.5 rounded">
             ↻ Reauth Cycle {client.reauth_cycle}
+          </span>
+        </div>
+      )}
+
+      {/* Diagnosis Pending badge — persistent across every stage until a real diagnosis is recorded */}
+      {showDiagnosisPendingTag && (
+        <div className="px-3 pt-2.5 pb-0">
+          <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">
+            ⏳ Diagnosis Pending
           </span>
         </div>
       )}

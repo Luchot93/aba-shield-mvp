@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Ico } from './icons.jsx';
-import { relTime } from '../utils/notifications.js';
+import { relTime, getEmailedKeys } from '../utils/notifications.js';
 import { SEED_USERS } from '../constants/seedData.js';
 import { isAdmin } from '../utils/permissions.js';
 import { FLAGS } from '../constants/featureFlags.js';
@@ -17,9 +17,22 @@ const initials = name => name.split(' ').map(n => n[0]).join('').slice(0, 2).toU
 export default function NavBar({ page, setPage, notifications, setNotifications, currentUser, setCurrentUser, onLogout }) {
   const [notifOpen,     setNotifOpen]     = useState(false);
   const [switcherOpen,  setSwitcherOpen]  = useState(false);
+  const [emailedKeys,   setEmailedKeys]   = useState(new Set());
   const notifPanelRef  = useRef(null);
   const switcherRef    = useRef(null);
   const unread = notifications.filter(n => !n.read).length;
+
+  // Fetch confirmed-sent email status when the panel opens, so the badge
+  // reflects real email_notifications rows rather than fire-and-forget intent.
+  useEffect(() => {
+    if (!notifOpen) return;
+    const clientIds = [...new Set(notifications.filter(n => n.clientId).map(n => n.clientId))];
+    if (!clientIds.length) { setEmailedKeys(new Set()); return; }
+    getEmailedKeys(clientIds)
+      .then(setEmailedKeys)
+      .catch(() => setEmailedKeys(new Set()));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notifOpen]);
 
   useEffect(() => {
     if (!notifOpen) return;
@@ -215,15 +228,22 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
             <div className="flex-1 overflow-y-auto min-h-0">
               {notifications.length === 0
                 ? <div data-testid="notif-empty" className="flex items-center justify-center h-40 text-sm text-slate-400">You're all caught up ✓</div>
-                : notifications.map(n => (
+                : notifications.map(n => {
+                  const wasEmailed = n.clientId && emailedKeys.has(`${n.clientId}::${n.subject}`);
+                  return (
                   <div
                     key={n.id}
                     data-testid={`notif-${n.id}`}
                     className={`px-4 py-3 border-b border-stone-100 ${rowBg(n.urgency, n.read)}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm leading-snug ${n.read ? 'font-normal text-slate-500' : 'font-medium text-slate-800'}`}>
-                          {n.subject}
+                        <p className={`text-sm leading-snug flex items-center gap-1.5 ${n.read ? 'font-normal text-slate-500' : 'font-medium text-slate-800'}`}>
+                          <span>{n.subject}</span>
+                          {wasEmailed && (
+                            <span title="Also sent by email" data-testid={`notif-emailed-${n.id}`} className="inline-flex text-teal-500 flex-shrink-0">
+                              <Ico.Mail/>
+                            </span>
+                          )}
                         </p>
                         {n.clientName && (
                           <p className="text-xs text-slate-400 mt-0.5">{n.clientName}</p>
@@ -241,7 +261,8 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
                       )}
                     </div>
                   </div>
-                ))
+                  );
+                })
               }
             </div>
           </div>

@@ -4,103 +4,99 @@ _Last updated: 2026-10-01_
 
 ## 1. Goal we are moving towards
 
-[ACD-77](https://awcbehavioralhealth.atlassian.net/browse/ACD-77) ("B6") —
-add a small "emailed" indicator to the in-app notification list so clinicians
-can see which stage-change alerts also triggered a real email, using the
-`email_notifications` table (added in a prior trench alongside the
-`send-notification-email` edge function) as the source of truth. This is a
-minor UI addition on top of the existing in-app notification list, not a
-redesign — and the badge only reflects a **confirmed** `status = 'sent'` row
-(not a mere send attempt), per explicit product decision.
+[ACD-78](https://awcbehavioralhealth.atlassian.net/browse/ACD-78) ("D1") —
+at Intake, some clients don't have their diagnosis paperwork (CDE) ready
+yet. Add a "Diagnosis Pending" checkbox so the case isn't stuck waiting on
+that document, with a persistent reminder badge until a real diagnosis is
+recorded (that happens later, at the Assessment stage). Also replace the
+old single "insurance verified" checkbox with a more accurate 3-way status:
+Not Verified / Requested / Verified — only "Verified" should unblock the
+stage.
 
 **Status: shipped, merged to both `dev` and `main`. Session closed.**
 
 ## 2. Current state of the code
 
-**Merged to `dev` (PR [#91](https://github.com/Luchot93/aba-shield-mvp/pull/91),
-commit `63220f8`) and promoted to `main` (PR
-[#92](https://github.com/Luchot93/aba-shield-mvp/pull/92)).** Local `main`
-and `dev` fast-forwarded to match origin at session close; both branches are
-in sync.
+**Merged to `dev` (PR [#93](https://github.com/Luchot93/aba-shield-mvp/pull/93))
+and promoted to `main` (PR
+[#94](https://github.com/Luchot93/aba-shield-mvp/pull/94), commit
+`2a7c0be`).** Local `main` and `dev` fast-forwarded to match origin at
+session close; both branches are in sync.
 
-- `src/utils/notifications.js` — `mkNotif()` now accepts an optional 4th
-  `clientId` param (only passed by call sites paired with a real
-  `sendStageChangeEmail()` call). New `getEmailedKeys(clientIds)` returns a
-  `Set` of `"clientId::subject"` keys for every email confirmed `sent`, used
-  to correlate a local in-app notification with its `email_notifications`
-  row — there's no shared ID between the two, so the same `subject` string
-  passed to both `mkNotif()` and `sendStageChangeEmail()` at each call site
-  is the correlation key.
-- `src/lib/db.js` — new `getSentEmailNotifications(clientIds)` query
-  (`email_notifications` filtered to `status = 'sent'`), following the file's
-  existing pattern (plain async query fn, no business logic).
-- `src/components/icons.jsx` — new `Mail` icon.
-- `src/components/NavBar.jsx` — notification panel now fetches
-  `getEmailedKeys()` when it opens and renders a small teal mail-icon badge
-  next to any notification whose `clientId::subject` key is in that set.
-- `src/features/detail/ClientDetailPage.jsx` — the 3 stage-change call sites
-  (`doAdvance`, `doDeny`, `doReturnFromDenied`) now pass `client.id` as the
-  4th `mkNotif()` arg, so **every** stage transition on the client card
-  (not just specific ones) is covered. The separate "parent email simulation"
-  notification (no real paired email) and `api/check-auth-expiry.js`'s cron
-  notifications (no paired local `mkNotif()` at all) were deliberately left
-  untagged — out of scope for this minor UI addition.
-- **Manual QA completed** (see QA comment on ACD-77): temporarily set
-  `FLAGS.PIPELINE = true` **locally only** to reach the gated notification
-  panel, triggered a real stage change (Submitted → Denied) on the test
-  fixture "RLS Test Client ACD-52," confirmed a real `email_notifications`
-  row was created (`status = 'failed'`, as expected — see blocker below),
-  manually flipped that row's status to `'sent'` via Supabase MCP, confirmed
-  the badge rendered next to the correct notification only (verified via
-  DOM `data-testid`, not just visually), then reverted the row to `'failed'`
-  and the client's `stage`/`pipeline_entry`/`denial_from_stage` back to their
-  original `null`/`false` values. `FLAGS.PIPELINE` was reverted to `false`
-  before commit — confirmed via `git diff` showing zero changes to
-  `featureFlags.js`.
+- `src/constants/checklist.js` — Intake stage items: the `cde` file_upload
+  item gained `orClientField: 'diagnosis_pending'`; a new `diagnosis_pending`
+  checkbox item (`optional: true`, `clientField: 'diagnosis_pending'`) sits
+  directly below it. The old `insurance_verified` checkbox item was replaced
+  with a `select` item `insurance_verification_status`
+  (`clientField: 'insurance_verification_status'`, `completeValue: 'verified'`,
+  options `not_verified` / `requested` / `verified`).
+- `src/utils/checklist.js` — `itemComplete()`: added a `clientField` read
+  path (falls back to the old nested `checklist[clSec][key]` lookup when
+  absent) so items can read/write top-level `client` fields instead of the
+  checklist JSON blob. `checkbox` items with `optional: true` now always
+  count as complete (used by `diagnosis_pending`, which is a flag, not a
+  requirement). `file_upload` now checks `orClientField` as an alternate
+  satisfy-path before falling back to "missing." Added a `select` case
+  (`val === item.completeValue`).
+- `src/features/detail/ClientDetailPage.jsx` — renders the new checkbox and
+  3-button select control (Not Verified / Requested / Verified, each with
+  its own active-state color: slate / amber / emerald) in the Intake
+  checklist; added the "⏳ Diagnosis Pending" badge to the client header,
+  shown whenever `client.diagnosis_pending === true` and `client.diagnosis`
+  is not set.
+- `src/features/pipeline/components/KanbanCard.jsx` — same "⏳ Diagnosis
+  Pending" badge condition added to the card, so the reminder is visible on
+  every pipeline stage, not just the detail page.
+- **Manual QA completed**, run against the Pipeline UI with
+  `FLAGS.PIPELINE` temporarily flipped to `true` **locally only**, using the
+  project's backend-free E2E mock mode (`VITE_E2E=1 VITE_DEMO_MODE=true` —
+  the same mode Playwright's `webServer` uses), so no writes touched the
+  real Supabase database:
+  - Checked `diagnosis_pending` on a client with no `diagnosis` → CDE item
+    renders "Not needed" and is counted complete via `orClientField`; "X of
+    Y complete" counter incremented accordingly.
+  - Confirmed the badge rendered on both `ClientDetailPage`'s header and the
+    matching `KanbanCard`.
+  - Confirmed the badge stayed hidden for a client that already had a
+    `diagnosis` set.
+  - Cycled the insurance select through all three states: "Requested" shows
+    amber active styling and does **not** satisfy the gate (count
+    unchanged); "Verified" shows emerald active styling and **does** satisfy
+    it (count increments); "Not Verified" is the slate/inactive default.
+  - `FLAGS.PIPELINE` reverted to `false` before commit — confirmed via
+    `git diff` showing zero changes to `featureFlags.js`.
 - `npx vite build` — clean, no new errors or warnings introduced.
-- Confirmed `tests/pipeline.spec.js`'s "Notifications" describe block stays
-  statically skipped (`gated(FLAGS.PIPELINE)` → `test.describe.skip`), so the
-  NavBar structural changes carry no CI risk.
-
-**Blocker (not fixed this session, by design):** real email delivery is
-still blocked by Resend sending-domain/DNS verification
-([ACD-101](https://awcbehavioralhealth.atlassian.net/browse/ACD-101)) — in
-production today every send lands as `status = 'failed'`, so the badge is
-logically correct but won't visibly appear for real users until that's
-resolved. Filed
-[ACD-111](https://awcbehavioralhealth.atlassian.net/browse/ACD-111) ("E2E
-verify 'emailed' notification indicator once Resend domain is live"),
-linked "Relates to" ACD-77 and "is blocked by" ACD-101, with cross-reference
-comments left on all three tickets — same pattern as how ACD-70 was closed
-previously with delivery confirmation deferred.
 
 ## 3. Files actively being edited
 
-None in flight — everything is committed, pushed, and merged into both `dev`
-and `main`, which are in sync. Working tree is clean. Next session starts
-from a clean slate.
+None in flight — everything is committed, pushed, and merged into both
+`dev` and `main`, which are in sync. Working tree is clean. Next session
+starts from a clean slate.
 
 ## 4. Everything tried that failed / walked back
 
-- Nothing on the code itself was walked back — the indicator logic, the
-  `clientId` correlation approach, and the 3 tagged call sites were all
-  shipped as drafted once QA passed.
-- Considered wiring `api/check-auth-expiry.js`'s auth-expiry cron emails
-  into the same badge, but that cron has no corresponding local in-app
-  `mkNotif()` entry at all (it's a separate server-side-only flow) — decided
-  that's a different, larger scope than "a minor UI addition" and left it
-  alone rather than expanding this ticket.
-- Flipping `FLAGS.PIPELINE` for QA required an explicit mid-session ask and
-  sign-off (per CLAUDE.md rule 4 — never flip a flag without being asked),
-  even though general "go ahead and test" permission had already been given;
-  paused specifically to confirm that covered a flag flip before proceeding.
+- Nothing on the code itself was walked back — the OR-gate approach for
+  `diagnosis_pending` and the 3-state select for insurance verification
+  were both shipped as drafted once QA passed.
+- The `computer` screenshot tool returned blank/white images throughout
+  this session's QA (on both port 5176 and 5177) despite the DOM being
+  populated — worked around entirely via `read_page` (accessibility tree)
+  and direct DOM/`innerText` inspection instead of visual screenshots; no
+  functional impact on the QA itself.
+- First attempt at creating a QA test client failed silently (modal stayed
+  open) because DOB / Insurer Name / Member ID are required but weren't
+  filled in initially — not a bug, just an incomplete first attempt.
+- After creating the QA test client with "Add to pipeline" checked, it
+  landed in the Directory with a separate "+ Add to pipeline" button rather
+  than going straight into the Intake stage — required an explicit second
+  click. Also not a bug; just the existing two-step flow.
 
 ## 5. Next steps
 
 1. **[ACD-111](https://awcbehavioralhealth.atlassian.net/browse/ACD-111)** —
-   real end-to-end test of the emailed-indicator feature (actual delivered
-   email reaching `status = 'sent'` through the real send path, not a
-   manually-edited test row). Blocked by ACD-101. Not started.
+   real end-to-end test of the ACD-77 emailed-indicator feature (actual
+   delivered email reaching `status = 'sent'` through the real send path).
+   Blocked by ACD-101. Not started.
 2. **[ACD-101](https://awcbehavioralhealth.atlassian.net/browse/ACD-101)**
    (Resend domain verification) — still blocked on DNS access to a real
    domain; pending leadership's help to unblock. Carried forward.
@@ -148,5 +144,5 @@ from a clean slate.
     `ACD-108-...` and older local feature branches, never explicitly
     confirmed for deletion) — low priority, worth a `git branch -d` pass
     whenever the user wants a tidy local branch list. The
-    `ACD-77-emailed-notification-indicator` branch can now be added to that
-    cleanup too, since its PR into `main` is merged.
+    `ACD-78-diagnosis-pending-insurance-status` branch can now be added to
+    that cleanup too, since its PR into `main` is merged.

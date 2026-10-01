@@ -22,9 +22,17 @@ export function getChecklistStatus(client, staff = []) {
 }
 
 export function itemComplete(item, client, staff) {
-  const val = client.checklist[item.clSec]?.[item.key];
+  const val = item.clientField ? client[item.clientField] : client.checklist[item.clSec]?.[item.key];
   switch (item.type) {
-    case 'checkbox': case 'upload': case 'file_upload': return val === true;
+    case 'checkbox':
+      if (item.optional) return true;
+      return val === true;
+    case 'upload': return val === true;
+    case 'file_upload':
+      if (val === true) return true;
+      if (item.orClientField) return client[item.orClientField] === true;
+      return false;
+    case 'select': return val === item.completeValue;
     case 'form_field': if (item.optional) return true; return typeof val === 'string' ? val.trim() !== '' : (val !== '' && val != null);
     case 'assign':     return item.role === 'bcba' ? !!client.bcba_id : !!client.rbt_id;
     case 'bridge':     return !!client.smart_assessment_session_id;

@@ -59,7 +59,8 @@ export function getStageItems(stage) {
     case 'intake': return [
       { type:'upload',       key:'referral_form',    label:'Referral request form',                     clSec:'intake', docType:'referral_form'    },
       { type:'file_upload', key:'insurance_card',   label:'Insurance card',                            clSec:'intake', accept:'.pdf,.docx,.jpg,.png', docType:'insurance_card'   },
-      { type:'file_upload', key:'cde',              label:'Comprehensive Diagnostic Evaluation (CDE)', clSec:'intake', accept:'.pdf,.docx,.jpg,.png', docType:'cde'              },
+      { type:'file_upload', key:'cde',              label:'Comprehensive Diagnostic Evaluation (CDE)', clSec:'intake', accept:'.pdf,.docx,.jpg,.png', docType:'cde', orClientField:'diagnosis_pending' },
+      { type:'checkbox',    key:'diagnosis_pending', label:'Diagnosis Pending', clSec:'intake', clientField:'diagnosis_pending', optional:true, sublabel:"Check this if the CDE isn't available yet — diagnosis will be captured during the initial assessment instead." },
       { type:'file_upload', key:'aba_prescription', label:'ABA prescription / script',                clSec:'intake', accept:'.pdf,.docx,.jpg,.png', docType:'aba_prescription' },
       { type:'file_upload', key:'consent_signed',   label:'Intake consent packet signed',             clSec:'intake', accept:'.pdf,.docx',           docType:'consent'          },
       { type:'auto',        key:'demographics',     label:'Client demographics',                       clSec:'intake', always:true },
@@ -68,7 +69,9 @@ export function getStageItems(stage) {
       { type:'form_field',  key:'member_id_verified', label:'Member ID / Group #',        clSec:'intake', fieldType:'text', optional:true, placeholder:'MBR-0000000',                                       clientFields:['member_id','group_number'],                clientFieldSep:' / '       },
       { type:'form_field',  key:'copay_deductible',   label:'Copay / deductible details', clSec:'intake', fieldType:'text', optional:true, placeholder:'$0 copay, $500 deductible remaining'                                                                                                    },
       { type:'form_field',  key:'preferred_language', label:'Preferred language',         clSec:'intake', fieldType:'text', optional:true, placeholder:'e.g. English, Spanish',                             clientFields:['preferred_language']                                                 },
-      { type:'checkbox',    key:'insurance_verified', label:'Insurance information verified',  clSec:'intake', sublabel:'Confirm member ID, group number, and plan name match the insurance card on file.' },
+      { type:'select',      key:'insurance_verification_status', label:'Insurance verification status', clSec:'intake', clientField:'insurance_verification_status', completeValue:'verified',
+        options:[{ value:'not_verified', label:'Not Verified' }, { value:'requested', label:'Requested' }, { value:'verified', label:'Verified' }],
+        sublabel:'Confirm member ID, group number, and plan name match the insurance card on file.' },
       { type:'checkbox',    key:'benefits_verified',  label:'Benefits verification completed', clSec:'intake', sublabel:'Verify ABA coverage, session limits, copay/deductible, and any prior auth requirements.' },
     ];
     case 'auth_assessment': return [

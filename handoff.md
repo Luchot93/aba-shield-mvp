@@ -4,84 +4,90 @@ _Last updated: 2026-10-02_
 
 ## 1. Goal we are moving towards
 
-[ACD-80](https://awcbehavioralhealth.atlassian.net/browse/ACD-80) ("D3") —
-clean up the Assessment stage checklist: remove a redundant item (`bcba_confirmed`,
-which never measured anything since BCBA assignment is already a hard blocker
-earlier in the pipeline), fix a mislabeled item (`direct_observation` →
-`maladaptive_behaviors_section`), fix stale-test detection so Vineland-3/BASC-3
-items only count complete when the paired date is within the last 12 months,
-add "Not Applicable" skip options for `additional_assessments` and
-`prior_assessments`, and gate a new `diagnosis_confirmed` item on
-`diagnosis_pending` so it only appears for clients whose diagnosis wasn't
-confirmed at Intake. The `smart_assessment_submitted` bridge/export signal was
-investigated and found to already match intent — left as-is per explicit user
-decision.
+[ACD-81](https://awcbehavioralhealth.atlassian.net/browse/ACD-81) ("D4") —
+make sure each Plan Draft checklist item actually checks for real content
+(not just a truthy flag), and add a downloadable, caregiver-facing treatment
+plan document distinct from the full clinical assessment `.docx`.
 
-**Status: shipped, merged to both `dev` and `main`. Ticket moved to Done.
-Session closed.**
+**Status: shipped, merged to both `dev` and `main`. Session closed.**
 
 ## 2. Current state of the code
 
 **Merged to `dev`
-([PR #97](https://github.com/Luchot93/aba-shield-mvp/pull/97)) and promoted to
-`main` ([PR #98](https://github.com/Luchot93/aba-shield-mvp/pull/98)).** Local
-`main` and `dev` fast-forwarded to match origin at session close; both
-branches are in sync.
+([PR #99](https://github.com/Luchot93/aba-shield-mvp/pull/99)) and promoted to
+`main` ([PR #100](https://github.com/Luchot93/aba-shield-mvp/pull/100)).**
+Confirmed via fresh `git fetch origin` at session close: `origin/main` and
+`origin/dev` point to the same commit (`fba5220`) — fully in sync, no diff.
 
-- `src/constants/checklist.js` — `mkChecklist()`'s `assessment` section:
-  removed `bcba_confirmed`, renamed `direct_observation` →
-  `maladaptive_behaviors_section` (same `sessionKey`), added
-  `additional_assessments_na`. `auth_assessment` section: added
-  `prior_assessments_na`. `getStageItems` signature changed to
-  `(stage, client)` so the `assessment` case can conditionally splice in a
-  `diagnosis_confirmed` item (`type: 'auto', diagnosisGate: true`) when
-  `client?.diagnosis_pending === true`. `additional_assessments` and
-  `prior_assessments` items both gained `naSkippable: true`.
-  `final_assessment_report` gained a sublabel noting the Vineland-3/BASC-3
-  graphs must be added manually (the Smart Assessment export can't contain
-  them).
-- `src/utils/checklist.js` — new shared helper `getRecentDateStatus(dateStr)`
-  returning `'empty' | 'future' | 'stale' | 'current'` (stale = >12 months
-  past), used by both completion logic and the UI. `itemComplete()`: the
-  `'dated'` case now requires the checkbox AND a date that resolves to
-  `'current'` (previously any date satisfied it). Added a generic
-  `naSkippable` branch — if `client.checklist[clSec][`${key}_na`] === true`,
-  the item is treated as complete regardless of type. The `'auto'` case
-  gained a `diagnosisGate` branch: complete unless `diagnosis_pending` is
-  true and `diagnosis`/`icd10` are still blank.
-- `src/features/detail/ClientDetailPage.jsx` — `getStageItems(stageToShow,
-  client)` now passes `client` through. `CheckRow` gained a reusable `NAToggle`
-  element (checkbox + "N/A — not used for this case" label, click-guarded so
-  it doesn't trigger the parent card's toggle) rendered for both
-  `naSkippable` checkbox- and file_upload-type items. The `'dated'` branch
-  now derives `dateStatus` from `getRecentDateStatus()` and shows a red
-  border + inline warning text ("Administered more than 12 months ago — a
-  new administration is required." / "Date can't be in the future.")
-  instead of the old one-sided "isOld" check. **Also fixed a bug found during
-  QA**: the `file_upload` item type never rendered `item.sublabel` — added
-  it, since without the fix the new `final_assessment_report` sublabel
-  (Vineland-3/BASC-3 graphs note) was set in data but invisible in the UI.
-- `src/constants/seedData.js` — updated 7 seeded clients: removed
-  `bcba_confirmed:true`, renamed `direct_observation:true` →
-  `maladaptive_behaviors_section:true`.
-- **Manual QA completed** against the live-code-feel E2E mock mode
-  (`VITE_E2E=1 VITE_DEMO_MODE=true`), with `FLAGS.PIPELINE` temporarily
-  flipped to `true` **locally only**, reverted before commit (confirmed via
-  `git diff` showing zero changes to `featureFlags.js`):
-  - A standalone 14-assertion Node script importing `itemComplete()` and
-    `getStageItems()` directly confirmed `diagnosisGate`, `naSkippable`
-    (both items), the `'dated'` stale/future/current logic, and the
-    `bcba_confirmed`/`direct_observation` changes — all pass.
-  - Live-clicked through Emma Thompson (Assessment stage): confirmed the
-    renamed "Maladaptive behaviors section captured" label, the Vineland-3
-    stale-date warning (red border + message, counts incomplete) and its
-    clearing on a recent date (counts complete), the `additional_assessments`
-    N/A toggle (counts complete, badge flips to "N/A"), and the now-visible
-    `final_assessment_report` sublabel.
-  - Live-clicked through Amelia Wilson (Auth Assessment stage): confirmed the
-    `prior_assessments` N/A toggle works the same way.
-- `npx vite build` — clean, no new errors or warnings introduced.
-- Jira ticket ACD-80 transitioned to **Done**.
+- `src/features/detail/lib/planDraftContentChecks.js` (new) — real content
+  checks for the plan-draft checklist, replacing shallow truthy flags:
+  `hasMedicalNecessityContent`, `hasSkillTargetsContent`,
+  `hasBehaviorGoalsContent`, `hasInterventionStrategiesContent`,
+  `hasCaregiverTrainingContent`, `sessionHasGraphableContent`. Wired into
+  `src/utils/checklist.js`'s `'smart_auto'` case so each checklist item only
+  shows complete when the underlying AI-generated content is substantive.
+- `src/features/detail/lib/planDraftExport.js` (new) — builds the
+  caregiver-facing treatment plan `.docx` locally from `plan_draft` session
+  data (goals, CPT hours, schedule, medical necessity narrative), separate
+  from the full clinical assessment export.
+- `src/features/detail/PlanDraftPreview.jsx` — exports `TreatmentPlanDownload`,
+  the download UI, now with two presentations controlled by a `compact`
+  prop:
+  - Default (checklist use): a larger card, `my-3` spacing (was `mb-2` —
+    tightened per user feedback that items looked cramped).
+  - `compact` (Plan tab sidebar use): a slim row styled to exactly match the
+    existing "Assessment Document" card (`DocumentBlock`) — small badge-less
+    card, simplified button text ("Download" only, no "Treatment Plan" in
+    the label).
+- `src/features/detail/ClientDetailPage.jsx` — inserts the (non-compact)
+  `TreatmentPlanDownload` into the `plan_draft` checklist render loop,
+  anchored after the `baseline_graphs` item.
+- `src/constants/checklist.js` — `plan_draft` stage item order changed so
+  the download → upload → approval-checkbox sequence matches the real BCBA
+  workflow: `baseline_graphs` → `treatment_plan_finalized` (upload) →
+  `ai_draft_approved` (checkbox, now last). Also renamed the
+  `caregiver_training` section label per product review.
+- `src/utils/checklist.js` — updated to call into
+  `planDraftContentChecks.js` for the `'smart_auto'` cases instead of
+  shallow truthy checks.
+- A Supabase migration and the `caregiver_training` label rename (both part
+  of the original ACD-81 scope) were completed and verified earlier in this
+  session, before the UX iteration described below.
+- `FLAGS.PIPELINE` was temporarily flipped to `true` locally for QA
+  (`ClientDetailPage.jsx` lives behind this flag) and reverted before
+  commit — confirmed via `git diff` showing zero net change to
+  `featureFlags.js`.
+- Manual QA via Chrome MCP against E2E mock mode
+  (`VITE_E2E=1 VITE_DEMO_MODE=true`, port 5175): verified the checklist
+  order (download → upload → checkbox), the spacing fix, and the compact
+  Plan-tab card visually matching the Assessment Document card.
+
+### Design decisions the user made during this session's UX iteration
+
+These were explicit user calls, not default implementation choices — keep
+them in mind if this area comes up again:
+
+1. **Keep the download in both places.** I initially read an early comment
+   as "move the download button into the checklist" (i.e. remove it from
+   the Plan tab sidebar). The user corrected this: *"I would keep both as
+   you say in the checklist and the plan just in case."* Both locations
+   render `TreatmentPlanDownload` — checklist gets the default/larger style,
+   Plan tab gets `compact`.
+2. **Checklist order is download → upload → checkbox, checkbox last.** The
+   user's reasoning: BCBA must download and actually review the generated
+   document, then upload the signed copy, and only *then* check the box
+   confirming AI content was reviewed and approved — the confirmation step
+   has to come after the real review happens, not before. This was
+   implemented purely as an array reorder in `checklist.js` (no change
+   needed to the insertion logic in `ClientDetailPage.jsx`, since it's
+   anchored to `baseline_graphs` regardless of what follows).
+3. **Plan tab's download card must visually match the existing Assessment
+   Document card, not look like its own distinct widget.** The user flagged
+   that the Plan tab copy was touching the box edges and was styled
+   differently from the "Assessment Document" download card already in that
+   sidebar. Fix: the `compact` prop variant, styled 1:1 off `DocumentBlock`,
+   with the button text simplified to just "Download" (no "Treatment Plan"
+   wording, since the surrounding label already says it).
 
 ## 3. Files actively being edited
 
@@ -91,20 +97,18 @@ starts from a clean slate.
 
 ## 4. Everything tried that failed / walked back
 
-- Nothing on the code itself was walked back — all changes were shipped as
-  drafted once QA passed.
-- The `file_upload` sublabel bug (see section 2) was not part of the original
-  plan — it was discovered only through live browser QA after the rest of
-  the diff had already been reviewed, and was fixed within the same session/
-  commit rather than filed separately, since it was directly blocking
-  visibility of a requirement (the Vineland-3/BASC-3 graphs note) that was
-  already in scope.
-- Chrome MCP session logged out mid-QA after a hard page reload; re-login via
-  `form_input` + a ref-based button click initially appeared not to register
-  (page still showed the sign-in form on the next check), but turned out to
-  just be the same screenshot/render-timing artifact noted in the ACD-79
-  handoff — a follow-up screenshot confirmed the login had actually
-  succeeded. No code or environment fix was needed.
+- An earlier blank "Plan Period" discrepancy noticed during QA was
+  investigated and traced to a stale `localStorage` E2E-mock caching
+  artifact, not a real bug — no code fix was needed.
+- I initially implemented "move the download button out of the Plan tab
+  into the checklist" based on an ambiguous early comment about creating "a
+  single workflow." The user walked this back: both locations should keep
+  the download, just styled appropriately per location (see design decision
+  1 above).
+- My first checklist reorder put the approval checkbox before the signed
+  upload (download → checkbox → upload). The user caught this from a
+  screenshot and corrected the order to download → upload → checkbox last
+  (see design decision 2 above).
 
 ## 5. Next steps
 
@@ -159,9 +163,9 @@ starts from a clean slate.
     feature branches never explicitly confirmed for deletion) — low
     priority, worth a `git branch -d` pass whenever the user wants a tidy
     local branch list. `ACD-78-diagnosis-pending-insurance-status`,
-    `ACD-79-authorization-proof-fields`, and
-    `ACD-80-assessment-checklist-cleanup` can all be added to that cleanup
-    now, since their PRs into `main` are merged.
+    `ACD-79-authorization-proof-fields`, `ACD-80-assessment-checklist-cleanup`,
+    and now `ACD-81-plan-draft-content-check-and-download` can all be added
+    to that cleanup, since their PRs into `main` are merged.
 14. The suggest-date label fix (`suggestFromLabel`, from ACD-79) only covers
     the two items that currently use `suggestFromField` (`appeal_deadline`,
     `cpt97151_expected_response_date`). If a future stage adds another

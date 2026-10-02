@@ -1,4 +1,12 @@
 import { getStageItems } from '../constants/checklist.js';
+import {
+  hasMedicalNecessityContent,
+  hasSkillTargetsContent,
+  hasBehaviorGoalsContent,
+  hasInterventionStrategiesContent,
+  hasCaregiverTrainingContent,
+  sessionHasGraphableContent,
+} from '../features/detail/lib/planDraftContentChecks.js';
 
 // Returns 'empty' | 'future' | 'stale' | 'current' for a date string, relative to now.
 // 'stale' = more than 12 months in the past. Used by both completion logic and the UI.
@@ -61,7 +69,19 @@ export function itemComplete(item, client, staff) {
     case 'form_field': if (item.optional) return true; return typeof val === 'string' ? val.trim() !== '' : (val !== '' && val != null);
     case 'assign':     return item.role === 'bcba' ? !!client.bcba_id : !!client.rbt_id;
     case 'bridge':     return !!client.smart_assessment_session_id;
-    case 'smart_auto': return !!client.smart_assessment_session_id;
+    case 'smart_auto': {
+      const session = client.assessment_session;
+      if (!session) return false;
+      switch (item.key) {
+        case 'medical_necessity':       return hasMedicalNecessityContent(session.sections?.medical_necessity);
+        case 'skill_targets':           return hasSkillTargetsContent(session);
+        case 'behavior_goals':          return hasBehaviorGoalsContent(session);
+        case 'intervention_strategies': return hasInterventionStrategiesContent(session);
+        case 'caregiver_training':      return hasCaregiverTrainingContent(session.sections?.caregiver_training);
+        case 'baseline_graphs':         return sessionHasGraphableContent(session);
+        default: return false;
+      }
+    }
     case 'dated': {
       if (val !== true) return false;
       const dateVal = client.checklist[item.clSec]?.[item.dateKey];

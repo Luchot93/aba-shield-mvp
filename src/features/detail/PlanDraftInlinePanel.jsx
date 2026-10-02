@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import {
+  hasSkillTargetsContent,
+  hasBehaviorGoalsContent,
+  hasTeachingStrategies,
+  hasHypothesizedFunctions,
+  hasCaregiverTrainingContent,
+} from './lib/planDraftContentChecks.js';
 
 // ─── Graph Lightbox ───────────────────────────────────────────────────────────
 
@@ -276,7 +283,7 @@ function SkillTargetsPanel({ session }) {
     return next;
   });
 
-  if (goals.length === 0) {
+  if (!hasSkillTargetsContent(session)) {
     return (
       <p className="text-[12px] text-slate-400 italic mt-3 pt-3 border-t border-stone-100">
         No skill goals documented yet.
@@ -346,7 +353,7 @@ function BehaviorGoalsPanel({ session }) {
     return next;
   });
 
-  if (behaviors.length === 0) {
+  if (!hasBehaviorGoalsContent(session)) {
     return (
       <p className="text-[12px] text-slate-400 italic mt-3 pt-3 border-t border-stone-100">
         No behavior targets documented yet.
@@ -443,7 +450,7 @@ function CaregiverTrainingPanel({ session }) {
     return next;
   });
 
-  if (targets.length === 0) {
+  if (!hasCaregiverTrainingContent(session?.sections?.caregiver_training)) {
     return (
       <p className="text-[12px] text-slate-400 italic mt-3 pt-3 border-t border-stone-100">
         No caregiver training targets documented yet.
@@ -506,8 +513,8 @@ function InterventionStrategiesPanel({ session }) {
   const goals     = session?.sections?.skill_acquisitions?.skillGoals ?? [];
   const behaviors = session?.sections?.behavior_targets?.behaviorTargets ?? [];
 
-  const hasStrategies = goals.some(g => (g.teachingStrategies?.length ?? 0) > 0 || g.teachingStrategiesOther?.trim());
-  const hasFunctions  = behaviors.some(bt => bt.hypothesizedFunction?.trim());
+  const hasStrategies = hasTeachingStrategies(goals);
+  const hasFunctions  = hasHypothesizedFunctions(behaviors);
 
   if (!hasStrategies && !hasFunctions) {
     return (

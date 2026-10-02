@@ -11,7 +11,7 @@ import { Ico } from '../../components/icons.jsx';
 import StagePill from '../../components/StagePill.jsx';
 import Avatar from '../../components/Avatar.jsx';
 import PlanDraftInlinePanel from './PlanDraftInlinePanel.jsx';
-import PlanDraftPreview from './PlanDraftPreview.jsx';
+import PlanDraftPreview, { TreatmentPlanDownload } from './PlanDraftPreview.jsx';
 import { buildGraphsFromSession } from '../../features/assessment/graphBuilder.js';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock.js';
 import BehaviorSessionLogPanel from './BehaviorSessionLogPanel.jsx';
@@ -909,8 +909,12 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             <button
                               onClick={() => {
                                 const endKey = item.suggestEndKey ?? 'plan_end_date';
-                                patchCL(item.clSec, item.key, startIso);
-                                patchCL(item.clSec, endKey, endIso);
+                                if (item.clientField) {
+                                  patchClient({ [item.clientField]: startIso, [endKey]: endIso });
+                                } else {
+                                  patchCL(item.clSec, item.key, startIso);
+                                  patchCL(item.clSec, endKey, endIso);
+                                }
                                 pushLog(`Updated: ${item.label} — ${startIso} → ${endIso}`);
                                 setSavedFields(prev => new Set(prev).add(item.key).add(endKey));
                                 clearTimeout(saveTimers.current[`suggest_${item.key}`]);
@@ -1627,7 +1631,16 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
                 {displayItems.length === 0
                   ? <p className="py-6 text-sm text-center text-slate-400">No checklist items.</p>
-                  : displayItems.map(item => <React.Fragment key={item.key}>{CheckRow({ item, readOnly: isReadOnly || !userCanEdit })}</React.Fragment>)}
+                  : displayItems.map(item => (
+                      <React.Fragment key={item.key}>
+                        {CheckRow({ item, readOnly: isReadOnly || !userCanEdit })}
+                        {/* Download sits between the last auto-generated content and the
+                            approval checkbox — BCBA reviews the actual document, then approves. */}
+                        {item.key === 'baseline_graphs' && (
+                          <TreatmentPlanDownload client={client} session={client.assessment_session} bcbaName={bcba?.name} />
+                        )}
+                      </React.Fragment>
+                    ))}
 
                 {/* Past Authorizations — collapsible, shown whenever history exists */}
                 {(client.auth_cycles_history ?? []).length > 0 && (
@@ -2486,6 +2499,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   session={client.assessment_session}
                   graphs={planGraphs}
                   documents={client.documents}
+                  client={client}
+                  bcbaName={bcba?.name}
                 />
               )}
 

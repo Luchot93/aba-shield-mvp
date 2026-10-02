@@ -9,13 +9,13 @@ export const mkChecklist = () => ({
   },
   auth_assessment: {
     cde_confirmed:false, prescription_confirmed:false, referral_confirmed:false,
-    prior_assessments:false, roi_confirmed:false, auth_submitted:false,
+    prior_assessments:false, prior_assessments_na:false, roi_confirmed:false, auth_submitted:false,
     cpt_97151_received:false, cpt97151_approval_doc:false, bcba_assigned:false,
   },
   assessment: {
-    bcba_confirmed:false, caregiver_interview:false, direct_observation:false,
+    caregiver_interview:false, maladaptive_behaviors_section:false,
     vineland3:false, vineland3_date:'', basc3:false, basc3_date:'',
-    additional_assessments:false, smart_assessment_submitted:false,
+    additional_assessments:false, additional_assessments_na:false, smart_assessment_submitted:false,
     baseline_data:false, behaviors_identified:false,
     final_assessment_report:false,
     observation_date:'', additional_assessments_detail:'',
@@ -53,7 +53,7 @@ export const mkChecklist = () => ({
   },
 });
 
-export function getStageItems(stage) {
+export function getStageItems(stage, client) {
   switch (stage) {
     case 'intake': return [
       { type:'upload',       key:'referral_form',    label:'Referral request form',                     clSec:'intake', docType:'referral_form'    },
@@ -77,7 +77,7 @@ export function getStageItems(stage) {
       { type:'auto',       key:'cde_confirmed',          label:'CDE confirmed',                          clSec:'auth_assessment', intakeKey:'cde' },
       { type:'auto',       key:'prescription_confirmed', label:'ABA prescription confirmed',             clSec:'auth_assessment', intakeKey:'aba_prescription' },
       { type:'auto',       key:'referral_confirmed',     label:'Referral form confirmed',                clSec:'auth_assessment', intakeKey:'referral_form' },
-      { type:'file_upload',key:'prior_assessments',      label:'Prior assessments attached',             clSec:'auth_assessment', accept:'.pdf,.docx', docType:'prior_assessments' },
+      { type:'file_upload',key:'prior_assessments',      label:'Prior assessments attached',             clSec:'auth_assessment', accept:'.pdf,.docx', docType:'prior_assessments', naSkippable:true },
       { type:'file_upload',key:'roi_confirmed',          label:'Release of Information (ROI) signed',    clSec:'auth_assessment', accept:'.pdf,.docx', docType:'roi', sublabel:'Required before the authorization request can be submitted to the insurer.' },
       { type:'checkbox',   key:'auth_submitted',         label:'Authorization submitted to insurer',     clSec:'auth_assessment', sublabel:'CPT 97151 authorization request submitted via Availity, fax, or phone. Requires a signed ROI, reference number, and submission date below.' },
       { type:'section_label', key:'_submission_header',  label:'Submission Details' },
@@ -92,20 +92,25 @@ export function getStageItems(stage) {
       { type:'form_field', key:'cpt97151_units_approved', label:'CPT 97151 units approved',              clSec:'auth_assessment', clientField:'cpt97151_units_approved', fieldType:'number', optional:true, placeholder:'e.g. 16' },
       { type:'assign',     key:'bcba_assigned',          label:'BCBA assigned to case',                  clSec:'auth_assessment', role:'bcba' },
     ];
-    case 'assessment': return [
-      { type:'auto',       key:'bcba_confirmed',               label:'BCBA assigned and confirmed',              clSec:'assessment', bcbaAuto:true },
-      { type:'bridge',     key:'smart_assessment_submitted',   label:'Smart Assessment',                         clSec:'assessment' },
-      { type:'auto',       key:'caregiver_interview',          label:'Caregiver interview completed',            clSec:'assessment', sessionKey:'caregiver_section' },
-      { type:'auto',       key:'direct_observation',           label:'Direct observation completed',             clSec:'assessment', sessionKey:'behaviors_section' },
-      { type:'form_field', key:'observation_date',             label:'Observation session date',                 clSec:'assessment', fieldType:'date', optional:true },
-      { type:'dated',      key:'vineland3',                    label:'Vineland-3 administered within 12 months', clSec:'assessment', dateKey:'vineland3_date' },
-      { type:'dated',      key:'basc3',                        label:'BASC-3 administered within 12 months',     clSec:'assessment', dateKey:'basc3_date' },
-      { type:'checkbox',   key:'additional_assessments',       label:'Additional assessments completed',         clSec:'assessment', sublabel:'Any supplemental tools administered (e.g. ABLLS-R, VB-MAPP, AFLS). List them in the field below.' },
-      { type:'form_field', key:'additional_assessments_detail',label:'Additional tools used',                    clSec:'assessment', fieldType:'text', optional:true, placeholder:'e.g. ABLLS-R, AFLS, VB-MAPP' },
-      { type:'auto',       key:'behaviors_identified',         label:'Behaviors identified',                     clSec:'assessment', sessionKey:'behaviors_any' },
-      { type:'auto',       key:'baseline_data',                label:'Baseline behavioral data recorded',        clSec:'assessment', sessionKey:'behaviors_baseline' },
-      { type:'file_upload',key:'final_assessment_report',      label:'Final assessment report uploaded',         clSec:'assessment', accept:'.docx,.pdf', docType:'final_assessment' },
-    ];
+    case 'assessment': {
+      const items = [
+        { type:'bridge',     key:'smart_assessment_submitted',   label:'Smart Assessment',                         clSec:'assessment' },
+        { type:'auto',       key:'caregiver_interview',          label:'Caregiver interview completed',            clSec:'assessment', sessionKey:'caregiver_section' },
+        { type:'auto',       key:'maladaptive_behaviors_section',label:'Maladaptive behaviors section captured',   clSec:'assessment', sessionKey:'behaviors_section' },
+        { type:'form_field', key:'observation_date',             label:'Observation session date',                 clSec:'assessment', fieldType:'date', optional:true },
+        { type:'dated',      key:'vineland3',                    label:'Vineland-3 administered within 12 months', clSec:'assessment', dateKey:'vineland3_date' },
+        { type:'dated',      key:'basc3',                        label:'BASC-3 administered within 12 months',     clSec:'assessment', dateKey:'basc3_date' },
+        { type:'checkbox',   key:'additional_assessments',       label:'Additional assessments completed',         clSec:'assessment', sublabel:'Any supplemental tools administered (e.g. ABLLS-R, VB-MAPP, AFLS). List them in the field below.', naSkippable:true },
+        { type:'form_field', key:'additional_assessments_detail',label:'Additional tools used',                    clSec:'assessment', fieldType:'text', optional:true, placeholder:'e.g. ABLLS-R, AFLS, VB-MAPP' },
+        { type:'auto',       key:'behaviors_identified',         label:'Behaviors identified',                     clSec:'assessment', sessionKey:'behaviors_any' },
+        { type:'auto',       key:'baseline_data',                label:'Baseline behavioral data recorded',        clSec:'assessment', sessionKey:'behaviors_baseline' },
+        { type:'file_upload',key:'final_assessment_report',      label:'Final assessment report uploaded',         clSec:'assessment', accept:'.docx,.pdf', docType:'final_assessment', sublabel:'Must include the Vineland-3/BASC-3 graphs, added manually — the generated Smart Assessment export can\'t contain them.' },
+      ];
+      if (client?.diagnosis_pending === true) {
+        items.splice(1, 0, { type:'auto', key:'diagnosis_confirmed', label:'Diagnosis confirmed', clSec:'assessment', diagnosisGate:true });
+      }
+      return items;
+    }
     case 'plan_draft': return [
       { type:'smart_auto', key:'medical_necessity',       label:'Medical necessity statement',            clSec:'plan_draft' },
       { type:'smart_auto', key:'skill_targets',           label:'Skill-acquisition targets',              clSec:'plan_draft' },

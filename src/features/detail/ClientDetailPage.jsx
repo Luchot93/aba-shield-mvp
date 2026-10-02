@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { STAGES, SM, NEXT_STAGE } from '../../constants/stages.js';
 import { getStageItems } from '../../constants/checklist.js';
-import { itemComplete, itemBlocks } from '../../utils/checklist.js';
+import { itemComplete, itemBlocks, getRecentDateStatus } from '../../utils/checklist.js';
 import { mkNotif, sendStageChangeEmail } from '../../utils/notifications.js';
 import { isAdmin, canEdit } from '../../utils/permissions.js';
 import { updateClient, logActivity, setChecklistItem, uploadDocument, addCaseNote } from '../../lib/db.js';
@@ -251,7 +251,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const serviceTabsActive = client.stage === 'services' && !isReadOnly && (FLAGS.SESSION_LOG || FLAGS.REASSESSMENT);
   const isReauthCycle = (client.reauth_cycle ?? 0) > 0;
   const displayItems = (() => {
-    const items = getStageItems(stageToShow);
+    const items = getStageItems(stageToShow, client);
     // For reauth cycles in submitted stage: hide the planDraftHours auto row
     // (the teal CPT box above the checklist shows the correct reassessment-requested hours)
     if (isReauthCycle && stageToShow === 'submitted') {
@@ -506,6 +506,23 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     const complete = itemComplete(item, client, staff);
     const blocks   = !readOnly && itemBlocks(item, client, staff);
     const clVal    = item.clientField ? client[item.clientField] : client.checklist[item.clSec]?.[item.key];
+    const isNA     = item.naSkippable && client.checklist[item.clSec]?.[`${item.key}_na`] === true;
+
+    const NAToggle = !item.naSkippable ? null : (
+      <label
+        className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-slate-500 cursor-pointer select-none w-fit"
+        onClick={e => e.stopPropagation()}
+      >
+        <input type="checkbox" checked={isNA}
+          onChange={e => {
+            const newVal = e.target.checked;
+            patchCL(item.clSec, `${item.key}_na`, newVal);
+            pushLog(`${newVal ? 'Marked' : 'Unmarked'} N/A: ${item.label}`);
+          }}
+          className="w-3 h-3 rounded accent-slate-400 cursor-pointer"/>
+        N/A — not used for this case
+      </label>
+    );
 
     if (item.type === 'section_label') return (
       <div className="flex items-center gap-2 -mx-5 px-5 pt-4 pb-1">
@@ -554,6 +571,10 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
             )}
             {!readOnly && item.mandatory && !complete && (
               <span className="inline-block mt-1 text-[10px] font-bold text-red-600 px-1.5 py-0.5 bg-red-50 border border-red-200 rounded">MANDATORY</span>
+            )}
+            {!readOnly && NAToggle}
+            {readOnly && isNA && (
+              <span className="inline-block mt-1.5 text-[11px] font-medium text-slate-400">N/A — not used for this case</span>
             )}
             {item.key === 'bcba_matches_auth' && (
               assignedBcba ? (
@@ -606,8 +627,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
             {item.type === 'file_upload' && (() => {
               const orSatisfied = item.orClientField && client[item.orClientField] === true;
               return (
+                <div>
                 <div className="flex items-center justify-between gap-3">
-                  <span className={`text-sm ${clVal === true ? 'text-slate-400 line-through' : orSatisfied ? 'text-slate-400' : 'text-slate-800'}`}>{item.label}</span>
+                  <span className={`text-sm ${clVal === true ? 'text-slate-400 line-through' : (orSatisfied || isNA) ? 'text-slate-400' : 'text-slate-800'}`}>{item.label}</span>
                   {clVal === true
                     ? <span className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg flex-shrink-0"
                         style={{ background:'rgba(20,184,166,0.1)', color:'#0D9488', border:'1px solid rgba(20,184,166,0.25)' }}>
@@ -618,6 +640,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                       </span>
                     : orSatisfied
                       ? <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-400 bg-stone-50 border border-stone-200 rounded-lg flex-shrink-0 cursor-not-allowed" title="Not needed — Diagnosis Pending is checked">Not needed</span>
+                      : isNA
+                        ? <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-400 bg-stone-50 border border-stone-200 rounded-lg flex-shrink-0">N/A</span>
                       : readOnly
                         ? <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-400 bg-stone-50 border border-stone-200 rounded-lg flex-shrink-0">Not uploaded</span>
                         : <label className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-stone-200 text-slate-600 bg-white hover:border-teal-300 hover:text-teal-700 hover:bg-teal-50/40 cursor-pointer transition-all flex-shrink-0">
@@ -639,6 +663,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             />
                           </label>
                   }
+                </div>
+                {item.sublabel && (<p className="mt-1 text-[11px] text-slate-400 leading-snug">{item.sublabel}</p>)}
+                {!readOnly && clVal !== true && !orSatisfied && NAToggle}
                 </div>
               );
             })()}
@@ -1113,7 +1140,13 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
             {item.type === 'dated' && (() => {
               const dateVal = client.checklist[item.clSec]?.[item.dateKey] ?? '';
-              const isOld   = dateVal && (Date.now() - new Date(dateVal).getTime()) > 365*24*60*60*1000;
+              const dateStatus = getRecentDateStatus(dateVal);
+              const hasIssue = dateStatus === 'stale' || dateStatus === 'future';
+              const warningText = dateStatus === 'stale'
+                ? 'Administered more than 12 months ago — a new administration is required.'
+                : dateStatus === 'future'
+                  ? "Date can't be in the future."
+                  : null;
               return (
                 <div>
                   <div className="flex items-center gap-2.5 mb-2">
@@ -1132,9 +1165,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                       ? <span className="text-xs text-slate-600 px-2.5 py-1.5 bg-stone-50 border border-stone-200 rounded-lg" style={{ fontFamily:'DM Mono, monospace' }}>{dateVal || '—'}</span>
                       : <input type="date" value={dateVal}
                           onChange={e => patchCL(item.clSec, item.dateKey, e.target.value)}
-                          className={`text-xs px-2.5 py-1.5 border rounded-lg outline-none focus:border-teal-400 ${isOld ? 'border-red-300 bg-red-50 text-red-700' : 'border-stone-200'}`}/>
+                          className={`text-xs px-2.5 py-1.5 border rounded-lg outline-none focus:border-teal-400 ${hasIssue ? 'border-red-300 bg-red-50 text-red-700' : 'border-stone-200'}`}/>
                     }
-                    {isOld && <span className="text-xs text-red-600 font-medium">⚠ Over 12 months ago</span>}
+                    {hasIssue && <span className="text-xs text-red-600 font-medium">⚠ {warningText}</span>}
                   </div>
                 </div>
               );

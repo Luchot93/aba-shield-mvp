@@ -1,7 +1,20 @@
 import { getStageItems } from '../constants/checklist.js';
 
+// Returns 'empty' | 'future' | 'stale' | 'current' for a date string, relative to now.
+// 'stale' = more than 12 months in the past. Used by both completion logic and the UI.
+export function getRecentDateStatus(dateStr) {
+  if (!dateStr) return 'empty';
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return 'empty';
+  const now = Date.now();
+  if (d.getTime() > now) return 'future';
+  const twelveMonthsMs = 365 * 24 * 60 * 60 * 1000;
+  if (now - d.getTime() > twelveMonthsMs) return 'stale';
+  return 'current';
+}
+
 export function getChecklistStatus(client, staff = []) {
-  const items = getStageItems(client.stage);
+  const items = getStageItems(client.stage, client);
   if (!items.length) return null;
 
   const missing = items.filter(item => !itemComplete(item, client, staff)).length;
@@ -23,6 +36,7 @@ export function getChecklistStatus(client, staff = []) {
 
 export function itemComplete(item, client, staff) {
   const val = item.clientField ? client[item.clientField] : client.checklist[item.clSec]?.[item.key];
+  if (item.naSkippable && client.checklist[item.clSec]?.[`${item.key}_na`] === true) return true;
   switch (item.type) {
     case 'checkbox':
       if (item.optional) return true;
@@ -48,10 +62,17 @@ export function itemComplete(item, client, staff) {
     case 'assign':     return item.role === 'bcba' ? !!client.bcba_id : !!client.rbt_id;
     case 'bridge':     return !!client.smart_assessment_session_id;
     case 'smart_auto': return !!client.smart_assessment_session_id;
-    case 'dated':      return val === true;
+    case 'dated': {
+      if (val !== true) return false;
+      const dateVal = client.checklist[item.clSec]?.[item.dateKey];
+      return getRecentDateStatus(dateVal) === 'current';
+    }
     case 'section_label': return true;
     case 'auto': {
       if (item.always)       return true;
+      if (item.diagnosisGate) {
+        return !client.diagnosis_pending || (!!client.diagnosis?.trim() && !!client.icd10?.trim());
+      }
       if (item.planDraftHours) {
         const pd = client.checklist?.plan_draft;
         return !!(pd?.hours_97153 || pd?.hours_97155 || pd?.hours_97156);

@@ -162,8 +162,9 @@ than ad-hoc now.
 ## 5. Next steps
 
 1. ~~PR from `ACD-82-submitted-stage-auth-proof-required` into `dev`~~ —
-   merged (#101). ~~Promote `dev` to `main`~~ — merged (#102). ACD-82 is
-   closed out; move the Jira ticket to Done if not already.
+   merged (#101). ~~Promote `dev` to `main`~~ — merged (#102). ~~Move the
+   Jira ticket to Done~~ — done, with a session-summary comment (what was
+   built, QA results, blockers, both PR links). ACD-82 is fully closed out.
 2. File Jira tickets for the 3 deferred REAUTH/REASSESSMENT repoint spots
    **only when that work actually starts** — per the user, no new tickets
    for them right now, just this handoff note.

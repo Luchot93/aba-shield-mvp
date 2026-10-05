@@ -1,174 +1,178 @@
 # Session Handoff
 
-_Last updated: 2026-10-02_
+_Last updated: 2026-10-05_
 
 ## 1. Goal we are moving towards
 
-[ACD-81](https://awcbehavioralhealth.atlassian.net/browse/ACD-81) ("D4") —
-make sure each Plan Draft checklist item actually checks for real content
-(not just a truthy flag), and add a downloadable, caregiver-facing treatment
-plan document distinct from the full clinical assessment `.docx`.
+[ACD-82](https://awcbehavioralhealth.atlassian.net/browse/ACD-82) ("D5") —
+require all authorization proof fields at the Submitted stage, catch invalid
+auth period date ranges (end before/equal to start), and flag cases stuck
+waiting on the payer's response.
 
-**Status: shipped, merged to both `dev` and `main`. Session closed.**
+**Status: implementation complete, QA-verified live in the browser, and
+committed on branch `ACD-82-submitted-stage-auth-proof-required`. Pushed,
+with a PR open into `dev`.**
 
 ## 2. Current state of the code
 
-**Merged to `dev`
-([PR #99](https://github.com/Luchot93/aba-shield-mvp/pull/99)) and promoted to
-`main` ([PR #100](https://github.com/Luchot93/aba-shield-mvp/pull/100)).**
-Confirmed via fresh `git fetch origin` at session close: `origin/main` and
-`origin/dev` point to the same commit (`fba5220`) — fully in sync, no diff.
+**Migration: live in Supabase, committed to git.**
+`supabase/migrations/20261005204600_acd82_submitted_auth_fields.sql` was
+applied via the Supabase MCP (`apply_migration`, project
+`qravuejkiluimaihhbrf`) and confirmed in the ledger via `list_migrations` at
+the assigned version `20261005204600`. The local file matches that version
+exactly. It adds 7 columns to `clients` (`plan_submission_date`,
+`auth_reference_number`, `authorized_97153/97155/97156`, `auth_start_date`,
+`auth_end_date`) plus a check constraint
+(`auth_end_date IS NULL OR auth_start_date IS NULL OR auth_end_date > auth_start_date`).
 
-- `src/features/detail/lib/planDraftContentChecks.js` (new) — real content
-  checks for the plan-draft checklist, replacing shallow truthy flags:
-  `hasMedicalNecessityContent`, `hasSkillTargetsContent`,
-  `hasBehaviorGoalsContent`, `hasInterventionStrategiesContent`,
-  `hasCaregiverTrainingContent`, `sessionHasGraphableContent`. Wired into
-  `src/utils/checklist.js`'s `'smart_auto'` case so each checklist item only
-  shows complete when the underlying AI-generated content is substantive.
-- `src/features/detail/lib/planDraftExport.js` (new) — builds the
-  caregiver-facing treatment plan `.docx` locally from `plan_draft` session
-  data (goals, CPT hours, schedule, medical necessity narrative), separate
-  from the full clinical assessment export.
-- `src/features/detail/PlanDraftPreview.jsx` — exports `TreatmentPlanDownload`,
-  the download UI, now with two presentations controlled by a `compact`
-  prop:
-  - Default (checklist use): a larger card, `my-3` spacing (was `mb-2` —
-    tightened per user feedback that items looked cramped).
-  - `compact` (Plan tab sidebar use): a slim row styled to exactly match the
-    existing "Assessment Document" card (`DocumentBlock`) — small badge-less
-    card, simplified button text ("Download" only, no "Treatment Plan" in
-    the label).
-- `src/features/detail/ClientDetailPage.jsx` — inserts the (non-compact)
-  `TreatmentPlanDownload` into the `plan_draft` checklist render loop,
-  anchored after the `baseline_graphs` item.
-- `src/constants/checklist.js` — `plan_draft` stage item order changed so
-  the download → upload → approval-checkbox sequence matches the real BCBA
-  workflow: `baseline_graphs` → `treatment_plan_finalized` (upload) →
-  `ai_draft_approved` (checkbox, now last). Also renamed the
-  `caregiver_training` section label per product review.
-- `src/utils/checklist.js` — updated to call into
-  `planDraftContentChecks.js` for the `'smart_auto'` cases instead of
-  shallow truthy checks.
-- A Supabase migration and the `caregiver_training` label rename (both part
-  of the original ACD-81 scope) were completed and verified earlier in this
-  session, before the UX iteration described below.
-- `FLAGS.PIPELINE` was temporarily flipped to `true` locally for QA
-  (`ClientDetailPage.jsx` lives behind this flag) and reverted before
-  commit — confirmed via `git diff` showing zero net change to
-  `featureFlags.js`.
-- Manual QA via Chrome MCP against E2E mock mode
-  (`VITE_E2E=1 VITE_DEMO_MODE=true`, port 5175): verified the checklist
-  order (download → upload → checkbox), the spacing fix, and the compact
-  Plan-tab card visually matching the Assessment Document card.
+**Code changes — committed (migration + 5 modified files):**
 
-### Design decisions the user made during this session's UX iteration
+- `src/constants/checklist.js` — the 7 Submitted-stage `form_field` items
+  (`plan_submission_date`, `auth_reference_number`, `authorized_97153/55/56`,
+  `auth_start_date`, `auth_end_date`) are now required (`optional:true`
+  removed) and wired via `clientField` to the new real columns instead of
+  local-only checklist state. `mkChecklist().submitted` trimmed to just
+  `plan_submitted`, `cpt_units_requested`, `approval_uploaded` (the fields
+  that stay local/non-`clientField`). `auth_end_date` got
+  `afterField:'auth_start_date', afterFieldLabel:'start date'` for the new
+  date-order check.
+- `src/utils/checklist.js` — `itemComplete`'s `form_field` case now validates
+  `afterField` (end date must be strictly after the referenced field,
+  mirroring the existing stale-date convention). `planDraftHours` auto-check
+  repointed from `client.checklist?.plan_draft?.hours_*` to
+  `client.hours_97153/55/56` directly.
+- `src/features/detail/ClientDetailPage.jsx` — repointed every live read of
+  `client.checklist.submitted.*` to the new real columns: `doAdvance`'s
+  auth-expiry copy-on-advance, both `authorizedHoursWeek` autoDefault/hint
+  reads, and the Auth Summary banner (shown in the Authorized stage). Added
+  inline red-border + "⚠ End date must fall after the start date" warning UI
+  for `auth_end_date`, mirroring the existing stale-date pattern. Fixed an
+  adjacent pre-existing bug found during review: the `item.planDraftKey`
+  autoDefault read was still pointing at the dead
+  `client.checklist?.plan_draft?.[key]` path (left over from the ACD-81
+  migration that moved those fields to real columns) — now reads
+  `client[item.planDraftKey]` directly. `doReturnFromDenied` (Mark as
+  Denied → return flow) rewritten to snapshot/clear the 7 real columns
+  (`SUBMITTED_AUTH_CLIENT_FIELDS`) separately from the 1 local field that
+  stays in checklist state (`approval_uploaded`), and now actually persists
+  the cleared client columns to Supabase via `updateClient` (previously the
+  local checklist clear was never persisted at all).
+- `src/features/pipeline/components/KanbanCard.jsx` — new "Waiting on payer"
+  badge (Kanban card only, not `ClientDetailPage`): shows when
+  `stage === 'submitted'` and `plan_submission_date` is more than 14 days
+  ago and `auth_start_date` is still null. Client-side computed, no new
+  columns needed. Comment flags the 14-day threshold as a flat default that
+  may need to become payer/plan-specific later.
+- `src/constants/seedData.js` — all 5 `cl.submitted = {...}` seed blocks
+  (clients c10, c11, c15, c16, c17) split: the 7 now-real fields moved to
+  top-level `c.*` assignments, `cl.submitted` trimmed to
+  `{ plan_submitted:true, approval_uploaded:true }`.
+- "Mark as Denied" button scope left unchanged (still `submitted` /
+  `auth_assessment` only) — added a one-line comment noting the PRD calls
+  for wider scope; not part of ACD-82.
+- `plan_submitted` and `approval_uploaded` checklist items left untouched, as
+  scoped.
+- Verified with a full `npm run build` — succeeds, no new errors (only
+  pre-existing chunk-size/Tailwind-content warnings).
 
-These were explicit user calls, not default implementation choices — keep
-them in mind if this area comes up again:
+### QA verification (this session, live browser pass against localhost:5175)
 
-1. **Keep the download in both places.** I initially read an early comment
-   as "move the download button into the checklist" (i.e. remove it from
-   the Plan tab sidebar). The user corrected this: *"I would keep both as
-   you say in the checklist and the plan just in case."* Both locations
-   render `TreatmentPlanDownload` — checklist gets the default/larger style,
-   Plan tab gets `compact`.
-2. **Checklist order is download → upload → checkbox, checkbox last.** The
-   user's reasoning: BCBA must download and actually review the generated
-   document, then upload the signed copy, and only *then* check the box
-   confirming AI content was reviewed and approved — the confirmation step
-   has to come after the real review happens, not before. This was
-   implemented purely as an array reorder in `checklist.js` (no change
-   needed to the insertion logic in `ClientDetailPage.jsx`, since it's
-   anchored to `baseline_graphs` regardless of what follows).
-3. **Plan tab's download card must visually match the existing Assessment
-   Document card, not look like its own distinct widget.** The user flagged
-   that the Plan tab copy was touching the box edges and was styled
-   differently from the "Assessment Document" download card already in that
-   sidebar. Fix: the `compact` prop variant, styled 1:1 off `DocumentBlock`,
-   with the button text simplified to just "Download" (no "Treatment Plan"
-   wording, since the surrounding label already says it).
+`FLAGS.PIPELINE` was temporarily flipped to `true` locally to reach the
+Kanban/detail UI (ACD-82's surfaces all live behind it), verified, then
+reverted to `false` before commit — confirmed via `git diff` showing no
+diff on `featureFlags.js`. Test client: John Smith (real Supabase row,
+`id a43342f5-d635-455e-a933-3f89a8d9d8ee`), moved to the Submitted stage via
+a one-off SQL `UPDATE` (user-approved) since no seed client was at that
+stage. All 5 behaviors confirmed working correctly:
+
+1. All 7 required fields render, save, and are wired to the real columns.
+2. Date-order validation: red border + "⚠ End date must fall after the
+   start date" on an invalid end date; clears correctly once corrected.
+3. Authorization Summary banner (Authorized stage) pulls live from the real
+   columns (`Auth # AET-SUB-0001`, `Period Oct 5, 2026 → Apr 5, 2027`,
+   `97153 20h · 97155 4h · 97156 4h`) — briefly flipped John Smith's `stage`
+   to `authorized` via SQL to view it, then reverted back to `submitted`.
+4. `authorizedHoursWeek` hint computes correctly from the new columns
+   (monthly ÷ 4 → weekly default, e.g. `20h/mo → ~5h/wk`).
+5. Kanban "Waiting on payer" badge renders correctly ("Waiting on payer —
+   34d since submission") when `auth_start_date` is null and
+   `plan_submission_date` is >14 days old.
+
+**Decision: John Smith's live Supabase row is intentionally left in its
+post-QA state** (`pipeline_entry: true`, `stage: 'submitted'`, all 7 auth
+fields populated with test values, plus Staffing-stage scheduled-hours
+fields) — per explicit user instruction, to reuse as the fixture for testing
+later pipeline stages once those changes land, rather than reverting it.
+
+### Scope boundary decided this session
+
+Fix everything in the active CRM build, including seed data — this covers
+all non-gated code, **including** code behind `FLAGS.PIPELINE` (that's the
+active CRM epic, not deferred Phase-2 code). The only things deferred are
+the specific `FLAGS.REAUTH` / `FLAGS.REASSESSMENT`-wrapped code paths, since
+reauth/reassessment aren't being worked this sprint (scope is "through the
+Services stage of a client's first pass"). See section 4 below for the exact
+3 spots.
 
 ## 3. Files actively being edited
 
-None in flight — everything is committed, pushed, and merged into both
-`dev` and `main`, which are in sync. Working tree is clean. Next session
-starts from a clean slate.
+None — all ACD-82 edits are applied, QA-verified, and committed. Remaining:
+- Confirm the PR into `dev` looks right once opened (this session is doing
+  that now).
 
-## 4. Everything tried that failed / walked back
+## 4. Everything tried that failed / walked back — and deferred items
 
-- An earlier blank "Plan Period" discrepancy noticed during QA was
-  investigated and traced to a stale `localStorage` E2E-mock caching
-  artifact, not a real bug — no code fix was needed.
-- I initially implemented "move the download button out of the Plan tab
-  into the checklist" based on an ambiguous early comment about creating "a
-  single workflow." The user walked this back: both locations should keep
-  the download, just styled appropriately per location (see design decision
-  1 above).
-- My first checklist reorder put the approval checkbox before the signed
-  upload (download → checkbox → upload). The user caught this from a
-  screenshot and corrected the order to download → upload → checkbox last
-  (see design decision 2 above).
+- No failed approaches this session — the Read-tool chunking issue on
+  `ClientDetailPage.jsx` (file too large for a single `Read`) was a tooling
+  hiccup, not a design walk-back; fixed by reading in targeted
+  `offset`/`limit` chunks.
+- Scope framing was corrected once: treating the whole CRM/Pipeline section
+  as "gated" (since it sits behind `FLAGS.PIPELINE`) was wrong — the user
+  corrected this, since `FLAGS.PIPELINE` is the active epic being un-gated,
+  not deferred Phase-2 code. Only `FLAGS.REAUTH` / `FLAGS.REASSESSMENT`
+  paths are genuinely out of scope this sprint.
+- QA setup required two one-off SQL mutations against live Supabase data
+  (moving John Smith through `submitted` → briefly `authorized` → back to
+  `submitted`), both explicitly user-approved before execution. The
+  resulting test data on John Smith's row was deliberately **not** reverted
+  — see "Decision" note in section 2.
+
+**Deferred — flagged per user instruction, not filed as new Jira tickets
+yet.** These 3 spots in `ClientDetailPage.jsx` still read
+`client.checklist.submitted.*` instead of the new real columns added by
+this migration. They don't affect the current first-pass new-client flow
+(the surrounding code doesn't execute while the flags are off, and
+conceptually only matters for renewal/reassessment cycles) — each now has an
+inline comment pointing back here:
+1. Reauth countdown banner, Services-stage header area (`FLAGS.REAUTH &&
+   client.stage === 'services'`) — reads `auth_end_date`.
+2. Reauth countdown banner, Services tab panel header (`FLAGS.REAUTH`,
+   unconditional once inside the services tab render) — reads
+   `auth_end_date` (falls back to `auth_expiry_date`).
+3. Reassessment tab block (`FLAGS.REASSESSMENT && servicesTab ===
+   'reassessment'`) — reads `auth_end_date` (urgency window calc) and, in a
+   nested snapshot-on-cycle-close handler, `authorized_97153/55/56`,
+   `auth_start_date/end_date`, `auth_reference_number`.
+
+**When Reauth/Reassessment is actually built**, repoint all of the above to
+the real columns from this migration (same pattern already applied
+elsewhere in this file) — do this fix to the gated code at that time rather
+than ad-hoc now.
 
 ## 5. Next steps
 
-1. **[ACD-111](https://awcbehavioralhealth.atlassian.net/browse/ACD-111)** —
-   real end-to-end test of the ACD-77 emailed-indicator feature (actual
-   delivered email reaching `status = 'sent'` through the real send path).
-   Blocked by ACD-101. Not started.
-2. **[ACD-101](https://awcbehavioralhealth.atlassian.net/browse/ACD-101)**
-   (Resend domain verification) — still blocked on DNS access to a real
-   domain; pending leadership's help to unblock. Carried forward.
-3. **[ACD-109](https://awcbehavioralhealth.atlassian.net/browse/ACD-109)** —
-   Supabase Auth's default email rate limit blocks real invite/bulk-import
-   use. Needs a transactional email provider; explicitly deferred pending
-   leadership confirmation before committing to a vendor. Not started.
-4. **[ACD-110](https://awcbehavioralhealth.atlassian.net/browse/ACD-110)** —
-   rewrite the Playwright "Staff Page" suite for the real-backend flow.
-   **Do not build until `FLAGS.STAFF` is actually flipped** — tracked as
-   part of ACD-99. Not started.
-5. **[ACD-100](https://awcbehavioralhealth.atlassian.net/browse/ACD-100)**
-   ("Wire client documents to real Supabase storage + table") — appears
-   substantially or fully covered by prior ACD-108 work, modulo a
-   column-naming mismatch (`doc_type`/`field_label` vs. the ticket's literal
-   ask for `document_type`). Still awaiting the user's answer on whether to
-   close it or leave it open pending that naming check — carried forward
-   again, do not close unilaterally.
-6. **Manual QA for ACD-73** — confirm no Session Log/Reassessment tabs
-   appear anywhere in the Services stage, no console errors, other
-   Services-stage functionality still works. **Wait until the
-   `FLAGS.PIPELINE` flip.** Carried forward.
-7. **[ACD-105](https://awcbehavioralhealth.atlassian.net/browse/ACD-105)** —
-   wire ACD-69's denial-tracking and staff-contact columns (backend already
-   Done) into the actual frontend UI. Not started.
-8. **[ACD-90](https://awcbehavioralhealth.atlassian.net/browse/ACD-90)**
-   ("E1: Add automated tests proving staff can only see their own data") —
-   still unblocked-but-pending. **Wait until the `FLAGS.PIPELINE` flip.**
-9. **[ACD-106](https://awcbehavioralhealth.atlassian.net/browse/ACD-106)** —
-   CLAUDE.md's "What This Repo Is NOT" section is stale on the
-   Pipeline/Trench-5 exclusion. Not started.
-10. **Manual QA against the ACD-67 acceptance criteria** — still outstanding
-    even though the Jira ticket itself shows "Done." **Wait until the
-    `FLAGS.PIPELINE` flip.**
-11. **[ACD-107](https://awcbehavioralhealth.atlassian.net/browse/ACD-107)** —
-    `.github/workflows/e2e.yml` has no cache for the Playwright browser
-    binary. Not started.
-12. **[ACD-99](https://awcbehavioralhealth.atlassian.net/browse/ACD-99)** —
-    "C1: Flip the feature flags to launch the pipeline and staff management
-    for real" (`FLAGS.PIPELINE` and `FLAGS.STAFF`). Not flipped for real —
-    still gated behind an explicit future ask per CLAUDE.md rule 4. Items 6,
-    8, and 10 above are explicitly waiting on this flip to be actionable,
-    and ACD-110 should be done as part of this effort.
-13. Local branch cleanup still pending from prior sessions (stale local
-    feature branches never explicitly confirmed for deletion) — low
-    priority, worth a `git branch -d` pass whenever the user wants a tidy
-    local branch list. `ACD-78-diagnosis-pending-insurance-status`,
-    `ACD-79-authorization-proof-fields`, `ACD-80-assessment-checklist-cleanup`,
-    and now `ACD-81-plan-draft-content-check-and-download` can all be added
-    to that cleanup, since their PRs into `main` are merged.
-14. The suggest-date label fix (`suggestFromLabel`, from ACD-79) only covers
-    the two items that currently use `suggestFromField` (`appeal_deadline`,
-    `cpt97151_expected_response_date`). If a future stage adds another
-    `suggestFromField` item, remember to set `suggestFromLabel` on it too —
-    there's no fallback/default text if it's omitted (renders as
-    `undefined`).
+1. PR open from `ACD-82-submitted-stage-auth-proof-required` into `dev` —
+   confirm it looks right, merge when ready.
+2. File Jira tickets for the 3 deferred REAUTH/REASSESSMENT repoint spots
+   **only when that work actually starts** — per the user, no new tickets
+   for them right now, just this handoff note.
+3. When picking up the next stage of pipeline work, remember John Smith
+   (`a43342f5-d635-455e-a933-3f89a8d9d8ee`) is already staged through
+   Submitted with real auth data filled in — reuse him rather than creating
+   a fresh test client.
+4. Everything from the prior (ACD-81) handoff's "Next steps" list (ACD-111,
+   ACD-101, ACD-109, ACD-110, ACD-100, ACD-105, ACD-90, ACD-106, ACD-99, the
+   `FLAGS.PIPELINE` flip-gated QA items, branch cleanup, and the
+   `suggestFromLabel` fallback note) is still outstanding and unrelated to
+   ACD-82 — carried forward as-is, not reproduced here in full; see git
+   history for the 2026-10-02 version of this file if needed.

@@ -66,7 +66,17 @@ export function itemComplete(item, client, staff) {
       if (item.orClientField) return client[item.orClientField] === true;
       return false;
     case 'select': return val === item.completeValue;
-    case 'form_field': if (item.optional) return true; return typeof val === 'string' ? val.trim() !== '' : (val !== '' && val != null);
+    case 'form_field': {
+      if (item.optional) return true;
+      const filled = typeof val === 'string' ? val.trim() !== '' : (val !== '' && val != null);
+      if (!filled) return false;
+      if (item.afterField) {
+        const otherVal = item.clientField ? client[item.afterField] : client.checklist[item.clSec]?.[item.afterField];
+        if (!otherVal) return false;
+        return new Date(val) > new Date(otherVal);
+      }
+      return true;
+    }
     case 'assign':     return item.role === 'bcba' ? !!client.bcba_id : !!client.rbt_id;
     case 'bridge':     return !!client.smart_assessment_session_id;
     case 'smart_auto': {
@@ -94,8 +104,7 @@ export function itemComplete(item, client, staff) {
         return !client.diagnosis_pending || (!!client.diagnosis?.trim() && !!client.icd10?.trim());
       }
       if (item.planDraftHours) {
-        const pd = client.checklist?.plan_draft;
-        return !!(pd?.hours_97153 || pd?.hours_97155 || pd?.hours_97156);
+        return !!(client.hours_97153 || client.hours_97155 || client.hours_97156);
       }
       if (item.intakeKey) return !!client.checklist?.intake?.[item.intakeKey];
       if (item.sessionKey) {

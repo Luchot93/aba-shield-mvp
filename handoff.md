@@ -9,9 +9,9 @@ require all authorization proof fields at the Submitted stage, catch invalid
 auth period date ranges (end before/equal to start), and flag cases stuck
 waiting on the payer's response.
 
-**Status: implementation complete, QA-verified live in the browser, and
-committed on branch `ACD-82-submitted-stage-auth-proof-required`. Pushed,
-with a PR open into `dev`.**
+**Status: DONE. Implementation complete, QA-verified live in the browser,
+merged into `dev` via PR #101, and promoted to `main` via PR #102. Both
+merged; local `dev`/`main` fast-forwarded to match origin.**
 
 ## 2. Current state of the code
 
@@ -116,9 +116,9 @@ Services stage of a client's first pass"). See section 4 below for the exact
 
 ## 3. Files actively being edited
 
-None — all ACD-82 edits are applied, QA-verified, and committed. Remaining:
-- Confirm the PR into `dev` looks right once opened (this session is doing
-  that now).
+None — all ACD-82 edits are applied, QA-verified, committed, and merged into
+both `dev` and `main`. Only this file (`handoff.md`) is being touched now,
+to close out the session record.
 
 ## 4. Everything tried that failed / walked back — and deferred items
 
@@ -161,8 +161,9 @@ than ad-hoc now.
 
 ## 5. Next steps
 
-1. PR open from `ACD-82-submitted-stage-auth-proof-required` into `dev` —
-   confirm it looks right, merge when ready.
+1. ~~PR from `ACD-82-submitted-stage-auth-proof-required` into `dev`~~ —
+   merged (#101). ~~Promote `dev` to `main`~~ — merged (#102). ACD-82 is
+   closed out; move the Jira ticket to Done if not already.
 2. File Jira tickets for the 3 deferred REAUTH/REASSESSMENT repoint spots
    **only when that work actually starts** — per the user, no new tickets
    for them right now, just this handoff note.

@@ -1961,7 +1961,8 @@ export const SEED_CLIENTS = () => [
     cl.assessment     = { caregiver_interview:true, maladaptive_behaviors_section:true, vineland3:true, vineland3_date:'2025-12-01', basc3:true, basc3_date:'2025-12-01', additional_assessments:true, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true, observation_date:'2025-12-01', additional_assessments_detail:'ABLLS-R screening, VBMAPP partial administration' };
     cl.plan_draft     = { ai_draft_approved:true, treatment_plan_finalized:true };
     c.hours_97153 = '80'; c.hours_97155 = '12'; c.hours_97156 = '8'; c.data_methodology = 'Event recording with same-day ABC notation'; c.plan_start_date = '2026-01-20'; c.plan_end_date = '2026-07-20'; c.sessions_per_week = '10'; c.session_duration_min = '120';
-    cl.submitted      = { plan_submitted:true, plan_submission_date:'2026-01-05', approval_uploaded:true, auth_reference_number:'CIG-AUT-2026-0105-9901', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2026-01-20', auth_end_date:'2026-07-20' };
+    c.plan_submission_date = '2026-01-05'; c.auth_reference_number = 'CIG-AUT-2026-0105-9901'; c.authorized_97153 = '80'; c.authorized_97155 = '12'; c.authorized_97156 = '8'; c.auth_start_date = '2026-01-20'; c.auth_end_date = '2026-07-20';
+    cl.submitted      = { plan_submitted:true, approval_uploaded:true };
     cl.authorized     = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Wed/Fri 9am–1pm, Tue/Thu 10am–12pm', session_location:'Center-based', scheduled_hours_week:'19', scheduled_97155_week:'3', scheduled_97156_week:'2' };
     cl.staffing       = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2026-01-20', first_session_time:'9:00 AM', session_location:'Center-based' };
 
@@ -2334,7 +2335,8 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
     cl.assessment     = { caregiver_interview:true, maladaptive_behaviors_section:true, vineland3:true, vineland3_date:'2025-11-10', basc3:true, basc3_date:'2025-11-10', additional_assessments:true, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
     cl.plan_draft     = { ai_draft_approved:true, treatment_plan_finalized:true };
     c.hours_97153 = '80'; c.hours_97155 = '12'; c.hours_97156 = '8'; c.data_methodology = 'Event recording with daily ABC notation; Spanish-language data sheets provided to caregiver'; c.plan_start_date = '2025-12-15'; c.plan_end_date = '2026-06-15'; c.sessions_per_week = '10'; c.session_duration_min = '120';
-    cl.submitted      = { plan_submitted:true, plan_submission_date:'2025-12-01', approval_uploaded:true, auth_reference_number:'AET-AUT-2025-1201-7742', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-12-15', auth_end_date:'2026-06-15' };
+    c.plan_submission_date = '2025-12-01'; c.auth_reference_number = 'AET-AUT-2025-1201-7742'; c.authorized_97153 = '80'; c.authorized_97155 = '12'; c.authorized_97156 = '8'; c.auth_start_date = '2025-12-15'; c.auth_end_date = '2026-06-15';
+    cl.submitted      = { plan_submitted:true, approval_uploaded:true };
     cl.authorized     = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Wed/Fri 10am–2pm, Tue/Thu 9am–11am', session_location:'Center-based', scheduled_hours_week:'19', scheduled_97155_week:'3', scheduled_97156_week:'2' };
     cl.staffing       = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2025-12-15', first_session_time:'10:00 AM', session_location:'Center-based' };
 
@@ -2506,7 +2508,8 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
     cl.assessment      = { caregiver_interview:true, maladaptive_behaviors_section:true, vineland3:true, vineland3_date:'2025-06-10', basc3:true, basc3_date:'2025-06-10', additional_assessments:false, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
     cl.plan_draft      = { ai_draft_approved:true, treatment_plan_finalized:true };
     c.hours_97153 = '80'; c.hours_97155 = '12'; c.hours_97156 = '8'; c.data_methodology = 'Event recording with daily frequency counts; Spanish-language data sheets'; c.plan_start_date = '2025-07-01'; c.plan_end_date = '2026-01-01'; c.sessions_per_week = '10'; c.session_duration_min = '120';
-    cl.submitted       = { plan_submitted:true, plan_submission_date:'2025-06-25', approval_uploaded:true, auth_reference_number:'FLB-AUT-2025-0625-5588', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-07-01', auth_end_date:'2026-01-01' };
+    c.plan_submission_date = '2025-06-25'; c.auth_reference_number = 'FLB-AUT-2025-0625-5588'; c.authorized_97153 = '80'; c.authorized_97155 = '12'; c.authorized_97156 = '8'; c.auth_start_date = '2025-07-01'; c.auth_end_date = '2026-01-01';
+    cl.submitted       = { plan_submitted:true, approval_uploaded:true };
     cl.authorized      = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Wed/Fri 9am–1pm, Tue/Thu 10am–12pm', session_location:'Home-based', scheduled_hours_week:'20', scheduled_97155_week:'3', scheduled_97156_week:'2' };
     cl.staffing        = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2025-07-01', first_session_time:'9:00 AM', session_location:'Home-based' };
     // Sofia's initial authorization — shown in the "Past Authorizations" history panel
@@ -3073,7 +3076,8 @@ Continued ABA services are medically necessary to maintain SIB mastery, complete
     cl.assessment      = { caregiver_interview:true, maladaptive_behaviors_section:true, vineland3:true, vineland3_date:'2025-03-01', basc3:true, basc3_date:'2025-03-01', additional_assessments:false, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
     cl.plan_draft      = { ai_draft_approved:true, treatment_plan_finalized:true };
     c.hours_97153 = '80'; c.hours_97155 = '12'; c.hours_97156 = '8'; c.data_methodology = 'Event recording with daily frequency counts'; c.plan_start_date = '2025-04-01'; c.plan_end_date = '2026-04-01'; c.sessions_per_week = '10'; c.session_duration_min = '90';
-    cl.submitted       = { plan_submitted:true, plan_submission_date:'2025-10-05', approval_uploaded:true, auth_reference_number:'CIG-AUT-2025-1003-8891', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-10-05', auth_end_date:'2026-04-05' };
+    c.plan_submission_date = '2025-10-05'; c.auth_reference_number = 'CIG-AUT-2025-1003-8891'; c.authorized_97153 = '80'; c.authorized_97155 = '12'; c.authorized_97156 = '8'; c.auth_start_date = '2025-10-05'; c.auth_end_date = '2026-04-05';
+    cl.submitted       = { plan_submitted:true, approval_uploaded:true };
     cl.authorized      = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Wed/Fri 3pm–5:30pm, Sat 9am–11am', session_location:'Home-based', scheduled_hours_week:'12', scheduled_97155_week:'2', scheduled_97156_week:'1' };
     cl.staffing        = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2025-04-10', first_session_time:'3:00 PM', session_location:'Home-based' };
 
@@ -3594,7 +3598,8 @@ Continued ABA services are medically necessary to maintain SIB mastery, complete
     cl.assessment      = { caregiver_interview:true, maladaptive_behaviors_section:true, vineland3:true, vineland3_date:'2024-08-01', basc3:true, basc3_date:'2024-08-01', additional_assessments:false, smart_assessment_submitted:true, baseline_data:true, behaviors_identified:true, final_assessment_report:true };
     cl.plan_draft      = { ai_draft_approved:true, treatment_plan_finalized:true };
     c.hours_97153 = '80'; c.hours_97155 = '12'; c.hours_97156 = '8'; c.data_methodology = 'Partial interval recording for behaviors; trial-by-trial data for skills'; c.plan_start_date = '2024-08-25'; c.plan_end_date = '2025-02-25'; c.sessions_per_week = '10'; c.session_duration_min = '120';
-    cl.submitted       = { plan_submitted:true, plan_submission_date:'2026-03-01', approval_uploaded:true, auth_reference_number:'SSH-AUT-2026-0228-9901', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2026-02-25', auth_end_date:'2026-08-25' };
+    c.plan_submission_date = '2026-03-01'; c.auth_reference_number = 'SSH-AUT-2026-0228-9901'; c.authorized_97153 = '80'; c.authorized_97155 = '12'; c.authorized_97156 = '8'; c.auth_start_date = '2026-02-25'; c.auth_end_date = '2026-08-25';
+    cl.submitted       = { plan_submitted:true, approval_uploaded:true };
     cl.authorized      = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true, schedule_template:'Mon/Tue/Thu/Fri 9am–1pm', session_location:'Home-based', scheduled_hours_week:'20', scheduled_97155_week:'3', scheduled_97156_week:'2' };
     cl.staffing        = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2024-08-25', first_session_time:'9:00 AM', session_location:'Home-based' };
 

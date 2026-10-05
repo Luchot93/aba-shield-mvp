@@ -33,6 +33,15 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
     else if (certDays <= 30) rbtCertWarn = { label: `${rbt.name.split(' ')[0]}'s cert exp. in ${certDays}d`, urgent: false };
   }
 
+  // "Waiting on payer" — Submitted stage, no auth response after 14 days of submission.
+  // NOTE: 14-day threshold is a flat default for now; may need to become payer/plan-specific
+  // later (open PRD item — not yet tracked).
+  let waitingOnPayer = null;
+  if (client.stage === 'submitted' && client.plan_submission_date && !client.auth_start_date) {
+    const days = Math.floor((Date.now() - new Date(client.plan_submission_date).getTime()) / 86_400_000);
+    if (days > 14) waitingOnPayer = { days };
+  }
+
   const handleClick = e => {
     if (e.target.closest('[data-no-nav]')) return;
     onSelectClient(client);
@@ -138,6 +147,14 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
           ${rbtCertWarn.urgent ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
           <Ico.Warn/>
           {rbtCertWarn.label}
+        </div>
+      )}
+
+      {/* Waiting on payer — Submitted stage, no auth response in 14+ days */}
+      {waitingOnPayer && (
+        <div className="mx-2 mb-2 px-2 py-1 rounded-md flex items-center gap-1.5 text-[10px] font-semibold bg-amber-50 text-amber-700">
+          <Ico.Warn/>
+          Waiting on payer — {waitingOnPayer.days}d since submission
         </div>
       )}
 

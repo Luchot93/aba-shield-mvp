@@ -370,7 +370,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     // When advancing to authorized (reauth cycle): update auth_expiry_date from the new auth period
     const extraPatch = {};
     if (toStage === 'authorized') {
-      const newAuthEnd = client.checklist?.submitted?.auth_end_date;
+      const newAuthEnd = client.auth_end_date;
       if (newAuthEnd) extraPatch.auth_expiry_date = newAuthEnd;
     }
     patchClient({ stage: toStage, stage_entered_at: new Date().toISOString(), ...extraPatch });
@@ -408,30 +408,38 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   };
 
   // Return from denied → submitted: snapshot prior values, clear auth fields for new submission
-  const SUBMITTED_AUTH_FIELDS = ['plan_submission_date','approval_uploaded','auth_reference_number','authorized_97153','authorized_97155','authorized_97156','auth_start_date','auth_end_date'];
+  const SUBMITTED_AUTH_CLIENT_FIELDS = ['plan_submission_date','auth_reference_number','authorized_97153','authorized_97155','authorized_97156','auth_start_date','auth_end_date'];
+  const SUBMITTED_AUTH_LOCAL_FIELDS  = ['approval_uploaded'];
   const doReturnFromDenied = (returnStage) => {
     if (returnStage === 'submitted') {
       // Snapshot the rejected submitted values before clearing
       const priorSnap = {};
-      SUBMITTED_AUTH_FIELDS.forEach(k => {
+      SUBMITTED_AUTH_CLIENT_FIELDS.forEach(k => {
+        const v = client[k];
+        if (v !== undefined && v !== null && v !== '') priorSnap[k] = v;
+      });
+      SUBMITTED_AUTH_LOCAL_FIELDS.forEach(k => {
         const v = client.checklist?.submitted?.[k];
         if (v !== undefined && v !== '' && v !== false) priorSnap[k] = v;
       });
       // Clear auth fields for fresh submission
-      const cleared = {};
-      SUBMITTED_AUTH_FIELDS.forEach(k => { cleared[k] = k === 'approval_uploaded' ? false : ''; });
+      const clearedClientFields = {};
+      SUBMITTED_AUTH_CLIENT_FIELDS.forEach(k => { clearedClientFields[k] = null; });
+      const clearedLocalFields = {};
+      SUBMITTED_AUTH_LOCAL_FIELDS.forEach(k => { clearedLocalFields[k] = false; });
       const enteredAt = new Date().toISOString();
       setClients(prev => prev.map(c => {
         if (c.id !== client.id) return c;
         return {
           ...c,
+          ...clearedClientFields,
           stage: returnStage,
           stage_entered_at: enteredAt,
           submitted_prior: Object.keys(priorSnap).length ? priorSnap : c.submitted_prior,
-          checklist: { ...c.checklist, submitted: { ...c.checklist.submitted, ...cleared } },
+          checklist: { ...c.checklist, submitted: { ...c.checklist.submitted, ...clearedLocalFields } },
         };
       }));
-      updateClient(client.id, { stage: returnStage, stage_entered_at: enteredAt }).catch(err => {
+      updateClient(client.id, { stage: returnStage, stage_entered_at: enteredAt, ...clearedClientFields }).catch(err => {
         console.error('Failed to save client update:', err);
         addNotif(mkNotif(`Failed to save changes for ${client.name} — please retry.`, client.name, 'urgent'));
       });
@@ -708,7 +716,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               let autoDefaultSource = ''; // 'plan' | 'assessment' | 'client'
 
               if (item.planDraftKey) {
-                const val = client.checklist?.plan_draft?.[item.planDraftKey];
+                const val = client[item.planDraftKey];
                 if (val) { autoDefault = String(val); autoDefaultSource = 'plan'; }
               }
               if (!autoDefault && item.sessionField && client.assessment_session) {
@@ -725,7 +733,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 const cptKey = item.authorizedHoursWeek === '97155' ? 'authorized_97155'
                              : item.authorizedHoursWeek === '97156' ? 'authorized_97156'
                              : 'authorized_97153';
-                const h = parseFloat(client.checklist?.submitted?.[cptKey]) || 0;
+                const h = parseFloat(client[cptKey]) || 0;
                 if (h > 0) { autoDefault = String(Math.round(h / 4.3)); autoDefaultSource = 'authorized'; }
               }
               if (!autoDefault && item.authorizedKey) {
@@ -747,6 +755,13 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               const justSaved = savedFields.has(item.key);
               // Whether this field can auto-seed but the client record has no data for it
               const missingClientData = !!(item.clientFields?.length && !clientDefault && !savedVal);
+
+              // Cross-field date-order check (e.g. auth_end_date must fall after auth_start_date)
+              const afterFieldVal = item.afterField
+                ? (item.clientField ? client[item.afterField] : client.checklist[item.clSec]?.[item.afterField])
+                : null;
+              const dateOrderIssue = !!(item.afterField && draft && afterFieldVal && new Date(draft) <= new Date(afterFieldVal));
+              const dateOrderWarning = item.afterFieldWarning ?? `End date must fall after the ${item.afterFieldLabel}`;
 
               // Format HH:MM (24h) → "9:00 AM" for time fields
               const fmtTime = val => {
@@ -784,7 +799,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
                             data-testid={`detail-field-${item.key}`}
                             placeholder={item.placeholder ?? (item.fieldType === 'number' ? '0' : 'Enter…')}
-                            className="flex-1 max-w-xs px-3 py-1.5 text-sm border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100"/>
+                            className={`flex-1 max-w-xs px-3 py-1.5 text-sm border rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 ${dateOrderIssue ? 'border-red-300 bg-red-50 text-red-700' : 'border-stone-200'}`}/>
                           <button
                             onClick={handleSave}
                             className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all flex-shrink-0 ${
@@ -834,6 +849,15 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             Not on file — collect and enter manually
                           </p>
                         )}
+                        {/* Cross-field date-order issue (e.g. auth_end_date <= auth_start_date) */}
+                        {dateOrderIssue && (
+                          <p className="mt-1 text-[11px] text-red-600 font-medium flex items-center gap-1">
+                            <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                            </svg>
+                            ⚠ {dateOrderWarning}
+                          </p>
+                        )}
                         {/* Previously rejected value — shown when returning to Submitted after denial */}
                         {item.clSec === 'submitted' && (() => {
                           const prior = client.submitted_prior?.[item.key];
@@ -849,11 +873,10 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         })()}
                         {/* Per-CPT authorized hours hint — shown on each weekly scheduling field */}
                         {item.authorizedHoursWeek && (() => {
-                          const sub = client.checklist?.submitted ?? {};
                           const cptKey = item.authorizedHoursWeek === '97155' ? 'authorized_97155'
                                        : item.authorizedHoursWeek === '97156' ? 'authorized_97156'
                                        : 'authorized_97153';
-                          const monthly = parseFloat(sub[cptKey]) || 0;
+                          const monthly = parseFloat(client[cptKey]) || 0;
                           if (!monthly) return null;
                           const weekly = Math.round(monthly / 4.3);
                           const cptLabel = item.authorizedHoursWeek === '97155' ? 'BCBA supervision'
@@ -1372,8 +1395,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
               {/* Auth summary banner — shown in Authorized stage */}
               {client.stage === 'authorized' && (() => {
-                const sub = client.checklist?.submitted ?? {};
-                const hasAny = sub.auth_reference_number || sub.auth_start_date || sub.auth_end_date || sub.authorized_97153 || sub.authorized_97155 || sub.authorized_97156;
+                const hasAny = client.auth_reference_number || client.auth_start_date || client.auth_end_date || client.authorized_97153 || client.authorized_97155 || client.authorized_97156;
                 if (!hasAny) return null;
                 const fmtDate = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) : '—';
                 const approvalDoc = client.documents?.findLast?.(d => d.type === 'auth_approval') ?? client.documents?.slice().reverse().find(d => d.type === 'auth_approval');
@@ -1384,18 +1406,18 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                       {client.insurer_name && <span className="text-[11px] font-medium text-teal-700">{client.insurer_name}</span>}
                     </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1">
-                      {sub.auth_reference_number && (
-                        <span className="text-xs text-slate-700">Auth # <span className="font-semibold" style={{ fontFamily:'DM Mono, monospace' }}>{sub.auth_reference_number}</span></span>
+                      {client.auth_reference_number && (
+                        <span className="text-xs text-slate-700">Auth # <span className="font-semibold" style={{ fontFamily:'DM Mono, monospace' }}>{client.auth_reference_number}</span></span>
                       )}
-                      {(sub.auth_start_date || sub.auth_end_date) && (
-                        <span className="text-xs text-slate-700">Period <span className="font-semibold">{fmtDate(sub.auth_start_date)} → {fmtDate(sub.auth_end_date)}</span></span>
+                      {(client.auth_start_date || client.auth_end_date) && (
+                        <span className="text-xs text-slate-700">Period <span className="font-semibold">{fmtDate(client.auth_start_date)} → {fmtDate(client.auth_end_date)}</span></span>
                       )}
                     </div>
-                    {(sub.authorized_97153 || sub.authorized_97155 || sub.authorized_97156) && (
+                    {(client.authorized_97153 || client.authorized_97155 || client.authorized_97156) && (
                       <div className="flex flex-wrap gap-x-4 gap-y-1">
-                        {sub.authorized_97153 && <span className="text-xs text-slate-600">97153 <span className="font-semibold text-teal-700">{sub.authorized_97153}h</span></span>}
-                        {sub.authorized_97155 && <span className="text-xs text-slate-600">97155 <span className="font-semibold text-teal-700">{sub.authorized_97155}h</span></span>}
-                        {sub.authorized_97156 && <span className="text-xs text-slate-600">97156 <span className="font-semibold text-teal-700">{sub.authorized_97156}h</span></span>}
+                        {client.authorized_97153 && <span className="text-xs text-slate-600">97153 <span className="font-semibold text-teal-700">{client.authorized_97153}h</span></span>}
+                        {client.authorized_97155 && <span className="text-xs text-slate-600">97155 <span className="font-semibold text-teal-700">{client.authorized_97155}h</span></span>}
+                        {client.authorized_97156 && <span className="text-xs text-slate-600">97156 <span className="font-semibold text-teal-700">{client.authorized_97156}h</span></span>}
                       </div>
                     )}
                     {approvalDoc && (
@@ -1413,6 +1435,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               })()}
 
               {/* Reauth countdown banner — shown in Services stage when auth end date is known */}
+              {/* FLAGS.REAUTH — deferred this sprint. Still reads client.checklist.submitted.auth_end_date —
+                  repoint to the real auth_end_date column (migrated in ACD-82) when Reauth is built. See handoff.md. */}
               {FLAGS.REAUTH && client.stage === 'services' && (() => {
                 const authEnd = client.checklist?.submitted?.auth_end_date;
                 if (!authEnd) return null;
@@ -1699,6 +1723,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     {canAdvance ? `Advance to ${SM[nextStage].label} →` : 'Complete all items to advance'}
                   </button>
                   {hasBlock && <p className="text-xs text-red-600 text-center mt-2">⚠ One or more items are blocking advance</p>}
+                  {/* Scope note: PRD calls for "Mark as Denied" to be available more broadly than just
+                      submitted/auth_assessment — leaving scope unchanged for ACD-82; revisit separately. */}
                   {(client.stage === 'submitted' || client.stage === 'auth_assessment') && (
                     <button data-testid="deny-btn"
                       onClick={() => setConfirmDeny(true)}
@@ -1747,6 +1773,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   </div>
 
                   {/* Reauth countdown — uses submitted auth_end_date or falls back to auth_expiry_date */}
+                  {/* FLAGS.REAUTH — deferred this sprint. Still reads client.checklist.submitted.auth_end_date —
+                      repoint to the real auth_end_date column (migrated in ACD-82) when Reauth is built. See handoff.md. */}
                   {FLAGS.REAUTH && (() => {
                     const authEnd = client.checklist?.submitted?.auth_end_date ?? client.auth_expiry_date;
                     if (!authEnd) return null;
@@ -1886,6 +1914,9 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 )}
 
                 {/* ── Tab 2: Reassessment ── */}
+                {/* FLAGS.REASSESSMENT — deferred this sprint. This block still reads
+                    client.checklist.submitted.auth_end_date — repoint to the real auth_end_date
+                    column (migrated in ACD-82) when Reassessment is built. See handoff.md. */}
                 {FLAGS.REASSESSMENT && servicesTab === 'reassessment' && (() => {
                   const allCycles = client.reassessment_sessions ?? [];
                   // Filter to the cycle selected in the shared cycle selector

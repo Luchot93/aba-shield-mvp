@@ -29,9 +29,6 @@ export const mkChecklist = () => ({
   },
   submitted: {
     plan_submitted:false, cpt_units_requested:false,
-    plan_submission_date:'', auth_reference_number:'',
-    authorized_97153:'', authorized_97155:'', authorized_97156:'',
-    auth_start_date:'', auth_end_date:'',
     approval_uploaded:false,
   },
   denied: {
@@ -131,16 +128,16 @@ export function getStageItems(stage, client) {
     ];
     case 'submitted': return [
       { type:'checkbox',   key:'plan_submitted',         label:'Treatment plan submitted',              clSec:'submitted', sublabel:'The signed treatment plan and CPT unit request have been submitted to the insurer.' },
-      { type:'form_field', key:'plan_submission_date',   label:'Plan submission date',                  clSec:'submitted', fieldType:'date',   optional:true },
+      { type:'form_field', key:'plan_submission_date',   label:'Plan submission date',                  clSec:'submitted', clientField:'plan_submission_date', fieldType:'date' },
       { type:'auto',       key:'cpt_units_requested',    label:'CPT units included in submission',      clSec:'submitted', planDraftHours:true },
       { type:'section_label', key:'_auth_received',      label:'Authorization Received' },
       { type:'file_upload',key:'approval_uploaded',      label:'Authorization approval document',       clSec:'submitted', accept:'.pdf,.docx,.jpg', docType:'auth_approval' },
-      { type:'form_field', key:'auth_reference_number',  label:'Authorization reference number',        clSec:'submitted', fieldType:'text',   optional:true, placeholder:'AUTH-0000000' },
-      { type:'form_field', key:'authorized_97153',       label:'Authorized 97153 — Direct hours',       clSec:'submitted', fieldType:'number', optional:true, placeholder:'hrs/month', planDraftKey:'hours_97153' },
-      { type:'form_field', key:'authorized_97155',       label:'Authorized 97155 — BCBA hours',         clSec:'submitted', fieldType:'number', optional:true, placeholder:'hrs/month', planDraftKey:'hours_97155' },
-      { type:'form_field', key:'authorized_97156',       label:'Authorized 97156 — Caregiver hours',    clSec:'submitted', fieldType:'number', optional:true, placeholder:'hrs/month', planDraftKey:'hours_97156' },
-      { type:'form_field', key:'auth_start_date',        label:'Authorization period start',            clSec:'submitted', fieldType:'date',   optional:true, suggestPeriod:true, suggestEndKey:'auth_end_date' },
-      { type:'form_field', key:'auth_end_date',          label:'Authorization period end',              clSec:'submitted', fieldType:'date',   optional:true },
+      { type:'form_field', key:'auth_reference_number',  label:'Authorization reference number',        clSec:'submitted', clientField:'auth_reference_number', fieldType:'text',   placeholder:'AUTH-0000000' },
+      { type:'form_field', key:'authorized_97153',       label:'Authorized 97153 — Direct hours',       clSec:'submitted', clientField:'authorized_97153',      fieldType:'number', placeholder:'hrs/month', planDraftKey:'hours_97153' },
+      { type:'form_field', key:'authorized_97155',       label:'Authorized 97155 — BCBA hours',         clSec:'submitted', clientField:'authorized_97155',      fieldType:'number', placeholder:'hrs/month', planDraftKey:'hours_97155' },
+      { type:'form_field', key:'authorized_97156',       label:'Authorized 97156 — Caregiver hours',    clSec:'submitted', clientField:'authorized_97156',      fieldType:'number', placeholder:'hrs/month', planDraftKey:'hours_97156' },
+      { type:'form_field', key:'auth_start_date',        label:'Authorization period start',            clSec:'submitted', clientField:'auth_start_date',       fieldType:'date',   suggestPeriod:true, suggestEndKey:'auth_end_date' },
+      { type:'form_field', key:'auth_end_date',          label:'Authorization period end',              clSec:'submitted', clientField:'auth_end_date',         fieldType:'date',   afterField:'auth_start_date', afterFieldLabel:'start date' },
     ];
     case 'denied': return [
       { type:'form_field', key:'denial_date',             label:'Denial received date',                         clSec:'denied', fieldType:'date', optional:true },

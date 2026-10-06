@@ -32,9 +32,8 @@ export const mkChecklist = () => ({
     approval_uploaded:false,
   },
   denied: {
-    denial_reason:'', peer_to_peer_scheduled:false,
+    peer_to_peer_scheduled:false, peer_to_peer_scheduled_na:false,
     supporting_docs:false, peer_to_peer_completed:false,
-    denial_date:'', denial_code:'', appeal_deadline:'', appeal_outcome:'',
   },
   authorized: {
     bcba_matches_auth:false, bcba_credentials_verified:false,
@@ -140,14 +139,17 @@ export function getStageItems(stage, client) {
       { type:'form_field', key:'auth_end_date',          label:'Authorization period end',              clSec:'submitted', clientField:'auth_end_date',         fieldType:'date',   afterField:'auth_start_date', afterFieldLabel:'start date' },
     ];
     case 'denied': return [
-      { type:'form_field', key:'denial_date',             label:'Denial received date',                         clSec:'denied', fieldType:'date', optional:true },
-      { type:'form_field', key:'denial_code',             label:'Denial code',                                  clSec:'denied', fieldType:'text', optional:true, placeholder:'e.g. AUTH-051, CO-97' },
-      { type:'form_field', key:'appeal_deadline',         label:'Appeal deadline',                              clSec:'denied', fieldType:'date', optional:true, suggestFromField:'denial_date', suggestFromLabel:'denial date', suggestOffsetDays:30 },
-      { type:'form_field', key:'denial_reason',           label:'Denial reason logged',                         clSec:'denied', fieldType:'text', optional:true, clientField:'denial_reason' },
-      { type:'checkbox',   key:'peer_to_peer_scheduled',  label:'Peer-to-peer scheduled within 2 days',         clSec:'denied', sublabel:'Request a peer-to-peer review with the insurer\'s medical director within 2 business days of denial.', note:'Call: 1-844-477-8313 Ext. 6032912' },
-      { type:'file_upload',key:'supporting_docs',         label:'Supporting documentation',                     clSec:'denied', accept:'.pdf,.docx', docType:'appeal_docs' },
+      { type:'form_field', key:'denial_date',             label:'Denial received date',                         clSec:'denied', fieldType:'date', clientField:'denial_date' },
+      { type:'form_field', key:'denial_code',             label:'Denial code',                                  clSec:'denied', fieldType:'text', clientField:'denial_code', placeholder:'e.g. AUTH-051, CO-97' },
+      // Appeal-deadline alert (reminders as the deadline approaches/passes) is a deferred PRD item — no thresholds decided yet.
+      { type:'form_field', key:'appeal_deadline',         label:'Appeal deadline',                              clSec:'denied', fieldType:'date', clientField:'appeal_deadline', suggestFromField:'denial_date', suggestFromLabel:'denial date', suggestOffsetDays:30 },
+      { type:'form_field', key:'denial_reason',           label:'Denial reason logged',                         clSec:'denied', fieldType:'text', clientField:'denial_reason' },
+      { type:'checkbox',   key:'peer_to_peer_scheduled',  label:'Peer-to-peer scheduled within 2 days',         clSec:'denied', sublabel:'Request a peer-to-peer review with the insurer\'s medical director within 2 business days of denial.', note:'Call: 1-844-477-8313 Ext. 6032912', naSkippable:true },
+      { type:'file_upload',key:'supporting_docs',         label:'Supporting documentation',                     clSec:'denied', accept:'.pdf,.docx', docType:'appeal_docs', optional:true },
       { type:'checkbox',   key:'peer_to_peer_completed',  label:'Peer-to-peer completed or appeal submitted',   clSec:'denied', sublabel:'Peer-to-peer call with insurer completed, or a formal written appeal has been submitted with supporting documentation.' },
-      { type:'form_field', key:'appeal_outcome',          label:'Appeal outcome',                               clSec:'denied', fieldType:'text', optional:true, placeholder:'Approved / Upheld / Pending' },
+      { type:'select',     key:'appeal_outcome',          label:'Appeal outcome',                               clSec:'denied', clientField:'appeal_outcome', completeValues:['Approved','Upheld','Pending'],
+        options:[{ value:'Approved', label:'Approved' }, { value:'Upheld', label:'Upheld' }, { value:'Pending', label:'Pending' }],
+        sublabel:'Outcome of the peer-to-peer review or written appeal.' },
     ];
     case 'authorized': return [
       { type:'checkbox',   key:'bcba_matches_auth',        label:'BCBA matches insurance authorization', clSec:'authorized', sublabel:'BCBA name and NPI on the authorization letter match the assigned BCBA in the system.' },

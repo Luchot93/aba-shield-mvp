@@ -12,6 +12,7 @@ import StagePill from '../../components/StagePill.jsx';
 import Avatar from '../../components/Avatar.jsx';
 import PlanDraftInlinePanel from './PlanDraftInlinePanel.jsx';
 import PlanDraftPreview, { TreatmentPlanDownload } from './PlanDraftPreview.jsx';
+import { generateDenialCycleRecord } from './lib/denialCycleExport.js';
 import { buildGraphsFromSession } from '../../features/assessment/graphBuilder.js';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock.js';
 import BehaviorSessionLogPanel from './BehaviorSessionLogPanel.jsx';
@@ -298,7 +299,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
       .then(saved => {
         setClients(prev => prev.map(c => {
           if (c.id !== client.id) return c;
-          return { ...c, documents: c.documents.map(d => d.id === localId ? { ...d, id: saved.id } : d) };
+          return { ...c, documents: c.documents.map(d => d.id === localId ? { ...d, id: saved.id, ...(saved.dataUrl ? { dataUrl: saved.dataUrl } : {}) } : d) };
         }));
       })
       .catch(err => {
@@ -373,6 +374,10 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
       const newAuthEnd = client.auth_end_date;
       if (newAuthEnd) extraPatch.auth_expiry_date = newAuthEnd;
     }
+    // Clear the "Appeal Upheld" flag once the client successfully leaves Auth/Assessment again
+    if (client.stage === 'auth_assessment' && client.stage2_appeal_upheld === true) {
+      extraPatch.stage2_appeal_upheld = false;
+    }
     patchClient({ stage: toStage, stage_entered_at: new Date().toISOString(), ...extraPatch });
     pushLog(`Moved to ${SM[toStage].label}`);
     const isAuth = toStage === 'authorized';
@@ -410,47 +415,78 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   // Return from denied → submitted: snapshot prior values, clear auth fields for new submission
   const SUBMITTED_AUTH_CLIENT_FIELDS = ['plan_submission_date','auth_reference_number','authorized_97153','authorized_97155','authorized_97156','auth_start_date','auth_end_date'];
   const SUBMITTED_AUTH_LOCAL_FIELDS  = ['approval_uploaded'];
-  const doReturnFromDenied = (returnStage) => {
-    if (returnStage === 'submitted') {
-      // Snapshot the rejected submitted values before clearing
-      const priorSnap = {};
-      SUBMITTED_AUTH_CLIENT_FIELDS.forEach(k => {
-        const v = client[k];
-        if (v !== undefined && v !== null && v !== '') priorSnap[k] = v;
-      });
-      SUBMITTED_AUTH_LOCAL_FIELDS.forEach(k => {
-        const v = client.checklist?.submitted?.[k];
-        if (v !== undefined && v !== '' && v !== false) priorSnap[k] = v;
-      });
-      // Clear auth fields for fresh submission
-      const clearedClientFields = {};
-      SUBMITTED_AUTH_CLIENT_FIELDS.forEach(k => { clearedClientFields[k] = null; });
-      const clearedLocalFields = {};
-      SUBMITTED_AUTH_LOCAL_FIELDS.forEach(k => { clearedLocalFields[k] = false; });
-      const enteredAt = new Date().toISOString();
-      setClients(prev => prev.map(c => {
-        if (c.id !== client.id) return c;
-        return {
-          ...c,
-          ...clearedClientFields,
-          stage: returnStage,
-          stage_entered_at: enteredAt,
-          submitted_prior: Object.keys(priorSnap).length ? priorSnap : c.submitted_prior,
-          checklist: { ...c.checklist, submitted: { ...c.checklist.submitted, ...clearedLocalFields } },
-        };
-      }));
-      updateClient(client.id, { stage: returnStage, stage_entered_at: enteredAt, ...clearedClientFields }).catch(err => {
-        console.error('Failed to save client update:', err);
-        addNotif(mkNotif(`Failed to save changes for ${client.name} — please retry.`, client.name, 'urgent'));
-      });
-      pushLog('Returned to Submitted after denial — auth fields reset');
-      const resubmitSubject = `${client.name} — returned to Submitted for resubmission`;
-      addNotif(mkNotif(resubmitSubject, client.name, 'normal', client.id));
-      sendStageChangeEmail(client, resubmitSubject, resubmitSubject).catch(() => {});
-    } else {
-      doAdvance(returnStage);
+  const doReturnFromDenied = () => {
+    const fromStage = client.denial_from_stage ?? 'submitted';
+    const outcome = client.appeal_outcome;
+    // Pending/unset — the Return button is disabled in this case, but guard anyway
+    if (outcome !== 'Approved' && outcome !== 'Upheld') return;
+
+    const targetStage = fromStage === 'auth_assessment'
+      ? 'auth_assessment'
+      : (outcome === 'Approved' ? 'submitted' : 'plan_draft');
+
+    // Auto-generate the "Denial Cycle N — Reason & Appeal Record" now, before this
+    // cycle's real columns (denial_date, denial_code, etc.) get overwritten by a
+    // future denial.
+    generateDenialCycleRecord(client, {
+      cycleNumber: client.denial_count ?? 1,
+      outcome,
+      destinationLabel: SM[targetStage]?.label ?? targetStage,
+    }).then(blob => {
+      const fileName = `Denial_Cycle_${client.denial_count ?? 1}_${client.name.replace(/\s+/g, '_')}.docx`;
+      const file = new File([blob], fileName, { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      pushDocUpload(file, 'denial_cycle_record', `Denial Cycle ${client.denial_count ?? 1} — Reason & Appeal Record`);
+    }).catch(err => {
+      console.error('Failed to generate denial cycle record:', err);
+      addNotif(mkNotif(`Failed to save denial cycle record for ${client.name}.`, client.name, 'urgent'));
+    });
+
+    if (fromStage === 'auth_assessment') {
+      if (outcome === 'Upheld') patchClient({ stage2_appeal_upheld: true });
+      doAdvance('auth_assessment');
       return;
     }
+
+    if (outcome === 'Upheld') {
+      // Submitted-stage denial, upheld on appeal — send back to Plan Draft for revision
+      doAdvance('plan_draft');
+      return;
+    }
+
+    // Submitted-stage denial, approved on appeal — snapshot the rejected values and clear for fresh submission
+    const priorSnap = {};
+    SUBMITTED_AUTH_CLIENT_FIELDS.forEach(k => {
+      const v = client[k];
+      if (v !== undefined && v !== null && v !== '') priorSnap[k] = v;
+    });
+    SUBMITTED_AUTH_LOCAL_FIELDS.forEach(k => {
+      const v = client.checklist?.submitted?.[k];
+      if (v !== undefined && v !== '' && v !== false) priorSnap[k] = v;
+    });
+    const clearedClientFields = {};
+    SUBMITTED_AUTH_CLIENT_FIELDS.forEach(k => { clearedClientFields[k] = null; });
+    const clearedLocalFields = {};
+    SUBMITTED_AUTH_LOCAL_FIELDS.forEach(k => { clearedLocalFields[k] = false; });
+    const enteredAt = new Date().toISOString();
+    setClients(prev => prev.map(c => {
+      if (c.id !== client.id) return c;
+      return {
+        ...c,
+        ...clearedClientFields,
+        stage: 'submitted',
+        stage_entered_at: enteredAt,
+        submitted_prior: Object.keys(priorSnap).length ? priorSnap : c.submitted_prior,
+        checklist: { ...c.checklist, submitted: { ...c.checklist.submitted, ...clearedLocalFields } },
+      };
+    }));
+    updateClient(client.id, { stage: 'submitted', stage_entered_at: enteredAt, ...clearedClientFields }).catch(err => {
+      console.error('Failed to save client update:', err);
+      addNotif(mkNotif(`Failed to save changes for ${client.name} — please retry.`, client.name, 'urgent'));
+    });
+    pushLog('Returned to Submitted after denial — auth fields reset');
+    const resubmitSubject = `${client.name} — returned to Submitted for resubmission`;
+    addNotif(mkNotif(resubmitSubject, client.name, 'normal', client.id));
+    sendStageChangeEmail(client, resubmitSubject, resubmitSubject).catch(() => {});
     if (onClientAdvanced) onClientAdvanced(client.id);
     setConfirmAdvance(null);
     onBack();
@@ -694,7 +730,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         data-testid={`select-${item.key}-${opt.value}`}
                         className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
                           active
-                            ? opt.value === item.completeValue
+                            ? (opt.value === item.completeValue || item.completeValues?.includes(opt.value))
                               ? 'bg-emerald-600 border-emerald-600 text-white'
                               : opt.value === 'requested'
                                 ? 'bg-amber-500 border-amber-500 text-white'
@@ -1283,6 +1319,11 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   ⏳ Diagnosis Pending
                 </span>
               )}
+              {client.stage2_appeal_upheld === true && client.stage === 'auth_assessment' && (
+                <span className="text-[11px] font-semibold text-red-700 bg-red-50 border border-red-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+                  ⚠ Appeal Upheld — Revise & Resubmit
+                </span>
+              )}
             </div>
           </div>
 
@@ -1736,19 +1777,33 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               )}
 
               {!isReadOnly && userCanEdit && client.stage === 'denied' && (() => {
-                const returnStage = client.denial_from_stage ?? 'submitted';
-                const returnLabel = returnStage === 'auth_assessment' ? 'Auth Assessment' : 'Submitted';
-                const isResubmit  = returnStage === 'submitted';
+                const fromStage = client.denial_from_stage ?? 'submitted';
+                const outcome   = client.appeal_outcome;
+                const canReturn = outcome === 'Approved' || outcome === 'Upheld';
+
+                const targetStage = fromStage === 'auth_assessment'
+                  ? 'auth_assessment'
+                  : (outcome === 'Approved' ? 'submitted' : 'plan_draft');
+                const targetLabel = SM[targetStage]?.label ?? targetStage;
+
+                let hint = null;
+                if (!outcome) hint = 'Record an appeal outcome above to continue.';
+                else if (outcome === 'Pending') hint = 'Waiting on appeal outcome — button unlocks once Approved or Upheld.';
+                else if (fromStage === 'submitted' && outcome === 'Approved') hint = 'Auth fields will be cleared for the new submission. Previous values will be saved as reference.';
+                else if (fromStage === 'submitted' && outcome === 'Upheld') hint = 'Client will be routed to Plan Draft for revision before resubmission.';
+                else if (fromStage === 'auth_assessment' && outcome === 'Upheld') hint = 'Flagged "Appeal Upheld — Revise & Resubmit" in Auth/Assessment.';
+
                 return (
                   <div className="flex-shrink-0 border-t border-stone-100 p-4">
                     <button data-testid="resolve-return"
-                      onClick={() => doReturnFromDenied(returnStage)}
-                      className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
-                      style={{ background:'#D97706' }}>
-                      Return to {returnLabel} →
+                      disabled={!canReturn}
+                      onClick={() => canReturn && doReturnFromDenied()}
+                      className={`w-full py-2.5 rounded-xl text-sm font-semibold transition-all ${canReturn ? 'text-white hover:opacity-90' : 'bg-stone-100 text-stone-400 cursor-not-allowed'}`}
+                      style={canReturn ? { background:'#D97706' } : {}}>
+                      Return to {targetLabel} →
                     </button>
-                    {isResubmit && (
-                      <p className="text-[11px] text-slate-400 text-center mt-2">Auth fields will be cleared for the new submission. Previous values will be saved as reference.</p>
+                    {hint && (
+                      <p className="text-[11px] text-slate-400 text-center mt-2">{hint}</p>
                     )}
                   </div>
                 );

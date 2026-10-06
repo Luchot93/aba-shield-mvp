@@ -15,12 +15,6 @@ import PlanDraftPreview, { TreatmentPlanDownload } from './PlanDraftPreview.jsx'
 import { generateDenialCycleRecord } from './lib/denialCycleExport.js';
 import { buildGraphsFromSession } from '../../features/assessment/graphBuilder.js';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock.js';
-import BehaviorSessionLogPanel from './BehaviorSessionLogPanel.jsx';
-import SkillSessionLogPanel    from './SkillSessionLogPanel.jsx';
-import BehaviorSessionModal    from './BehaviorSessionModal.jsx';
-import SkillSessionModal       from './SkillSessionModal.jsx';
-import CaregiverTrainingLogPanel from './CaregiverTrainingLogPanel.jsx';
-import CaregiverTrainingLogModal from './CaregiverTrainingLogModal.jsx';
 import ReassessmentCyclePanel, { ReauthSubmissionChecklist } from './ReassessmentCyclePanel.jsx';
 
 function buildPromotedSections(originalAssessment, completedReassessment) {
@@ -158,10 +152,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [viewStage,      setViewStage]      = useState(null);
   const [noteText,       setNoteText]       = useState('');
   const [activeTab,      setActiveTab]      = useState('notes');
-  const [logSessionModalOpen,          setLogSessionModalOpen]          = useState(false);
-  const [logSkillSessionModalOpen,     setLogSkillSessionModalOpen]     = useState(false);
-  const [logCaregiverSessionModalOpen, setLogCaregiverSessionModalOpen] = useState(false);
-  const [servicesTab,                  setServicesTab]                  = useState(initialServicesTab ?? 'sessions');
+  const [servicesTab,                  setServicesTab]                  = useState(initialServicesTab ?? 'reassessment');
   // Always default to the client's current reauth cycle so the most recent data
   // is visible immediately. A useEffect below keeps this in sync if the cycle
   // advances while the component is already mounted (e.g. Start Reauthorization).
@@ -250,7 +241,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const isReadOnly   = viewStage !== null;
   const stageToShow  = isReadOnly ? viewStage : client.stage;
   const nextStage    = NEXT_STAGE[client.stage];
-  const serviceTabsActive = client.stage === 'services' && !isReadOnly && (FLAGS.SESSION_LOG || FLAGS.REASSESSMENT);
+  const serviceTabsActive = client.stage === 'services' && !isReadOnly && FLAGS.REASSESSMENT;
   const isReauthCycle = (client.reauth_cycle ?? 0) > 0;
   const displayItems = (() => {
     const items = getStageItems(stageToShow, client);
@@ -315,37 +306,6 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     logActivity(client.id, action, detail).catch(err => {
       console.error('Failed to save activity log entry:', err);
     });
-  };
-
-  /* ── session log handlers ── */
-  const handleSaveSessionLog = newLog => {
-    setClients(prev => prev.map(c =>
-      c.id === client.id
-        ? { ...c, service_session_logs: [...(c.service_session_logs ?? []), newLog] }
-        : c,
-    ));
-    pushLog(`Behavior session #${newLog.sessionNumber} logged by ${newLog.rbtName}`);
-    setLogSessionModalOpen(false);
-  };
-
-  const handleSaveSkillLog = newLog => {
-    setClients(prev => prev.map(c =>
-      c.id === client.id
-        ? { ...c, service_session_logs: [...(c.service_session_logs ?? []), newLog] }
-        : c,
-    ));
-    pushLog(`Skill session #${newLog.sessionNumber} logged by ${newLog.rbtName}`);
-    setLogSkillSessionModalOpen(false);
-  };
-
-  const handleSaveCaregiverSessionLog = newLog => {
-    setClients(prev => prev.map(c =>
-      c.id === client.id
-        ? { ...c, caregiver_training_session_logs: [...(c.caregiver_training_session_logs ?? []), newLog] }
-        : c,
-    ));
-    pushLog(`Caregiver training session #${newLog.sessionNumber} logged by ${newLog.bcbaName}`);
-    setLogCaregiverSessionModalOpen(false);
   };
 
   const addNote = () => {
@@ -1922,13 +1882,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   {/* Tab bar */}
                   <div className="flex border-b border-stone-100 -mx-5 px-5">
                     {(() => {
-                      const totalSessions =
-                        (client.service_session_logs?.length ?? 0) +
-                        (client.caregiver_training_session_logs?.length ?? 0);
                       const tabs = [
-                        ...(FLAGS.SESSION_LOG
-                          ? [{ key: 'sessions', label: 'Session Logs', count: totalSessions, badge: null }]
-                          : []),
                         ...(FLAGS.REASSESSMENT
                           ? [{ key: 'reassessment', label: 'Reassessment', count: (client.reassessment_sessions ?? []).length, badge: null }]
                           : []),
@@ -1966,28 +1920,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   </div>
                 </div>
 
-                {/* ── Tab 1: Session Logs ── */}
-                {FLAGS.SESSION_LOG && servicesTab === 'sessions' && (
-                  <div className="p-4 space-y-3">
-                    <BehaviorSessionLogPanel
-                      client={client}
-                      onLogSession={() => setLogSessionModalOpen(true)}
-                      selectedCycle={selectedLogCycle}
-                    />
-                    <SkillSessionLogPanel
-                      client={client}
-                      onLogSession={() => setLogSkillSessionModalOpen(true)}
-                      selectedCycle={selectedLogCycle}
-                    />
-                    <CaregiverTrainingLogPanel
-                      client={client}
-                      onLogSession={() => setLogCaregiverSessionModalOpen(true)}
-                      selectedCycle={selectedLogCycle}
-                    />
-                  </div>
-                )}
-
-                {/* ── Tab 2: Reassessment ── */}
+                {/* ── Tab: Reassessment ── */}
                 {/* FLAGS.REASSESSMENT — deferred this sprint. This block still reads
                     client.checklist.submitted.auth_end_date — repoint to the real auth_end_date
                     column (migrated in ACD-82) when Reassessment is built. See handoff.md. */}
@@ -2613,32 +2546,6 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
           </div>
         </div>
       </div>
-
-      {/* ── session log modals ── */}
-      {logSessionModalOpen && (
-        <BehaviorSessionModal
-          client={client}
-          currentUser={currentUser}
-          onSave={handleSaveSessionLog}
-          onClose={() => setLogSessionModalOpen(false)}
-        />
-      )}
-      {logSkillSessionModalOpen && (
-        <SkillSessionModal
-          client={client}
-          currentUser={currentUser}
-          onSave={handleSaveSkillLog}
-          onClose={() => setLogSkillSessionModalOpen(false)}
-        />
-      )}
-      {logCaregiverSessionModalOpen && (
-        <CaregiverTrainingLogModal
-          client={client}
-          currentUser={currentUser}
-          onSave={handleSaveCaregiverSessionLog}
-          onClose={() => setLogCaregiverSessionModalOpen(false)}
-        />
-      )}
 
       {/* ── advance confirmation dialog ── */}
       {confirmAdvance && (

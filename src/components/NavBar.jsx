@@ -84,6 +84,7 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
               ...(FLAGS.METRICS && isAdmin(currentUser?.role) ? [['metrics','Metrics']] : []),
               ...(FLAGS.PIPELINE ? [['pipeline','Pipeline']] : []),
               ['clients','Clients'],
+              ['service_sessions','Service Sessions'],
               ['assessments','Assessments'],
               ...(FLAGS.STAFF ? [['staff','Staff']] : []),
             ].map(([id,label]) => (

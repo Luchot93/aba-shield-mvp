@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { makeCaregiverTrainingSessionLog } from '../../constants/seedData.js';
+import { makeCaregiverTrainingSessionLog } from '../../../constants/seedData.js';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

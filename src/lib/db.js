@@ -121,6 +121,55 @@ async function getActivityLogByClientIds(clientIds) {
   return map
 }
 
+function toBehaviorLog(row, staffMap) {
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    rbtId: row.logged_by_staff_id,
+    rbtName: staffMap.get(row.logged_by_staff_id) ?? '',
+    sessionDate: row.session_date,
+    sessionNumber: row.session_number,
+    sessionType: 'behavior',
+    notes: row.notes ?? '',
+    behaviorEntries: row.entries ?? [],
+    skillEntries: [],
+    reauth_cycle: row.reauth_cycle,
+    createdAt: row.created_at,
+  }
+}
+
+function toSkillLog(row, staffMap) {
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    rbtId: row.logged_by_staff_id,
+    rbtName: staffMap.get(row.logged_by_staff_id) ?? '',
+    sessionDate: row.session_date,
+    sessionNumber: row.session_number,
+    sessionType: 'skill',
+    notes: row.notes ?? '',
+    behaviorEntries: [],
+    skillEntries: row.entries ?? [],
+    reauth_cycle: row.reauth_cycle,
+    createdAt: row.created_at,
+  }
+}
+
+function toCaregiverLog(row, staffMap) {
+  return {
+    id: row.id,
+    clientId: row.client_id,
+    bcbaId: row.logged_by_staff_id,
+    bcbaName: staffMap.get(row.logged_by_staff_id) ?? '',
+    sessionDate: row.session_date,
+    sessionNumber: row.session_number,
+    notes: row.notes ?? '',
+    trainingEntries: row.entries ?? [],
+    createdAt: row.created_at,
+    reauth_cycle: row.reauth_cycle,
+  }
+}
+
 export async function setChecklistItem(clientId, stage, itemKey, value) {
   const { data: { user } } = await supabase.auth.getUser()
   const isBoolean = typeof value === 'boolean'
@@ -404,4 +453,100 @@ export async function logActivity(clientId, action, detail) {
     .single()
   if (error) throw error
   return data
+}
+
+export async function getBehaviorSessionLogsByClientIds(clientIds) {
+  if (!clientIds.length) return []
+  const { data, error } = await supabase
+    .from('behavior_session_logs')
+    .select('*')
+    .in('client_id', clientIds)
+    .order('session_date', { ascending: true })
+  if (error) throw error
+  const staffMap = await getStaffNameMap()
+  return data.map(row => toBehaviorLog(row, staffMap))
+}
+
+export async function getSkillSessionLogsByClientIds(clientIds) {
+  if (!clientIds.length) return []
+  const { data, error } = await supabase
+    .from('skill_session_logs')
+    .select('*')
+    .in('client_id', clientIds)
+    .order('session_date', { ascending: true })
+  if (error) throw error
+  const staffMap = await getStaffNameMap()
+  return data.map(row => toSkillLog(row, staffMap))
+}
+
+export async function getCaregiverTrainingSessionLogsByClientIds(clientIds) {
+  if (!clientIds.length) return []
+  const { data, error } = await supabase
+    .from('caregiver_training_session_logs')
+    .select('*')
+    .in('client_id', clientIds)
+    .order('session_date', { ascending: true })
+  if (error) throw error
+  const staffMap = await getStaffNameMap()
+  return data.map(row => toCaregiverLog(row, staffMap))
+}
+
+export async function addBehaviorSessionLog(clientId, { sessionDate, sessionNumber, reauthCycle, entries, notes }) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('behavior_session_logs')
+    .insert({
+      client_id: clientId,
+      logged_by_staff_id: user?.id ?? null,
+      reauth_cycle: reauthCycle ?? 0,
+      session_number: sessionNumber,
+      session_date: sessionDate,
+      entries,
+      notes,
+    })
+    .select()
+    .single()
+  if (error) throw error
+  const staffMap = await getStaffNameMap()
+  return toBehaviorLog(data, staffMap)
+}
+
+export async function addSkillSessionLog(clientId, { sessionDate, sessionNumber, reauthCycle, entries, notes }) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('skill_session_logs')
+    .insert({
+      client_id: clientId,
+      logged_by_staff_id: user?.id ?? null,
+      reauth_cycle: reauthCycle ?? 0,
+      session_number: sessionNumber,
+      session_date: sessionDate,
+      entries,
+      notes,
+    })
+    .select()
+    .single()
+  if (error) throw error
+  const staffMap = await getStaffNameMap()
+  return toSkillLog(data, staffMap)
+}
+
+export async function addCaregiverTrainingSessionLog(clientId, { sessionDate, sessionNumber, reauthCycle, entries, notes }) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase
+    .from('caregiver_training_session_logs')
+    .insert({
+      client_id: clientId,
+      logged_by_staff_id: user?.id ?? null,
+      reauth_cycle: reauthCycle ?? 0,
+      session_number: sessionNumber,
+      session_date: sessionDate,
+      entries,
+      notes,
+    })
+    .select()
+    .single()
+  if (error) throw error
+  const staffMap = await getStaffNameMap()
+  return toCaregiverLog(data, staffMap)
 }

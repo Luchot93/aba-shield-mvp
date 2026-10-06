@@ -11,6 +11,7 @@ import StaffPage from './features/staff/StaffPage.jsx';
 import ClientDetailPage from './features/detail/ClientDetailPage.jsx';
 import MetricsPage from './features/metrics/MetricsPage.jsx';
 import AssessmentsPage from './features/assessment/AssessmentsPage.jsx';
+import ServiceSessionsPage from './features/sessions/ServiceSessionsPage.jsx';
 import AssessmentFeature from './features/assessment/AssessmentFeature.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import LoginPage from './auth/LoginPage.jsx';
@@ -280,6 +281,7 @@ export default function App() {
       {page !== 'pipeline' && (
         <main className="max-w-7xl mx-auto px-6 py-8">
           {page==='clients'     && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={c => setProfileClient(c)} currentUser={currentUser} clientsLoading={clientsLoading}/>}
+          {page==='service_sessions' && <ServiceSessionsPage clients={clients} currentUser={currentUser} addNotif={addNotif}/>}
           {FLAGS.STAFF && page==='staff' && <StaffPage staff={staff} setStaff={setStaff} clients={clients} currentUser={currentUser}
                                     onSelectClient={c => setProfileClient(c)}/>}
           {FLAGS.METRICS && page==='metrics' && (

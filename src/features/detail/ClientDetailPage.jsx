@@ -773,7 +773,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 if (h > 0) { autoDefault = String(Math.round(h / 4.3)); autoDefaultSource = 'authorized'; }
               }
               if (!autoDefault && item.authorizedKey) {
-                const val = client.checklist?.authorized?.[item.authorizedKey];
+                const val = client[item.authorizedKey];
                 if (val) { autoDefault = String(val); autoDefaultSource = 'authorized'; }
               }
               const clientDefault = item.clientFields
@@ -1504,8 +1504,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
               {/* Staffing — editable session schedule (seeded from Authorized, overridable by coordinator) */}
               {client.stage === 'staffing' && (() => {
-                const authSched  = client.checklist?.authorized?.schedule_template ?? '';
-                const authLoc    = client.checklist?.authorized?.session_location  ?? '';
+                const authSched  = client.schedule_template ?? '';
+                const authLoc    = client.session_location  ?? '';
                 const staffSched = client.checklist?.staffing?.schedule_template   ?? '';
                 const staffLoc   = client.checklist?.staffing?.session_location    ?? '';
                 // Display values: use staffing override if saved, else fall back to authorized

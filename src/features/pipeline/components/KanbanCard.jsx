@@ -10,7 +10,7 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
   const bcba     = staff.find(s => s.id === client.bcba_id) || null;
   const rbt      = staff.find(s => s.id === client.rbt_id)  || null;
   const showBCBA = STAGES.indexOf(client.stage) >= STAGES.indexOf('auth_assessment');
-  const showRBT  = client.stage === 'staffing' || client.stage === 'services';
+  const showRBT  = client.stage === 'authorized' || client.stage === 'staffing' || client.stage === 'services';
   const status   = getChecklistStatus(client, staff);
   const isDenied      = client.stage === 'denied';
   const denialCount   = client.denial_count ?? 0;

@@ -40,10 +40,7 @@ export const mkChecklist = () => ({
     rbt_assigned:false, rbt_cert_valid:false, rbt_credentials_attached:false,
   },
   staffing: {
-    caregiver_availability:false, schedule_coordinated:false,
-    first_session_scheduled:false,
-    first_session_date:'', first_session_time:'', session_location:'',
-    schedule_template:'',
+    caregiver_availability_confirmed:false, staff_schedule_coordinated:false,
   },
 });
 
@@ -163,11 +160,10 @@ export function getStageItems(stage, client) {
       { type:'form_field', key:'session_location',        label:'Session location',                     clSec:'authorized', clientField:'session_location',        fieldType:'text',   placeholder:"Client's home / Clinic / School" },
     ];
     case 'staffing': return [
-      { type:'checkbox',   key:'caregiver_availability',  label:'Caregiver availability confirmed', clSec:'staffing', sublabel:'Caregiver has confirmed availability for all scheduled session days and times.' },
-      { type:'checkbox',   key:'schedule_coordinated',    label:'Staff schedule coordinated',       clSec:'staffing', sublabel:'RBT and BCBA schedules are aligned with authorized hours and caregiver availability.' },
-      { type:'form_field', key:'first_session_date',      label:'First session date',               clSec:'staffing', fieldType:'date' },
-      { type:'form_field', key:'first_session_time',      label:'First session time',               clSec:'staffing', fieldType:'time',   optional:true },
-      { type:'form_field', key:'session_location',        label:'Session location',                 clSec:'staffing', fieldType:'text',   optional:true, placeholder:"Client's home / Clinic / School", authorizedKey:'session_location' },
+      { type:'checkbox',   key:'caregiver_availability_confirmed', label:'Caregiver availability confirmed', clSec:'staffing', sublabel:'Caregiver has confirmed availability for all scheduled session days and times.' },
+      { type:'checkbox',   key:'staff_schedule_coordinated',       label:'Staff schedule coordinated',       clSec:'staffing', sublabel:'RBT and BCBA schedules are aligned with authorized hours and caregiver availability.' },
+      { type:'form_field', key:'first_session_date', label:'First session date', clSec:'staffing', clientField:'first_session_date', fieldType:'date' },
+      { type:'form_field', key:'first_session_time', label:'First session time', clSec:'staffing', clientField:'first_session_time', fieldType:'time', optional:true },
     ];
     default: return [];
   }

@@ -1963,8 +1963,9 @@ export const SEED_CLIENTS = () => [
     c.plan_submission_date = '2026-01-05'; c.auth_reference_number = 'CIG-AUT-2026-0105-9901'; c.authorized_97153 = '80'; c.authorized_97155 = '12'; c.authorized_97156 = '8'; c.auth_start_date = '2026-01-20'; c.auth_end_date = '2026-07-20';
     cl.submitted      = { plan_submitted:true, approval_uploaded:true };
     c.schedule_template = 'Mon/Wed/Fri 9am–1pm, Tue/Thu 10am–12pm'; c.session_location = 'Center-based'; c.scheduled_hours_week = '19'; c.scheduled_97155_week = '3'; c.scheduled_97156_week = '2';
+    c.first_session_date = '2026-01-20'; c.first_session_time = '09:00';
     cl.authorized     = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true };
-    cl.staffing       = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2026-01-20', first_session_time:'9:00 AM', session_location:'Center-based' };
+    cl.staffing       = { caregiver_availability_confirmed:true, staff_schedule_coordinated:true };
 
     const assessment_session_charlotte = (() => {
       const s = makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Ana Reyes', CHARLOTTE_INTERVIEW_DATA, {
@@ -2338,8 +2339,9 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
     c.plan_submission_date = '2025-12-01'; c.auth_reference_number = 'AET-AUT-2025-1201-7742'; c.authorized_97153 = '80'; c.authorized_97155 = '12'; c.authorized_97156 = '8'; c.auth_start_date = '2025-12-15'; c.auth_end_date = '2026-06-15';
     cl.submitted      = { plan_submitted:true, approval_uploaded:true };
     c.schedule_template = 'Mon/Wed/Fri 10am–2pm, Tue/Thu 9am–11am'; c.session_location = 'Center-based'; c.scheduled_hours_week = '19'; c.scheduled_97155_week = '3'; c.scheduled_97156_week = '2';
+    c.first_session_date = '2025-12-15'; c.first_session_time = '10:00';
     cl.authorized     = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true };
-    cl.staffing       = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2025-12-15', first_session_time:'10:00 AM', session_location:'Center-based' };
+    cl.staffing       = { caregiver_availability_confirmed:true, staff_schedule_coordinated:true };
 
     const assessment_session_james = (() => {
       const s = makeFilledSession(c.id, c.name, c.bcba_id, 'Dr. Rachel Kim', JAMES_INTERVIEW_DATA, {
@@ -2512,8 +2514,9 @@ Charlotte has been receiving ABA services since Jan 30, 2026 (this authorization
     c.plan_submission_date = '2025-06-25'; c.auth_reference_number = 'FLB-AUT-2025-0625-5588'; c.authorized_97153 = '80'; c.authorized_97155 = '12'; c.authorized_97156 = '8'; c.auth_start_date = '2025-07-01'; c.auth_end_date = '2026-01-01';
     cl.submitted       = { plan_submitted:true, approval_uploaded:true };
     c.schedule_template = 'Mon/Wed/Fri 9am–1pm, Tue/Thu 10am–12pm'; c.session_location = 'Home-based'; c.scheduled_hours_week = '20'; c.scheduled_97155_week = '3'; c.scheduled_97156_week = '2';
+    c.first_session_date = '2025-07-01'; c.first_session_time = '09:00';
     cl.authorized      = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true };
-    cl.staffing        = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2025-07-01', first_session_time:'9:00 AM', session_location:'Home-based' };
+    cl.staffing        = { caregiver_availability_confirmed:true, staff_schedule_coordinated:true };
     // Sofia's initial authorization — shown in the "Past Authorizations" history panel
     c.auth_cycles_history = [
       { cycle:0, label:'Initial Authorization', authorized_97153:'80', authorized_97155:'12', authorized_97156:'8', auth_start_date:'2025-07-01', auth_end_date:'2026-01-01', auth_reference_number:'FLB-AUT-2025-0625-5588', closed_at:'2026-01-15T09:00:00.000Z' },
@@ -3081,8 +3084,9 @@ Continued ABA services are medically necessary to maintain SIB mastery, complete
     c.plan_submission_date = '2025-10-05'; c.auth_reference_number = 'CIG-AUT-2025-1003-8891'; c.authorized_97153 = '80'; c.authorized_97155 = '12'; c.authorized_97156 = '8'; c.auth_start_date = '2025-10-05'; c.auth_end_date = '2026-04-05';
     cl.submitted       = { plan_submitted:true, approval_uploaded:true };
     c.schedule_template = 'Mon/Wed/Fri 3pm–5:30pm, Sat 9am–11am'; c.session_location = 'Home-based'; c.scheduled_hours_week = '12'; c.scheduled_97155_week = '2'; c.scheduled_97156_week = '1';
+    c.first_session_date = '2025-04-10'; c.first_session_time = '15:00';
     cl.authorized      = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true };
-    cl.staffing        = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2025-04-10', first_session_time:'3:00 PM', session_location:'Home-based' };
+    cl.staffing        = { caregiver_availability_confirmed:true, staff_schedule_coordinated:true };
 
     // ── Behavior targets (initial plan) ───────────────────────────────────────
     const C16_BEHAVIOR_TARGETS = [
@@ -3604,8 +3608,9 @@ Continued ABA services are medically necessary to maintain SIB mastery, complete
     c.plan_submission_date = '2026-03-01'; c.auth_reference_number = 'SSH-AUT-2026-0228-9901'; c.authorized_97153 = '80'; c.authorized_97155 = '12'; c.authorized_97156 = '8'; c.auth_start_date = '2026-02-25'; c.auth_end_date = '2026-08-25';
     cl.submitted       = { plan_submitted:true, approval_uploaded:true };
     c.schedule_template = 'Mon/Tue/Thu/Fri 9am–1pm'; c.session_location = 'Home-based'; c.scheduled_hours_week = '20'; c.scheduled_97155_week = '3'; c.scheduled_97156_week = '2';
+    c.first_session_date = '2024-08-25'; c.first_session_time = '09:00';
     cl.authorized      = { bcba_matches_auth:true, bcba_credentials_verified:true, rbt_assigned:true, rbt_cert_valid:true, rbt_credentials_attached:true };
-    cl.staffing        = { caregiver_availability:true, schedule_coordinated:true, first_session_scheduled:true, first_session_date:'2024-08-25', first_session_time:'9:00 AM', session_location:'Home-based' };
+    cl.staffing        = { caregiver_availability_confirmed:true, staff_schedule_coordinated:true };
 
     // ── Behavior targets (initial plan, cycle 0) ──────────────────────────────
     const C17_BEHAVIOR_TARGETS = [

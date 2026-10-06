@@ -153,7 +153,8 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [formDrafts,     setFormDrafts]     = useState({});
   const [savedFields,    setSavedFields]    = useState(new Set());
   const [schedEdit,      setSchedEdit]      = useState(false);
-  const [schedDraft,     setSchedDraft]     = useState('');
+  const [schedDraft,     setSchedDraft]     = useState({ schedule_template:'', session_location:'' });
+  const [unlockedFields, setUnlockedFields] = useState(new Set());
   const [viewStage,      setViewStage]      = useState(null);
   const [noteText,       setNoteText]       = useState('');
   const [activeTab,      setActiveTab]      = useState('notes');
@@ -783,6 +784,11 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               const sessionDefaultSource = autoDefaultSource; // keep hint label alias
               const draft    = formDrafts[item.key] !== undefined ? formDrafts[item.key] : (clVal || autoDefault);
               const savedVal = clVal ?? '';
+              // Staffing-only: once first_session_date/time has a saved value, lock it
+              // read-only until the user explicitly clicks Edit. Narrow and one-off by
+              // design — not a generic item-schema flag like naSkippable.
+              const isStaffingLockField = item.clSec === 'staffing' && (item.key === 'first_session_date' || item.key === 'first_session_time');
+              const isLocked = isStaffingLockField && !!savedVal && !unlockedFields.has(item.key);
               // Dirty when user has typed something different, OR when an auto default
               // is pre-filled but hasn't been confirmed/saved to the checklist yet.
               const isDirty  = formDrafts[item.key] !== undefined
@@ -813,6 +819,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 else patchCL(item.clSec, item.key, draft);
                 setFormDrafts(d => { const n = { ...d }; delete n[item.key]; return n; });
                 if (draft !== savedVal) pushLog(`Updated: ${item.label} — ${fmtTime(draft) || draft}`);
+                if (isStaffingLockField) setUnlockedFields(u => { const n = new Set(u); n.delete(item.key); return n; });
                 // Flash "Saved" for 2 seconds
                 setSavedFields(prev => new Set(prev).add(item.key));
                 clearTimeout(saveTimers.current[item.key]);
@@ -828,6 +835,17 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     ? <span className="text-sm text-slate-600 px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg block max-w-xs" style={{ fontFamily:'DM Mono, monospace' }}>
                         {fmtTime(savedVal) || savedVal || <span className="text-slate-400 italic">—</span>}
                       </span>
+                    : isLocked
+                    ? <div className="flex items-center gap-2">
+                        <span className="text-sm text-slate-600 px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg" style={{ fontFamily:'DM Mono, monospace' }}>
+                          {fmtTime(savedVal) || savedVal}
+                        </span>
+                        <button
+                          onClick={() => setUnlockedFields(u => new Set(u).add(item.key))}
+                          className="text-xs text-teal-600 hover:text-teal-800 underline">
+                          Edit
+                        </button>
+                      </div>
                     : <>
                         <div className="flex items-center gap-2">
                           <input type={item.fieldType || 'text'} value={draft}
@@ -1502,26 +1520,21 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 );
               })()}
 
-              {/* Staffing — editable session schedule (seeded from Authorized, overridable by coordinator) */}
+              {/* Staffing — editable session schedule (set at Authorized, confirmed/adjusted here) */}
               {client.stage === 'staffing' && (() => {
-                const authSched  = client.schedule_template ?? '';
-                const authLoc    = client.session_location  ?? '';
-                const staffSched = client.checklist?.staffing?.schedule_template   ?? '';
-                const staffLoc   = client.checklist?.staffing?.session_location    ?? '';
-                // Display values: use staffing override if saved, else fall back to authorized
-                const displaySched = staffSched || authSched;
-                const displayLoc   = staffLoc   || authLoc;
-                if (!authSched && !authLoc && !staffSched && !staffLoc) return null;
-
-                const isConfirmed = !!staffSched || !!staffLoc;
+                const sched = client.schedule_template ?? '';
+                const loc   = client.session_location  ?? '';
+                if (!sched && !loc) return null;
 
                 const handleOpenEdit = () => {
-                  setSchedDraft(displaySched);
+                  setSchedDraft({ schedule_template: sched, session_location: loc });
                   setSchedEdit(true);
                 };
                 const handleSaveSchedule = () => {
-                  patchCL('staffing', 'schedule_template', schedDraft.trim());
-                  pushLog(`Session schedule confirmed: ${schedDraft.trim()}`);
+                  const newSched = schedDraft.schedule_template.trim();
+                  const newLoc   = schedDraft.session_location.trim();
+                  patchClient({ schedule_template: newSched, session_location: newLoc });
+                  pushLog(`Session schedule confirmed: ${newSched}${newLoc ? ` @ ${newLoc}` : ''}`);
                   setSchedEdit(false);
                 };
 
@@ -1529,9 +1542,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   <div className="mx-5 mb-3 rounded-xl border border-slate-200 bg-stone-50 p-3">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                        {isConfirmed ? 'Confirmed schedule' : 'Planned from Authorized'}
-                      </p>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Session schedule</p>
                       {!schedEdit && (
                         <button
                           onClick={handleOpenEdit}
@@ -1539,7 +1550,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                           <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
                           </svg>
-                          {isConfirmed ? 'Edit' : 'Adjust'}
+                          Edit
                         </button>
                       )}
                     </div>
@@ -1556,21 +1567,32 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                           </label>
                           <input
                             type="text"
-                            value={schedDraft}
-                            onChange={e => setSchedDraft(e.target.value)}
+                            value={schedDraft.schedule_template}
+                            onChange={e => setSchedDraft(d => ({ ...d, schedule_template: e.target.value }))}
                             placeholder="e.g. Mon/Wed/Fri 9–1pm, Tue/Thu 10–12pm"
                             className="w-full px-3 py-2 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 bg-white"
                           />
-                          {authSched && schedDraft !== authSched && (
-                            <p className="mt-1 text-[10px] text-slate-400">
-                              Authorized plan: <span className="font-medium text-slate-500">{authSched}</span>
-                            </p>
-                          )}
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-slate-500 mb-1">
+                            <svg className="inline w-3 h-3 mr-1 text-teal-500" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            Session location
+                          </label>
+                          <input
+                            type="text"
+                            value={schedDraft.session_location}
+                            onChange={e => setSchedDraft(d => ({ ...d, session_location: e.target.value }))}
+                            placeholder="Client's home / Clinic / School"
+                            className="w-full px-3 py-2 text-xs border border-stone-200 rounded-lg outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 bg-white"
+                          />
                         </div>
                         <div className="flex items-center gap-2 pt-1">
                           <button
                             onClick={handleSaveSchedule}
-                            disabled={!schedDraft.trim()}
+                            disabled={!schedDraft.schedule_template.trim()}
                             className="px-3 py-1.5 text-xs font-semibold rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
                             style={{ background: '#0D9488' }}>
                             Confirm schedule
@@ -1585,24 +1607,21 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     ) : (
                       /* View mode */
                       <div className="space-y-1">
-                        {displaySched && (
+                        {sched && (
                           <div className="flex items-start gap-2">
                             <svg className="w-3.5 h-3.5 text-teal-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                             </svg>
-                            <span className="text-xs text-slate-700 font-medium">{displaySched}</span>
-                            {!staffSched && authSched && (
-                              <span className="text-[10px] text-amber-600 font-medium ml-1">← from Authorized</span>
-                            )}
+                            <span className="text-xs text-slate-700 font-medium">{sched}</span>
                           </div>
                         )}
-                        {displayLoc && (
+                        {loc && (
                           <div className="flex items-center gap-2">
                             <svg className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                             </svg>
-                            <span className="text-xs text-slate-600">{displayLoc}</span>
+                            <span className="text-xs text-slate-600">{loc}</span>
                           </div>
                         )}
                       </div>

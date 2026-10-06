@@ -60,12 +60,17 @@ export function itemComplete(item, client, staff) {
         return val === true && sec.cpt97151_approval_doc === true;
       }
       return val === true;
-    case 'upload': return val === true;
+    case 'upload':
+      if (item.optional) return true;
+      return val === true;
     case 'file_upload':
+      if (item.optional) return true;
       if (val === true) return true;
       if (item.orClientField) return client[item.orClientField] === true;
       return false;
-    case 'select': return val === item.completeValue;
+    case 'select':
+      if (item.completeValues) return item.completeValues.includes(val);
+      return val === item.completeValue;
     case 'form_field': {
       if (item.optional) return true;
       const filled = typeof val === 'string' ? val.trim() !== '' : (val !== '' && val != null);

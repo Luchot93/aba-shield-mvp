@@ -16,6 +16,7 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
   const denialCount   = client.denial_count ?? 0;
   const showDenialTag = denialCount > 0 && !isDenied; // only on non-denied cards (denied stage has its own banner)
   const showDiagnosisPendingTag = client.diagnosis_pending === true && !client.diagnosis;
+  const showAppealUpheldTag = client.stage2_appeal_upheld === true && client.stage === 'auth_assessment';
 
   // Auth expiry banner for Services — date-threshold driven
   let authBanner = null;
@@ -80,6 +81,15 @@ export default function KanbanCard({ client, staff, onAssignBCBA, onAssignRBT, o
         <div className="px-3 pt-2.5 pb-0">
           <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">
             ⏳ Diagnosis Pending
+          </span>
+        </div>
+      )}
+
+      {/* Appeal Upheld badge — client was sent back to Auth/Assessment after an upheld appeal; cleared once they advance past this stage again */}
+      {showAppealUpheldTag && (
+        <div className="px-3 pt-2.5 pb-0">
+          <span className="text-[10px] font-semibold text-red-700 bg-red-50 border border-red-100 px-1.5 py-0.5 rounded">
+            ⚠ Appeal Upheld — Revise & Resubmit
           </span>
         </div>
       )}

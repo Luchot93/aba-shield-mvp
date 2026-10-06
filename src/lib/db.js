@@ -156,7 +156,8 @@ export async function uploadDocument(clientId, stage, file, docType, fieldLabel)
     .select()
     .single()
   if (error) throw error
-  return data
+  const { data: signed } = await supabase.storage.from('client-documents').createSignedUrl(path, 3600)
+  return { ...data, dataUrl: signed?.signedUrl ?? null }
 }
 
 export async function addCaseNote(clientId, stage, text) {

@@ -79,6 +79,7 @@ function buildSkillChartData(sessionLogs, skillGoals) {
       skillName,
       baseline,
       mastery,
+      latestValue: latest?.accuracy ?? null,
       stoSteps,
       currentStoNumber: latest?.stoNumber ?? null,
       currentStoStatus: latest?.stoStatus ?? 'not_yet_started',
@@ -264,9 +265,38 @@ function SkillProgressCard({ data }) {
   );
 }
 
+// ── Compact summary row (for checklist "Progress preview" cards) ──────────────
+
+function SkillCompactRow({ data }) {
+  const { skillName, baseline, latestValue, mastery, sessionCount, trend } = data;
+  const trendEl =
+    trend === 'up'     ? <span className="font-semibold text-emerald-600">↑</span>
+    : trend === 'down' ? <span className="font-semibold text-rose-500">↓</span>
+    : trend === 'stable' ? <span className="text-slate-400">→</span>
+    : <span className="text-slate-400">—</span>;
+
+  const segments = [];
+  if (baseline != null)    segments.push(`Baseline ${baseline}%`);
+  if (latestValue != null) segments.push(`Latest ${latestValue}%`);
+  if (mastery != null)     segments.push(`Mastery ${mastery}%`);
+
+  return (
+    <div className="py-1.5 text-[12px]">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-slate-700 truncate">{skillName}</span>
+        {trendEl}
+      </div>
+      <div className="flex items-center gap-1.5 mt-0.5 text-slate-400">
+        {segments.length > 0 ? segments.join(' → ') : 'No baseline/mastery set'}
+        <span>· {sessionCount} session{sessionCount !== 1 ? 's' : ''}</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Default export ────────────────────────────────────────────────────────────
 
-export default function SkillSessionProgressPanel({ client, selectedCycle }) {
+export default function SkillSessionProgressPanel({ client, selectedCycle, compact = false }) {
   const sessionLogs  = (client?.service_session_logs ?? []).filter(
     l => selectedCycle == null || (l.reauth_cycle ?? 0) === selectedCycle,
   );
@@ -279,12 +309,22 @@ export default function SkillSessionProgressPanel({ client, selectedCycle }) {
 
   if (skills.length === 0) {
     return (
-      <div className="px-5 py-8 text-center">
-        <p className="text-[13px] text-slate-400 leading-relaxed">
-          No skill data to display yet.
-          <br />
-          Log at least one session to see accuracy charts.
+      <div className={compact ? 'py-2 text-center' : 'px-5 py-8 text-center'}>
+        <p className="text-[12px] text-slate-400 leading-relaxed">
+          {compact ? 'No skill data yet.' : (
+            <>No skill data to display yet.<br />Log at least one session to see accuracy charts.</>
+          )}
         </p>
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="divide-y divide-stone-100">
+        {skills.map(s => (
+          <SkillCompactRow key={s.skillId} data={s} />
+        ))}
       </div>
     );
   }

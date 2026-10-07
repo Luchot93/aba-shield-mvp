@@ -16,7 +16,7 @@ import BehaviorSessionModal      from './components/BehaviorSessionModal.jsx';
 import SkillSessionModal         from './components/SkillSessionModal.jsx';
 import CaregiverTrainingLogModal from './components/CaregiverTrainingLogModal.jsx';
 
-export default function ServiceSessionsPage({ clients, currentUser, addNotif }) {
+export default function ServiceSessionsPage({ clients, currentUser, addNotif, initialClientId, onInitialClientConsumed }) {
   // Role-scoped: only clients in the Services stage, filtered to the ones
   // this user is actually assigned to (admins see all of them).
   const scopedClients = useMemo(() => {
@@ -39,6 +39,15 @@ export default function ServiceSessionsPage({ clients, currentUser, addNotif }) 
   const [caregiverModalOpen, setCaregiverModalOpen] = useState(false);
 
   const selectedClient = scopedClients.find(c => c.id === selectedClientId) ?? null;
+
+  // One-shot external selection (e.g. "Open Service Sessions" from the client
+  // detail checklist) — consume it immediately so later remounts of this page
+  // via plain nav-bar navigation don't re-trigger a stale selection.
+  useEffect(() => {
+    if (!initialClientId) return;
+    setSelectedClientId(initialClientId);
+    onInitialClientConsumed?.();
+  }, [initialClientId]);
 
   // Fetch logs for the selected client only, on demand — not for the whole
   // scoped list up front.

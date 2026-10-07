@@ -50,6 +50,7 @@ export default function App() {
   const [assessmentClientId, setAssessmentClientId] = useState(null);
   const [profileClient,      setProfileClient]     = useState(null);
   const [openingAssessmentId, setOpeningAssessmentId] = useState(null);
+  const [serviceSessionsInitialClientId, setServiceSessionsInitialClientId] = useState(null);
 
   const [currentUser,  setCurrentUser]  = useState(null);
   const [authLoading,  setAuthLoading]  = useState(true);
@@ -281,7 +282,15 @@ export default function App() {
       {page !== 'pipeline' && (
         <main className="max-w-7xl mx-auto px-6 py-8">
           {page==='clients'     && <ClientsPage clients={clients} staff={enrichedStaff} setClients={setClients} setSelectedClient={c => setProfileClient(c)} currentUser={currentUser} clientsLoading={clientsLoading}/>}
-          {page==='service_sessions' && <ServiceSessionsPage clients={clients} currentUser={currentUser} addNotif={addNotif}/>}
+          {page==='service_sessions' && (
+            <ServiceSessionsPage
+              clients={clients}
+              currentUser={currentUser}
+              addNotif={addNotif}
+              initialClientId={serviceSessionsInitialClientId}
+              onInitialClientConsumed={() => setServiceSessionsInitialClientId(null)}
+            />
+          )}
           {FLAGS.STAFF && page==='staff' && <StaffPage staff={staff} setStaff={setStaff} clients={clients} currentUser={currentUser}
                                     onSelectClient={c => setProfileClient(c)}/>}
           {FLAGS.METRICS && page==='metrics' && (
@@ -361,6 +370,12 @@ export default function App() {
             setSelectedClient(null);
             setSelectedClientInitTab(null);
             handleOpenAssessment(arg); // handleOpenAssessment normalises string or object
+          }}
+          onOpenServiceSessions={(clientId) => {
+            setSelectedClient(null);
+            setSelectedClientInitTab(null);
+            setServiceSessionsInitialClientId(clientId);
+            setPage('service_sessions');
           }}
         />
       )}

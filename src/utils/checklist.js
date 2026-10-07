@@ -102,9 +102,19 @@ export function itemComplete(item, client, staff) {
       const dateVal = client.checklist[item.clSec]?.[item.dateKey];
       return getRecentDateStatus(dateVal) === 'current';
     }
-    case 'section_label': return true;
+    case 'section_label':
+    case 'stat':
+    case 'progress_preview':
+    case 'nav_link':
+      return true;
     case 'auto': {
       if (item.always)       return true;
+      if (item.serviceSessionsAny) {
+        return (
+          (client.service_session_logs?.length ?? 0) > 0 ||
+          (client.caregiver_training_session_logs?.length ?? 0) > 0
+        );
+      }
       if (item.diagnosisGate) {
         return !client.diagnosis_pending || (!!client.diagnosis?.trim() && !!client.icd10?.trim());
       }

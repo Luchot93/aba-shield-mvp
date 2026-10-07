@@ -5,7 +5,10 @@ import { getStageItems } from '../../constants/checklist.js';
 import { itemComplete, itemBlocks, getRecentDateStatus } from '../../utils/checklist.js';
 import { mkNotif, sendStageChangeEmail } from '../../utils/notifications.js';
 import { isAdmin, canEdit } from '../../utils/permissions.js';
-import { updateClient, logActivity, setChecklistItem, uploadDocument, addCaseNote } from '../../lib/db.js';
+import {
+  updateClient, logActivity, setChecklistItem, uploadDocument, addCaseNote,
+  getBehaviorSessionLogsByClientIds, getSkillSessionLogsByClientIds, getCaregiverTrainingSessionLogsByClientIds,
+} from '../../lib/db.js';
 import { FLAGS } from '../../constants/featureFlags.js';
 import { Ico } from '../../components/icons.jsx';
 import StagePill from '../../components/StagePill.jsx';
@@ -16,6 +19,9 @@ import { generateDenialCycleRecord } from './lib/denialCycleExport.js';
 import { buildGraphsFromSession } from '../../features/assessment/graphBuilder.js';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock.js';
 import ReassessmentCyclePanel, { ReauthSubmissionChecklist } from './ReassessmentCyclePanel.jsx';
+import ServiceSessionProgressPanel from '../sessions/components/ServiceSessionProgressPanel.jsx';
+import SkillSessionProgressPanel from '../sessions/components/SkillSessionProgressPanel.jsx';
+import CaregiverTrainingProgressPanel from '../sessions/components/CaregiverTrainingProgressPanel.jsx';
 
 function buildPromotedSections(originalAssessment, completedReassessment) {
   const origSections = originalAssessment?.sections ?? {};
@@ -136,7 +142,7 @@ function buildPromotedSections(originalAssessment, completedReassessment) {
   };
 }
 
-export default function ClientDetailPage({ clientId, clients, staff, setClients, onBack, backLabel, currentUser, addNotif, onClientAdvanced, onOpenAssessment, initialServicesTab }) {
+export default function ClientDetailPage({ clientId, clients, staff, setClients, onBack, backLabel, currentUser, addNotif, onClientAdvanced, onOpenAssessment, onOpenServiceSessions, initialServicesTab }) {
   useBodyScrollLock();
   const client = clients.find(c => c.id === clientId);
   const [confirmAdvance, setConfirmAdvance] = useState(null);
@@ -158,6 +164,12 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   // advances while the component is already mounted (e.g. Start Reauthorization).
   const [selectedLogCycle, setSelectedLogCycle] = useState(() => client?.reauth_cycle ?? 0);
   const [historyOpen,                  setHistoryOpen]                  = useState(false);
+  // Services-stage checklist: behavior/skill/caregiver-training session logs
+  // live in Prompt D9a's dedicated tables, not on the client object — fetched
+  // here only when the Services checklist is actually being shown.
+  const [servicesBehaviorLogs,  setServicesBehaviorLogs]  = useState([]);
+  const [servicesSkillLogs,     setServicesSkillLogs]     = useState([]);
+  const [servicesCaregiverLogs, setServicesCaregiverLogs] = useState([]);
   const pickerRef = useRef(null);
   const saveTimers = useRef({});
 
@@ -221,6 +233,24 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     return () => document.removeEventListener('mousedown', h);
   }, [openPicker]);
 
+  // Fetch session logs for the Services checklist only when that stage is
+  // actually being shown (current stage, or viewed read-only via history).
+  const servicesStageShown = (viewStage !== null ? viewStage : client?.stage) === 'services';
+  useEffect(() => {
+    if (!servicesStageShown || !clientId) return;
+    Promise.all([
+      getBehaviorSessionLogsByClientIds([clientId]),
+      getSkillSessionLogsByClientIds([clientId]),
+      getCaregiverTrainingSessionLogsByClientIds([clientId]),
+    ])
+      .then(([behavior, skill, caregiver]) => {
+        setServicesBehaviorLogs(behavior);
+        setServicesSkillLogs(skill);
+        setServicesCaregiverLogs(caregiver);
+      })
+      .catch(err => console.error('Failed to load session logs for services checklist:', err));
+  }, [servicesStageShown, clientId]);
+
   // Auto-switch tab when entering/leaving read-only mode.
   useEffect(() => {
     if (viewStage !== null) {
@@ -252,9 +282,19 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     }
     return items;
   })();
-  const completeCount = displayItems.filter(it => itemComplete(it, client, staff)).length;
+  // Services checklist reads session-log data that lives in Prompt D9a's
+  // dedicated tables (fetched above), not on the client object — this shape
+  // adapter mirrors the one in ServiceSessionsPage.jsx so itemComplete's
+  // existing service_session_logs / caregiver_training_session_logs lookups
+  // (and the progress-preview panels below) work unmodified.
+  const servicesAugmentedClient = stageToShow === 'services' ? {
+    ...client,
+    service_session_logs: [...servicesBehaviorLogs, ...servicesSkillLogs],
+    caregiver_training_session_logs: servicesCaregiverLogs,
+  } : client;
+  const completeCount = displayItems.filter(it => itemComplete(it, servicesAugmentedClient, staff)).length;
   const allDone   = displayItems.length > 0 && completeCount === displayItems.length;
-  const hasBlock  = displayItems.some(it => itemBlocks(it, client, staff));
+  const hasBlock  = displayItems.some(it => itemBlocks(it, servicesAugmentedClient, staff));
   const canAdvance = !isReadOnly && allDone && !hasBlock && !!nextStage && client.stage !== 'denied';
   const visibleDocs = client.documents;
 
@@ -508,8 +548,10 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
   /* ── single checklist row ── */
   const CheckRow = ({ item, readOnly }) => {
-    const complete = itemComplete(item, client, staff);
-    const blocks   = !readOnly && itemBlocks(item, client, staff);
+    // servicesAugmentedClient === client for every stage except 'services',
+    // where it carries the live session-log data fetched above.
+    const complete = itemComplete(item, servicesAugmentedClient, staff);
+    const blocks   = !readOnly && itemBlocks(item, servicesAugmentedClient, staff);
     const clVal    = item.clientField ? client[item.clientField] : client.checklist[item.clSec]?.[item.key];
     const isNA     = item.naSkippable && client.checklist[item.clSec]?.[`${item.key}_na`] === true;
 
@@ -1071,6 +1113,10 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     display = `On file · ${rm.cert_number}`;
                   }
                 }
+              } else if (item.serviceSessionsAny) {
+                const done = itemComplete(item, servicesAugmentedClient, staff);
+                display = done ? 'Logged' : 'No sessions logged yet';
+                if (!done) cc = 'bg-amber-50 border-amber-200 text-amber-700';
               }
               return (
                 <div className="flex items-center justify-between gap-3">
@@ -1079,6 +1125,58 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                 </div>
               );
             })()}
+
+            {item.type === 'stat' && (() => {
+              const allLogs = [
+                ...(servicesAugmentedClient.service_session_logs ?? []),
+                ...(servicesAugmentedClient.caregiver_training_session_logs ?? []),
+              ];
+              let display = '—';
+              if (item.statKind === 'count') {
+                display = `${allLogs.length} session${allLogs.length !== 1 ? 's' : ''}`;
+              } else if (item.statKind === 'lastDate') {
+                const dates = allLogs.map(l => l.sessionDate).filter(Boolean).sort();
+                display = dates.length ? dates[dates.length - 1] : 'No sessions yet';
+              }
+              return (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-slate-800">{item.label}</span>
+                  <span className="text-xs font-medium px-2 py-1 rounded-lg border flex-shrink-0 bg-stone-50 border-stone-200 text-slate-600" style={{ fontFamily:'DM Mono, monospace' }}>{display}</span>
+                </div>
+              );
+            })()}
+
+            {item.type === 'progress_preview' && (
+              <div>
+                <div className="text-sm text-slate-800 mb-2">{item.label}</div>
+                <div className="space-y-2">
+                  <div className="border border-stone-200 rounded-lg px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Maladaptive behaviors</p>
+                    <ServiceSessionProgressPanel client={servicesAugmentedClient} selectedCycle={selectedLogCycle} compact/>
+                  </div>
+                  <div className="border border-stone-200 rounded-lg px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Skill acquisition</p>
+                    <SkillSessionProgressPanel client={servicesAugmentedClient} selectedCycle={selectedLogCycle} compact/>
+                  </div>
+                  <div className="border border-stone-200 rounded-lg px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">Caregiver training</p>
+                    <CaregiverTrainingProgressPanel client={servicesAugmentedClient} selectedCycle={selectedLogCycle} compact/>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {item.type === 'nav_link' && (
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-slate-800">{item.label}</span>
+                <button
+                  onClick={() => onOpenServiceSessions?.(client.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white rounded-lg hover:opacity-90 transition-opacity flex-shrink-0"
+                  style={{ background: 'linear-gradient(135deg,#0D9488,#0F766E)' }}>
+                  Open Service Sessions →
+                </button>
+              </div>
+            )}
 
             {item.type === 'smart_auto' && (() => {
               const hasSession = !!client.assessment_session;

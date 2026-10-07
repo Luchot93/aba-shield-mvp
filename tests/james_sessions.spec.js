@@ -6,6 +6,12 @@ import { loginAsAdmin } from './helpers/auth.js';
 // auto-skips while the flag is off and runs unmodified once it flips true.
 const gated = (flag) => (flag ? test.describe : test.describe.skip);
 
+// TODO(ACD-113): this whole file tests the old in-tab session logging UI, which
+// ACD-87/ACD-88 replaced with the standalone Service Sessions page. FLAGS.SESSION_LOG
+// itself was removed as dead code in ACD-89. Porting this requires extending the
+// E2E mock store to back session-log reads/writes first (see ACD-113) — tracked
+// there, not fixed here.
+
 async function loginAndOpenJames(page) {
   await loginAsAdmin(page);
   await page.getByRole('button', { name: 'Pipeline' }).click();

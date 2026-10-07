@@ -43,11 +43,3 @@ export function sectionPromptHashes(session) {
   }
   return out;
 }
-
-/**
- * Hash for a single section's current prompt.
- */
-export function sectionPromptHash(session, sectionKey) {
-  const prompts = buildSectionPrompts(session);
-  return hashString(prompts[sectionKey] ?? '');
-}

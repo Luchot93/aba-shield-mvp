@@ -7,6 +7,12 @@ import { loginAsAdmin } from './helpers/auth.js';
 // describe is split — each block auto-skips while its flag is off.
 const gated = (flag) => (flag ? test.describe : test.describe.skip);
 
+// TODO(ACD-113): the FLAGS.SESSION_LOG block below tests the old in-tab session
+// logging UI, which ACD-87/ACD-88 replaced with the standalone Service Sessions
+// page. FLAGS.SESSION_LOG itself was removed as dead code in ACD-89. Porting this
+// block requires extending the E2E mock store to back session-log reads/writes
+// first (see ACD-113) — tracked there, not fixed here.
+
 // Both feature panels live inside the client detail view, reached via Pipeline.
 async function loginAndOpenPipeline(page) {
   await loginAsAdmin(page);

@@ -6,7 +6,6 @@ import { completeSession, canExport, addSessionDocument, sectionsMissingSTO, bac
 import { useSaveStatus } from '../../hooks/useSaveStatus.js';
 import { FLAGS } from '../../constants/featureFlags.js';
 import { generateAssessmentDoc } from './lib/generateAssessmentDoc.js';
-import { generateTemplateDoc }   from './lib/docxExport.js';
 import { supabase } from '../../lib/supabase.js';
 
 // ─── Status tag config ────────────────────────────────────────────────────────

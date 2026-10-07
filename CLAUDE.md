@@ -12,7 +12,6 @@ but gated behind feature flags in `src/constants/featureFlags.js`. Never delete 
 
 Do not add, reference, or assume these features exist in this repo:
 - Pipeline CRM / Kanban board (FLAGS.PIPELINE — Trench 5)
-- Session logging modals (FLAGS.SESSION_LOG — Trench 6)
 - Reassessment workflow (FLAGS.REASSESSMENT — Trench 7)
 - Staff directory (FLAGS.STAFF — Trench 8)
 - Metrics dashboard (FLAGS.METRICS — Trench 9)
@@ -46,8 +45,8 @@ serverless function**, so the route 404s in production on Vercel.
 - With it off, clinicians use the existing text-notes fields; `/api/transcribe` is never called.
 - **To enable:** create `api/transcribe.js` (mirror `api/generate.js`'s serverless pattern —
   see how the dev `assemblyTranscribePlugin` uploads/polls AssemblyAI), set `ASSEMBLYAI_API_KEY`
-  in Vercel, then flip the flag to true. `useAssemblyToken.js` → `/api/assembly-token` is a dead
-  hook (imported nowhere) — ignore it.
+  in Vercel, then flip the flag to true. The old `useAssemblyToken.js` → `/api/assembly-token`
+  hook was dead (imported nowhere) and was removed in ACD-89 cleanup.
 
 ## Tech Stack
 
@@ -59,7 +58,7 @@ serverless function**, so the route 404s in production on Vercel.
 | AI drafting | Anthropic API via /api/generate serverless function |
 | Voice | AssemblyAI |
 | Charts | chart.js (graphs in .docx) + recharts (UI only) |
-| Doc export | docx + docxtemplater + docxtemplater-image-module-free |
+| Doc export | docx |
 | Dev server | Vite (port 5175) |
 | Deploy | Vercel |
 
@@ -82,8 +81,7 @@ src/
 │   └── metrics/             # GATED (FLAGS.METRICS) — do not activate
 ├── hooks/
 │   ├── useAutoSave.js       # Used by assessment — keep
-│   ├── useSaveStatus.js     # New in Trench 2
-│   └── useAssemblyToken.js  # Used by assessment voice recording — keep
+│   └── useSaveStatus.js     # New in Trench 2
 ├── lib/
 │   ├── supabase.js          # Supabase client — created in Trench 2
 │   └── db.js                # Data access layer — grows with each trench

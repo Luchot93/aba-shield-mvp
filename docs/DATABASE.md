@@ -30,7 +30,7 @@ migration. One migration = one focused change with a descriptive name.
 
 ## Current schema (`public`)
 
-Six tables. Four are used in Alpha; two ship dormant for Phase 2 (gated by `FLAGS.*`).
+Eight tables. Seven are used in Alpha; one ships dormant for Phase 2 (gated by `FLAGS.*`).
 
 | Table                  | Purpose                                                        | Phase |
 |------------------------|----------------------------------------------------------------|-------|
@@ -38,10 +38,12 @@ Six tables. Four are used in Alpha; two ship dormant for Phase 2 (gated by `FLAG
 | `assessment_sessions`  | Initial-assessment interview state, AI draft content, approvals, exported docs. | Alpha |
 | `profiles`             | One row per auth user; `role` (admin/bcba/bcaba/rbt), auto-created on signup. Drives permissions. | Alpha |
 | `rate_limits`          | Per-user/endpoint/hour counter guarding `/api/generate`. No client access; touched only by the `check_rate_limit` definer function. | Alpha |
-| `service_session_logs` | Session logging.                                               | Phase 2 (`FLAGS.SESSION_LOG`) |
+| `behavior_session_logs` | Behavior-target session logging (Service Sessions page). | Alpha |
+| `skill_session_logs`   | Skill-goal session logging (Service Sessions page).            | Alpha |
+| `caregiver_training_session_logs` | Caregiver-training session logging (Service Sessions page). | Alpha |
 | `staff`                | Staff directory.                                               | Phase 2 (`FLAGS.STAFF`) |
 
-All six have RLS enabled. Access is scoped to the owning user (`auth.uid()`).
+All eight have RLS enabled. Access is scoped to the owning user (`auth.uid()`).
 
 > RLS is automatic. An event trigger (`rls_auto_enable`) turns on row-level security the
 > moment any new `public` table is created — so a fresh table denies **all** access until

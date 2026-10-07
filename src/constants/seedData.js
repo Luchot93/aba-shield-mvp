@@ -4621,40 +4621,6 @@ export const SEED_USERS = [
   { id:'u4', name:'James Torres',  email:'james@abashield.com', role:'rbt'   },
 ];
 
-export const makeServiceSessionLog = (
-  clientId, rbtId, rbtName, sessionDate,
-  behaviorEntries = [], skillEntries = [], notes = '',
-) => ({
-  id: `slog_${clientId}_${Date.now()}`,
-  clientId,
-  rbtId,
-  rbtName,
-  sessionDate,
-  sessionNumber: 0,
-  notes,
-  behaviorEntries: behaviorEntries.map(e => ({
-    behaviorId:           e.behaviorId           ?? null,
-    behaviorName:         e.behaviorName         ?? '',
-    isNew:                e.isNew                ?? false,
-    baselineFrequency:    e.baselineFrequency     ?? null,
-    sessionFrequency:     e.sessionFrequency      ?? null,
-    currentStoNumber:     e.currentStoNumber      ?? 1,
-    stoStatus:            e.stoStatus             ?? 'in_progress',
-    newBehaviorDefinition:e.newBehaviorDefinition ?? '',
-    newBehaviorFunction:  e.newBehaviorFunction   ?? '',
-    newBehaviorSeverity:  e.newBehaviorSeverity   ?? '',
-    firstSeenDate:        e.firstSeenDate         ?? null,
-  })),
-  skillEntries: skillEntries.map(e => ({
-    skillId:    e.skillId    ?? null,
-    skillName:  e.skillName  ?? '',
-    isNew:      e.isNew      ?? false,
-    firstSeenDate: e.firstSeenDate ?? null,
-    notes:      e.notes      ?? '',
-  })),
-  createdAt: new Date().toISOString(),
-});
-
 export const makeCaregiverTrainingSessionLog = (
   clientId, bcbaId, bcbaName, sessionDate,
   trainingEntries = [], notes = '',

@@ -6,7 +6,6 @@
  */
 export const FLAGS = {
   PIPELINE:      false,   // Trench 5 — 9-stage Kanban CRM
-  SESSION_LOG:   false,   // Trench 6 — Behavior/Skill/CT session logging
   REASSESSMENT:  false,   // Trench 7 — 6-month reassessment workflow
   REAUTH:        false,   // Reauth cycle UI (banners, badges, countdowns) —
                           // punted for this release per product decision;

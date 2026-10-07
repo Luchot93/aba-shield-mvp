@@ -77,7 +77,7 @@ export default function DemographicsForm({ clientId, client, session, setClients
   const clientName = session?.clientName ?? client?.name ?? '';
 
   // Local draft state, debounced before hitting Supabase — mirrors the
-  // useAutoSave pattern already used by FreeTextNotes/ProseEditor/InlineEditor.
+  // useAutoSave pattern already used by FreeTextNotes/InlineEditor.
   // Without this, every keystroke fired its own PATCH request; concurrent
   // requests could complete out of order and silently clobber each other,
   // which is why typed text (e.g. Reason for Referral) could vanish on reload.

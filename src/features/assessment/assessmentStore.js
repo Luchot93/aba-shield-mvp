@@ -1249,39 +1249,3 @@ export function removeCaregiverStoStep(setClients, clientId, targetId, stepId) {
   }));
   _persist(sessionId, persistPatch);
 }
-
-// ─── Caregiver Training Session Logs ─────────────────────────────────────────
-
-export function addCaregiverTrainingSessionLog(clientId, newLog, clients, setClients) {
-  setClients(prev => prev.map(c => {
-    if (c.id !== clientId) return c;
-    return {
-      ...c,
-      caregiver_training_session_logs: [
-        ...(c.caregiver_training_session_logs ?? []),
-        newLog,
-      ],
-    };
-  }));
-}
-
-// ─── Session listing ──────────────────────────────────────────────────────────
-
-export function getClientSessions(client) {
-  const sessions = [];
-  if (client?.assessment_session) {
-    sessions.push({
-      ...client.assessment_session,
-      sessionType: 'initial',
-      clientId: client.id,
-    });
-  }
-  for (const s of (client?.reassessment_sessions ?? [])) {
-    sessions.push({
-      ...s,
-      sessionType: 'reassessment',
-      clientId: client.id,
-    });
-  }
-  return sessions;
-}

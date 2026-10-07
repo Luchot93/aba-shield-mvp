@@ -29,13 +29,6 @@ export const KM = {
   services:        { label:'Services',    hdr:'bg-teal-100 text-teal-800',     colBg:'bg-teal-50/40'   },
 };
 
-// Which checklist section to evaluate per stage
-export const STAGE_CL_KEY = {
-  intake:'intake', auth_assessment:'auth_assessment', assessment:'assessment',
-  plan_draft:'plan_draft', submitted:'submitted', denied:'denied',
-  authorized:'authorized', staffing:'staffing', services:'services_reauth',
-};
-
 export const NEXT_STAGE = {
   intake:'auth_assessment', auth_assessment:'assessment', assessment:'plan_draft',
   plan_draft:'submitted', submitted:'authorized', authorized:'staffing', staffing:'services',

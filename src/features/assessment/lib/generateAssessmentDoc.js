@@ -1634,7 +1634,7 @@ function signatureSection() {
 // ─── Reassessment document helpers ───────────────────────────────────────────
 //
 // All functions below are used exclusively by generateReassessmentDoc().
-// They are NOT called by generateInitialAssessmentDoc() / generateAssessmentDoc().
+// They are NOT called by generateAssessmentDoc().
 
 /** Shared date formatter used across reassessment sections */
 const fmtDocDate = (iso) => {
@@ -3239,9 +3239,6 @@ export async function generateAssessmentDoc(session, clientName = 'Client') {
 
   return Packer.toBlob(doc);
 }
-
-// ─── Alias for backwards compat (initial assessment unchanged) ────────────────
-export const generateInitialAssessmentDoc = generateAssessmentDoc;
 
 // ─── Reassessment document — purpose-built ────────────────────────────────────
 /**

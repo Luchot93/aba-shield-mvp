@@ -5,6 +5,10 @@ const PORT = 5199;
 
 export default defineConfig({
   testDir: './tests',
+  // tests/rls is a separate node:test suite (ACD-90) that hits a real Supabase
+  // project, not Playwright's mock seam — exclude it or every run here fails
+  // on a missing SUPABASE_URL it was never meant to have.
+  testIgnore: '**/rls/**',
   // Dedicated port + VITE_E2E=1 so the app boots with the mock Supabase seam
   // (backend-free auth/data/storage). A plain dev server on 5175 would run
   // WITHOUT the flag and fail every login, so we never reuse it in CI.

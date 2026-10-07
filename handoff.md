@@ -1,200 +1,154 @@
 # Session Handoff
 
-_Last updated: 2026-10-06_
+_Last updated: 2026-10-07_
 
 ## 1. Goal we are moving towards
 
-ACD-87 ("D9b: Move session logging out of the client detail page into its
-own standalone Service Sessions page") — the follow-up to ACD-86's backend
-foundation. ACD-86 created real DB tables (`behavior_session_logs`,
-`skill_session_logs`, `caregiver_training_session_logs`) but touched no
-application code. ACD-87 is the UI-facing half: give session logging its
-own top-level page in the nav, scoped by role, and wire it to actually
-read/write those tables through Supabase — replacing the old in-memory-only
-`client.service_session_logs` / `client.caregiver_training_session_logs`
-fields on the client detail page.
+ACD-88 ("D9c: Turn the Services stage into a simple, informative checklist
+now that session logging has moved out") — the follow-up to ACD-87, which
+moved session logging into its own standalone Service Sessions page. With
+logging moved out, the Services stage on the client detail page needed a
+lightweight, read-only replacement instead of an empty tab: a 5-item
+checklist showing whether a first session has happened, a running session
+count, the date of the last session, progress-preview snapshots for
+behavior/skill/caregiver-training targets, and a link to jump straight into
+the Service Sessions page for that client.
 
-**Status: DONE. Built, build-verified, then manually tested end-to-end
-against the live dev server and live Supabase DB (all three log types:
-caregiver training, behavior, skill). Merged into `dev` via PR
-[#112](https://github.com/Luchot93/aba-shield-mvp/pull/112), promoted to
-`main` via PR [#113](https://github.com/Luchot93/aba-shield-mvp/pull/113).
-Both merged; local `dev`/`main` fast-forwarded to match origin. Jira ACD-87
-has a plain-English closeout comment and has been transitioned to Done. A
-separate pre-existing bug found during QA was filed as its own ticket,
-ACD-112 (see section 2).**
+**Status: DONE. Built, QA'd end-to-end against real Supabase data, merged
+into `dev` via PR [#114](https://github.com/Luchot93/aba-shield-mvp/pull/114),
+promoted to `main` via PR [#115](https://github.com/Luchot93/aba-shield-mvp/pull/115).
+Both merged; local `dev`/`main` fast-forwarded to match origin. Jira ACD-88
+has a plain-English closeout comment and has been transitioned to Done.**
 
 ## 2. Current state of the code
 
 **Applied, committed, merged into both `dev` and `main`.**
 
-- **New file:** `src/features/sessions/ServiceSessionsPage.jsx` — top-level
-  page with its own client picker (`scopedClients`: admin sees all clients
-  in the `services` stage, BCBA/RBT see only their own assigned clients).
-  Logs are fetched lazily per selected client (not for the whole scoped list
-  up front) via three new `db.js` functions, and an `augmentedClient` shape
-  adapter lets the existing log panels/modals run unmodified against real
-  DB rows by reshaping them back into the
-  `service_session_logs` / `caregiver_training_session_logs` array shape
-  those components already expect.
-- **Moved** (not edited, aside from one relative-import fix): the 9
-  session-log panel/modal/progress-chart components from
-  `src/features/detail/` → `src/features/sessions/components/`
-  (`BehaviorSessionLogPanel`, `BehaviorSessionModal`,
-  `CaregiverTrainingLogPanel`, `CaregiverTrainingLogModal`,
-  `CaregiverTrainingProgressPanel`, `ServiceSessionProgressPanel`,
-  `SkillSessionLogPanel`, `SkillSessionModal`, `SkillSessionProgressPanel`).
-  `CaregiverTrainingLogModal.jsx`'s import of `makeCaregiverTrainingSessionLog`
-  from `constants/seedData.js` was updated for the new relative path
-  (`../../constants/` → `../../../constants/`).
-- **`src/lib/db.js`** — added 6 new functions following the existing
-  file pattern (async, throw on error, return data directly; no business
-  logic in this file):
-  - `getBehaviorSessionLogsByClientIds`, `getSkillSessionLogsByClientIds`,
-    `getCaregiverTrainingSessionLogsByClientIds` — batch SELECT by
-    `client_id IN (...)`, ordered by `session_date`, each row passed
-    through a `to*Log(row, staffMap)` shaper that resolves
-    `logged_by_staff_id` to a display name via the existing
-    `getStaffNameMap()` helper.
-  - `addBehaviorSessionLog`, `addSkillSessionLog`,
-    `addCaregiverTrainingSessionLog` — INSERT + `.select().single()`,
-    stamping `logged_by_staff_id` from `supabase.auth.getUser()`, returning
-    the same shaped object the getters produce.
-- **`src/App.jsx`** — imported `ServiceSessionsPage`, added a
-  `page==='service_sessions'` route (outside any `FLAGS` gate — this is an
-  active Alpha feature, not gated Phase-2 code).
-- **`src/components/NavBar.jsx`** — added `['service_sessions','Service
-  Sessions']` to the nav tab list, between Clients and Assessments.
-- **`src/features/detail/ClientDetailPage.jsx`** — removed: the Session
-  Logs tab, its 3 local-state modal-open flags, its 3
-  `handleSave*Log`/`pushLog` handlers (behavior/skill/caregiver), the 3
-  modal-render blocks at the bottom of the component, and the now-unused
-  imports of the 6 moved components. `servicesTab` now defaults to
-  `'reassessment'` instead of `'sessions'` (the Reassessment tab, still
-  `FLAGS.REASSESSMENT`-gated, is the only tab left on this page).
-  `serviceTabsActive` no longer includes `FLAGS.SESSION_LOG` in its
-  condition — only `FLAGS.REASSESSMENT`.
-- Build verified clean before testing (no new TypeErrors/import errors).
+- **`src/features/detail/ClientDetailPage.jsx`** — Services stage now
+  renders a 5-item checklist (first-session indicator, session count, last
+  session date, three progress-preview summaries, "Open Service Sessions"
+  link) instead of the old session-logging modal entry points. Fetches
+  `behavior_session_logs` / `skill_session_logs` /
+  `caregiver_training_session_logs` on demand via a `useEffect` gated on
+  `servicesStageShown`, and builds a `servicesAugmentedClient` shape so the
+  existing progress-panel components can read real DB rows without changes
+  to their own internals.
+- **`src/features/sessions/components/ServiceSessionProgressPanel.jsx`,
+  `SkillSessionProgressPanel.jsx`, `CaregiverTrainingProgressPanel.jsx`** —
+  each gained a compact row component (`BehaviorCompactRow`,
+  `SkillCompactRow`, `CaregiverCompactRow`) rendering the approved design:
+  `Baseline X → Latest Y → Mastery Z · N sessions` with a trend arrow
+  (↓/↑/→/—), reading plan targets from `client.assessment_session.sections`
+  and session entries from the client's log arrays.
+- **`src/constants/checklist.js` / `src/utils/checklist.js`** — added the
+  Services-stage checklist item definitions and helper logic consistent
+  with the existing checklist pattern used by other stages.
+- **`src/features/sessions/ServiceSessionsPage.jsx`** — minor adjustment to
+  support deep-linking from the new "Open Service Sessions" link (pre-select
+  the client that was clicked from).
+- **`src/App.jsx`** — minor wiring to support the cross-page navigation
+  link.
+- **Deleted** two dead files: `src/features/detail/LogSessionModal.jsx` and
+  `src/features/detail/ServiceSessionLogPanel.jsx` — leftover from an
+  earlier version of session logging, fully superseded by ACD-87's Service
+  Sessions page and no longer referenced anywhere.
+- 8 files changed, 297 insertions(+), 1120 deletions(-) net across the two
+  deleted files.
 
 ### Live QA — what was actually tested, and how
 
-Driven through the running dev server (`npm run dev`, port 5175) via
-Chrome MCP tooling, against the real Supabase project (`qravuejkiluimaihhbrf`),
-not just read from code:
+With explicit user permission, `FLAGS.PIPELINE` was temporarily flipped to
+`true` locally to reach the Pipeline/detail view, and a disposable test
+client was created directly in the real Supabase project
+(`qravuejkiluimaihhbrf`) via SQL — not a local/mock DB:
 
-- **Caregiver Training Log:** opened the modal on a temporarily-promoted
-  test client (`RLS Test Client ACD-52`, `stage` flipped to `'services'`
-  with explicit user approval), filled it out, saved. Verified via SQL that
-  a correctly-shaped row landed in `caregiver_training_session_logs`, and
-  that the UI re-rendered immediately with the resolved staff name. Test
-  row deleted and `stage` reverted afterward.
-- **Behavior Session + Skill Session:** re-tested using a seed-data client
-  with real assessment content instead — **Maria Lopez**
-  (`51a9fcd5-34ff-41f3-8903-2292db89fbfa`), who already had 2 behavior
-  targets and 1 skill goal populated in her `assessment_sessions` row.
-  Temporarily flipped her `stage` to `'services'`. Both modals correctly
-  loaded her real targets (with baseline/STO-goal/mastery context), both
-  saves produced correctly-shaped rows in `behavior_session_logs` and
-  `skill_session_logs` (verified via SQL against what was entered in the
-  UI), both re-rendered in the page's timeline immediately with correct
-  staff attribution, zero console errors. Test rows deleted and `stage`
-  reverted afterward; final SQL check confirmed a clean revert
-  (`stage: null, behavior_log_count: 0, skill_log_count: 0`).
-- **Empty-state correctness:** confirmed via SQL that zero clients in the
-  live DB currently have `stage = 'services'` (expected — `FLAGS.PIPELINE`
-  is off, so nothing in the live app advances a client's stage yet), so the
-  page's "No clients assigned" empty state on first load is correct
-  behavior, not a bug.
+- Created client `ZZZ_QA_TEST ACD-88 (delete me)`, an `assessment_sessions`
+  row with one behavior target, one skill goal, and one caregiver-training
+  target (with baseline/mastery/STO values), and 3 session-log rows each
+  for behavior (frequency 9→6→4, downward/improving trend), skill (accuracy
+  30→50→65, upward trend), and caregiver training (percent 20→35→55,
+  upward trend).
+- Verified via the running app (Chrome MCP) that all 5 checklist items
+  render correctly, the three compact progress rows show the correct
+  baseline/latest/mastery values and trend arrows, and the "Open Service
+  Sessions" link correctly navigates to that client pre-selected.
+- Fully cleaned up afterward: deleted all session-log rows, the
+  `assessment_sessions` row, and the client row; confirmed via a SQL count
+  query that all were 0. Reverted `FLAGS.PIPELINE` to `false`; confirmed via
+  `git status`/`git diff --stat` that `featureFlags.js` showed no diff.
 
-### Bug found during QA — filed separately, not fixed here
+### Bug encountered during QA — already tracked, not fixed here
 
-While testing Behavior/Skill logging, the panels initially showed "No
-targets in the assessment" for clients that *did* have real target data.
-Root-caused to a pre-existing, unrelated bug: `getAssessmentSessionsByBcba`
-in `db.js` filters strictly by `.eq('bcba_id', bcbaId)` with no
-admin-sees-all branch, so an admin only gets `client.assessment_session`
-populated for sessions whose `bcba_id` literally matches the admin's own
-auth id. This is read by `App.jsx`'s top-level client-loading effect and
-therefore affects `client.assessment_session` app-wide (confirmed via grep
-that `ClientDetailPage.jsx` reads the identical field off the identical
-shared state) — it predates ACD-87 and isn't something this story's new
-code caused. Worked around *only for testing* by temporarily pointing the
-test clients' `assessment_sessions.bcba_id` at the admin's own id (fully
-reverted after). Filed as **[ACD-112](https://awcbehavioralhealth.atlassian.net/browse/ACD-112)**
-with root cause, impact, and a suggested fix (branch on
-`isAdmin(currentUser.role)` the same way `ServiceSessionsPage.jsx`'s own
-`scopedClients` already does). Not fixed in this session — out of scope for
-ACD-87.
+While setting up test data, baseline/mastery values initially didn't show
+up in the compact rows. Root cause: `getAssessmentSessionsByBcba` in
+`db.js` filters strictly by `.eq('bcba_id', bcbaId)` with no
+admin-sees-all branch, so the test `assessment_sessions` row (with no
+`bcba_id` set) never matched the logged-in admin's id, leaving
+`client.assessment_session` as `null`. Worked around *only for testing* by
+pointing the test row's `bcba_id` at the admin's own auth id (reverted via
+cleanup). This is the exact bug already filed as
+**[ACD-112](https://awcbehavioralhealth.atlassian.net/browse/ACD-112)**
+during the ACD-87 session (confirmed by independently re-finding and
+matching the ticket, not just taking it on faith) — status **To Do**, not
+yet fixed in code. No changes were made to `getAssessmentSessionsByBcba` as
+part of ACD-88; that fix stays scoped to ACD-112.
 
 ### Jira / PR closeout
 
-- PR [#112](https://github.com/Luchot93/aba-shield-mvp/pull/112)
-  (`ACD-87-service-sessions-page` → `dev`) merged.
-- PR [#113](https://github.com/Luchot93/aba-shield-mvp/pull/113)
+- PR [#114](https://github.com/Luchot93/aba-shield-mvp/pull/114)
+  (`ACD-88-services-stage-checklist` → `dev`) merged.
+- PR [#115](https://github.com/Luchot93/aba-shield-mvp/pull/115)
   (`dev` → `main`) merged.
-- Local `main` fast-forwarded to `45f48ed`; local `dev` fast-forwarded to
-  `1595741` — both confirmed synced with origin.
-- Jira ACD-87: plain-English closeout comment posted (what shipped, how it
-  was tested, the ACD-112 bug called out as separate/out-of-scope, PR
-  links) and ticket transitioned to **Done**.
-- New bug ticket **ACD-112** filed (see above), left in its default **To
-  Do** status — not started, not part of this session's scope.
+- Local `main` fast-forwarded to `6b1caae`; local `dev` fast-forwarded to
+  `27468c0` — both confirmed synced with origin.
+- Jira ACD-88: plain-English closeout comment posted (what shipped, how it
+  was tested, PR links) and ticket transitioned to **Done**.
+- No new bug ticket filed this session — the one bug surfaced during QA was
+  already tracked by ACD-112 from the prior session; confirmed via Jira
+  search rather than assumed.
 
 ## 3. Files actively being edited
 
-None — ACD-87 is merged into both `dev` and `main`, and all live-DB test
-mutations (log rows, `stage` flips) have been verified reverted. Only this
-file (`handoff.md`) is being touched now, to close out the session record.
+None — ACD-88 is merged into both `dev` and `main`, and all live-DB test
+mutations (test client, assessment session, session-log rows) have been
+verified deleted. Only this file (`handoff.md`) is being touched now, to
+close out the session record.
 
 ## 4. Everything tried that failed / walked back — and deferred items
 
 - No approaches were walked back this session.
-- Direct SQL `UPDATE clients SET bcba_id = ...` (attempted while looking
-  for a way to make a test client visible to the admin test user) was
-  blocked by the `enforce_client_assignment_admin_only()` DB trigger
-  (`ERROR 42501`). This is intentional, correct behavior (the raw SQL path
-  has no authenticated Supabase session context, so it's correctly treated
-  as non-admin) — not a bug, and not worked around by weakening the
-  trigger. Worked around instead by updating `assessment_sessions.bcba_id`
-  (a different table, not covered by that trigger), which was sufficient
-  for the test goal.
-- No new deferred/flagged-but-not-ticketed items identified this session
-  beyond ACD-112, which **was** ticketed (see section 2) rather than left
-  as a loose note, per the standing rule that untracked pending debt gets a
-  Jira ticket at session close.
+- No new deferred/flagged-but-not-ticketed items identified this session —
+  the only bug found during QA (the `getAssessmentSessionsByBcba`
+  admin-visibility gap) was independently confirmed to already be tracked
+  by ACD-112, so no duplicate ticket was filed.
 
 ## 5. Next steps
 
-1. ~~Build ACD-87 (Service Sessions page + db.js wiring + ClientDetailPage
-   cleanup)~~ — done.
-   ~~Manually test all three session-log types (caregiver training,
-   behavior, skill) against the live app + live DB~~ — done, all three
-   verified end-to-end.
+1. ~~Build ACD-88 (Services-stage checklist + compact progress rows +
+   delete dead files)~~ — done.
+   ~~QA against live Supabase data~~ — done, all 5 checklist items and all
+   3 compact progress rows verified, test data cleaned up.
    ~~PR into `dev`~~ — merged
-   ([#112](https://github.com/Luchot93/aba-shield-mvp/pull/112)).
+   ([#114](https://github.com/Luchot93/aba-shield-mvp/pull/114)).
    ~~Promote `dev` to `main`~~ — merged
-   ([#113](https://github.com/Luchot93/aba-shield-mvp/pull/113)).
-   ~~Move the ACD-87 Jira ticket to Done with a session-summary
-   comment~~ — done.
-   ~~File a ticket for the admin-visibility bug found during QA~~ — done,
-   [ACD-112](https://awcbehavioralhealth.atlassian.net/browse/ACD-112).
-2. **ACD-112 (new, not started):** fix `getAssessmentSessionsByBcba` in
-   `src/lib/db.js` to branch on `isAdmin(currentUser.role)` the same way
-   `ServiceSessionsPage.jsx`'s `scopedClients` useMemo already does —
-   admins should query without the `bcba_id` filter (or fetch all
-   sessions), while BCBA/RBT roles keep the scoped filter. Affects
-   `App.jsx`'s top-level client-loading effect, so the fix is small and
-   centralized, but worth a quick regression check on `ClientDetailPage.jsx`
-   and `ServiceSessionsPage.jsx` (both consume `client.assessment_session`)
-   once it's live.
+   ([#115](https://github.com/Luchot93/aba-shield-mvp/pull/115)).
+   ~~Move the ACD-88 Jira ticket to Done with a session-summary comment~~ —
+   done.
+2. **ACD-112 (carried forward, not started):** fix
+   `getAssessmentSessionsByBcba` in `src/lib/db.js` to branch on
+   `isAdmin(currentUser.role)` the same way `ServiceSessionsPage.jsx`'s
+   `scopedClients` useMemo already does — admins should query without the
+   `bcba_id` filter, while BCBA/RBT roles keep the scoped filter. Worth a
+   regression check on `ClientDetailPage.jsx` and `ServiceSessionsPage.jsx`
+   (both consume `client.assessment_session`) once it's live.
 3. File Jira tickets for the 3 deferred REAUTH/REASSESSMENT repoint spots
    in `ClientDetailPage.jsx` (noted in the ACD-82 handoff) **only when
    that work actually starts** — per the user, still just a handoff note,
    no tickets yet.
-4. Everything from the ACD-82/ACD-83/ACD-84/ACD-85/ACD-86 handoffs'
-   carried-forward "Next steps" list (ACD-111, ACD-101, ACD-109, ACD-110,
-   ACD-100, ACD-105, ACD-90, ACD-106, ACD-99, the `FLAGS.PIPELINE`
-   flip-gated QA items, branch cleanup, and the `suggestFromLabel` fallback
-   note) is still outstanding and unrelated to ACD-87 — carried forward as
-   a pointer rather than reproduced in full; see git history for the
-   2026-10-06 (ACD-86) version of this file if needed.
+4. Everything from the ACD-82 through ACD-87 handoffs' carried-forward
+   "Next steps" list (ACD-111, ACD-101, ACD-109, ACD-110, ACD-100, ACD-105,
+   ACD-90, ACD-106, ACD-99, the `FLAGS.PIPELINE` flip-gated QA items, branch
+   cleanup, and the `suggestFromLabel` fallback note) is still outstanding
+   and unrelated to ACD-88 — carried forward as a pointer rather than
+   reproduced in full; see git history for the 2026-10-06 (ACD-87) version
+   of this file if needed.

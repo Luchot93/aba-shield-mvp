@@ -165,6 +165,24 @@ export function getStageItems(stage, client) {
       { type:'form_field', key:'first_session_date', label:'First session date', clSec:'staffing', clientField:'first_session_date', fieldType:'date' },
       { type:'form_field', key:'first_session_time', label:'First session time', clSec:'staffing', clientField:'first_session_time', fieldType:'time', optional:true },
     ];
+    case 'services': return [
+      // Informational only — services is terminal (no NEXT_STAGE entry), so none of
+      // these are mandatory/blocking. Session data now lives in Prompt D9a's
+      // behavior_session_logs/skill_session_logs/caregiver_training_session_logs
+      // tables (fetched per-client in ClientDetailPage), not on the client object.
+      //
+      // ASSUMPTION (flag for confirmation once rendered): a session logged in ANY
+      // of the three tables counts toward "first session completed" — the PRD
+      // doesn't specify whether only one type, or any type, should trigger this.
+      { type:'auto', key:'first_session_completed', label:'First session completed', clSec:'services', serviceSessionsAny:true },
+      // ASSUMPTION (flag for confirmation once rendered): combines behavior + skill +
+      // caregiver-training rows into one running total rather than showing a
+      // per-type breakdown — the PRD doesn't specify which presentation it wants.
+      { type:'stat', key:'sessions_logged_count', label:'Sessions logged to date', clSec:'services', statKind:'count' },
+      { type:'stat', key:'last_session_date', label:'Last session date', clSec:'services', statKind:'lastDate' },
+      { type:'progress_preview', key:'progress_preview', label:'Progress preview', clSec:'services' },
+      { type:'nav_link', key:'open_service_sessions', label:'Open Service Sessions', clSec:'services' },
+    ];
     default: return [];
   }
 }

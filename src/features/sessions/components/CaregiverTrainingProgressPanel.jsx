@@ -85,6 +85,7 @@ function buildCaregiverChartData(sessionLogs, caregiverTargets) {
       goalName,
       baseline,
       ltoPercent,
+      latestValue: latest?.percent ?? null,
       stoSteps,
       currentStoNumber: latest?.stoNumber ?? null,
       currentStoStatus: latest?.stoStatus ?? 'not_yet_started',
@@ -278,9 +279,38 @@ function CaregiverProgressCard({ data }) {
   );
 }
 
+// ── Compact summary row (for checklist "Progress preview" cards) ──────────────
+
+function CaregiverCompactRow({ data }) {
+  const { goalName, baseline, latestValue, ltoPercent, sessionCount, trend } = data;
+  const trendEl =
+    trend === 'up'     ? <span className="font-semibold text-emerald-600">↑</span>
+    : trend === 'down' ? <span className="font-semibold text-rose-500">↓</span>
+    : trend === 'stable' ? <span className="text-slate-400">→</span>
+    : <span className="text-slate-400">—</span>;
+
+  const segments = [];
+  if (baseline != null)    segments.push(`Baseline ${baseline}%`);
+  if (latestValue != null) segments.push(`Latest ${latestValue}%`);
+  if (ltoPercent != null)  segments.push(`Mastery ${ltoPercent}%`);
+
+  return (
+    <div className="py-1.5 text-[12px]">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-slate-700 truncate">{goalName}</span>
+        {trendEl}
+      </div>
+      <div className="flex items-center gap-1.5 mt-0.5 text-slate-400">
+        {segments.length > 0 ? segments.join(' → ') : 'No baseline/mastery set'}
+        <span>· {sessionCount} session{sessionCount !== 1 ? 's' : ''}</span>
+      </div>
+    </div>
+  );
+}
+
 // ── CaregiverTrainingProgressPanel (default export) ───────────────────────────
 
-export default function CaregiverTrainingProgressPanel({ client, selectedCycle }) {
+export default function CaregiverTrainingProgressPanel({ client, selectedCycle, compact = false }) {
   const sessionLogs = (client?.caregiver_training_session_logs ?? []).filter(
     l => selectedCycle == null || (l.reauth_cycle ?? 0) === selectedCycle,
   );
@@ -294,12 +324,22 @@ export default function CaregiverTrainingProgressPanel({ client, selectedCycle }
 
   if (targets.length === 0) {
     return (
-      <div className="px-5 py-8 text-center">
-        <p className="text-[13px] text-slate-400 leading-relaxed">
-          No caregiver training data to display yet.
-          <br />
-          Log at least one session to see progress charts.
+      <div className={compact ? 'py-2 text-center' : 'px-5 py-8 text-center'}>
+        <p className="text-[12px] text-slate-400 leading-relaxed">
+          {compact ? 'No caregiver training data yet.' : (
+            <>No caregiver training data to display yet.<br />Log at least one session to see progress charts.</>
+          )}
         </p>
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="divide-y divide-stone-100">
+        {targets.map(t => (
+          <CaregiverCompactRow key={t.targetId} data={t} />
+        ))}
       </div>
     );
   }

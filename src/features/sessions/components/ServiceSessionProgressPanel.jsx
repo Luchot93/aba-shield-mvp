@@ -86,6 +86,7 @@ function buildBehaviorChartData(sessionLogs, behaviorTargets) {
       behaviorName,
       baseline,
       ltoFreq,
+      latestValue: latest?.frequency ?? null,
       stoSteps,
       currentStoNumber: latest?.stoNumber ?? null,
       currentStoStatus: latest?.stoStatus ?? 'not_yet_started',
@@ -283,9 +284,38 @@ function BehaviorProgressCard({ data }) {
   );
 }
 
+// ── Compact summary row (for checklist "Progress preview" cards) ──────────────
+
+function BehaviorCompactRow({ data }) {
+  const { behaviorName, baseline, latestValue, ltoFreq, sessionCount, trend } = data;
+  const trendEl =
+    trend === 'down'   ? <span className="font-semibold text-emerald-600">↓</span>
+    : trend === 'up'   ? <span className="font-semibold text-rose-500">↑</span>
+    : trend === 'stable' ? <span className="text-slate-400">→</span>
+    : <span className="text-slate-400">—</span>;
+
+  const segments = [];
+  if (baseline != null)    segments.push(`Baseline ${baseline}×`);
+  if (latestValue != null) segments.push(`Latest ${latestValue}×`);
+  if (ltoFreq != null)     segments.push(`Mastery ${ltoFreq}×`);
+
+  return (
+    <div className="py-1.5 text-[12px]">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-slate-700 truncate">{behaviorName}</span>
+        {trendEl}
+      </div>
+      <div className="flex items-center gap-1.5 mt-0.5 text-slate-400">
+        {segments.length > 0 ? segments.join(' → ') : 'No baseline/mastery set'}
+        <span>· {sessionCount} session{sessionCount !== 1 ? 's' : ''}</span>
+      </div>
+    </div>
+  );
+}
+
 // ── ServiceSessionProgressPanel (default export) ──────────────────────────────
 
-export default function ServiceSessionProgressPanel({ client, selectedCycle }) {
+export default function ServiceSessionProgressPanel({ client, selectedCycle, compact = false }) {
   const sessionLogs = (client?.service_session_logs ?? []).filter(
     l =>
       (l.sessionType === 'behavior' || (!l.sessionType && (l.behaviorEntries ?? []).some(e => !e.isNew))) &&
@@ -301,12 +331,22 @@ export default function ServiceSessionProgressPanel({ client, selectedCycle }) {
 
   if (behaviors.length === 0) {
     return (
-      <div className="px-5 py-8 text-center">
-        <p className="text-[13px] text-slate-400 leading-relaxed">
-          No behavior data to display yet.
-          <br />
-          Log at least one session to see progress charts.
+      <div className={compact ? 'py-2 text-center' : 'px-5 py-8 text-center'}>
+        <p className="text-[12px] text-slate-400 leading-relaxed">
+          {compact ? 'No behavior data yet.' : (
+            <>No behavior data to display yet.<br />Log at least one session to see progress charts.</>
+          )}
         </p>
+      </div>
+    );
+  }
+
+  if (compact) {
+    return (
+      <div className="divide-y divide-stone-100">
+        {behaviors.map(b => (
+          <BehaviorCompactRow key={b.behaviorId} data={b} />
+        ))}
       </div>
     );
   }

@@ -1,133 +1,166 @@
 # Session Handoff
 
-_Last updated: 2026-10-07_
+_Last updated: 2026-10-08_
 
 ## 1. Goal we are moving towards
 
-ACD-90 ("E1: Add automated tests proving staff can only see their own
-data") — prove, with an automated test suite (not just the RLS policies
-existing), that the role-scoped RLS model actually enforces what it
-claims: admin sees everything; BCBA/BCaBA/RBT see only clients they're
-assigned to; the same rule cascades to `checklist_items`, `documents`,
-`activity_log`, `staff`, and `profiles`.
+ACD-91 ("E2: Validate file uploads on all four upload widgets") — lock
+down all four file-upload surfaces (client document upload on
+`ClientDetailPage`, final-report upload in `ReassessmentCyclePanel`,
+client CSV/XLSX import in `ImportPanel`, staff bulk CSV/XLSX import in
+`BulkInvitePanel`) so they enforce an approved file-type list and a max
+size, reject disguised/mislabeled files via magic-byte sniffing, and show
+a clear error instead of failing silently — both when the type is wrong
+and when the file is too large.
 
-**Status: DONE. Suite built, verified, merged into `dev` via PR
-[#118](https://github.com/Luchot93/aba-shield-mvp/pull/118), promoted to
-`main` via PR [#119](https://github.com/Luchot93/aba-shield-mvp/pull/119).
-Both merged, all CI checks green on both. Jira ACD-90 has a plain-English
-closeout comment and has been transitioned to Done.**
+**Status: DONE and merged — but only after this session's audit turned up
+two real gaps against the ticket's own acceptance criteria. One is fixed;
+the other is intentionally scoped out to a new ticket, not code.**
+
+- PR [#120](https://github.com/Luchot93/aba-shield-mvp/pull/120)
+  (`ACD-91-file-upload-validation` → `dev`) merged.
+- PR [#121](https://github.com/Luchot93/aba-shield-mvp/pull/121)
+  (`dev` → `main`) merged.
+- Local `dev`/`main` fast-forwarded to origin.
+- Jira ACD-91 itself has **not** been transitioned or commented on this
+  session — only the code shipped and a follow-up ticket was filed (see
+  below). Transition/close it once the team is ready to call it done.
 
 ## 2. Current state of the code
 
 **Committed, merged into `dev`, promoted and merged into `main`. Local
 `dev`/`main` fast-forwarded to origin.**
 
-- **New test suite**: `tests/rls/` — a `node:test`-based suite, a
-  separate track from Playwright (which mocks Supabase entirely via
-  `createMockSupabaseClient()` and would never catch a broken/missing RLS
-  policy). Runs against a **real** `@supabase/supabase-js` client against
-  a real Postgres project. Files: `setup.js` (seed/teardown fixtures:
-  1 admin, 1 BCBA, 1 BCaBA, 1 RBT, 2 clients), `clients.test.js`,
-  `child-tables.test.js` (`checklist_items`/`documents`/`activity_log`),
-  `staff-and-profiles.test.js`, `README.md`.
-- **`package.json`**: added `test:rls` script. Had to use the glob form
-  `node --test "tests/rls/*.test.js"` — the bare-directory form
-  `node --test tests/rls` throws `MODULE_NOT_FOUND` on Node 24.12.0 (the
-  version this machine and GitHub Actions both run).
-- **`playwright.config.js`**: added `testIgnore: '**/rls/**'`. Playwright's
-  default `testDir: './tests'` with no exclusion was picking up
-  `tests/rls/*.test.js` as if they were Playwright specs, failing CI with
-  a missing-`SUPABASE_URL` error (correct behavior — that CI job was never
-  meant to have real Supabase credentials).
-- **New dedicated non-production Supabase dev project** stood up for this
-  suite to run against: name `aba-shield-rls-dev`, ref
-  `aaqhoqzmkunsrfhcmlop`, region us-east-2, Postgres 17. All 23 local
-  migration files were applied to it in chronological order so its schema
-  matches production (`ABA_VAULT_MVP` / `qravuejkiluimaihhbrf`) exactly —
-  13 tables, RLS enabled on all. **User explicitly decided to leave the
-  project name as `aba-shield-rls-dev`** rather than renaming it (see
-  section 4 — renaming isn't possible via MCP anyway).
-- **`.env.rls`** (repo root, git-ignored via the existing `.env.*` pattern)
-  holds `SUPABASE_URL`/`SUPABASE_ANON_KEY`/`SUPABASE_SERVICE_ROLE_KEY` for
-  that dev project. Not committed, never will be — local-only by design.
+- **New file `src/utils/validateFile.js`**: `validateFile(file, { allowedMimeTypes, maxSizeBytes })`
+  checks size, MIME allowlist, and (for PDF/PNG/JPEG/DOCX/XLSX/XLS) the
+  first 4 bytes against a known magic number, so a renamed/disguised file
+  can't just spoof `file.type`. Exports `DOCUMENT_ALLOWED_MIME_TYPES`
+  (25MB cap), `CSV_ALLOWED_MIME_TYPES` (5MB cap), and the new
+  `SPREADSHEET_ALLOWED_MIME_TYPES`/`SPREADSHEET_MAX_SIZE_BYTES` (5MB cap,
+  added this session).
+- **`ClientDetailPage.jsx`** and **`ReassessmentCyclePanel.jsx`**
+  (`ReauthSubmissionChecklist`): both call `validateFile` with the
+  document allowlist before accepting an upload; inline red error text on
+  rejection. These two upload the real file to the `client-documents`
+  Supabase Storage bucket, which has its own `file_size_limit`/
+  `allowed_mime_types` + RLS — a genuine server-enforced boundary, not
+  just client-side.
+- **`ImportPanel.jsx`** and **`BulkInvitePanel.jsx`**: already validated
+  the `.csv` branch; **this session added the same validation to the
+  `.xlsx`/`.xls` branch**, which previously had zero size/type check at
+  all. Both parse the file entirely client-side (PapaParse/SheetJS) and
+  only pass structured row data onward to `onImport(...)` or the
+  staff-invite edge function as structured JSON — the raw file itself is
+  never sent anywhere, so there's no server leg to validate against.
+- **`tests/reassessment_submission_checklist.spec.js`**: fixed a stale
+  fixture (`Buffer.from('mock pdf')` → `Buffer.from('%PDF-1.4\nmock pdf')`)
+  that predates magic-byte sniffing and would otherwise fail the new PDF
+  validation. Byte-verified correct independently.
+- **`src/constants/featureFlags.js`**: no net change. Caught and reverted
+  an accidental diff (Trench-5/7/8 explanatory comments had been stripped,
+  likely a side effect of temporarily flipping flags for QA earlier in
+  the session) before committing — confirmed `git diff` against this file
+  is empty. All flags remain `false`.
 
 ### QA / verification performed
 
-- `npm run test:rls` — **28/28 pass** against the new dev project.
-- Proved the suite actually catches regressions (per the ticket's own
-  Testing/QA acceptance criterion): temporarily loosened the
-  `clients select admin or assigned` policy to `using (true)` via a
-  throwaway migration, reran the suite — exactly the 3 expected tests
-  failed (BCBA/RBT/BCaBA cross-client visibility) — then reverted the
-  policy via a second migration and reran — back to 28/28.
-- PR #118 CI: `build`, `playwright`, `Vercel`, `Vercel Preview Comments`
-  all green (after the `testIgnore` fix below).
+- Manual Chrome QA across all 4 widgets × 3 scenarios each (disguised
+  file, oversized file, valid file) — 12/12 passed.
+- `npx vite build` — clean.
+- `tests/import.spec.js` + `tests/clients.spec.js` (live, ungated specs
+  that touch this code) — 4/4 passed after the XLSX fix.
+- `tests/reassessment_submission_checklist.spec.js` (gated behind
+  `FLAGS.REASSESSMENT`, off) — 3/12 pass; the other 9 fail in a shared
+  `openClientTab` test helper against newer UI, unrelated to this
+  ticket's fixture fix (see section 4). Left as-is per explicit user
+  decision — Reassessment is being rebuilt in a future sprint.
 
-### Jira / PR closeout
+### Acceptance-criteria audit (this session's main finding)
 
-- PR [#118](https://github.com/Luchot93/aba-shield-mvp/pull/118)
-  (`ACD-90-rls-automated-tests` → `dev`) merged.
-- PR [#119](https://github.com/Luchot93/aba-shield-mvp/pull/119)
-  (`dev` → `main`) **merged.** Its Playwright job hung for ~17 minutes on
-  `npx playwright install --with-deps chromium` (transient GitHub Actions
-  runner/mirror slowness, not a code issue); cancelled and reran via
-  `gh run rerun --failed`, which completed cleanly in ~1m22s on retry. All
-  checks green, merged into `main`.
-- Jira ACD-90: plain-English closeout comment posted (what shipped, how
-  it was verified, PR links, the `profiles` write-policy note below) and
-  ticket transitioned to **Done**.
-- No new bug ticket filed this session.
+Pulled ACD-91 from Jira and checked each AC against the real
+implementation:
+
+- AC 1/2 (size + type enforced on all four widgets): **was failing** for
+  the `.xlsx`/`.xls` branch of widgets 3 & 4 — fixed this session (see
+  above).
+- AC 5 ("validation happens both in the browser and on the server, so it
+  can't be bypassed"): **fully satisfied** by widgets 1 & 2 (Storage
+  bucket allowlist + RLS is real server enforcement). **Not satisfiable
+  as currently architected** by widgets 3 & 4 — they never send the raw
+  file to a server at all, only parsed row data, so there's no server leg
+  to validate against. This isn't a missing check, it's an architecture
+  mismatch with the AC as written.
+- Rather than silently fixing or silently ignoring that last point, filed
+  **[ACD-114](https://awcbehavioralhealth.atlassian.net/browse/ACD-114)**
+  ("Clarify/scope ACD-91 AC 5 for CSV/XLSX import widgets") — lays out
+  both options (narrow the AC to document uploads only, vs. build a real
+  server-side parse/validate step for import) with a recommendation for
+  the former given the low blast radius of a bad import row. Status: To
+  Do, unassigned, decision pending.
 
 ## 3. Files actively being edited
 
-None — `tests/rls/*`, `package.json`, and `playwright.config.js` are all
-committed, pushed, and merged into both `dev` and `main`. Only this file
-(`handoff.md`) is being touched now. Local `dev` and `main` have already
-been fast-forwarded to origin this session (`dev` → `c1fa986`, `main` →
-`82cb6a0`).
+None — everything is committed, pushed, and merged into both `dev` and
+`main`. Only this file (`handoff.md`) is being touched now.
 
 ## 4. Everything tried that failed / walked back — and deferred items
 
-- **Project rename requested, not possible**: user asked to rename the
-  new dev project to `Aba-Vault-Dev`. The Supabase MCP server has no
-  rename/update-project tool (confirmed via full tool-list review) — it's
-  dashboard-only (Project Settings → General → Project Name) and purely
-  cosmetic (doesn't change the ref/URL). User was informed and then
-  **explicitly decided to leave the name as `aba-shield-rls-dev`** rather
-  than rename it manually. Don't re-raise this.
-- **`node --test tests/rls` (bare directory) broken on Node 24.12.0**:
-  threw `MODULE_NOT_FOUND` locally and in CI. Not a design decision, a
-  runtime regression — fixed by switching to the glob form in both the
-  local run and `package.json`'s `test:rls` script.
-- **First push of PR #118 failed CI** (`playwright` check): Playwright's
-  default test discovery picked up `tests/rls/*.test.js` and failed on a
-  missing `SUPABASE_URL`, since that CI job intentionally has no Supabase
-  credentials. Fixed with `testIgnore: '**/rls/**'` in
-  `playwright.config.js`, pushed a second commit, all checks went green.
-- **Migration-replay idempotency conflicts** while applying the 23
-  migrations to the fresh dev project (replaying a chronological history
-  including a `pg_dump` baseline snapshot against an empty project hits
-  `CREATE SCHEMA public` / duplicate `CREATE FUNCTION` collisions) — fixed
-  with `CREATE SCHEMA IF NOT EXISTS` / `CREATE OR REPLACE FUNCTION`,
-  final schema state unaffected.
-- **One migration applied from memory instead of reading the file
-  first** (`20260928140000_client_denial_staff_contact_fields.sql`):
-  applied `denial_count integer default 0` (nullable) when the real file
-  specifies `not null default 0`. Caught by reading the actual file
-  afterward and comparing; fixed with a corrective
-  `alter column denial_count set not null` migration. Adopted a stricter
-  rule for the rest of that session: read every migration file via `cat`
-  immediately before applying it, never from memory/paraphrase.
+- **Confusion about which flag gates the reauth UI**: user asked why a
+  "reauth" surface was showing during QA. Traced it precisely:
+  `FLAGS.REAUTH` only gates the Kanban card badge and banners/countdowns
+  in `ClientDetailPage.jsx` (per commit `780c65d`) — it does **not** gate
+  `ReauthSubmissionChecklist`, which has no `FLAGS` reference of its own
+  and is only reachable via `FLAGS.PIPELINE` + `FLAGS.REASSESSMENT`
+  (which were temporarily true for QA, as expected). No code was wrong;
+  explained and moved on.
+- **`openClientTab` test-helper bug surfaced, explicitly NOT fixed**:
+  verifying the fixture fix via a real Playwright run of the gated
+  reassessment spec revealed 9/12 failures, all pre-existing and
+  unrelated to this ticket — the shared `openClientTab` helper's
+  `getByRole(..., { name: new RegExp(tabName) })` is now ambiguous against
+  newer UI (a "Reassessment N" cycle-count badge, a "Continue
+  Reassessment →" button, a disabled "Start Reauthorization →" button).
+  **User explicitly decided not to fix this now** — Reassessment is
+  getting rebuilt in a future sprint, so patching a helper that will
+  likely change again anyway isn't worth it this sprint. Don't re-raise
+  this as something ACD-91 needs to resolve.
+- **Accidental `featureFlags.js` comment loss, caught before commit**:
+  while re-verifying state ahead of committing, noticed the Trench-5/7/8
+  explanatory comments on `PIPELINE`/`REASSESSMENT`/`STAFF` had been
+  silently stripped (likely a side effect from temporarily flipping those
+  flags for manual/automated QA earlier in the session). Restored them
+  before committing — this was out of scope for ACD-91 and not an
+  intentional edit.
+- **AC 5 gap was not code-fixed** — deliberately. Investigated whether a
+  server-side check could be bolted onto CSV/XLSX import, concluded it
+  would require actually routing the file through a new server/edge
+  function (real architecture work, not a validation tweak), and the risk
+  the AC is protecting against (a bypassed browser check reaching an
+  unprotected server endpoint) doesn't apply when there's no server
+  endpoint in the flow at all. Scoped this as a decision, not a bug — see
+  ACD-114.
 
 ## 5. Next steps
 
-1. ACD-90 is fully closed: PR #118 and PR #119 merged, Jira Done, local
-   `dev`/`main` fast-forwarded to origin. Nothing outstanding for this
-   ticket.
-2. Everything from the ACD-82 through ACD-89 handoffs' carried-forward
-   "Next steps" list (ACD-113, ACD-112, ACD-111, ACD-101, ACD-109,
-   ACD-110, ACD-100, ACD-105, ACD-106, ACD-99, the `FLAGS.PIPELINE`
-   flip-gated QA items, branch cleanup, and the `suggestFromLabel`
-   fallback note) is still outstanding and unrelated to ACD-90 — carried
-   forward as a pointer rather than reproduced in full; see git history
-   for the 2026-10-07 (ACD-89) version of this file if needed.
+1. ACD-91 is code-complete and merged (PR #120 → `dev`, PR #121 → `dev`
+   → `main`). Jira ACD-91 has not been transitioned/commented yet —
+   decide whether to close it now or hold it open pending ACD-114's
+   resolution.
+2. **ACD-114** (To Do, unassigned): needs a decision — narrow AC 5's
+   scope to the two document-upload widgets only (recommended), or
+   commit to building real server-side validation for CSV/XLSX import
+   (bigger scope, new ticket(s) if chosen).
+3. This sprint's actual stated focus (per user, 2026-10-08) is **Staff,
+   CRM Pipeline + new service checklist, and the standalone service
+   session logs feature** — none of that was touched this session; still
+   fully unstarted from here.
+4. The `openClientTab` Playwright helper bug (9 failing tests in the
+   gated reassessment spec) is known and intentionally deferred — do not
+   fix ad hoc; revisit when/if Reassessment is rebuilt, since the helper
+   will likely need to change again anyway.
+5. Carried forward, unrelated to ACD-91 (pointer only, not reproduced):
+   everything from the ACD-82 through ACD-90 handoffs' outstanding items
+   (ACD-113, ACD-112, ACD-111, ACD-101, ACD-109, ACD-110, ACD-100,
+   ACD-105, ACD-106, ACD-99, the `FLAGS.PIPELINE` flip-gated QA items,
+   branch cleanup, and the `suggestFromLabel` fallback note) — see git
+   history for the 2026-10-07 (ACD-90) version of this file if needed.

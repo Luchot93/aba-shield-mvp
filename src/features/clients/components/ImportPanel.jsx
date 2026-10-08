@@ -4,6 +4,10 @@ import { loadCdnScript } from '../../../utils/cdn.js';
 import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock.js';
 import { normalizeDate } from '../../../utils/dates.js';
 import { FLAGS } from '../../../constants/featureFlags.js';
+import {
+  validateFile, CSV_ALLOWED_MIME_TYPES, CSV_MAX_SIZE_BYTES,
+  SPREADSHEET_ALLOWED_MIME_TYPES, SPREADSHEET_MAX_SIZE_BYTES,
+} from '../../../utils/validateFile.js';
 
 const IMPORT_REQUIRED = [
   { key:'name',             label:'Client name'      },
@@ -50,11 +54,27 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
       const ext = file.name.split('.').pop().toLowerCase();
       let rows = [];
       if (ext === 'csv') {
+        const validation = await validateFile(file, {
+          allowedMimeTypes: CSV_ALLOWED_MIME_TYPES,
+          maxSizeBytes: CSV_MAX_SIZE_BYTES,
+        });
+        if (!validation.valid) {
+          setParseError(validation.error);
+          setLoading(false); return;
+        }
         await loadCdnScript('https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js');
         const text = await file.text();
         const result = window.Papa.parse(text, { header:true, skipEmptyLines:true });
         rows = result.data;
       } else if (ext === 'xlsx' || ext === 'xls') {
+        const validation = await validateFile(file, {
+          allowedMimeTypes: SPREADSHEET_ALLOWED_MIME_TYPES,
+          maxSizeBytes: SPREADSHEET_MAX_SIZE_BYTES,
+        });
+        if (!validation.valid) {
+          setParseError(validation.error);
+          setLoading(false); return;
+        }
         await loadCdnScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
         const ab = await file.arrayBuffer();
         const wb = window.XLSX.read(ab, { type:'array', cellDates:true });

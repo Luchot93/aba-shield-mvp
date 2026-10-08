@@ -90,7 +90,9 @@ gated(FLAGS.REASSESSMENT)('Reassessment — Submission Checklist (Reauth tab)', 
     await page.locator('input[type="file"]').setInputFiles({
       name: 'Sofia_Final_Report.pdf',
       mimeType: 'application/pdf',
-      buffer: Buffer.from('mock pdf'),
+      // Must start with the real %PDF magic bytes — validateFile.js (ACD-91)
+      // sniffs the header and rejects a mislabeled/corrupted file otherwise.
+      buffer: Buffer.from('%PDF-1.4\nmock pdf'),
     });
     await expect(page.getByText('Ready for reauthorization submission')).toBeVisible();
   });

@@ -18,6 +18,7 @@ import PlanDraftPreview, { TreatmentPlanDownload } from './PlanDraftPreview.jsx'
 import { generateDenialCycleRecord } from './lib/denialCycleExport.js';
 import { buildGraphsFromSession } from '../../features/assessment/graphBuilder.js';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock.js';
+import { validateFile, DOCUMENT_ALLOWED_MIME_TYPES, DOCUMENT_MAX_SIZE_BYTES } from '../../utils/validateFile.js';
 import ReassessmentCyclePanel, { ReauthSubmissionChecklist } from './ReassessmentCyclePanel.jsx';
 import ServiceSessionProgressPanel from '../sessions/components/ServiceSessionProgressPanel.jsx';
 import SkillSessionProgressPanel from '../sessions/components/SkillSessionProgressPanel.jsx';
@@ -151,6 +152,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
   const [openPicker,     setOpenPicker]     = useState(null);
   const [pickerAnchor,   setPickerAnchor]   = useState(null); // { top, left, role, pid, pool, item }
   const [formDrafts,     setFormDrafts]     = useState({});
+  const [fileUploadErrors, setFileUploadErrors] = useState({});
   const [savedFields,    setSavedFields]    = useState(new Set());
   const [schedEdit,      setSchedEdit]      = useState(false);
   const [schedDraft,     setSchedDraft]     = useState({ schedule_template:'', session_location:'' });
@@ -673,6 +675,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
 
             {item.type === 'file_upload' && (() => {
               const orSatisfied = item.orClientField && client[item.orClientField] === true;
+              const fileError = fileUploadErrors[item.key];
               return (
                 <div>
                 <div className="flex items-center justify-between gap-3">
@@ -700,9 +703,23 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                               type="file"
                               accept={item.accept ?? '.docx,.pdf'}
                               className="hidden"
-                              onChange={e => {
+                              onChange={async e => {
                                 const file = e.target.files?.[0];
                                 if (!file) return;
+                                const result = await validateFile(file, {
+                                  allowedMimeTypes: DOCUMENT_ALLOWED_MIME_TYPES,
+                                  maxSizeBytes: DOCUMENT_MAX_SIZE_BYTES,
+                                });
+                                if (!result.valid) {
+                                  setFileUploadErrors(prev => ({ ...prev, [item.key]: result.error }));
+                                  e.target.value = '';
+                                  return;
+                                }
+                                setFileUploadErrors(prev => {
+                                  const next = { ...prev };
+                                  delete next[item.key];
+                                  return next;
+                                });
                                 patchCL(item.clSec, item.key, true);
                                 pushDocUpload(file, item.docType ?? item.key, item.label);
                                 pushLog(`Uploaded: ${item.label} — ${file.name}`);
@@ -712,6 +729,14 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                   }
                 </div>
                 {item.sublabel && (<p className="mt-1 text-[11px] text-slate-400 leading-snug">{item.sublabel}</p>)}
+                {fileError && (
+                  <p className="mt-1 text-[11px] text-red-600 font-medium flex items-center gap-1">
+                    <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+                    </svg>
+                    {fileError}
+                  </p>
+                )}
                 {!readOnly && clVal !== true && !orSatisfied && NAToggle}
                 </div>
               );

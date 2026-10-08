@@ -6,6 +6,10 @@ import { useBodyScrollLock } from '../../../hooks/useBodyScrollLock.js';
 import { supabase } from '../../../lib/supabase.js';
 import { updateStaff } from '../../../lib/db.js';
 import { extractFunctionError, friendlyInviteError } from '../functionError.js';
+import {
+  validateFile, CSV_ALLOWED_MIME_TYPES, CSV_MAX_SIZE_BYTES,
+  SPREADSHEET_ALLOWED_MIME_TYPES, SPREADSHEET_MAX_SIZE_BYTES,
+} from '../../../utils/validateFile.js';
 
 // ─── Role normalization ───────────────────────────────────────────────────────
 const ROLE_MAP = {
@@ -113,10 +117,26 @@ export default function BulkInvitePanel({ onClose, onImport, existingStaff }) {
       let rows = [];
 
       if (ext === 'csv') {
+        const validation = await validateFile(file, {
+          allowedMimeTypes: CSV_ALLOWED_MIME_TYPES,
+          maxSizeBytes: CSV_MAX_SIZE_BYTES,
+        });
+        if (!validation.valid) {
+          setParseError(validation.error);
+          setLoading(false); return;
+        }
         await loadCdnScript('https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js');
         const text = await file.text();
         rows = window.Papa.parse(text, { header: true, skipEmptyLines: true }).data;
       } else if (ext === 'xlsx' || ext === 'xls') {
+        const validation = await validateFile(file, {
+          allowedMimeTypes: SPREADSHEET_ALLOWED_MIME_TYPES,
+          maxSizeBytes: SPREADSHEET_MAX_SIZE_BYTES,
+        });
+        if (!validation.valid) {
+          setParseError(validation.error);
+          setLoading(false); return;
+        }
         await loadCdnScript('https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js');
         const ab = await file.arrayBuffer();
         const wb = window.XLSX.read(ab, { type: 'array', cellDates: true });

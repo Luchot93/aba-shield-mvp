@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { validateFile, DOCUMENT_ALLOWED_MIME_TYPES, DOCUMENT_MAX_SIZE_BYTES } from '../../utils/validateFile.js';
 import {
   LineChart,
   Line,
@@ -1235,8 +1236,25 @@ function CheckItem({ checked, onChange, label, sublabel }) {
 
 export function ReauthSubmissionChecklist({ checklist, onChange, onUpload }) {
   const { vineland = false, basc = false, finalUploaded = false } = checklist ?? {};
+  const [fileError, setFileError] = useState(null);
 
   const allDone = vineland && basc && finalUploaded;
+
+  const handleUpload = async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const result = await validateFile(file, {
+      allowedMimeTypes: DOCUMENT_ALLOWED_MIME_TYPES,
+      maxSizeBytes: DOCUMENT_MAX_SIZE_BYTES,
+    });
+    if (!result.valid) {
+      setFileError(result.error);
+      e.target.value = '';
+      return;
+    }
+    setFileError(null);
+    onUpload(e);
+  };
 
   return (
     <div className="mt-6 pt-5 border-t border-stone-100">
@@ -1288,7 +1306,7 @@ export function ReauthSubmissionChecklist({ checklist, onChange, onUpload }) {
           </span>
         ) : (
           <label className="flex-shrink-0 ml-3 cursor-pointer">
-            <input type="file" accept=".pdf,.docx" className="hidden" onChange={onUpload} />
+            <input type="file" accept=".pdf,.docx" className="hidden" onChange={handleUpload} />
             <span className="flex items-center gap-1.5 text-[11px] font-semibold text-teal-700 bg-white border border-teal-300 hover:bg-teal-50 px-3 py-1.5 rounded-lg transition-colors">
               <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
                 <path d="M6 1v7M3 5l3-3 3 3M1 10h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
@@ -1298,6 +1316,14 @@ export function ReauthSubmissionChecklist({ checklist, onChange, onUpload }) {
           </label>
         )}
       </div>
+      {fileError && (
+        <p className="mt-1.5 text-[11px] text-red-600 font-medium flex items-center gap-1">
+          <svg className="w-3 h-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd"/>
+          </svg>
+          {fileError}
+        </p>
+      )}
     </div>
   );
 }

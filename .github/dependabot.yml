@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+    groups:
+      # Patch/minor bumps are low-risk — batch them into one PR to cut down on noise.
+      # Majors are left out of this group so Dependabot opens an individual PR per
+      # major bump, since those are the ones most likely to need manual review.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"

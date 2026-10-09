@@ -15,4 +15,10 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # Scoped to production dependencies only: devDependencies (tailwindcss/vite toolchain)
+      # have pre-existing high-severity findings tracked separately in ACD-115, so including
+      # them here would fail every build on day one. --audit-level=high only fails on
+      # high/critical findings — moderate/low are too noisy to act on yet; lower this once
+      # the backlog in ACD-115 is cleared.
+      - run: npm audit --omit=dev --audit-level=high
       - run: npm run build

@@ -16,6 +16,57 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const PROFILE_ROLES = ['admin', 'bcba', 'bcaba', 'rbt']
 
+// Basic plausibility checks, not full RFC/format validation -- ACD-92 (E3)
+// asks for exactly that: reject obviously malformed input before it ever
+// reaches the Admin API, not exhaustively validate every edge case.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const CERT_NUMBER_RE = /^[A-Za-z0-9\- /]{1,50}$/
+const NPI_RE = /^\d{10}$/
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+function isValidDateString(value: string): boolean {
+  if (!DATE_RE.test(value)) return false
+  return !Number.isNaN(new Date(value).getTime())
+}
+
+// Validates the full invite payload up front so the request is rejected
+// with one 400 instead of partially applying (e.g. creating the auth user,
+// then failing on a malformed npi while inserting the staff row).
+function validateInvitePayload(payload: {
+  name?: string
+  email?: string
+  role?: string
+  cert_number?: string
+  npi?: string
+  hire_date?: string
+}): string | null {
+  const { name, email, role, cert_number, npi, hire_date } = payload
+
+  if (!name || !email) return 'name and email are required'
+  if (!EMAIL_RE.test(email)) return 'email is not a valid email address'
+  if (role && !PROFILE_ROLES.includes(role)) return `role must be one of: ${PROFILE_ROLES.join(', ')}`
+  if (cert_number && !CERT_NUMBER_RE.test(cert_number)) return 'cert_number is not a valid format'
+  if (npi && !NPI_RE.test(npi)) return 'npi must be exactly 10 digits'
+  if (hire_date && !isValidDateString(hire_date)) return 'hire_date must be a valid date (YYYY-MM-DD)'
+
+  return null
+}
+
+// Audit trail for admin actions on staff (ACD-92 / AC 2). Separate table
+// from the client-scoped `activity_log` -- see the ACD-92 migration note.
+// Logging failure should never fail the admin action itself; the error is
+// surfaced via console so it's visible in function logs for troubleshooting
+// without ever including request secrets.
+async function logStaffActivity(
+  admin: ReturnType<typeof createClient>,
+  actorId: string,
+  action: 'invite' | 'revoke',
+  detail: Record<string, unknown>
+) {
+  const { error } = await admin.from('staff_activity_log').insert({ actor_id: actorId, action, detail })
+  if (error) console.error('staff_activity_log insert failed:', error.message)
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -64,12 +115,16 @@ Deno.serve(async req => {
   }
 
   const { action } = payload
-  if (action === 'invite') return handleInvite(admin, payload)
-  if (action === 'revoke') return handleRevoke(admin, payload)
+  if (action === 'invite') return handleInvite(admin, payload, callerData.user.id)
+  if (action === 'revoke') return handleRevoke(admin, payload, callerData.user.id)
   return jsonResponse({ error: 'action must be "invite" or "revoke"' }, 400)
 })
 
-async function handleInvite(admin: ReturnType<typeof createClient>, payload: Record<string, unknown>) {
+async function handleInvite(
+  admin: ReturnType<typeof createClient>,
+  payload: Record<string, unknown>,
+  actorId: string
+) {
   const { name, email, phone, role, cert_number, cert_expiry, npi, hire_date } = payload as {
     name?: string
     email?: string
@@ -81,12 +136,10 @@ async function handleInvite(admin: ReturnType<typeof createClient>, payload: Rec
     hire_date?: string
   }
 
-  if (!name || !email) return jsonResponse({ error: 'name and email are required' }, 400)
-  if (role && !PROFILE_ROLES.includes(role)) {
-    return jsonResponse({ error: `role must be one of: ${PROFILE_ROLES.join(', ')}` }, 400)
-  }
+  const validationError = validateInvitePayload({ name, email, role, cert_number, npi, hire_date })
+  if (validationError) return jsonResponse({ error: validationError }, 400)
 
-  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email)
+  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email!)
   if (inviteError || !inviteData?.user) {
     return jsonResponse({ error: inviteError?.message ?? 'invite failed' }, 400)
   }
@@ -140,6 +193,8 @@ async function handleInvite(admin: ReturnType<typeof createClient>, payload: Rec
     }
   }
 
+  await logStaffActivity(admin, actorId, 'invite', { staff_id: staffRow.id, email })
+
   return jsonResponse({ staff: staffRow })
 }
 
@@ -149,13 +204,17 @@ async function handleInvite(admin: ReturnType<typeof createClient>, payload: Rec
 // staff.user_id -> auth.users is ON DELETE NO ACTION, so the staff row must
 // be deleted BEFORE the auth user, or the auth delete fails with a DB error
 // because the staff row still references it.
-async function handleRevoke(admin: ReturnType<typeof createClient>, payload: Record<string, unknown>) {
+async function handleRevoke(
+  admin: ReturnType<typeof createClient>,
+  payload: Record<string, unknown>,
+  actorId: string
+) {
   const { staffId } = payload as { staffId?: string }
   if (!staffId) return jsonResponse({ error: 'staffId is required' }, 400)
 
   const { data: staffRow, error: staffLookupError } = await admin
     .from('staff')
-    .select('id, user_id')
+    .select('id, user_id, email')
     .eq('id', staffId)
     .single()
 
@@ -172,6 +231,8 @@ async function handleRevoke(admin: ReturnType<typeof createClient>, payload: Rec
     const { error: deleteUserError } = await admin.auth.admin.deleteUser(staffRow.user_id)
     if (deleteUserError) return jsonResponse({ error: `staff record removed but account deletion failed: ${deleteUserError.message}` }, 500)
   }
+
+  await logStaffActivity(admin, actorId, 'revoke', { staff_id: staffRow.id, email: staffRow.email })
 
   return jsonResponse({ success: true })
 }

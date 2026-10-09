@@ -5,6 +5,14 @@
 // see notifyByEmail() in src/utils/notifications.js. The caller never awaits
 // the result, so failures here must not throw -- they get logged and
 // returned as { success: false } instead.
+//
+// ACD-92 (E3): this function runs with the service role key, which bypasses
+// the RLS "select own" policy on email_notifications -- so unlike most
+// tables here, there was no server-side gate at all on who could trigger a
+// send. Added below: require a valid Supabase JWT (same check manage-staff
+// uses) and confirm the caller is the recipient themselves, an admin, or the
+// assigned BCBA/RBT for the referenced client -- mirroring the same
+// visibility rule RLS already enforces for reading these rows.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -24,6 +32,14 @@ function jsonResponse(body: unknown, status = 200) {
   })
 }
 
+// Defense against email header injection: a value carrying a newline could
+// smuggle extra headers (e.g. a forged Bcc) into providers that build raw
+// headers from this field. The body stays free text per the ticket -- it's
+// sent as the message content, never placed into a header.
+function stripHeaderInjection(value: string): string {
+  return value.replace(/[\r\n]+/g, ' ').trim()
+}
+
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -31,6 +47,18 @@ Deno.serve(async req => {
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   )
+
+  // --- Auth: caller must be a logged-in user, checked again below for
+  // whether they're actually allowed to notify this particular recipient --
+  const authHeader = req.headers.get('Authorization') ?? ''
+  const jwt = authHeader.replace(/^Bearer\s+/i, '')
+  if (!jwt) return jsonResponse({ success: false, error: 'Missing Authorization header' }, 401)
+
+  const { data: callerData, error: callerError } = await supabase.auth.getUser(jwt)
+  if (callerError || !callerData?.user) {
+    return jsonResponse({ success: false, error: 'Invalid or expired session' }, 401)
+  }
+  const callerId = callerData.user.id
 
   let payload: { recipientStaffId?: string; notificationType?: string; subject?: string; body?: string; clientId?: string | null }
   try {
@@ -40,8 +68,28 @@ Deno.serve(async req => {
   }
 
   const { recipientStaffId, notificationType, subject, body, clientId = null } = payload
-  if (!recipientStaffId || !notificationType || !subject || !body) {
+  if (!recipientStaffId || !notificationType || !subject?.trim() || !body?.trim()) {
     return jsonResponse({ success: false, error: 'missing required fields' }, 400)
+  }
+  const safeSubject = stripHeaderInjection(subject)
+
+  // --- Authorization: recipient themselves, an admin, or the client's
+  // assigned BCBA/RBT (same rule RLS enforces for reading email_notifications,
+  // re-checked here because the service-role client above bypasses RLS). ---
+  const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', callerId).single()
+  const isAdmin = callerProfile?.role === 'admin'
+
+  const { data: callerStaff } = await supabase.from('staff').select('id').eq('user_id', callerId).maybeSingle()
+  const isRecipientSelf = callerStaff?.id === recipientStaffId
+
+  let isAssignedForClient = false
+  if (clientId) {
+    const { data: clientRow } = await supabase.from('clients').select('bcba_id, rbt_id').eq('id', clientId).maybeSingle()
+    isAssignedForClient = !!clientRow && (clientRow.bcba_id === callerId || clientRow.rbt_id === callerId)
+  }
+
+  if (!isAdmin && !isRecipientSelf && !isAssignedForClient) {
+    return jsonResponse({ success: false, error: 'Not authorized to send this notification' }, 403)
   }
 
   const { data: logRow, error: insertError } = await supabase
@@ -50,7 +98,7 @@ Deno.serve(async req => {
       recipient_staff_id: recipientStaffId,
       client_id: clientId,
       notification_type: notificationType,
-      subject,
+      subject: safeSubject,
       body,
       status: 'pending',
     })
@@ -85,7 +133,7 @@ Deno.serve(async req => {
         Authorization: `Bearer ${RESEND_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ from: FROM_ADDRESS, to: [staff.email], subject, text: body }),
+      body: JSON.stringify({ from: FROM_ADDRESS, to: [staff.email], subject: safeSubject, text: body }),
     })
 
     if (!resendRes.ok) {

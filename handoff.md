@@ -95,34 +95,30 @@ this file (`handoff.md`) is being touched now.
   (client c1, stage `intake`). Not a gap worth a new ticket — it's a
   property of the seeded fixtures, and the same `validateFile.js` boundary
   is already covered end-to-end via BCBA.
-- **Jira ACD-93 not yet commented or transitioned to Done** — following
-  the same pattern as ACD-92, implementation + test summary has not yet
-  been posted to the ticket, and it hasn't been moved out of its current
-  status. Deferred to whoever closes this out next (or next session, if
-  asked).
+- None this session — ACD-93 shipped clean, no walked-back requirements.
+
+Jira ACD-93 has been commented with the full implementation/test summary
+and **transitioned to Done** (resolved this session — no longer pending).
 
 ## 5. Next steps
 
-1. Decide whether to comment on Jira ACD-93 with the implementation/test
-   summary and transition it (same open question left on ACD-92 last
-   session — neither has been closed out in Jira yet).
-2. Consider deleting the now-merged `ACD-93-role-restriction-browser-tests`
-   branch (local + `origin`) — unlike `dev`/`main`, this is a disposable
-   feature branch, safe to delete post-merge, but not done automatically
-   this session since it's a destructive action outside what was asked.
-3. Carried over from ACD-92's handoff, still unstarted — **the follow-up
+1. The now-merged `ACD-93-role-restriction-browser-tests` branch (local +
+   `origin`) is safe to delete post-merge whenever convenient — unlike
+   `dev`/`main`, it's disposable. Not deleted automatically since that's a
+   destructive action outside what was explicitly asked.
+2. Carried over from ACD-92's handoff, still unstarted — **the follow-up
    re-test of `manage-staff`'s invite happy-path** once this Supabase
    project's invite emails aren't rate-limited (commented on ACD-92
    already, not a new ticket).
-4. **ACD-101** (DNS/Resend domain verification) — still To Do, unassigned,
+3. **ACD-101** (DNS/Resend domain verification) — still To Do, unassigned,
    still blocked on owning/controlling a real domain. Unchanged.
-5. This sprint's actual stated focus (per user, 2026-10-08, carried over
+4. This sprint's actual stated focus (per user, 2026-10-08, carried over
    across the last two sessions) is still **Staff, CRM Pipeline + new
    service checklist, and the standalone service session logs feature** —
    none of that has been touched in either the ACD-92 or ACD-93 sessions;
    fully unstarted from here. ACD-93's browser tests for those surfaces are
    written and gated/ready, but the features themselves are not built.
-6. Carried forward, unrelated to ACD-92/ACD-93 (pointer only, not
+5. Carried forward, unrelated to ACD-92/ACD-93 (pointer only, not
    reproduced here): the `openClientTab` Playwright helper bug, and
    everything from the ACD-82 through ACD-91 handoffs' outstanding items
    (ACD-113, ACD-112, ACD-111, ACD-109, ACD-110, ACD-100, ACD-105, ACD-106,

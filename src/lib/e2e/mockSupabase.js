@@ -9,18 +9,31 @@
 import { resetStore } from './store.js';
 
 // Shared with tests/helpers/auth.js (kept identical there; specs must not import
-// this browser module).
+// this browser module). Three fixed accounts, one per role the Playwright suite
+// needs to exercise (ACD-93) — ids match the staff fixtures in seedData.js so
+// store.getProfileFor() and the clients' bcba_id/rbt_id assignments resolve to
+// the right person.
 export const E2E_ADMIN = { email: 'admin@abashield.com', password: 'test-e2e-password' };
+export const E2E_BCBA  = { email: 'ana@abashield.com',   password: 'test-e2e-password' };
+export const E2E_RBT   = { email: 'james@abashield.com', password: 'test-e2e-password' };
 
-const ADMIN_USER = { id: 'u1', email: E2E_ADMIN.email, user_metadata: {}, app_metadata: {} };
+const USERS = [
+  { id: 'u1', ...E2E_ADMIN },
+  { id: 'u2', ...E2E_BCBA },
+  { id: 'u4', ...E2E_RBT },
+];
 
-function makeSession() {
+function toAuthUser({ id, email }) {
+  return { id, email, user_metadata: {}, app_metadata: {} };
+}
+
+function makeSession(user) {
   return {
     access_token: 'e2e-access-token',
     refresh_token: 'e2e-refresh-token',
     token_type: 'bearer',
     expires_in: 3600,
-    user: ADMIN_USER,
+    user,
   };
 }
 
@@ -36,13 +49,15 @@ export function createMockSupabaseClient() {
 
   const auth = {
     async signInWithPassword({ email, password }) {
-      if (email === E2E_ADMIN.email && password === E2E_ADMIN.password) {
-        currentSession = makeSession();
+      const match = USERS.find(u => u.email === email && u.password === password);
+      if (match) {
+        const user = toAuthUser(match);
+        currentSession = makeSession(user);
         // Real Supabase fires SIGNED_IN asynchronously AFTER signIn resolves; the
         // async tick guarantees App's onAuthStateChange listener (registered on
         // mount) receives it.
         setTimeout(() => authCb?.('SIGNED_IN', currentSession), 0);
-        return { data: { session: currentSession, user: ADMIN_USER }, error: null };
+        return { data: { session: currentSession, user }, error: null };
       }
       return {
         data: { session: null, user: null },
@@ -62,7 +77,7 @@ export function createMockSupabaseClient() {
       return { error: null };
     },
     async updateUser() {
-      return { data: { user: ADMIN_USER }, error: null };
+      return { data: { user: currentSession?.user ?? null }, error: null };
     },
   };
 

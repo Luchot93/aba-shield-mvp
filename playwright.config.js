@@ -36,5 +36,10 @@ export default defineConfig({
   // without hiding genuine hangs.
   timeout: 60_000,
   retries: CI ? 1 : 0,
+  // Serialize workers: parallel workers all hit `webServer` with `page.goto`
+  // during its cold start/first-compile window, which reliably times out
+  // multiple unrelated specs' beforeEach hooks (reproduced on pre-existing
+  // files, not just new ones). One worker avoids the race entirely.
+  workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
 });

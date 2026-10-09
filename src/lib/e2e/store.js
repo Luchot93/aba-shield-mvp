@@ -76,10 +76,15 @@ function ensureInit() {
 function nextId(prefix) { state.seq += 1; return `${prefix}-e2e-${state.seq}`; }
 
 // --- Clients (raw snake_case rows; db.js applies enrichClient) ---
+// Mirrors the production RLS policy from ACD-67 ("clients select admin or
+// assigned"): admin sees every client; everyone else only sees clients where
+// they're the assigned bcba_id or rbt_id. NOT ownership (user_id) — that
+// policy was dropped in the ACD-67 migration.
 export function listClients(userId) {
   ensureInit();
+  const isAdminUser = userId === ADMIN.id;
   return state.clients
-    .filter(c => c.user_id === userId)
+    .filter(c => isAdminUser || c.bcba_id === userId || c.rbt_id === userId)
     .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 }
 export function insertClient(row) {
@@ -104,10 +109,18 @@ export function removeClient(clientId) {
 }
 
 // --- Profile ---
+// ids/names/roles match the staff fixtures in seedData.js (u1 admin, u2 bcba,
+// u4 rbt) so the role-scoped Pipeline/Staff Playwright tests (ACD-93) see a
+// real, recognizable person rather than a generic stand-in.
+const PROFILES = {
+  u1: { role: ADMIN.role, full_name: ADMIN.full_name },
+  u2: { role: 'bcba', full_name: 'Dr. Ana Reyes' },
+  u4: { role: 'rbt', full_name: 'James Torres' },
+};
+
 export function getProfileFor(userId) {
   ensureInit();
-  if (userId === ADMIN.id) return { role: ADMIN.role, full_name: ADMIN.full_name };
-  return { role: 'bcba', full_name: 'E2E User' };
+  return PROFILES[userId] ?? { role: 'bcba', full_name: 'E2E User' };
 }
 
 // --- Assessment sessions (raw snake_case rows; db.js applies fromDbRow) ---

@@ -125,7 +125,7 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
         {/* Modal header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
           <h2 className="text-lg font-bold text-slate-900" style={{ fontFamily:'Syne, sans-serif' }}>New Client</h2>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-stone-100 text-slate-500">
+          <button onClick={onClose} aria-label="Close" className="p-1.5 rounded-lg hover:bg-stone-100 text-slate-500">
             <Ico.X/>
           </button>
         </div>
@@ -185,7 +185,7 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
                   data-testid="add-to-pipeline-btn"
                   onClick={() => { onAddToPipeline(dirClient); onClose(); }}
                   className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg hover:opacity-90"
-                  style={{ background:'#0D9488' }}>
+                  style={{ background:'#0F766E' }}>
                   + Add to Pipeline
                 </button>
                 <button
@@ -223,7 +223,7 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
 
           {/* ── Client demographics ── */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2.5">Client</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2.5">Client</p>
             <div className="grid grid-cols-2 gap-3">
               {[
                 { key:'name',               label:'Client Name',        type:'text',  required:true,  col:'col-span-2' },
@@ -243,10 +243,11 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
                 { key:'referring_provider_phone',label:'Referring Provider Phone', type:'tel',   required:false, col:'',  placeholder:'(555) 000-0000' },
               ].map(({ key, label, type, required, col, placeholder }) => (
                 <div key={key} className={col}>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                  <label htmlFor={`nc-field-${key}`} className="block text-xs font-semibold text-slate-600 mb-1">
                     {label}{required && <span className="text-red-500 ml-0.5">*</span>}
                   </label>
                   <input
+                    id={`nc-field-${key}`}
                     type={type}
                     value={form[key]}
                     onChange={e => setField(key, e.target.value)}
@@ -262,16 +263,16 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
 
           {/* ── Parent / Guardian ── */}
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2.5">Parent / Guardian</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2.5">Parent / Guardian</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
-                <input type="text" value={form.parent_name} onChange={e => setField('parent_name', e.target.value)}
+                <label htmlFor="nc-parent_name" className="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
+                <input id="nc-parent_name" type="text" value={form.parent_name} onChange={e => setField('parent_name', e.target.value)}
                   placeholder="Parent or guardian full name" className={INP} data-testid="field-parent_name"/>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Relationship</label>
-                <select value={form.parent_relationship} onChange={e => setField('parent_relationship', e.target.value)}
+                <label htmlFor="nc-parent_relationship" className="block text-xs font-semibold text-slate-600 mb-1">Relationship</label>
+                <select id="nc-parent_relationship" value={form.parent_relationship} onChange={e => setField('parent_relationship', e.target.value)}
                   className={INP} data-testid="field-parent_relationship">
                   <option value="">Select…</option>
                   <option>Mother</option>
@@ -283,8 +284,8 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Preferred Language</label>
-                <select value={form.preferred_language} onChange={e => setField('preferred_language', e.target.value)}
+                <label htmlFor="nc-preferred_language" className="block text-xs font-semibold text-slate-600 mb-1">Preferred Language</label>
+                <select id="nc-preferred_language" value={form.preferred_language} onChange={e => setField('preferred_language', e.target.value)}
                   className={INP} data-testid="field-preferred_language">
                   <option value="English">English</option>
                   <option value="Spanish">Spanish</option>
@@ -296,9 +297,9 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
                 </select>
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <label htmlFor="nc-parent_email" className="block text-xs font-semibold text-slate-600 mb-1">
                   Email
-                  <span className="ml-1 font-normal text-slate-400">(stage-change notifications)</span>
+                  <span className="ml-1 font-normal text-slate-600">(stage-change notifications)</span>
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
@@ -306,7 +307,7 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                     </svg>
                   </span>
-                  <input type="email" value={form.parent_email} onChange={e => setField('parent_email', e.target.value)}
+                  <input id="nc-parent_email" type="email" value={form.parent_email} onChange={e => setField('parent_email', e.target.value)}
                     placeholder="parent@email.com" className={`${INP} pl-9`} data-testid="field-parent_email"/>
                 </div>
               </div>
@@ -329,8 +330,8 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
                 />
                 <div className="w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
                   style={{
-                    background: form.createPipelineEntry ? '#0D9488' : 'white',
-                    borderColor: form.createPipelineEntry ? '#0D9488' : '#CBD5E1',
+                    background: form.createPipelineEntry ? '#0F766E' : 'white',
+                    borderColor: form.createPipelineEntry ? '#0F766E' : '#CBD5E1',
                   }}>
                   {form.createPipelineEntry && (
                     <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
@@ -341,7 +342,7 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-800">Add to pipeline</p>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-slate-600 mt-0.5">
                   {form.createPipelineEntry
                     ? 'Client will be created and placed in the Intake stage of the pipeline.'
                     : 'Client will be saved to the directory only — no pipeline entry created.'}
@@ -359,7 +360,7 @@ export default function NewClientModal({ clients, onSave, onClose, onOpenClient,
           </button>
           <button onClick={handleSave} data-testid="save-client"
             className="px-5 py-2 text-sm font-semibold text-white rounded-lg transition-all hover:opacity-90 active:scale-95"
-            style={{ background:'#0D9488' }}>
+            style={{ background:'#0F766E' }}>
             {form.createPipelineEntry ? 'Save & Add to Pipeline' : 'Save to Directory'}
           </button>
         </div>

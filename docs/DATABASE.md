@@ -37,7 +37,7 @@ Eight tables. Seven are used in Alpha; one ships dormant for Phase 2 (gated by `
 | `clients`              | Client/patient demographics + intake. Phase-2 pipeline columns present but null in Alpha. | Alpha |
 | `assessment_sessions`  | Initial-assessment interview state, AI draft content, approvals, exported docs. | Alpha |
 | `profiles`             | One row per auth user; `role` (admin/bcba/bcaba/rbt), auto-created on signup. Drives permissions. | Alpha |
-| `rate_limits`          | Per-user/endpoint/hour counter guarding `/api/generate`. No client access; touched only by the `check_rate_limit` definer function. | Alpha |
+| `rate_limits`          | Per-user/endpoint/hour counter guarding `/api/generate`, `/api/generate-definition`, and the `manage-staff`/`send-notification-email` Edge Functions. No client access; touched only by the `check_rate_limit` definer function. | Alpha |
 | `behavior_session_logs` | Behavior-target session logging (Service Sessions page). | Alpha |
 | `skill_session_logs`   | Skill-goal session logging (Service Sessions page).            | Alpha |
 | `caregiver_training_session_logs` | Caregiver-training session logging (Service Sessions page). | Alpha |
@@ -53,6 +53,48 @@ All eight have RLS enabled. Access is scoped to the owning user (`auth.uid()`).
 > Note: the ACD-48 baseline dump (`..._baseline_remote_schema.sql`) emits `CREATE TABLE`
 > for only the four core app tables; `profiles` and `rate_limits` are created by their own
 > earlier migrations. All six exist in the live database.
+
+### Rate limiting — `check_rate_limit` (ACD-35, extended in ACD-95)
+
+One Postgres function (`public.check_rate_limit(p_user_id uuid, p_endpoint text, p_max_calls integer)`,
+`SECURITY DEFINER`, defined in `supabase/migrations/20260713201033_rate_limits.sql`) backs every
+rate limit in the app. It atomically increments the caller's current-hour window in `rate_limits`
+and returns `true`/`false` for under/over the cap; callers are fail-open (an RPC error is logged
+and treated as allowed — a limiter outage must never block clinical work).
+
+| Caller | Runtime | Helper | Endpoint key | Limit/hour |
+|--------|---------|--------|--------------|------------|
+| `api/generate.js` | Vercel (Node) | `api/_lib/rateLimit.js` | `generate` | 30 |
+| `api/generate-definition.js` | Vercel (Node) | `api/_lib/rateLimit.js` | `generate-definition` | 60 |
+| `supabase/functions/manage-staff` | Supabase Edge Function (Deno) | `supabase/functions/_shared/rateLimit.ts` | `manage-staff` | 20 |
+| `supabase/functions/send-notification-email` | Supabase Edge Function (Deno) | `supabase/functions/_shared/rateLimit.ts` | `send-notification-email` | 200 |
+
+There are two helpers with the identical RPC-call pattern, not one shared file, because Vercel's
+`api/` functions run on Node and Supabase Edge Functions run on Deno — `api/_lib/rateLimit.js`
+can't be imported from `supabase/functions/`. `manage-staff`'s 20/hour reflects that invite/revoke
+are rare, deliberate admin actions; `send-notification-email`'s 200/hour is set much higher because
+it fires on every stage change and checklist completion across all staff, so normal volume is
+already higher than `manage-staff`'s.
+
+**Grants**: the migration runs `revoke execute ... from anon, public` and `grant execute ... to
+authenticated`, but never mentions `service_role` — both Edge Functions call the RPC through their
+existing `service_role`-keyed admin client, not a user-context client. This works because
+`service_role` already carries `EXECUTE` on every `public` function via Supabase's default
+privilege grants, which were never revoked here. Verified directly against the production project
+(`qravuejkiluimaihhbrf`) via `information_schema.routine_privileges`:
+
+```
+grantee        | privilege_type
+---------------+---------------
+postgres       | EXECUTE
+authenticated  | EXECUTE
+service_role   | EXECUTE
+```
+
+So no grant changes or auth-context rework were needed to extend rate limiting to the Edge
+Functions — confirm this still holds (`select grantee, privilege_type from
+information_schema.routine_privileges where routine_name = 'check_rate_limit';`) if a future
+migration ever touches these grants.
 
 ### JSONB design note — `assessment_sessions.sections`
 

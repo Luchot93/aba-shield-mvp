@@ -15,6 +15,13 @@
 // visibility rule RLS already enforces for reading these rows.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { checkRateLimit } from '../_shared/rateLimit.ts'
+
+// ACD-95: this fires on every stage change and checklist completion across
+// every staff member, so its cap needs to be much higher than manage-staff's
+// -- 200/hour is well above legitimate volume but still bounds a runaway
+// loop or compromised session from turning into an email-spam vector.
+const RATE_LIMIT_MAX_CALLS = 200
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 // TODO: swap for the real verified sending domain once one exists in Resend.
@@ -90,6 +97,12 @@ Deno.serve(async req => {
 
   if (!isAdmin && !isRecipientSelf && !isAssignedForClient) {
     return jsonResponse({ success: false, error: 'Not authorized to send this notification' }, 403)
+  }
+
+  // --- Rate limit: cap notification sends per caller per hour -------------
+  const allowed = await checkRateLimit(supabase, callerId, 'send-notification-email', RATE_LIMIT_MAX_CALLS)
+  if (!allowed) {
+    return jsonResponse({ success: false, error: 'Too many requests — please slow down and try again shortly.' }, 429)
   }
 
   const { data: logRow, error: insertError } = await supabase

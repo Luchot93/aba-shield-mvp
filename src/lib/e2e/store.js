@@ -6,7 +6,7 @@
 // statically false — Rollup tree-shakes this module out entirely. All seeding,
 // localStorage access, and the production guard live inside functions that only
 // run when a db.js function is actually called, which only happens when IS_E2E.
-import { SEED_CLIENTS } from '../../constants/seedData.js';
+import { SEED_CLIENTS, SEED_STAFF } from '../../constants/seedData.js';
 
 const LS_KEY = 'aba_e2e_store';
 const ADMIN = { id: 'u1', full_name: 'Admin User', email: 'admin@abashield.com', role: 'admin' };
@@ -37,6 +37,10 @@ function sessionToDbRow(s, clientId) {
   };
 }
 
+// Staff rows keyed by `id` (matches how client.bcba_id/rbt_id are compared
+// directly against staff ids elsewhere in the app — seed fixtures have no
+// separate user_id). `user_id` is added as an alias of `id` so getStaffByUserIds'
+// `.in('user_id', ids)` filter (mirrored here) resolves the same records.
 function freshSeed() {
   const seeds = SEED_CLIENTS();
   const base = Date.UTC(2026, 0, 1, 0, 0, 0);
@@ -48,7 +52,8 @@ function freshSeed() {
     clients.push({ ...rest, user_id: ADMIN.id, created_at: new Date(base - i * 60000).toISOString() });
     if (assessment_session) sessions.push(sessionToDbRow(assessment_session, c.id));
   });
-  return { clients, sessions, seq: 0 };
+  const staff = SEED_STAFF().map(s => ({ ...s, user_id: s.id }));
+  return { clients, sessions, staff, activityLog: [], seq: 0 };
 }
 
 let state = null;
@@ -70,6 +75,14 @@ function ensureInit() {
   if (!state || !Array.isArray(state.clients)) {
     state = freshSeed();
     persist();
+  } else {
+    // Backfill: a store persisted before the staff/activityLog fields existed
+    // (e.g. a browser profile with older localStorage) won't have them —
+    // add without wiping already-seeded clients/sessions.
+    let changed = false;
+    if (!Array.isArray(state.staff)) { state.staff = SEED_STAFF().map(s => ({ ...s, user_id: s.id })); changed = true; }
+    if (!Array.isArray(state.activityLog)) { state.activityLog = []; changed = true; }
+    if (changed) persist();
   }
 }
 
@@ -145,6 +158,62 @@ export function updateSession(sessionId, patch) {
   const s = state.sessions.find(x => x.id === sessionId);
   if (s) Object.assign(s, patch);
   persist();
+}
+
+// --- Staff (raw rows; mirrors the real `staff` table) ---
+export function listStaff() {
+  ensureInit();
+  // Return a copy, not the live array reference: getStaff() -> App.jsx stores this
+  // directly in React state, and handleInvite's optimistic setStaff(prev => [...prev, row])
+  // closes over that same `prev` array. If this returned the live reference, a later
+  // insertStaffRow() push (which mutates state.staff in place) would already be reflected
+  // in `prev` by the time the optimistic append ran, duplicating the just-invited row.
+  return [...state.staff];
+}
+export function insertStaffRow(row) {
+  ensureInit();
+  const id = row.id ?? nextId('staff');
+  const rec = { status: 'pending', ...row, id, user_id: row.user_id ?? id };
+  state.staff.push(rec);
+  persist();
+  return rec;
+}
+export function updateStaffRow(staffId, patch) {
+  ensureInit();
+  const s = state.staff.find(x => x.id === staffId);
+  if (!s) return null;
+  Object.assign(s, patch);
+  persist();
+  return s;
+}
+export function removeStaffRow(staffId) {
+  ensureInit();
+  state.staff = state.staff.filter(s => s.id !== staffId);
+  persist();
+}
+export function staffByUserIds(userIds) {
+  ensureInit();
+  const ids = new Set(userIds);
+  return state.staff.filter(s => ids.has(s.user_id));
+}
+
+// --- Clients: patch (mirrors updateClient) ---
+export function updateClientRow(clientId, patch) {
+  ensureInit();
+  const c = state.clients.find(x => x.id === clientId);
+  if (!c) return null;
+  Object.assign(c, patch);
+  persist();
+  return c;
+}
+
+// --- Activity log (raw rows; mirrors the real `activity_log` table) ---
+export function insertActivityLog(row) {
+  ensureInit();
+  const rec = { id: nextId('activity'), created_at: new Date().toISOString(), ...row };
+  state.activityLog.push(rec);
+  persist();
+  return rec;
 }
 
 // Test hook: wipe persisted store + reseed for per-test isolation. Registered on

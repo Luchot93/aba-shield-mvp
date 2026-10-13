@@ -367,12 +367,14 @@ export async function updateAssessmentSession(sessionId, patch) {
 }
 
 export async function getStaff() {
+  if (IS_E2E) return store.listStaff()
   const { data, error } = await supabase.from('staff').select('*')
   if (error) throw error
   return data
 }
 
 export async function createStaff(staffData) {
+  if (IS_E2E) return store.insertStaffRow(staffData)
   const { data, error } = await supabase
     .from('staff')
     .insert(staffData)
@@ -385,6 +387,7 @@ export async function createStaff(staffData) {
 export async function getStaffByUserIds(userIds) {
   const ids = [...new Set(userIds.filter(Boolean))]
   if (!ids.length) return []
+  if (IS_E2E) return store.staffByUserIds(ids)
   const { data, error } = await supabase.from('staff').select('*').in('user_id', ids)
   if (error) throw error
   return data
@@ -401,6 +404,7 @@ export async function getAdminStaff() {
 }
 
 export async function updateStaff(staffId, patch) {
+  if (IS_E2E) return store.updateStaffRow(staffId, patch)
   const { data, error } = await supabase
     .from('staff')
     .update(patch)
@@ -412,6 +416,7 @@ export async function updateStaff(staffId, patch) {
 }
 
 export async function updateClient(clientId, patch) {
+  if (IS_E2E) return store.updateClientRow(clientId, patch)
   const { data, error } = await supabase
     .from('clients')
     .update(patch)
@@ -446,6 +451,7 @@ export async function getSentEmailNotifications(clientIds) {
 
 export async function logActivity(clientId, action, detail) {
   const { data: { user } } = await supabase.auth.getUser()
+  if (IS_E2E) return store.insertActivityLog({ client_id: clientId, actor_id: user?.id ?? null, action, ...(detail ? { detail } : {}) })
   const { data, error } = await supabase
     .from('activity_log')
     .insert({ client_id: clientId, actor_id: user?.id ?? null, action, ...(detail ? { detail } : {}) })
@@ -457,6 +463,7 @@ export async function logActivity(clientId, action, detail) {
 
 export async function getBehaviorSessionLogsByClientIds(clientIds) {
   if (!clientIds.length) return []
+  if (IS_E2E) return []
   const { data, error } = await supabase
     .from('behavior_session_logs')
     .select('*')
@@ -469,6 +476,7 @@ export async function getBehaviorSessionLogsByClientIds(clientIds) {
 
 export async function getSkillSessionLogsByClientIds(clientIds) {
   if (!clientIds.length) return []
+  if (IS_E2E) return []
   const { data, error } = await supabase
     .from('skill_session_logs')
     .select('*')
@@ -481,6 +489,7 @@ export async function getSkillSessionLogsByClientIds(clientIds) {
 
 export async function getCaregiverTrainingSessionLogsByClientIds(clientIds) {
   if (!clientIds.length) return []
+  if (IS_E2E) return []
   const { data, error } = await supabase
     .from('caregiver_training_session_logs')
     .select('*')

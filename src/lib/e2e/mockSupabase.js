@@ -6,7 +6,7 @@
 //
 // Loaded ONLY when IS_E2E is true (supabase.js ternary), so this file — and its
 // import of ./store.js — never executes in a production build.
-import { resetStore } from './store.js';
+import { resetStore, insertStaffRow, removeStaffRow, listStaff } from './store.js';
 
 // Shared with tests/helpers/auth.js (kept identical there; specs must not import
 // this browser module). Three fixed accounts, one per role the Playwright suite
@@ -67,6 +67,9 @@ export function createMockSupabaseClient() {
     async getSession() {
       return { data: { session: currentSession }, error: null };
     },
+    async getUser() {
+      return { data: { user: currentSession?.user ?? null }, error: null };
+    },
     onAuthStateChange(cb) {
       authCb = cb;
       return { data: { subscription: { unsubscribe() { authCb = null; } } } };
@@ -89,5 +92,57 @@ export function createMockSupabaseClient() {
     },
   };
 
-  return { auth, storage };
+  // Mocks the `manage-staff` edge function (invite/revoke) closely enough for
+  // the happy + validation-error paths exercised by StaffPage.jsx and
+  // BulkInvitePanel.jsx to behave like production. See functionError.js for
+  // the error-message strings these responses are translated into.
+  const ALLOWED_ROLES = ['admin', 'bcba', 'bcaba', 'rbt'];
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const NPI_RE = /^\d{10}$/;
+
+  function manageStaffInvite(body) {
+    const { name, email, phone, role, cert_number, cert_expiry, npi, hire_date } = body;
+    if (!name || !email) return { data: null, error: { message: 'name and email are required' } };
+    if (!EMAIL_RE.test(email)) return { data: null, error: { message: 'invalid email address' } };
+    if (!ALLOWED_ROLES.includes(role)) {
+      return { data: null, error: { message: `role must be one of ${ALLOWED_ROLES.join(', ')}` } };
+    }
+    if (npi && !NPI_RE.test(npi)) return { data: null, error: { message: 'npi must be exactly 10 digits' } };
+    if (listStaff().some(s => s.email === email)) {
+      return { data: null, error: { message: 'a staff member with that email is already registered' } };
+    }
+    const rec = insertStaffRow({
+      name, email, phone: phone ?? '', role,
+      cert_number: cert_number ?? '', cert_expiry: cert_expiry || null,
+      npi: npi ?? '', hire_date: hire_date || null,
+      status: 'pending',
+    });
+    return { data: { staff: rec }, error: null };
+  }
+
+  function manageStaffRevoke(body) {
+    const { staffId } = body;
+    if (!staffId) return { data: null, error: { message: 'staffId is required' } };
+    if (!listStaff().some(s => s.id === staffId)) {
+      return { data: null, error: { message: 'staff record not found' } };
+    }
+    removeStaffRow(staffId);
+    return { data: { success: true }, error: null };
+  }
+
+  const functions = {
+    async invoke(name, opts) {
+      const body = opts?.body ?? {};
+      if (name === 'manage-staff') {
+        if (body.action === 'invite') return manageStaffInvite(body);
+        if (body.action === 'revoke') return manageStaffRevoke(body);
+        return { data: null, error: { message: `unknown action: ${body.action}` } };
+      }
+      // Other functions (e.g. send-notification-email) are fire-and-forget
+      // in every caller — a safe no-op success keeps those call sites quiet.
+      return { data: { success: true }, error: null };
+    },
+  };
+
+  return { auth, storage, functions };
 }

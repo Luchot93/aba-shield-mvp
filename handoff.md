@@ -4,63 +4,96 @@ _Last updated: 2026-10-13_
 
 ## 1. Goal we are moving towards
 
-ACD-96 ("E7: Run the data-access security tests automatically on every
-code change") — E1 (ACD-90) created `test:rls`, a Node-based test suite
-proving the role-scoped RLS model actually enforces admin-vs-assigned
-data access. It had to be run by hand, so a regression could land
-without anyone noticing. This story wires `test:rls` into CI so it runs
-automatically on every PR/push to `main`/`dev`, fails the check clearly
-on a real failure, and never silently no-ops if its secrets are missing
-— a green check here must mean the suite actually ran against real
-Postgres RLS policies, not that it skipped.
+ACD-97 ("E8: Add automated accessibility tests") — some staff and
+clients' family members rely on screen readers or other assistive
+technology. This story adds automated accessibility scans (axe-core,
+run inside the existing Playwright suite) against the app's key live
+pages, so screen-reader-blocking problems (missing labels, poor color
+contrast, unreachable buttons) are caught before they ship instead of
+discovered by a user. Per the ticket's acceptance criteria, fixing
+every issue found wasn't required to close the story — only that
+critical/serious issues be visibly tracked. In practice we chose to fix
+the critical/serious issues outright so the suite's assertion could be
+strict (fail the build on any critical/serious violation) rather than
+loosen the bar.
 
 **Status: DONE, merged to `main` — deployed to production.**
 
-- PR [#140](https://github.com/Luchot93/aba-shield-mvp/pull/140)
-  (`ACD-96-ci-rls-tests` → `dev`) merged.
-- PR [#141](https://github.com/Luchot93/aba-shield-mvp/pull/141)
+- PR [#142](https://github.com/Luchot93/aba-shield-mvp/pull/142)
+  (`ACD-97-accessibility-tests` → `dev`) merged.
+- PR [#143](https://github.com/Luchot93/aba-shield-mvp/pull/143)
   (`dev` → `main`) merged.
-- Jira ACD-96 commented (plain-English summary + PR links) and
+- Jira ACD-97 commented (plain-English summary + PR links) and
   transitioned to **Done**.
 
 ## 2. Current state of the code
 
-**Committed, merged into `dev` and `main`. No DB/migration changes —
-this ticket only adds a GitHub Actions workflow; `test:rls` itself and
-the fixtures it drives already existed from ACD-90.**
+**Committed, merged into `dev` and `main`. Local `main`/`dev` fast-forwarded
+to match `origin` as of this session close. No DB/migration changes.**
 
-- **New `.github/workflows/rls.yml`**: same `push: [main, dev]` /
-  `pull_request` triggers as the existing `ci.yml`/`e2e.yml`. Steps:
-  checkout → setup-node (pinned to **Node 24**, not 20 like the other
-  two workflows — see failure note below) → `npm ci` → a dedicated
-  "Verify RLS Supabase secrets are configured" step that checks
-  `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/`SUPABASE_ANON_KEY` are
-  non-empty and `exit 1`s with a named-secret `::error::` if not →
-  writes `.env.rls` on the runner from those env vars → `npm run
-  test:rls`.
-- **Three new GitHub Actions repository secrets**, already set by the
-  user (not by this session — secret values are never entered by
-  Claude per policy): `RLS_SUPABASE_URL`, `RLS_SUPABASE_SERVICE_ROLE_KEY`,
-  `RLS_SUPABASE_ANON_KEY`. Deliberately `RLS_`-prefixed, not the bare
-  `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` names — those bare names
-  are already the *production* Vercel env var names per `.env.example`,
-  and reusing them as GitHub secret names would invite pasting the prod
-  value in by habit. All three point at the non-production
-  `aba-shield-rls-dev` project (`aaqhoqzmkunsrfhcmlop`), verified by
-  reading back the `SUPABASE_URL` secret's value (URL only, no key
-  material) before trusting it — never `ABA_VAULT_MVP`
-  (`qravuejkiluimaihhbrf`).
+- **New `tests/accessibility.spec.js`**: uses `AxeBuilder({ page }).analyze()`
+  from `@axe-core/playwright` (new devDependency). Scans the live Alpha
+  pages — Login, Clients (Intake), New Client form — asserting zero
+  critical/serious violations (`expect(blocking.length, msg).toBe(0)`,
+  not a noisy `toEqual([])`); moderate/minor findings are logged to the
+  console, not failed on. Pipeline board, Client Detail modal, and Staff
+  Directory are also scanned but gated behind the existing `gated()`
+  skip helper (`FLAGS.PIPELINE`/`FLAGS.STAFF`), so they auto-skip while
+  those features stay off.
+- **Real accessibility bugs found by the scan were fixed at the source**
+  (not suppressed) in four files, scoped narrowly to only what the scan
+  actually flagged — deliberately did *not* do a sweeping brand-color
+  rebrand across the ~41 files using the old `#0D9488` teal (127
+  occurrences), since most of those are in gated/unscanned Phase-2 pages:
+  - `src/auth/LoginPage.jsx` — "Vault" logo span, subtitle, submit
+    button, "For demo purposes only" text, "Test invite flow" link:
+    low-contrast colors swapped for WCAG-AA-passing equivalents
+    (`#0F766E` teal, `text-slate-600`, `text-teal-700`).
+  - `src/components/NavBar.jsx` — "Testing as:" label (lightened, since
+    this one sits on NavBar's *dark* header, opposite direction from the
+    other fixes) and role-switcher avatar background color.
+  - `src/features/clients/ClientsPage.jsx` — subtitle, "New Client"
+    buttons (header + empty state), table header text/hover color (also
+    fixed an invalid `hover:text-slate-606` Tailwind-class typo found
+    along the way), age/footer-count spans.
+  - `src/features/pipeline/components/NewClientModal.jsx` — close button
+    missing `aria-label`, several `<label>`/`<input>` pairs missing
+    matching `htmlFor`/`id` (field-map loop, parent/guardian fields),
+    low-contrast section labels and helper text, button/checkbox colors.
+  - Remaining moderate/minor findings left un-fixed on purpose per the
+    ticket's AC (only critical/serious required tracking): `landmark-one-main`,
+    `region` (missing `<main>`/landmark wrapping), `empty-table-header`
+    (one empty `<th>` in the clients table). These are logged every CI
+    run by the spec's console output, so they stay visible without
+    needing a separate ticket.
+- **`package-lock.json` CI fix (same PR, found while verifying the above)**:
+  adding `@axe-core/playwright` via a locally-installed **npm 11**
+  produced a lockfile that dropped the `node_modules/@floating-ui/dom`
+  entry two `@tiptap` extensions still depend on. CI's `build`/`playwright`
+  jobs pin **Node 20**, which bundles **npm 10** — a stricter resolver
+  that rejected the lockfile with `npm ci`'s `Missing: @floating-ui/dom@1.8.0
+  from lock file`. Root-caused by reproducing the exact failure locally via
+  `npx npm@10.8.2 ci`, then regenerating the lockfile with that same npm
+  version (`npx npm@10.8.2 install`) so it matches what CI actually runs.
+  **Worth remembering**: this repo's `node_modules`/`package-lock.json`
+  must be regenerated with npm 10 (or verified with `npx npm@10.8.2 ci`)
+  when touching dependencies — a locally newer npm can silently produce a
+  lockfile that only passes `npm ci` under that newer npm, not CI's pinned
+  one. This bit the project once before (ACD-89's `f3cd15d` fix) for the
+  same package, and bit it again here from a different direction.
 
 ### Testing performed this session
 
-- **Local, before pushing**: ran the fail-loud secret-check bash logic
-  with all three vars unset — confirmed `exit 1` naming all three
-  missing secrets by their `RLS_`-prefixed names. Ran `npm run
-  test:rls` directly against `aba-shield-rls-dev` (already had a local
-  `.env.rls` from a prior session) — 42/42 passing.
-- **CI, via PR #140**: first push failed — see section 4. After the
-  Node 24 fix, all three checks (`CI`, `E2E`, `RLS`) went green; `RLS`
-  showed the same 42/42 passing inside the hosted runner.
+- Local Playwright run of `accessibility.spec.js` + `clients.spec.js` +
+  `auth.spec.js` (8 passed, 3 skipped — gated pages) confirmed 0
+  critical/serious violations on all three live pages, both before
+  pushing and again after the lockfile regeneration (re-verified against
+  the npm-10-generated `node_modules`, including a Chromium reinstall
+  made necessary by the `node_modules` wipe).
+- `npm run build` succeeded against the final lockfile.
+- PR #142 CI (`build`, `playwright`, `rls`, both Vercel checks) — first
+  run failed on all 3 non-Vercel checks (the lockfile issue above);
+  second run after the fix passed all 5 checks clean.
 
 ## 3. Files actively being edited
 
@@ -69,27 +102,32 @@ Only this file (`handoff.md`) is being touched now.
 
 ## 4. Everything tried that failed / walked back — and deferred items
 
-- **First CI push failed, root-caused and fixed in the same session —
-  not walked back, just a real bug caught by the CI run itself.**
-  `rls.yml` initially pinned `node-version: 20` (copied from
-  `ci.yml`/`e2e.yml`). `package.json`'s `test:rls` script passes a
-  *quoted* glob straight to `node --test`
-  (`node --env-file=.env.rls --test "tests/rls/*.test.js"`), so the
-  shell never expands it — Node's own test runner has to resolve the
-  glob. On Node 20 it can't: the run failed with `Could not find
-  '.../tests/rls/*.test.js'`. `tests/rls/README.md` already documented
-  "this repo runs Node 24" for this suite, and the local run (on Node
-  24) had worked fine, which was the tell. Fix: bumped `node-version`
-  to `24` in `rls.yml` only — `ci.yml`/`e2e.yml` stay on 20 since they
-  never invoke `test:rls`. Confirmed green on the next CI run.
-  **Worth remembering for any future workflow that touches `test:rls`
-  or other `node --test` glob invocations: Node 20 cannot resolve a
-  quoted glob arg to `--test`; Node 24 can. Don't re-copy the Node 20
-  pin from `ci.yml`/`e2e.yml` onto a job that runs `test:rls`.**
-- **No new pending debt surfaced this session** — scope was fully
-  closed out (workflow added, secrets wired, Node version bug found
-  and fixed, all before merge) with no deferred follow-on work and no
-  new ticket needed.
+- **Self-caught mistake, reverted same session**: initially changed
+  NavBar's "Vault" logo span color (`#2DD4BF`→`#5EEAD4`) on a false
+  assumption it was the same span axe flagged on the Login page.
+  Re-checked the debug log's exact `target`/computed color
+  (`rgb(13, 148, 136)` = `#0D9488`) and confirmed it only matched
+  LoginPage's "Vault" span, not NavBar's `#2DD4BF` one — reverted before
+  any further edits.
+- **First lockfile fix attempt was wrong and not committed**: initially
+  ran a from-scratch `rm -rf node_modules package-lock.json && npm install`
+  (plain local npm, i.e. npm 11) to fix the missing `@floating-ui/dom`
+  entry. This "fixed" the immediate symptom but (a) bumped ~10 unrelated
+  packages (tiptap 3.31.4→3.32.0, rollup, playwright, postcss, etc.) to
+  newer semver-compatible versions picked up fresh from the registry —
+  scope creep for a CI-fix commit — and (b) still silently dropped
+  `@floating-ui/dom` again, because the real cause was npm-version
+  resolution behavior, not a one-off bad lockfile write. Caught by
+  diffing against `main`'s already-correct lockfile and noticing the
+  unrelated version churn; discarded in favor of layering only the new
+  `@axe-core/playwright` dependency onto `main`'s existing lockfile with
+  npm 10 (see section 2) — zero unrelated version bumps in the final
+  diff.
+- **No new pending debt surfaced this session needing a ticket** — the
+  only unfixed accessibility findings (moderate/minor landmark + empty
+  table header) are explicitly out of scope per ACD-97's own acceptance
+  criteria (only critical/serious required follow-up tracking) and are
+  already self-tracking via the spec's per-run console log.
 
 ## 5. Next steps
 
@@ -108,10 +146,10 @@ Only this file (`handoff.md`) is being touched now.
    over across the last several sessions) is still **Staff, CRM
    Pipeline + new service checklist, and the standalone service
    session logs feature** — none of that has been touched in the
-   ACD-92 through ACD-96 sessions; fully unstarted from here.
-5. Carried forward, unrelated to ACD-96 (pointer only, not reproduced
+   ACD-92 through ACD-97 sessions; fully unstarted from here.
+5. Carried forward, unrelated to ACD-97 (pointer only, not reproduced
    here): the `openClientTab` Playwright helper bug, and everything
-   from the ACD-82 through ACD-92 handoffs' outstanding items
+   from the ACD-82 through ACD-96 handoffs' outstanding items
    (ACD-113, ACD-112, ACD-111, ACD-109, ACD-110, ACD-100, ACD-105,
    ACD-106, ACD-99, the `FLAGS.PIPELINE` flip-gated QA items, and the
    `suggestFromLabel` fallback note) — see git history for earlier

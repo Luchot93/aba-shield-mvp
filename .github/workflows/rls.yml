@@ -1,0 +1,49 @@
+name: RLS
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+jobs:
+  rls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # Fail loudly if the staging-project secrets aren't configured, instead of letting
+      # `node --env-file=.env.rls` run against blank/undefined vars and silently pass a
+      # suite that never actually talked to Supabase. A green check here must mean the
+      # RLS policies were really exercised. Names are RLS_-prefixed on purpose: SUPABASE_URL
+      # and SUPABASE_SERVICE_ROLE_KEY already exist as the *production* Vercel env vars
+      # (see .env.example), and this suite must never be pointed at that project.
+      - name: Verify RLS Supabase secrets are configured
+        env:
+          SUPABASE_URL: ${{ secrets.RLS_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.RLS_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.RLS_SUPABASE_ANON_KEY }}
+        run: |
+          missing=()
+          [ -z "$SUPABASE_URL" ] && missing+=("RLS_SUPABASE_URL")
+          [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] && missing+=("RLS_SUPABASE_SERVICE_ROLE_KEY")
+          [ -z "$SUPABASE_ANON_KEY" ] && missing+=("RLS_SUPABASE_ANON_KEY")
+          if [ ${#missing[@]} -ne 0 ]; then
+            echo "::error::RLS test suite cannot run: missing repo secret(s) ${missing[*]}. Set them in GitHub repo Settings > Secrets and variables > Actions, pointing at the non-production RLS test project (aba-shield-rls-dev) — never ABA_VAULT_MVP."
+            exit 1
+          fi
+      - name: Write .env.rls for test runner
+        env:
+          SUPABASE_URL: ${{ secrets.RLS_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.RLS_SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.RLS_SUPABASE_ANON_KEY }}
+        run: |
+          cat > .env.rls <<EOF
+          SUPABASE_URL=$SUPABASE_URL
+          SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY
+          SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY
+          EOF
+      - run: npm run test:rls

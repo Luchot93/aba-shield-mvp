@@ -4,88 +4,63 @@ _Last updated: 2026-10-13_
 
 ## 1. Goal we are moving towards
 
-ACD-95 ("E6: Rate-limit the staff-management and email-notification
-functions") — the `manage-staff` and `send-notification-email` Edge
-Functions had no rate limiting, unlike `/api/generate` and
-`/api/generate-definition` (ACD-35). Without a cap, a bug or a
-compromised/careless session could spam staff invites/revokes or
-email sends. Scope: wire both functions into the existing
-`check_rate_limit` Postgres RPC, with per-function limits sized to
-each one's normal call volume, fail-open on RPC error (consistent with
-the Vercel-side limiters), and explicitly leave Supabase Auth login
-alone (GoTrue already rate-limits that at the platform level).
+ACD-96 ("E7: Run the data-access security tests automatically on every
+code change") — E1 (ACD-90) created `test:rls`, a Node-based test suite
+proving the role-scoped RLS model actually enforces admin-vs-assigned
+data access. It had to be run by hand, so a regression could land
+without anyone noticing. This story wires `test:rls` into CI so it runs
+automatically on every PR/push to `main`/`dev`, fails the check clearly
+on a real failure, and never silently no-ops if its secrets are missing
+— a green check here must mean the suite actually ran against real
+Postgres RLS policies, not that it skipped.
 
 **Status: DONE, merged to `main` — deployed to production.**
 
-- PR [#138](https://github.com/Luchot93/aba-shield-mvp/pull/138)
-  (`ACD-95-rate-limit-staff-email-functions` → `dev`) merged.
-- PR [#139](https://github.com/Luchot93/aba-shield-mvp/pull/139)
+- PR [#140](https://github.com/Luchot93/aba-shield-mvp/pull/140)
+  (`ACD-96-ci-rls-tests` → `dev`) merged.
+- PR [#141](https://github.com/Luchot93/aba-shield-mvp/pull/141)
   (`dev` → `main`) merged.
-- Jira ACD-95 commented (plain-English summary + test results) and
+- Jira ACD-96 commented (plain-English summary + PR links) and
   transitioned to **Done**.
 
 ## 2. Current state of the code
 
 **Committed, merged into `dev` and `main`. No DB/migration changes —
-this ticket only adds Edge Function code; the underlying
-`check_rate_limit` RPC and `rate_limits` table already existed
-(ACD-35).**
+this ticket only adds a GitHub Actions workflow; `test:rls` itself and
+the fixtures it drives already existed from ACD-90.**
 
-- **New `supabase/functions/_shared/rateLimit.ts`**: Deno-side
-  equivalent of `api/_lib/rateLimit.js` — same RPC-call pattern
-  (`check_rate_limit`), fail-open on error. A separate file (not a
-  shared import) because Vercel's `api/` runs Node and Supabase Edge
-  Functions run Deno.
-- **`supabase/functions/manage-staff/index.ts`**: rate-limit check
-  added right after the admin-role gate, keyed on the caller's user id
-  and endpoint `'manage-staff'`, capped at **20/hour** (invite/revoke
-  are rare, deliberate admin actions).
-- **`supabase/functions/send-notification-email/index.ts`**:
-  rate-limit check added after the authorization gate (recipient
-  self / admin / assigned BCBA-RBT) and before the
-  `email_notifications` insert, keyed on `'send-notification-email'`,
-  capped at **200/hour** (fires on every stage change and checklist
-  completion across all staff, so normal volume is already higher
-  than `manage-staff`'s).
-- **`docs/DATABASE.md`**: new "Rate limiting — `check_rate_limit`"
-  subsection documenting the caller/helper/endpoint/limit table for
-  all four rate-limited call sites, plus the grants finding below.
-- **Grants verified, no change needed**: confirmed directly against
-  production (`qravuejkiluimaihhbrf`) via
-  `information_schema.routine_privileges` that `service_role` already
-  has implicit `EXECUTE` on `check_rate_limit` through Supabase's
-  default privilege grants — the ACD-35 migration only explicitly
-  revoked `anon`/`public`. So both Edge Functions can call the RPC
-  through their existing `service_role`-keyed admin client with no
-  grant or auth-context rework. Documented in `docs/DATABASE.md` for
-  future reference (a lightweight TRD-equivalent) in case a future
-  migration ever touches these grants.
+- **New `.github/workflows/rls.yml`**: same `push: [main, dev]` /
+  `pull_request` triggers as the existing `ci.yml`/`e2e.yml`. Steps:
+  checkout → setup-node (pinned to **Node 24**, not 20 like the other
+  two workflows — see failure note below) → `npm ci` → a dedicated
+  "Verify RLS Supabase secrets are configured" step that checks
+  `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`/`SUPABASE_ANON_KEY` are
+  non-empty and `exit 1`s with a named-secret `::error::` if not →
+  writes `.env.rls` on the runner from those env vars → `npm run
+  test:rls`.
+- **Three new GitHub Actions repository secrets**, already set by the
+  user (not by this session — secret values are never entered by
+  Claude per policy): `RLS_SUPABASE_URL`, `RLS_SUPABASE_SERVICE_ROLE_KEY`,
+  `RLS_SUPABASE_ANON_KEY`. Deliberately `RLS_`-prefixed, not the bare
+  `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY` names — those bare names
+  are already the *production* Vercel env var names per `.env.example`,
+  and reusing them as GitHub secret names would invite pasting the prod
+  value in by habit. All three point at the non-production
+  `aba-shield-rls-dev` project (`aaqhoqzmkunsrfhcmlop`), verified by
+  reading back the `SUPABASE_URL` secret's value (URL only, no key
+  material) before trusting it — never `ABA_VAULT_MVP`
+  (`qravuejkiluimaihhbrf`).
 
-### Testing performed this session (non-production only)
+### Testing performed this session
 
-- **SQL/RPC-level**: looped 21 calls against `manage-staff`'s key in
-  the dev project (`aba-shield-rls-dev`, `aaqhoqzmkunsrfhcmlop`) —
-  confirmed the 21st call flips to `false`; confirmed a different
-  endpoint key for the same user starts a fresh counter (isolation
-  between endpoints works).
-- **Live deployed-function HTTP test**: deployed both updated
-  functions (v2) to `aba-shield-rls-dev`, created a temporary admin
-  user + real JWT, and hit both over `curl`:
-  - `manage-staff`: under-cap call → `400` (expected validation error,
-    proves the rate-check-pass path); cap pre-set to 20 via SQL →
-    **`429`**.
-  - `send-notification-email`: under-cap call → `500` (deliberate FK
-    violation on a bogus `recipientStaffId`, proves the
-    rate-check-pass path with zero rows persisted, no email sent); cap
-    pre-set to 200 via SQL → **`429`**.
-- Confirmed the rate check runs *before* the Resend API call in
-  `send-notification-email`, so this testing needed no working email
-  domain — the DNS/Resend gap (ACD-101) did not block this ticket, and
-  no new Jira ticket was needed for email-specific testing.
-- All test data (temp staff row, `rate_limits` rows, temp auth user)
-  cleaned up afterward; local scratch scripts deleted. `git status
-  --short` confirmed only the 4 intended files remained changed before
-  commit.
+- **Local, before pushing**: ran the fail-loud secret-check bash logic
+  with all three vars unset — confirmed `exit 1` naming all three
+  missing secrets by their `RLS_`-prefixed names. Ran `npm run
+  test:rls` directly against `aba-shield-rls-dev` (already had a local
+  `.env.rls` from a prior session) — 42/42 passing.
+- **CI, via PR #140**: first push failed — see section 4. After the
+  Node 24 fix, all three checks (`CI`, `E2E`, `RLS`) went green; `RLS`
+  showed the same 42/42 passing inside the hosted runner.
 
 ## 3. Files actively being edited
 
@@ -94,21 +69,27 @@ Only this file (`handoff.md`) is being touched now.
 
 ## 4. Everything tried that failed / walked back — and deferred items
 
-- **Nothing walked back this session** — the per-function limits (20
-  vs. 200), the fail-open design, and the Deno-vs-Node split into two
-  helper files were all the plan from the start per the implementation
-  prompt, not corrections after a failed attempt.
-- **Minor friction, resolved immediately**: a first test script placed
-  in `/tmp` failed with `ERR_MODULE_NOT_FOUND` for
-  `@supabase/supabase-js` (outside the repo's `node_modules`
-  resolution scope) — fixed by running the script from inside the
-  repo root instead. Leftover `rls-admin-*@test.abashield.local`
-  fixture accounts from an earlier interrupted ACD-90 run couldn't be
-  signed into (passwords were never persisted) — worked around by
-  creating a fresh temp admin account instead, fully cleaned up after.
-- **No new pending debt surfaced this session** — unlike ACD-94, this
-  ticket's scope was fully closed out with no deferred follow-on work
-  and no new ticket needed.
+- **First CI push failed, root-caused and fixed in the same session —
+  not walked back, just a real bug caught by the CI run itself.**
+  `rls.yml` initially pinned `node-version: 20` (copied from
+  `ci.yml`/`e2e.yml`). `package.json`'s `test:rls` script passes a
+  *quoted* glob straight to `node --test`
+  (`node --env-file=.env.rls --test "tests/rls/*.test.js"`), so the
+  shell never expands it — Node's own test runner has to resolve the
+  glob. On Node 20 it can't: the run failed with `Could not find
+  '.../tests/rls/*.test.js'`. `tests/rls/README.md` already documented
+  "this repo runs Node 24" for this suite, and the local run (on Node
+  24) had worked fine, which was the tell. Fix: bumped `node-version`
+  to `24` in `rls.yml` only — `ci.yml`/`e2e.yml` stay on 20 since they
+  never invoke `test:rls`. Confirmed green on the next CI run.
+  **Worth remembering for any future workflow that touches `test:rls`
+  or other `node --test` glob invocations: Node 20 cannot resolve a
+  quoted glob arg to `--test`; Node 24 can. Don't re-copy the Node 20
+  pin from `ci.yml`/`e2e.yml` onto a job that runs `test:rls`.**
+- **No new pending debt surfaced this session** — scope was fully
+  closed out (workflow added, secrets wired, Node version bug found
+  and fixed, all before merge) with no deferred follow-on work and no
+  new ticket needed.
 
 ## 5. Next steps
 
@@ -127,8 +108,8 @@ Only this file (`handoff.md`) is being touched now.
    over across the last several sessions) is still **Staff, CRM
    Pipeline + new service checklist, and the standalone service
    session logs feature** — none of that has been touched in the
-   ACD-92/ACD-93/ACD-94/ACD-95 sessions; fully unstarted from here.
-5. Carried forward, unrelated to ACD-95 (pointer only, not reproduced
+   ACD-92 through ACD-96 sessions; fully unstarted from here.
+5. Carried forward, unrelated to ACD-96 (pointer only, not reproduced
    here): the `openClientTab` Playwright helper bug, and everything
    from the ACD-82 through ACD-92 handoffs' outstanding items
    (ACD-113, ACD-112, ACD-111, ACD-109, ACD-110, ACD-100, ACD-105,

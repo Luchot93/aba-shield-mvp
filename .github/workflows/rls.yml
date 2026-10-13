@@ -12,7 +12,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Pinned to 24, not 20 like ci.yml/e2e.yml: test:rls passes a quoted glob
+          # ("tests/rls/*.test.js") straight to `node --test`, and Node's own glob
+          # resolution for that syntax isn't there yet on 20 — it fails with
+          # "Could not find '.../tests/rls/*.test.js'". tests/rls/README.md already
+          # documents this repo running Node 24 for this suite.
+          node-version: 24
           cache: npm
       - run: npm ci
       # Fail loudly if the staging-project secrets aren't configured, instead of letting

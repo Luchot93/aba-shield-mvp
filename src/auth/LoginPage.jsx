@@ -34,7 +34,7 @@ export default function LoginPage() {
             <Ico.Shield />
           </div>
           <span className="font-bold text-[15px] tracking-tight text-slate-900">
-            ABA <span style={{ color: '#0D9488' }}>Vault</span>
+            ABA <span style={{ color: '#0F766E' }}>Vault</span>
           </span>
         </div>
 
@@ -42,7 +42,7 @@ export default function LoginPage() {
           style={{ fontFamily: 'Syne, sans-serif' }}>
           Sign in
         </h1>
-        <p className="text-sm text-slate-400 mb-6">ABA workflow management</p>
+        <p className="text-sm text-slate-600 mb-6">ABA workflow management</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -74,7 +74,7 @@ export default function LoginPage() {
             data-testid="login-submit"
             disabled={loading}
             className="w-full py-2.5 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300 focus-visible:ring-offset-2"
-            style={{ background: '#0D9488' }}>
+            style={{ background: '#0F766E' }}>
             {loading && (
               <svg aria-hidden="true" className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -91,10 +91,10 @@ export default function LoginPage() {
 
         {/* Dev helper — simulate receiving an invite email */}
         <div className="mt-6 pt-5 border-t border-stone-100 text-center">
-          <p className="text-[11px] text-slate-400 mb-2">For demo purposes only</p>
+          <p className="text-[11px] text-slate-600 mb-2">For demo purposes only</p>
           <a
             href="?invite=true"
-            className="text-xs font-medium text-teal-600 hover:text-teal-800 transition-colors">
+            className="text-xs font-medium text-teal-700 hover:text-teal-800 transition-colors">
             Test invite flow →
           </a>
         </div>

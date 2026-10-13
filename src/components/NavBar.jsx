@@ -121,7 +121,7 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
             {/* Role switcher */}
             <div className="relative" ref={switcherRef}>
               <div className="flex flex-col items-end">
-                <span className="text-[10px] text-slate-500 mb-0.5 pr-1">Testing as:</span>
+                <span className="text-[10px] text-slate-400 mb-0.5 pr-1">Testing as:</span>
                 <button
                   onClick={() => setSwitcherOpen(o => !o)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors"
@@ -129,7 +129,7 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
                   onMouseLeave={e => !switcherOpen && (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}>
                   <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white flex-shrink-0"
-                    style={{ background:'#0D9488', fontFamily:'DM Sans, sans-serif' }}>
+                    style={{ background:'#0F766E', fontFamily:'DM Sans, sans-serif' }}>
                     {initials(currentUser.name)}
                   </div>
                   <span className="text-sm text-white" style={{ fontFamily:'DM Sans, sans-serif' }}>{currentUser.name}</span>

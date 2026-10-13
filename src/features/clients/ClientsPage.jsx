@@ -184,7 +184,7 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
       <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-[26px] font-bold tracking-tight text-slate-900" style={{ fontFamily:'Syne, sans-serif' }}>Clients</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-600 mt-0.5">
             {/* U-03: dynamic subtitle */}
             {search.trim()
               ? `${sorted.length} of ${filteredByStage.length} clients matching "${search}" · ${FILTER_DISPLAY[filter]}`
@@ -204,7 +204,7 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
             </button>
             <button onClick={() => setShowNew(true)} data-testid="clients-new-btn"
               className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity"
-              style={{ background:'#0D9488' }}>
+              style={{ background:'#0F766E' }}>
               <Ico.Plus/> New Client
             </button>
           </div>
@@ -273,8 +273,8 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
                   return (
                     <th key={c.key}
                       onClick={c.sortable ? () => handleSort(c.key) : undefined}
-                      className={`text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-slate-400 select-none whitespace-nowrap ${
-                        c.sortable ? 'cursor-pointer hover:text-slate-606' : ''
+                      className={`text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-slate-600 select-none whitespace-nowrap ${
+                        c.sortable ? 'cursor-pointer hover:text-slate-800' : ''
                       }`}>
                       {c.label}{c.sortable && <SortIcon col={c.key}/>}
                     </th>
@@ -302,7 +302,7 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
                         </button>
                         <button onClick={() => setShowNew(true)}
                           className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg hover:opacity-90 transition-opacity"
-                          style={{ background:'#0D9488' }}>
+                          style={{ background:'#0F766E' }}>
                           + New Client
                         </button>
                       </div>
@@ -384,7 +384,7 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
                         {formatDob(c.dob)}
                       </span>
                       {age !== null && (
-                        <span className="ml-1.5 text-[10px] text-slate-400">({age}y)</span>
+                        <span className="ml-1.5 text-[10px] text-slate-600">({age}y)</span>
                       )}
                     </td>
 
@@ -463,7 +463,7 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
         {/* P-03: row count footer note */}
         {sorted.length > 0 && (
           <div className="px-4 py-2 border-t border-stone-100 flex items-center justify-between">
-            <span className="text-[11px] text-slate-400">
+            <span className="text-[11px] text-slate-600">
               {sorted.length} client{sorted.length !== 1 ? 's' : ''}
               {sorted.length < clients.length && ` · ${clients.length - sorted.length} hidden by filter`}
             </span>

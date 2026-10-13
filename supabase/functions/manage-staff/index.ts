@@ -13,8 +13,14 @@
 // second one, which would violate the profiles primary key.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { checkRateLimit } from '../_shared/rateLimit.ts'
 
 const PROFILE_ROLES = ['admin', 'bcba', 'bcaba', 'rbt']
+
+// ACD-95: invite/revoke are rare, deliberate admin actions -- 20/hour is
+// generous for real usage but caps a compromised or careless admin session
+// from spamming invites or mass-revoking staff.
+const RATE_LIMIT_MAX_CALLS = 20
 
 // Basic plausibility checks, not full RFC/format validation -- ACD-92 (E3)
 // asks for exactly that: reject obviously malformed input before it ever
@@ -104,6 +110,12 @@ Deno.serve(async req => {
 
   if (profileError || callerProfile?.role !== 'admin') {
     return jsonResponse({ error: 'Admin only' }, 403)
+  }
+
+  // --- Rate limit: cap invite/revoke actions per admin per hour -----------
+  const allowed = await checkRateLimit(admin, callerData.user.id, 'manage-staff', RATE_LIMIT_MAX_CALLS)
+  if (!allowed) {
+    return jsonResponse({ error: 'Too many requests — please slow down and try again shortly.' }, 429)
   }
 
   // --- Body -------------------------------------------------------------

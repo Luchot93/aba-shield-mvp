@@ -298,19 +298,28 @@ gated(FLAGS.PIPELINE)('ABA Shield — Pipeline Kanban', () => {
     await expect(page.locator('[data-testid="advance-btn"]')).not.toBeVisible();
   });
 
+  // Referral request form has no data-testid (same as every other file_upload
+  // checklist row) — located by scoping to the row containing its label, the
+  // pattern used throughout tests/upload-validation.spec.js.
+  function referralFormRow(page) {
+    return page.getByTestId('client-detail-modal').getByText('Referral request form', { exact: true }).locator('..');
+  }
+  const referralFormFile = { name: 'referral.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\n') };
+
   test('upload button marks item complete and adds to documents', async ({ page }) => {
     await page.locator('[data-testid="card-name-c1"]').click();
     await page.locator('[data-testid="detail-tab-documents"]').click();
     await expect(page.locator('[data-testid="documents-panel"]')).toContainText('No documents uploaded yet.');
-    await page.locator('[data-testid="upload-referral_form"]').click();
+    await referralFormRow(page).locator('input[type=file]').setInputFiles(referralFormFile);
     await expect(page.locator('[data-testid="documents-panel"]')).toContainText('Referral request form');
   });
 
   test('upload action appears in activity log', async ({ page }) => {
     await page.locator('[data-testid="card-name-c1"]').click();
-    await page.locator('[data-testid="upload-referral_form"]').click();
-    // Wait for upload button to be replaced by "Uploaded" state before switching tabs
-    await expect(page.locator('[data-testid="upload-referral_form"]')).not.toBeVisible({ timeout: 5000 });
+    const row = referralFormRow(page);
+    await row.locator('input[type=file]').setInputFiles(referralFormFile);
+    // Wait for the row to flip to "Uploaded" state before switching tabs
+    await expect(row).toContainText('Uploaded');
     await page.locator('[data-testid="detail-tab-activity"]').click();
     await expect(page.locator('[data-testid="activity-log"]')).toContainText('Uploaded: Referral request form');
   });

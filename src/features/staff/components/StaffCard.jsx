@@ -144,7 +144,7 @@ export default function StaffCard({ member, clients, onEdit, currentUser, onSele
             </div>
           </div>
           <div className="text-right flex-shrink-0">
-            <div className="text-xl font-bold" style={{ color: member.active_case_count > 0 ? '#0D9488' : '#CBD5E1', fontFamily:'Syne, sans-serif' }}>
+            <div className="text-xl font-bold" style={{ color: member.active_case_count > 0 ? '#0F766E' : '#CBD5E1', fontFamily:'Syne, sans-serif' }}>
               {member.active_case_count}
             </div>
             <div className="text-[10px] text-slate-400">active cases</div>
@@ -357,7 +357,7 @@ export default function StaffCard({ member, clients, onEdit, currentUser, onSele
               <div className="flex items-center gap-2">
                 <button onClick={handleEditSave} data-testid={`save-staff-${member.id}`}
                   className="px-3 py-1.5 text-xs font-semibold text-white rounded-lg hover:opacity-90"
-                  style={{ background:'#0D9488' }}>Save</button>
+                  style={{ background:'#0F766E' }}>Save</button>
                 <button onClick={handleEditCancel}
                   className="px-3 py-1.5 text-xs font-semibold text-slate-600 border border-stone-200 bg-stone-50 rounded-lg hover:bg-stone-100">Cancel</button>
               </div>

@@ -198,7 +198,7 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
             </button>
             <button onClick={() => setShowInvite(true)} data-testid="invite-btn"
               className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity"
-              style={{ background:'#0D9488' }}>
+              style={{ background:'#0F766E' }}>
               <Ico.Plus/> Invite Staff
             </button>
           </div>
@@ -209,7 +209,7 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
       <div className="flex items-center gap-0 mb-6 bg-white rounded-xl border border-stone-200 divide-x divide-stone-100 overflow-hidden">
         {[
           { label:'Active Staff',   value:totalActive,  sub:`of ${enriched.length} total`,  color:'#059669' },
-          { label:'Total Cases',    value:totalCases,   sub:'across all staff',              color:'#0D9488' },
+          { label:'Total Cases',    value:totalCases,   sub:'across all staff',              color:'#0F766E' },
           { label:'Cert Expiring',  value:expiringSoon, sub:'within 60 days',               color:'#D97706' },
           {
             label:'Invite Pending', value:totalPending, sub:'awaiting acceptance',           color:'#7C3AED',
@@ -256,7 +256,7 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
                     ? 'text-white border-teal-600'
                     : 'text-slate-600 border-stone-200 bg-white hover:border-teal-300 hover:text-teal-700'
                 }`}
-                style={filter === c.key ? { background:'#0D9488' } : {}}>
+                style={filter === c.key ? { background:'#0F766E' } : {}}>
                 {c.label}
               </button>
               {c.key === 'expiring' && (

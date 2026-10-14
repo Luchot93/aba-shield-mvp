@@ -239,11 +239,14 @@ export default function ClientsPage({ clients, staff, setClients, setSelectedCli
                     ? 'text-white border-teal-600'
                     : 'text-slate-600 border-stone-200 bg-white hover:border-teal-300 hover:text-teal-700'
                 }`}
-                style={filter === f.key ? { background:'#0D9488' } : {}}>
+                style={filter === f.key ? { background:'#0F766E' } : {}}>
                 {f.label}
                 {filterCounts[f.key] > 0 && (
                   <span className={`ml-1.5 text-[10px] font-bold px-1 py-0.5 rounded ${
-                    filter === f.key ? 'bg-white/20' : 'bg-stone-100 text-slate-500'
+                    /* ACD-117: solid light pill + dark teal text instead of a translucent
+                       white overlay — bg-white/20 composited onto teal-600 washed out to
+                       ~2.8:1 contrast regardless of the underlying teal shade. */
+                    filter === f.key ? 'bg-white text-teal-700' : 'bg-stone-100 text-slate-500'
                   }`}>
                     {filterCounts[f.key]}
                   </span>

@@ -69,6 +69,7 @@ export function itemComplete(item, client, staff) {
       if (item.orClientField) return client[item.orClientField] === true;
       return false;
     case 'select':
+      if (item.optional) return true;
       if (item.completeValues) return item.completeValues.includes(val);
       return val === item.completeValue;
     case 'form_field': {

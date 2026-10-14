@@ -23,7 +23,7 @@ gated(FLAGS.PIPELINE)('ABA Shield — Pipeline Kanban', () => {
 
   // ── Nav ──────────────────────────────────────────────────────────────────
   test('nav bar renders logo and 3 links', async ({ page }) => {
-    await expect(page.locator('header')).toContainText('ABA Shield');
+    await expect(page.locator('header')).toContainText('ABA Vault');
     await expect(page.getByRole('button', { name: 'Pipeline' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Clients' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Staff' })).toBeVisible();
@@ -93,12 +93,14 @@ gated(FLAGS.PIPELINE)('ABA Shield — Pipeline Kanban', () => {
   });
 
   test('Services cards show Services · Reauth label', async ({ page }) => {
+    test.skip(!FLAGS.REAUTH, 'FLAGS.REAUTH is false — reauth cycle UI punted per product decision (CLAUDE.md "What This Repo Is NOT")');
     await page.locator('.overflow-x-auto').evaluate(el => el.scrollLeft = 9999);
     await expect(page.locator('[data-testid="card-c10"]')).toContainText('Services · Reauth');
     await expect(page.locator('[data-testid="card-c11"]')).toContainText('Services · Reauth');
   });
 
   test('Services cards show reauth banners', async ({ page }) => {
+    test.skip(!FLAGS.REAUTH, 'FLAGS.REAUTH is false — reauth cycle UI punted per product decision (CLAUDE.md "What This Repo Is NOT")');
     await page.locator('.overflow-x-auto').evaluate(el => el.scrollLeft = 9999);
     await expect(page.locator('[data-testid="card-c10"]')).toContainText('Reauth in');
     await expect(page.locator('[data-testid="card-c11"]')).toContainText('Reauth in');
@@ -115,8 +117,10 @@ gated(FLAGS.PIPELINE)('ABA Shield — Pipeline Kanban', () => {
   });
 
   // ── BCBA assignment dropdown ──────────────────────────────────────────────
+  // showBCBA (KanbanCard.jsx) only renders the Assign row at auth_assessment stage
+  // or later — c3/c12 (auth_assessment) are used here instead of c1/c2 (intake).
   test('clicking + Assign opens BCBA dropdown with all 4 BCBAs', async ({ page }) => {
-    await page.locator('[data-testid="card-c1"] button').first().click();
+    await page.locator('[data-testid="card-c3"] button').first().click();
     const dropdown = page.locator('[data-testid="assignee-dropdown-bcba"]');
     await expect(dropdown).toBeVisible();
     await expect(dropdown).toContainText('Dr. Rachel Kim');
@@ -126,19 +130,19 @@ gated(FLAGS.PIPELINE)('ABA Shield — Pipeline Kanban', () => {
   });
 
   test('dropdown shows active case counts', async ({ page }) => {
-    await page.locator('[data-testid="card-c1"] button').first().click();
+    await page.locator('[data-testid="card-c3"] button').first().click();
     await expect(page.locator('[data-testid="assignee-dropdown-bcba"]')).toContainText('active cases');
   });
 
   test('selecting a BCBA assigns and closes dropdown', async ({ page }) => {
-    await page.locator('[data-testid="card-c2"] button').first().click();
+    await page.locator('[data-testid="card-c12"] button').first().click();
     await page.locator('[data-testid="assignee-dropdown-bcba"]').getByText('Marcus Webb').click();
-    await expect(page.locator('[data-testid="card-c2"]')).toContainText('Marcus');
+    await expect(page.locator('[data-testid="card-c12"]')).toContainText('Marcus');
     await expect(page.locator('[data-testid="assignee-dropdown-bcba"]')).not.toBeVisible();
   });
 
   test('clicking outside dropdown closes it', async ({ page }) => {
-    await page.locator('[data-testid="card-c1"] button').first().click();
+    await page.locator('[data-testid="card-c3"] button').first().click();
     await expect(page.locator('[data-testid="assignee-dropdown-bcba"]')).toBeVisible();
     await page.locator('header').click();
     await expect(page.locator('[data-testid="assignee-dropdown-bcba"]')).not.toBeVisible();
@@ -190,6 +194,8 @@ gated(FLAGS.PIPELINE)('ABA Shield — Pipeline Kanban', () => {
     await page.locator('[data-testid="field-dob"]').fill('2020-06-15');
     await page.locator('[data-testid="field-insurer_name"]').fill('Humana');
     await page.locator('[data-testid="field-member_id"]').fill('HUM-999001');
+    // "Add to pipeline" checkbox defaults unchecked — must be checked to land in Intake
+    await page.getByText('Add to pipeline', { exact: true }).click();
     await page.locator('[data-testid="save-client"]').click();
 
     await expect(page.locator('[data-testid="new-client-modal"]')).not.toBeVisible();
@@ -199,6 +205,8 @@ gated(FLAGS.PIPELINE)('ABA Shield — Pipeline Kanban', () => {
 
   test('duplicate name + DOB shows warning and blocks save', async ({ page }) => {
     await page.locator('[data-testid="new-client-btn"]').click();
+    // handleSave's duplicate block only runs when "Add to pipeline" is checked
+    await page.getByText('Add to pipeline', { exact: true }).click();
     await page.locator('[data-testid="field-name"]').fill('Liam Rodriguez');
     await page.locator('[data-testid="field-dob"]').fill('2018-03-15');
     await expect(page.getByText('A client with this name and date of birth already exists.')).toBeVisible();
@@ -223,6 +231,8 @@ gated(FLAGS.PIPELINE)('ABA Shield — Pipeline Kanban', () => {
     await page.locator('[data-testid="new-client-btn"]').click();
     await page.locator('[data-testid="client-search"]').fill('Sophia');
     await page.locator('[data-testid="new-client-modal"] [data-testid^="search-result-"]').first().click();
+    // handleSave's duplicate block only runs when "Add to pipeline" is checked
+    await page.getByText('Add to pipeline', { exact: true }).click();
     // Form is auto-filled — no inline warning yet, but save must catch the duplicate
     await page.locator('[data-testid="save-client"]').click();
     await expect(page.locator('[data-testid="new-client-modal"]')).toBeVisible();
@@ -306,9 +316,9 @@ gated(FLAGS.PIPELINE)('ABA Shield — Pipeline Kanban', () => {
   });
 
   test('form field input marks item complete when filled', async ({ page }) => {
-    // c3 is auth_assessment stage — has reference_number form field
+    // c3 is auth_assessment stage — checklist key is cpt97151_reference_number (checklist.js:76)
     await page.locator('[data-testid="card-name-c3"]').click();
-    const field = page.locator('[data-testid="detail-field-reference_number"]');
+    const field = page.locator('[data-testid="detail-field-cpt97151_reference_number"]');
     await expect(field).toBeVisible();
     await field.fill('AUTH-123456');
   });
@@ -332,6 +342,7 @@ gated(FLAGS.PIPELINE)('ABA Shield — Pipeline Kanban', () => {
   });
 
   test('reauth banner shows for services clients with reauth_active', async ({ page }) => {
+    test.skip(!FLAGS.REAUTH, 'FLAGS.REAUTH is false — reauth cycle UI punted per product decision (CLAUDE.md "What This Repo Is NOT")');
     await page.locator('.overflow-x-auto').evaluate(el => el.scrollLeft = 9999);
     await page.locator('[data-testid="card-name-c10"]').click();
     // Services stage now shows a 3-tab shell; reauth_active surfaces as a badge in the countdown banner
@@ -369,8 +380,8 @@ gated(FLAGS.PIPELINE)('ABA Shield — Pipeline Kanban', () => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  ABA Shield — Clients Page
-//  Gated under PIPELINE: this block asserts V0/pipeline artifacts (14 seed clients,
-//  filter chips, stage pills, client-profile-panel, 7 table headers) that don't
+//  Gated under PIPELINE: this block asserts V0/pipeline artifacts (17 seed clients,
+//  filter chips, stage pills, client-profile-panel, 8 table headers) that don't
 //  exist in the Alpha Clients page. Live Alpha coverage lives in tests/clients.spec.js.
 // ─────────────────────────────────────────────────────────────────────────────
 gated(FLAGS.PIPELINE)('ABA Shield — Clients Page', () => {
@@ -382,14 +393,15 @@ gated(FLAGS.PIPELINE)('ABA Shield — Clients Page', () => {
   });
 
   // ── Table renders ─────────────────────────────────────────────────────────
-  test('Clients page shows all 14 seed clients', async ({ page }) => {
+  test('Clients page shows all 17 seed clients', async ({ page }) => {
     const rows = page.locator('[data-testid="clients-table"] tbody tr');
-    await expect(rows).toHaveCount(14);
+    await expect(rows).toHaveCount(17);
   });
 
-  test('all 7 column headers render', async ({ page }) => {
+  test('all 8 column headers render', async ({ page }) => {
+    // 8th header is the unlabeled Actions column (COLS in ClientsPage.jsx: key:'actions', label:'')
     const th = page.locator('[data-testid="clients-table"] thead th');
-    await expect(th).toHaveCount(7);
+    await expect(th).toHaveCount(8);
     for (const label of ['Client','DOB / Age','Insurer','Member ID','Stage','Care Team','Referral Date']) {
       await expect(page.locator('[data-testid="clients-table"] thead')).toContainText(label);
     }
@@ -452,9 +464,10 @@ gated(FLAGS.PIPELINE)('ABA Shield — Clients Page', () => {
   });
 
   test('Active Services filter shows only services clients', async ({ page }) => {
+    // c10, c11, c15, c16, c17 are all stage:'services' (seedData.js) = 5
     await page.getByTestId('filter-active_services').click();
     const rows = page.locator('[data-testid="clients-table"] tbody tr');
-    await expect(rows).toHaveCount(2);
+    await expect(rows).toHaveCount(5);
   });
 
   test('In Progress filter excludes intake, services, denied', async ({ page }) => {
@@ -509,7 +522,7 @@ gated(FLAGS.PIPELINE)('ABA Shield — Clients Page', () => {
     await page.locator('[data-testid="save-client"]').click();
     await expect(page.locator('[data-testid="clients-table"]')).toContainText('Test Import Child');
     const rows = page.locator('[data-testid="clients-table"] tbody tr');
-    await expect(rows).toHaveCount(15);
+    await expect(rows).toHaveCount(18);
   });
 
   // ── Import CSV/Excel button ───────────────────────────────────────────────
@@ -731,9 +744,13 @@ gated(FLAGS.PIPELINE)('ABA Shield — Notifications', () => {
   });
 
   // ── Seed notifications ─────────────────────────────────────────────────────
-  test('seed notifs include urgent reauth for Charlotte Davis', async ({ page }) => {
+  // c10 Charlotte Davis's auth_expiry_date (2026-07-31) is now >30 days out from the
+  // seed "today" (2026-05-14 in App.jsx), so she no longer falls in the notif window —
+  // c16 Ethan Clarke's auth_expiry_date (2026-04-05) is already past, which lands in
+  // the "URGENT — authorization expired" branch instead (App.jsx seedNotifs effect).
+  test('seed notifs include urgent expired-authorization alert for Ethan Clarke', async ({ page }) => {
     await page.locator('[data-testid="bell-btn"]').click();
-    await expect(page.locator('[data-testid="notif-panel"]')).toContainText('Charlotte Davis');
+    await expect(page.locator('[data-testid="notif-panel"]')).toContainText('Ethan Clarke');
   });
 
   test('seed notifs include urgent reauth for James Martinez', async ({ page }) => {
@@ -764,14 +781,12 @@ gated(FLAGS.PIPELINE)('ABA Shield — Notifications', () => {
     // Navigate to client detail of c9 (Mason Garcia, staffing stage) which can advance
     await page.locator('[data-testid="card-name-c9"]').first().click();
     await page.waitForSelector('[data-testid="client-detail-modal"]');
-    // Complete all checkboxes within the modal
+    // Complete both staffing checklist items — these are custom clickable rows
+    // in ClientDetailPage.jsx (div + onClick), not native <input type="checkbox">
+    // elements, so there's nothing for an `input[type="checkbox"]` locator to find.
     const modal = page.locator('[data-testid="client-detail-modal"]');
-    const checks = modal.locator('input[type="checkbox"]');
-    const checkCount = await checks.count();
-    for (let i = 0; i < checkCount; i++) {
-      const cb = checks.nth(i);
-      if (!(await cb.isChecked())) await cb.check();
-    }
+    await modal.getByText('Caregiver availability confirmed', { exact: true }).click();
+    await modal.getByText('Staff schedule coordinated', { exact: true }).click();
     // Fill required date field (first_session_date) so advance button enables
     const dateInput = modal.locator('[data-testid="detail-field-first_session_date"]');
     if (await dateInput.isVisible()) {

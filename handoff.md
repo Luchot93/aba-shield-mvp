@@ -4,101 +4,112 @@ _Last updated: 2026-10-14_
 
 ## 1. Goal we are moving towards
 
-This session closed out the full ACD-99 chain: flip `FLAGS.PIPELINE`/`FLAGS.STAFF`
-to launch Pipeline CRM and Staff Directory for real, then clear the two
-follow-up tickets that triage surfaced (stale test assertions, app-wide
-color-contrast debt) so nothing shipped half-verified. All three are now
-merged to `main` and closed in Jira.
+This session was a production QA pass, not ticket-driven work: verify the
+live production app end-to-end, find real bugs, and fix them immediately
+rather than just filing them. Two bugs were found and fixed — no Jira
+ticket was opened for either, since both were fully diagnosed, fixed,
+dev-verified, deployed to production, and merged to `main` within this same
+session (nothing left in a "pending debt" state that would need one).
 
-**Status: ACD-99, ACD-116, and ACD-117 are all done — merged to `dev` and
-`main`, CI green on every PR, Jira tickets commented and transitioned to
-Done.** There is no in-flight ticket right now; the next session starts
-from backlog (see §5).
+**Status: both fixes are done — merged to `dev` and `main`, deployed live
+to production, and verified against real production data.** There is no
+in-flight ticket right now; the next session starts from backlog (see §5).
 
 ## 2. Current state of the code
 
-**All changes from this session are merged into `main` (and `dev`). Nothing
-outstanding on any feature branch. No DB/migration changes this session.**
+**All changes from this session are merged into `main` (and `dev`) via PR
+#150 (→ `dev`) and PR #151 (`dev` → `main`), both merged. Local `main` and
+`dev` fast-forwarded to match `origin` at session close. Nothing outstanding
+on any feature branch.**
 
-- **ACD-99** (PR #146, merged to `dev` then promoted to `main`): flipped
-  `FLAGS.PIPELINE`/`FLAGS.STAFF` to `true`. Fixed E2E mock-backend gaps in
-  `src/lib/db.js`, `src/lib/e2e/store.js`, `src/lib/e2e/mockSupabase.js`
-  that only became reachable once the flags were live. Fixed 2 critical
-  axe violations (`label` on Client Detail checklist inputs, `select-name`
-  on Staff Directory's sort dropdown) with `aria-label` additions. Updated
-  `CLAUDE.md` to reflect Pipeline/Staff as shipped. Full diagnosis/fix
-  record in `docs/ACD-99-flag-flip-qa-report.md`.
-- **ACD-116** (PR #147, merged to `dev` then promoted to `main`): repaired
-  18 stale/incorrect assertions in `tests/pipeline.spec.js` that had never
-  run before (previously `test.describe.skip`-gated behind the same
-  flags). Root causes were all test-authoring debt (stale branding string,
-  stale seed-data counts, wrong seed client IDs, a missing "Add to
-  Pipeline" checkbox in test setup, a renamed field testid, 3 assertions
-  that wrongly assumed `FLAGS.REAUTH` is on) — zero `src/` app code changed
-  for this ticket, test-file-only fix. Full suite now 81/81 in that file.
-- **ACD-117** (PR #148 → `dev`, PR #149 `dev` → `main`): app-wide WCAG AA
-  color-contrast fixes. Darkened `teal-600`, `slate-400`/`500`, `red-500`
-  globally in `tailwind.config.js` to the next official Tailwind shade.
-  Added per-stage `chipBg` values in `stages.js` for the Client Detail
-  stage stepper (white text needs a darker solid background than the
-  `dot` accent color). Replaced a translucent `bg-white/20` count-badge
-  pattern (Clients/Pipeline filter chips) with a solid white pill + dark
-  teal text — the overlay washed out to ~2.8:1 regardless of underlying
-  color. Fixed the amber-500 "Requested" status pill to amber-600. Opted
-  two `NavBar.jsx` labels (inactive nav tabs, "Testing as:") out of the
-  global `slate-400` override via a pinned literal hex, since that header's
-  dark background already passed at the original lighter value and the
-  darkened override broke it (~7.3:1 → ~3.9:1) — same token, two
-  incompatible contexts, documented inline with a comment.
-- **Verification across all three**: `tests/accessibility.spec.js` 6/6
-  passing (0 critical/serious violations, Login/Clients/New Client
-  form/Pipeline/Client Detail/Staff Directory), full Playwright suite 121
-  passed / 59 skipped (pre-existing gated-feature tests, unrelated) / 0
-  failed, `npm run build` succeeds, `npm audit --omit=dev --audit-level=high`
-  0 vulnerabilities, manual visual spot-check — no regressions. Every PR's
-  CI (build, playwright, rls, Vercel deploy) ran green before merging.
-- **Repo sync verified clean**: local `dev` and `main` both fast-forwarded
-  to match `origin`, a direct `git diff main dev` is empty (byte-for-byte
-  identical), no stray local-only commits on any branch, working tree
-  clean, no stash entries.
-- **Jira**: ACD-99, ACD-116, ACD-117 each got a plain-English comment
-  summarizing the work and linking the merging PR(s), then were
-  transitioned to **Done**.
+- **RLS bug**: `clients.bcba_id`/`rbt_id` store `staff.id` (the staff
+  table's own PK), but the `clients` select/update RLS policies and the
+  shared `can_access_client()` helper (gates `checklist_items`/`documents`/
+  `activity_log`/the `client-documents` storage bucket) compared them
+  directly to `auth.uid()` — which equals `staff.user_id`, a different id
+  space with no FK tying the two together. A real assigned BCBA/RBT could
+  never see their own clients. Fixed with a new `is_assigned_staff()`
+  helper + rewritten policies (`supabase/migrations/20261014120000_fix_client_assignment_rls_staff_id.sql`,
+  `20261014121000_fix_can_access_client_rls_staff_id.sql`). The identical
+  bug also existed independently in `send-notification-email`'s own
+  authorization check (compared to `callerId` instead of `callerStaff.id`)
+  — fixed in the same pass.
+- **Test-fixture bug found along the way**: `tests/rls/setup.js`'s `seed()`
+  wrote fixture users' raw auth ids into `bcba_id`/`rbt_id` instead of their
+  `staff.id`, which meant `npm run test:rls` showed green without ever
+  exercising the real bug. Fixed so the suite proves real behavior — now
+  42/42 genuinely passing.
+- **Auth Assessment checklist bug**: the `'select'` case in
+  `itemComplete()` (`src/utils/checklist.js`) was missing the
+  `if (item.optional) return true` early-return present on every sibling
+  case, permanently blocking an optional field ("Submission method") from
+  ever completing — which blocked every client from advancing past the
+  Auth Assessment stage. One-line fix.
+- **Deploy-drift fix (ACD-95 parity)**: while deploying the
+  `send-notification-email` auth fix, discovered production's live version
+  (v3/v4) predated the already-merged ACD-95 rate-limiting feature present
+  in the repo. Deployed the full rate-limited version to production (now
+  v5) so prod matches the repo/dev — closing that gap rather than leaving
+  it as silent drift.
+- **Verification**: both migrations + the edge function fix applied to and
+  tested against the dedicated RLS dev project (`aba-shield-rls-dev`,
+  `aaqhoqzmkunsrfhcmlop`) first — `npm run test:rls` 42/42 — then promoted
+  to production (`ABA_VAULT_MVP`, `qravuejkiluimaihhbrf`). Live production
+  verification: a `set_config('request.jwt.claims', ...)` DB simulation
+  confirmed the real QA-fixture BCBA now sees their assigned client
+  (previously invisible), a random unrelated user still sees 0 rows
+  (negative control), and `can_access_client()` resolves `true` for the
+  real assignment. The redeployed edge function was smoke-tested live
+  (valid-but-wrong-role JWT → got the function's own clean
+  `"Invalid or expired session"` response, confirming both imports,
+  including the cross-directory `_shared/rateLimit.ts` one, resolved
+  correctly at boot). `npm run build` clean. `tests/pipeline.spec.js`:
+  86 passed / 28 skipped (gated Metrics/Reassessment specs, expected) / 0
+  failed.
+- **No Jira ticket filed** — explicit call this session, since both bugs
+  were fixed start-to-finish with no pending/deferred piece.
 
 ## 3. Files actively being edited
 
-None — only `handoff.md` is being touched now, at session close. Nothing
-is mid-edit; everything from this session is already committed and merged.
+None — only `handoff.md` is being touched now, at session close. Everything
+else from this session is already committed, merged, and deployed.
 
 ## 4. Everything tried that failed / walked back — and deferred items
 
-- **Nothing walked back on the ACD-99 flag flip itself** — clean on the
-  first pass (build succeeded, no orphaned flag checks found).
-- **Stale accessibility test run during ACD-117 verification**: a re-run
-  of `tests/accessibility.spec.js` after the `tailwind.config.js` edit
-  still showed the old violations, because Playwright's
-  `reuseExistingServer: !CI` was reusing a dev server process that
-  predated the config edit (started before the session, serving stale
-  compiled CSS). Fixed by killing the stale process and re-running — not
-  an app bug, a local test-environment artifact.
-- **Genuine regression introduced and self-caught during ACD-117**:
-  globally darkening `slate-400` fixed contrast on light/white backgrounds
-  but broke `NavBar.jsx`'s already-passing dark-header usage of the same
-  class (same token, incompatible contexts — the second instance of this
-  exact bug class this project has hit, after an earlier `SM.dot` issue).
-  Caught via the probe script + manual WCAG contrast math before shipping,
-  fixed with a pinned literal-hex opt-out rather than reverting the global
-  change (see §2 above).
-- **Deliberately scoped `color-contrast` out of ACD-99** rather than
-  fixing it inline — it predated Pipeline/Staff (visible on Clients/New
-  Client form too), so it was filed separately as ACD-117 instead of
-  scope-creeping ACD-99. (Resolved this session, as described above.)
-- **Test-suite debt found during ACD-99 but not fixed inline** — filed as
-  ACD-116 instead, since full remediation was out of ACD-99's scope.
-  (Resolved this session.)
-- Temporary diagnostic scripts (`tests/a11y-probe.spec.js`, used in both
-  the ACD-99 and ACD-117 triage passes) were deleted after use in each
-  case — never part of the permanent test suite.
+- **First `deploy_edge_function` attempt (dev) failed**: passed
+  `entrypoint_path: "index.ts"` with files `"index.ts"` and
+  `"_shared/rateLimit.ts"` both at bundle root — `../_shared/rateLimit.ts`
+  couldn't resolve from that layout (`BadRequestException: Failed to
+  bundle`). Fixed by inspecting the already-deployed dev version via
+  `get_edge_function` and matching its actual structure
+  (`entrypoint_path: "source/index.ts"`, `_shared/rateLimit.ts` as a
+  sibling of `source/`).
+- **Deliberately did NOT deploy the full local `index.ts` to production on
+  the first pass** — production's actual running code (confirmed via
+  `get_edge_function`) lacked the ACD-95 rate-limiting feature the local
+  repo file already had, a pre-existing, out-of-scope deploy-drift issue.
+  Built a minimal patch on top of production's actual code first (auth fix
+  only, v4) to avoid silently changing production behavior as a side
+  effect, then came back and deployed the full rate-limited version (v5)
+  as an explicit, separate, user-approved step once asked to proceed with
+  "the ACD-95 rate limits fix."
+- **Second deploy's metadata looked suspicious**: the v5
+  `deploy_edge_function` response showed `entrypoint_path:
+  ".../source/source/index.ts"` — a doubled `source/` segment. Investigated
+  rather than assuming it was fine: `get_edge_function` confirmed the
+  stored files were exactly `source/index.ts` + `_shared/rateLimit.ts` as
+  siblings (the doubled segment is cosmetic, an artifact of Supabase's temp
+  bundle-directory naming, also present on the earlier single-file prod
+  deploy). Confirmed with a live smoke test rather than taking the metadata
+  at face value.
+- **Deliberately left the 5 Dependabot vulnerabilities (1 high, 4
+  moderate) alone** — surfaced automatically on `git push`, unrelated to
+  this session's fixes. User explicitly said to leave them for a dedicated
+  pass later (see §5).
+- Branched the fix off local `main` rather than `dev` directly — confirmed
+  first via `git log` that `main` and `origin/dev` were content-identical
+  at the time (no divergence), so it made no difference which was the
+  base.
 
 ## 5. Next steps
 
@@ -123,8 +134,13 @@ prior sessions (none of these were touched this session):
    through ACD-98 handoffs' outstanding items (ACD-113, ACD-112, ACD-111,
    ACD-109, ACD-110, ACD-100, ACD-105, ACD-106) — see git history for
    earlier handoff versions if needed.
-7. 4 open Dependabot dependency-bump PRs exist on the repo as of this
-   session's close (#133 react-dom 18→19, #134 vite 5→8, #135
-   @vitejs/plugin-react 4→6, #136 tailwindcss 3→4) — all major-version
-   bumps, none reviewed or merged yet, likely overlapping with ACD-115's
-   scope. Worth triaging together next session.
+7. 4 open Dependabot dependency-bump PRs still open as of this session's
+   close (#133 react-dom 18→19, #134 vite 5→8.3.4, #135
+   @vitejs/plugin-react 4→6.1.2, #136 tailwindcss 3→4.3.3) — all
+   major-version bumps, none reviewed or merged yet, likely overlapping
+   with ACD-115's scope. Unchanged from prior handoffs.
+8. **New this session**: GitHub flagged 5 Dependabot *vulnerability alerts*
+   (1 high, 4 moderate) on push — distinct from the dependency-bump PRs
+   above. User explicitly deferred addressing these; worth a dedicated
+   triage pass next session (`gh api repos/Luchot93/aba-shield-mvp/dependabot/alerts`
+   or the repo's Security tab for specifics).

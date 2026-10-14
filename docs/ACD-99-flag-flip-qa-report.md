@@ -189,7 +189,71 @@ None of the 16 touch the fix in §9, none are regressions from the flag flip its
 
 ## 11. Updated conclusion
 
-**ACD-99 is ready to close on the product side.** Pipeline Kanban and Staff Directory are fully functional against real (mock) data — assignment, invite/edit/revoke, checklist saves, and activity logging all persist correctly. The two functional bugs found in the original pass (§5) are fixed (§9) and verified by re-test (§10). The only outstanding items are tracked separately and don't block this ticket:
+**ACD-99 is ready to close on the product side.** Pipeline Kanban and Staff Directory are fully functional against real (mock) data — assignment, invite/edit/revoke, checklist saves, and activity logging all persist correctly. The two functional bugs found in the original pass (§5) are fixed (§9) and verified by re-test (§10). The accessibility acceptance-criteria item is now triaged and resolved for its blocking portion — see §12. The only outstanding items are tracked separately and don't block this ticket:
 - **ACD-116** — 16 stale/incorrect `tests/pipeline.spec.js` assertions (test-suite debt, not app debt).
-- **§6.4** — `color-contrast` accessibility findings across every page (pre-existing design-token issue, not Pipeline/Staff-specific) and the two newly-surfaced critical findings (`label` on Client Detail, `select-name` on Staff Directory) — per ACD-99's acceptance criteria, these should be triaged against `tests/accessibility.spec.js` (ACD-97) before the ticket is fully closed; not yet re-verified post-fix in this session.
+- **ACD-117** — `color-contrast` design-token issue across every page, pre-existing and cross-cutting, not Pipeline/Staff-specific (full detail in §12).
 - **§6.3 / §8.4** — Login-page a11y flakiness between isolated and full-suite runs, not re-investigated.
+
+## 12. Accessibility (ACD-97/axe-core) — final triage, fix, and re-test
+
+Picking up from §6.4/§10's note that accessibility hadn't been re-verified post-fix. Ran `tests/accessibility.spec.js` in full (all three describe blocks, including the two previously-always-skipped "gated" blocks now that `FLAGS.PIPELINE`/`FLAGS.STAFF` are live) and used a throwaway probe spec (`AxeBuilder` dumping `violation.nodes` directly, since the main spec only logs counts) to pull exact selectors and HTML for each violation.
+
+### 12.1 Findings (pre-fix)
+
+| Page | Critical/serious violations |
+|---|---|
+| Login | — (passed; 2 moderate-only findings, not blocking) |
+| Clients (Intake) | `color-contrast` (serious, 2 nodes) |
+| New Client form | `color-contrast` (serious, 2 nodes) |
+| Pipeline Kanban board | `color-contrast` (serious, 27 nodes) |
+| Client Detail | `color-contrast` (serious, 30 nodes) + **`label`** — checklist checkbox/date inputs missing accessible names (**critical**, 4 nodes) |
+| Staff Directory | `color-contrast` (serious, 21 nodes) + **`select-name`** — sort `<select>` missing accessible name (**critical**, 1 node) |
+
+Two distinct problem classes, triaged differently:
+- **`label` / `select-name` (critical)** — genuine, newly-surfaced defects specific to the Client Detail checklist rows and the Staff sort dropdown. Both newly reachable because this is the first time these gated blocks have ever executed (flags were always `false` before ACD-99). Cheap, scoped, no-visual-change fix (add `aria-label`).
+- **`color-contrast` (serious)** — present on *every* page tested, including Clients/New Client form, which shipped long before Pipeline/Staff existed. This is a pre-existing, cross-cutting design-token problem (3 recurring teal/slate token combos reused everywhere), not something introduced by this ticket, and not something that should be fixed ad hoc inside ACD-99. Filed separately as **ACD-117** rather than fixed here.
+
+### 12.2 Fix applied (critical violations only)
+
+Minimal, non-visual `aria-label` additions — no layout/style change, no behavior change:
+
+`src/features/detail/ClientDetailPage.jsx` (checklist row checkbox + date inputs):
+```diff
+  : <input type="checkbox" checked={!!clVal}
+      onChange={e => { patchCL(item.clSec, item.key, e.target.checked); if (e.target.checked) pushLog(`Checked: ${item.label}`); }}
++     aria-label={item.label}
+      className="w-4 h-4 rounded accent-teal-600 cursor-pointer"/>
+...
+  : <input type="date" value={dateVal}
+      onChange={e => patchCL(item.clSec, item.dateKey, e.target.value)}
++     aria-label={`${item.label} date`}
+      className={...}/>
+```
+
+`src/features/staff/StaffPage.jsx` (sort dropdown):
+```diff
+  <select value={sort} onChange={e => setSort(e.target.value)}
+    data-testid="staff-sort"
++   aria-label="Sort staff"
+    className="...">
+```
+
+### 12.3 Re-test results (post-fix)
+
+Re-ran `tests/accessibility.spec.js` in full. Both critical violation types are gone; `color-contrast` persists at **identical node counts** (confirms the fix touched nothing else and introduced no regression):
+
+| Page | Before | After |
+|---|---|---|
+| Client Detail | `color-contrast` (30) + `label` (4, critical) | `color-contrast` (30) only |
+| Staff Directory | `color-contrast` (21) + `select-name` (1, critical) | `color-contrast` (21) only |
+
+Also ran the **full** `tests/pipeline.spec.js` (all describe blocks, not just §10's narrower 3-block `-g` filter, so this run additionally covers the Notifications and Services/Reauth-labeling blocks that §10 didn't touch) as a regression check on the two changed files: **71 passed, 18 failed, 25 skipped (10.2 min)**. Checked each of the 18 against §10's root-cause catalogue and the test source:
+- 14 map directly onto §10's six existing ACD-116 categories (rebranding string, stale seed counts, stale column count, stage-gated assignment UI, "Save to Directory" vs. "Save & Add to Pipeline" behavior, wrong field key).
+- The other 4 (`Services cards show Services · Reauth label`, `Services cards show reauth banners`, `reauth banner shows for services clients with reauth_active`, `advancing a client stage creates a notification`) only appear in this broader run because it includes describe blocks §10 excluded via `-g`; all four are REAUTH-surface assertions — out of scope per CLAUDE.md ("Reauth cycle UI ... punted per product decision; Services is shipped as a plain stage with no reauth surfaces yet") — or (for the notification test) a checklist-completeness gap unrelated to the two changed files, confirmed by its failure reason (`advance-btn` stayed disabled because another checklist field the test doesn't fill was still incomplete — nothing to do with the checkbox/date `aria-label` additions).
+- No failure references the Client Detail checklist checkbox/date inputs or the Staff sort dropdown by selector or behavior — the two touched elements are exercised successfully in multiple **passing** specs (e.g. `form field input marks item complete when filled`'s own checklist-field interaction up to its unrelated field-key failure, and the Staff Page `sort` control isn't assertion-tested directly but renders/filters correctly throughout the passing Staff Page block).
+
+**Conclusion: zero regressions from the `aria-label` additions.** Every failure is pre-existing test-suite debt (ACD-116 or REAUTH out-of-scope), not caused by this fix.
+
+### 12.4 Outcome
+
+ACD-99's accessibility acceptance-criteria item is satisfied: the two critical violations surfaced by activating Pipeline/Staff are fixed and verified. The remaining serious `color-contrast` findings are a pre-existing, cross-cutting issue unrelated to this ticket's scope, tracked in **ACD-117**.

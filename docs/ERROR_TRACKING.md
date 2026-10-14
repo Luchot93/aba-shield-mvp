@@ -7,7 +7,7 @@ How ABA Shield surfaces runtime errors and where to look when something breaks (
 Frontend errors are reported to Sentry (`@sentry/react`), initialized in
 [`src/lib/sentry.js`](../src/lib/sentry.js) and called at boot in [`main.jsx`](../main.jsx).
 
-- **Project dashboard:** <!-- TODO: paste Sentry project URL --> `https://sentry.io/organizations/<org>/issues/`
+- **Project dashboard:** https://pmsolutions.sentry.io/projects/aba_vault_sentry/?project=4511814705283072
 - **Disabled in dev.** `initSentry()` returns early when `import.meta.env.DEV` is true or
   `VITE_SENTRY_DSN` is empty. The DSN is set only in Vercel (Preview + Production) — never
   committed. So Sentry only reports from real deploys.

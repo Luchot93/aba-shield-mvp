@@ -320,11 +320,6 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
     });
   };
 
-  const pushDoc = (type, label, dataUrl, fieldLabel) => {
-    const doc = { id:`doc_${Date.now()}`, type, label, uploaded_at:new Date().toISOString(), by:currentUser.name, stage:client.stage, ...(dataUrl ? { dataUrl } : {}), ...(fieldLabel ? { field: fieldLabel } : {}) };
-    setClients(prev => prev.map(c => c.id === client.id ? { ...c, documents:[...c.documents, doc] } : c));
-  };
-
   const pushDocUpload = (file, docType, fieldLabel) => {
     const localId = `doc_${Date.now()}`;
     const doc = { id:localId, type:docType, label:file.name, uploaded_at:new Date().toISOString(), by:currentUser.name, stage:client.stage, ...(fieldLabel ? { field: fieldLabel } : {}) };
@@ -639,31 +634,6 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               )
             )}
           </div>
-        </div>
-      );
-    }
-
-    // ── Card-style upload ──────────────────────────────────────────────────
-    if (item.type === 'upload') {
-      return (
-        <div className={`mb-2 flex items-center justify-between gap-3 px-4 py-3 rounded-lg border transition-colors
-          ${complete ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-stone-200'}`}>
-          <p className={`text-sm font-semibold ${complete ? 'line-through text-slate-400' : 'text-slate-700'}`}>{item.label}</p>
-          {complete
-            ? <span className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-lg flex-shrink-0">
-                <svg className="w-3 h-3" fill="none" viewBox="0 0 12 12">
-                  <path d="M2 6l2.5 2.5L10 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Uploaded
-              </span>
-            : readOnly
-              ? <span className="px-2.5 py-1.5 text-xs font-semibold text-slate-400 bg-stone-50 border border-stone-200 rounded-lg flex-shrink-0">Not uploaded</span>
-              : <button data-testid={`upload-${item.key}`}
-                  onClick={e => { e.stopPropagation(); patchCL(item.clSec, item.key, true); pushDoc(item.key, item.label); pushLog(`Uploaded: ${item.label}`); }}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-teal-700 border border-teal-300 bg-white hover:bg-teal-50 rounded-lg flex-shrink-0 transition-colors">
-                  <Ico.Upload/> Upload
-                </button>
-          }
         </div>
       );
     }

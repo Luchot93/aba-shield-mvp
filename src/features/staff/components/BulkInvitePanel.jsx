@@ -602,7 +602,7 @@ export default function BulkInvitePanel({ onClose, onImport, existingStaff }) {
                   onClick={buildPreview}
                   disabled={!allMapped}
                   className="px-5 py-2 text-sm font-semibold text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-                  style={{ background: '#0D9488' }}>
+                  style={{ background: '#0F766E' }}>
                   Preview →
                 </button>
               </div>
@@ -798,7 +798,7 @@ export default function BulkInvitePanel({ onClose, onImport, existingStaff }) {
                     <div className="mt-1.5 h-1.5 w-full rounded-full bg-stone-200 overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-150"
-                        style={{ background: '#0D9488', width: `${(sending.current / sending.total) * 100}%` }}
+                        style={{ background: '#0F766E', width: `${(sending.current / sending.total) * 100}%` }}
                       />
                     </div>
                   </div>
@@ -813,7 +813,7 @@ export default function BulkInvitePanel({ onClose, onImport, existingStaff }) {
                 <span/>
                 <button onClick={onClose} data-testid="bulk-invite-done"
                   className="px-5 py-2 text-sm font-semibold text-white rounded-xl hover:opacity-90 transition-opacity"
-                  style={{ background: '#0D9488' }}>
+                  style={{ background: '#0F766E' }}>
                   Done
                 </button>
               </>
@@ -826,7 +826,7 @@ export default function BulkInvitePanel({ onClose, onImport, existingStaff }) {
                   disabled={okCount === 0}
                   data-testid="bulk-invite-submit"
                   className="px-5 py-2 text-sm font-semibold text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-                  style={{ background: '#0D9488' }}>
+                  style={{ background: '#0F766E' }}>
                   Invite {okCount} staff member{okCount !== 1 ? 's' : ''}
                 </button>
               </>

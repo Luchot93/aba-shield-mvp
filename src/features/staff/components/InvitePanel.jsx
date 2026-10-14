@@ -155,7 +155,7 @@ export default function InvitePanel({ onClose, onInvite, pendingInvites, onRevok
           <button onClick={handleSubmit} disabled={!canSubmit}
             data-testid="invite-submit"
             className="w-full py-2.5 text-sm font-semibold text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-            style={{ background:'#0D9488' }}>
+            style={{ background:'#0F766E' }}>
             Send invite
           </button>
 

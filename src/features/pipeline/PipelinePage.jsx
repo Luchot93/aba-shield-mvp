@@ -246,6 +246,7 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
           onClose={() => setShowModal(false)}
           onOpenClient={client => { setShowModal(false); setSelectedClient(client); }}
           onAddToPipeline={client => { handleAddToPipeline(client); setShowModal(false); }}
+          showPipelineOption={true}
         />
       )}
     </div>

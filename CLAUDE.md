@@ -2,30 +2,36 @@
 
 ## What This Repo Is
 
-`aba-shield-mvp` is the production repository for ABA Shield Alpha.
-It ships 4 features: Login, Clients (create + import), Initial Assessment, and AI-Generated .docx export.
+`aba-shield-mvp` is the production repository for ABA Shield.
+It ships: Login, Clients (create + import), Initial Assessment, AI-Generated .docx export,
+Pipeline CRM / Kanban board, and Staff directory. (ACD-99 flipped `FLAGS.PIPELINE` and
+`FLAGS.STAFF` to true — see "Feature Flags Pattern" below for current flag state.)
 
-This repo was extracted from `ABA_Shield_V0`. All Phase 2+ code is still present in the files
+This repo was extracted from `ABA_Shield_V0`. Remaining Phase 2+ code is still present in the files
 but gated behind feature flags in `src/constants/featureFlags.js`. Never delete gated code.
 
 ## What This Repo Is NOT
 
 Do not add, reference, or assume these features exist in this repo:
-- Pipeline CRM / Kanban board (FLAGS.PIPELINE — Trench 5)
 - Reassessment workflow (FLAGS.REASSESSMENT — Trench 7)
-- Staff directory (FLAGS.STAFF — Trench 8)
 - Metrics dashboard (FLAGS.METRICS — Trench 9)
+- Reauth cycle UI — banners, badges, countdowns on the now-live Pipeline (FLAGS.REAUTH).
+  Punted per product decision; Services is shipped as a plain stage with no reauth surfaces yet.
 
 If you see imports from these features, check whether they are gated. If they are gated, leave them.
 If they are not gated and causing errors, gate them — do not delete them.
 
 ## Feature Flags Pattern
 
-All Phase 2 code uses this pattern:
+Remaining Phase 2 code uses this pattern:
   import { FLAGS } from '../constants/featureFlags.js'
-  {FLAGS.PIPELINE && <PipelinePage />}
+  {FLAGS.REASSESSMENT && <ReassessmentPage />}
 
-To enable a Phase 2 feature: set its flag to true in featureFlags.js, then fix TypeErrors.
+Current state in `src/constants/featureFlags.js`: `PIPELINE: true`, `STAFF: true` (both flipped
+in ACD-99 — Pipeline and Staff are shipped, active features now, not gated code). `REASSESSMENT`,
+`REAUTH`, `METRICS`, and `VOICE_CAPTURE` remain `false`.
+
+To enable a remaining Phase 2 feature: set its flag to true in featureFlags.js, then fix TypeErrors.
 Never set a flag to true without being explicitly asked to do so.
 
 ### FLAGS.VOICE_CAPTURE — Assessment voice recording + transcription (OFF for initial ship)
@@ -69,32 +75,35 @@ src/
 ├── auth/                    # LoginPage.jsx, SetPasswordPage.jsx
 ├── components/              # NavBar (tabs gated), Avatar, StagePill, icons, ErrorBoundary
 ├── constants/
-│   ├── featureFlags.js      # ALL flags false in Alpha. Do not change without being asked.
+│   ├── featureFlags.js      # PIPELINE + STAFF true (ACD-99). REASSESSMENT/REAUTH/METRICS/
+│   │                        # VOICE_CAPTURE false. Do not change without being asked.
 │   ├── seedData.js          # makeInitialSections() + makeAssessmentSession() — keep both
-│   └── checklist.js        # Keep — pipeline will need it in Trench 5
+│   └── checklist.js        # ACTIVE — drives Pipeline stage checklists (Kanban + Client Detail)
 ├── features/
 │   ├── assessment/          # ACTIVE — full 12-section interview + AI draft + .docx export
 │   ├── clients/             # ACTIVE — client table, search, import CSV, new client modal
-│   ├── pipeline/            # GATED (FLAGS.PIPELINE) — do not activate
-│   ├── detail/              # GATED (FLAGS.PIPELINE) — do not activate
-│   ├── staff/               # GATED (FLAGS.STAFF) — do not activate
+│   ├── pipeline/            # ACTIVE (FLAGS.PIPELINE) — Kanban board, stage management
+│   ├── detail/              # ACTIVE (FLAGS.PIPELINE) — Client Detail page
+│   ├── staff/               # ACTIVE (FLAGS.STAFF) — Staff directory, cert tracking
 │   └── metrics/             # GATED (FLAGS.METRICS) — do not activate
 ├── hooks/
 │   ├── useAutoSave.js       # Used by assessment — keep
 │   └── useSaveStatus.js     # New in Trench 2
 ├── lib/
 │   ├── supabase.js          # Supabase client — created in Trench 2
-│   └── db.js                # Data access layer — grows with each trench
+│   └── db.js                # Data access layer — grows with each trench; see "db.js Pattern" below
 └── utils/
     ├── dates.js             # Keep
     ├── checklist.js         # Keep
-    ├── notifications.js     # GATED — referenced only inside FLAGS.PIPELINE blocks
-    └── permissions.js       # GATED — referenced only inside FLAGS.PIPELINE blocks
+    ├── notifications.js     # ACTIVE — referenced inside FLAGS.PIPELINE blocks (now live)
+    └── permissions.js       # ACTIVE — referenced inside FLAGS.PIPELINE blocks (now live)
 
 ## Client Object Shape — Never Shrink This
 
-Every client in the `clients` state array must have ALL of these fields,
-even if they are null in Alpha. Phase 2 components expect them.
+Every client in the `clients` state array must have ALL of these fields.
+`stage`, `stage_entered_at`, `pipeline_entry`, `bcba_id`, and `rbt_id` are now actively read/written
+by the live Pipeline (FLAGS.PIPELINE) — don't treat them as dead/null-only fields. The rest below
+remain null/empty because their owning feature is still gated (REASSESSMENT, METRICS).
 
 {
   id, name, dob, phone, address, gender, icd10, diagnosis,
@@ -103,11 +112,12 @@ even if they are null in Alpha. Phase 2 components expect them.
   referral_date, parent_name, parent_relationship, parent_email,
   preferred_language, source,
   assessment_session: null,
-  // Phase 2 fields — null/empty in Alpha
-  stage: null, stage_entered_at: null, auth_expiry_date: null,
-  reauth_cycle: 0, pipeline_entry: false, bcba_id: null, rbt_id: null,
-  service_session_logs: [], reassessment_sessions: [],
+  // Live Pipeline fields (FLAGS.PIPELINE) — populated once a client enters the CRM
+  stage: null, stage_entered_at: null, pipeline_entry: false,
+  bcba_id: null, rbt_id: null, service_session_logs: [],
   caregiver_training_session_logs: [], documents: [], activity_log: [],
+  // Still gated — null/empty until FLAGS.REAUTH / FLAGS.REASSESSMENT ship
+  auth_expiry_date: null, reauth_cycle: 0, reassessment_sessions: [],
 }
 
 ## Assessment Auto-Population
@@ -193,9 +203,16 @@ Each trench adds its own functions to this file following this pattern:
 - async function, throw on error, return data directly (unwrap { data, error })
 - No business logic in db.js — only queries
 
-Current functions (Trench 2):
-  getClients, createClient, getAssessmentSession,
-  createAssessmentSession, updateAssessmentSession
+Current functions (28, as of ACD-99 — grown well past Trench 2; re-check with
+`grep -n "^export async function\|^export function" src/lib/db.js` before trusting this list,
+since it grows every trench):
+  setChecklistItem, uploadDocument, addCaseNote, getClients, createClient, createClients,
+  deleteClient, getProfile, getAssessmentSessionsByBcba, getAssessmentSession,
+  createAssessmentSession, updateAssessmentSession, getStaff, createStaff, getStaffByUserIds,
+  getAdminStaff, updateStaff, updateClient, getActivityLog, getSentEmailNotifications,
+  logActivity, getBehaviorSessionLogsByClientIds, getSkillSessionLogsByClientIds,
+  getCaregiverTrainingSessionLogsByClientIds, addBehaviorSessionLog, addSkillSessionLog,
+  addCaregiverTrainingSessionLog
 
 ## Working Rules
 

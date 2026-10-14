@@ -1320,6 +1320,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         </span>
                       : <input type="checkbox" checked={!!clVal}
                           onChange={e => { patchCL(item.clSec, item.key, e.target.checked); if (e.target.checked) pushLog(`Checked: ${item.label}`); }}
+                          aria-label={item.label}
                           className="w-4 h-4 rounded accent-teal-600 cursor-pointer"/>
                     }
                     <span className={`text-sm ${complete ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{item.label}</span>
@@ -1329,6 +1330,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                       ? <span className="text-xs text-slate-600 px-2.5 py-1.5 bg-stone-50 border border-stone-200 rounded-lg" style={{ fontFamily:'DM Mono, monospace' }}>{dateVal || '—'}</span>
                       : <input type="date" value={dateVal}
                           onChange={e => patchCL(item.clSec, item.dateKey, e.target.value)}
+                          aria-label={`${item.label} date`}
                           className={`text-xs px-2.5 py-1.5 border rounded-lg outline-none focus:border-teal-400 ${hasIssue ? 'border-red-300 bg-red-50 text-red-700' : 'border-stone-200'}`}/>
                     }
                     {hasIssue && <span className="text-xs text-red-600 font-medium">⚠ {warningText}</span>}

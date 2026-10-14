@@ -66,19 +66,35 @@ async function createFixtureUser(email, role) {
     .upsert({ user_id: userId, name: email, role, status: 'active' }, { onConflict: 'user_id', ignoreDuplicates: true })
   if (staffError) throw new Error(`failed to create staff row for ${email}: ${staffError.message}`)
 
-  return userId
+  // staff.id (the table's own PK) is what the real app writes into
+  // clients.bcba_id/rbt_id (see PipelinePage.jsx's handleAssignBCBA/RBT,
+  // which assign a staff row's `id`, not its `user_id`) — never fetched
+  // from the upsert above because `ignoreDuplicates` skips RETURNING on a
+  // conflict (the admin fixture's row already exists). Fetch it explicitly
+  // so callers can seed bcba_id/rbt_id with the correct id space instead of
+  // the auth user id.
+  const { data: staffRow, error: staffFetchError } = await adminClient
+    .from('staff')
+    .select('id')
+    .eq('user_id', userId)
+    .single()
+  if (staffFetchError) throw new Error(`failed to fetch staff id for ${email}: ${staffFetchError.message}`)
+
+  return { userId, staffId: staffRow.id }
 }
 
 const FIXTURE_PASSWORD = `rls-test-${randomUUID()}`
 
 // Seeds one admin, one BCBA, one BCaBA, one RBT fixture user, plus two
-// clients: "assigned" (bcba_id/rbt_id = the fixture BCBA/RBT) and "other".
-// "other" deliberately reuses the admin fixture's id as both bcba_id and
+// clients: "assigned" (bcba_id/rbt_id = the fixture BCBA/RBT's staff.id --
+// the same id space the real app writes via PipelinePage.jsx's
+// handleAssignBCBA/RBT, NOT their auth user id) and "other". "other"
+// deliberately reuses the admin fixture's staff id as both bcba_id and
 // rbt_id, rather than seeding a 5th throwaway staff member, purely to give
-// it a valid, FK-satisfying assignment that is provably NOT the BCBA/RBT
-// fixture pair. Admin visibility is governed entirely by is_admin() and is
-// unaffected by which id sits in these columns, so this has no bearing on
-// what the admin-visibility assertions actually check.
+// it a valid assignment that is provably NOT the BCBA/RBT fixture pair.
+// Admin visibility is governed entirely by is_admin() and is unaffected by
+// which id sits in these columns, so this has no bearing on what the
+// admin-visibility assertions actually check.
 export async function seed() {
   const runId = randomUUID().slice(0, 8)
   const emails = {
@@ -89,15 +105,18 @@ export async function seed() {
   }
 
   const users = {}
+  const staffIds = {}
   for (const [role, email] of Object.entries(emails)) {
-    users[role] = await createFixtureUser(email, role)
+    const { userId, staffId } = await createFixtureUser(email, role)
+    users[role] = userId
+    staffIds[role] = staffId
   }
 
   const { data: clientRows, error: clientError } = await adminClient
     .from('clients')
     .insert([
-      { name: `RLS Fixture Client A (${runId})`, user_id: users.admin, bcba_id: users.bcba, rbt_id: users.rbt },
-      { name: `RLS Fixture Client B (${runId})`, user_id: users.admin, bcba_id: users.admin, rbt_id: users.admin },
+      { name: `RLS Fixture Client A (${runId})`, user_id: users.admin, bcba_id: staffIds.bcba, rbt_id: staffIds.rbt },
+      { name: `RLS Fixture Client B (${runId})`, user_id: users.admin, bcba_id: staffIds.admin, rbt_id: staffIds.admin },
     ])
     .select('id')
   if (clientError) throw new Error(`failed to seed clients: ${clientError.message}`)
@@ -119,6 +138,7 @@ export async function seed() {
     runId,
     password: FIXTURE_PASSWORD,
     users: { ...users, emails },
+    staffIds,
     clients: { assigned, other },
   }
 }

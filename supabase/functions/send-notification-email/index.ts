@@ -91,8 +91,16 @@ Deno.serve(async req => {
 
   let isAssignedForClient = false
   if (clientId) {
+    // clients.bcba_id/rbt_id store staff.id (the staff table's own primary
+    // key), not the caller's auth user id -- compare against callerStaff.id
+    // (fetched above), not callerId. Comparing against callerId directly was
+    // the same wrong-id-space bug as the clients/can_access_client RLS
+    // policies (see supabase/migrations/20261014120000_*.sql,
+    // 20261014121000_*.sql) -- a real assigned BCBA/RBT could never pass
+    // this check.
     const { data: clientRow } = await supabase.from('clients').select('bcba_id, rbt_id').eq('id', clientId).maybeSingle()
-    isAssignedForClient = !!clientRow && (clientRow.bcba_id === callerId || clientRow.rbt_id === callerId)
+    isAssignedForClient = !!clientRow && !!callerStaff?.id
+      && (clientRow.bcba_id === callerStaff.id || clientRow.rbt_id === callerStaff.id)
   }
 
   if (!isAdmin && !isRecipientSelf && !isAssignedForClient) {

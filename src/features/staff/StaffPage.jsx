@@ -271,6 +271,7 @@ export default function StaffPage({ staff, setStaff, clients, currentUser, onSel
         {/* UX7: Sort dropdown */}
         <select value={sort} onChange={e => setSort(e.target.value)}
           data-testid="staff-sort"
+          aria-label="Sort staff"
           className="ml-auto text-xs font-medium px-3 py-1.5 border border-stone-200 rounded-lg bg-white text-slate-600 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 cursor-pointer">
           <option value="name">Sort: Name A–Z</option>
           <option value="expiry">Sort: Cert expiry</option>

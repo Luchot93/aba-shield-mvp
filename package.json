@@ -11,7 +11,7 @@
     "test:rls": "node --env-file=.env.rls --test \"tests/rls/*.test.js\""
   },
   "dependencies": {
-    "@sentry/react": "^10.68.0",
+    "@sentry/react": "^11.4.0",
     "@supabase/supabase-js": "^2.110.0",
     "@tiptap/react": "^3.23.6",
     "@tiptap/starter-kit": "^3.23.6",

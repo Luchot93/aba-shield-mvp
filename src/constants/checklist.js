@@ -47,7 +47,7 @@ export const mkChecklist = () => ({
 export function getStageItems(stage, client) {
   switch (stage) {
     case 'intake': return [
-      { type:'upload',       key:'referral_form',    label:'Referral request form',                     clSec:'intake', docType:'referral_form'    },
+      { type:'file_upload', key:'referral_form',    label:'Referral request form',                     clSec:'intake', accept:'.pdf,.docx,.jpg,.png', docType:'referral_form'    },
       { type:'file_upload', key:'insurance_card',   label:'Insurance card',                            clSec:'intake', accept:'.pdf,.docx,.jpg,.png', docType:'insurance_card'   },
       { type:'file_upload', key:'cde',              label:'Comprehensive Diagnostic Evaluation (CDE)', clSec:'intake', accept:'.pdf,.docx,.jpg,.png', docType:'cde', orClientField:'diagnosis_pending' },
       { type:'checkbox',    key:'diagnosis_pending', label:'Diagnosis Pending', clSec:'intake', clientField:'diagnosis_pending', optional:true, sublabel:"Check this if the CDE isn't available yet — diagnosis will be captured during the initial assessment instead." },

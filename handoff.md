@@ -83,29 +83,30 @@ now removed (resolved this session):
    Still unstarted.
 3. **ACD-101** (DNS/Resend domain verification) — still To Do, unassigned,
    still blocked on owning/controlling a real domain. Unchanged.
-4. The Login-page a11y test flakiness noted in the ACD-99 QA report
-   (passed in isolation, failed once in a long combined run) — not
-   investigated yet; worth a look if it recurs.
-5. Dependabot PR #137 (`@sentry/react` 10→11 major-version bump) merged to
-   `main` previously, outside a session — still not re-verified against
-   `sentry.js`'s API usage. Unchanged from prior handoffs.
-6. Carried forward, unrelated pointer only (not reproduced here): the
-   `openClientTab` Playwright helper bug, and everything from the ACD-82
-   through ACD-98 handoffs' outstanding items (ACD-113, ACD-112, ACD-111,
-   ACD-109, ACD-110, ACD-105, ACD-106) — see git history for earlier
-   handoff versions if needed.
+4. **ACD-118** (new this session) — the Login-page a11y test flakiness
+   noted in the ACD-99 QA report (passed in isolation, failed once in a
+   long combined run) — not investigated yet; worth a look if it recurs.
+5. **ACD-119** (new this session) — Dependabot PR #137 (`@sentry/react`
+   10→11 major-version bump) merged to `main` previously, outside a
+   session — still not re-verified against `sentry.js`'s API usage.
+6. **ACD-120** (new this session) — the `openClientTab` Playwright helper
+   bug, carried forward across several prior handoffs without its own
+   ticket. Confirmed via JQL that ACD-105/106/109-113 do not cover it.
+   Everything else from the ACD-82 through ACD-98 handoffs' outstanding
+   items (ACD-113, ACD-112, ACD-111, ACD-109, ACD-110, ACD-105, ACD-106)
+   — see git history for earlier handoff versions if needed.
 7. 4 open Dependabot dependency-bump PRs still open as of this session's
    close (#133 react-dom 18→19, #134 vite 5→8.3.4, #135
    @vitejs/plugin-react 4→6.1.2, #136 tailwindcss 3→4.3.3) — all
-   major-version bumps, none reviewed or merged yet, likely overlapping
-   with ACD-115's scope. Unchanged from prior handoffs.
-8. GitHub's 5 Dependabot *vulnerability alerts* (1 high, 4 moderate),
-   flagged on push in a prior session — user explicitly deferred
-   addressing these; still worth a dedicated triage pass
-   (`gh api repos/Luchot93/aba-shield-mvp/dependabot/alerts` or the repo's
-   Security tab for specifics). Unchanged.
-9. ACD-100's own "out of scope" follow-up, noted in its ticket
-   description: a document-signature-request notification (flagging that
+   major-version bumps, none reviewed or merged yet, overlapping with
+   ACD-115's scope. Unchanged from prior handoffs.
+8. GitHub's 5 Dependabot *vulnerability alerts* (1 high, 4 moderate) —
+   confirmed this session (`gh api repos/Luchot93/aba-shield-mvp/dependabot/alerts`)
+   all 5 are on `vite`/`esbuild`/`postcss-selector-parser`, i.e. fully
+   covered by **ACD-115**'s existing scope (Tailwind/Vite major-version
+   upgrade). No separate ticket needed — resolved once ACD-115 lands.
+9. **ACD-121** (new this session) — ACD-100's own "out of scope"
+   follow-up: a document-signature-request notification (flagging that
    a specific document, e.g. a treatment plan, is awaiting a signed
    reupload). Needs a decision on how a "reupload" gets explicitly
    represented (e.g. a `supersedes_id` or `status` column) before it can

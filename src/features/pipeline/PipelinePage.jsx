@@ -146,7 +146,7 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
             onClick={() => setShowModal(true)}
             data-testid="new-client-btn"
             className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-95"
-            style={{ background:'#0D9488', fontFamily:'DM Sans, sans-serif' }}>
+            style={{ background:'#0F766E', fontFamily:'DM Sans, sans-serif' }}>
             <Ico.Plus/> NEW CLIENT +
           </button>
         )}
@@ -167,9 +167,12 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
               data-testid={chip.testid}
               onClick={() => setSummaryFilter(active ? 'all' : chip.key)}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${active ? 'text-white border-teal-600' : 'text-slate-700 border-stone-200 bg-white hover:border-teal-300 hover:text-teal-700'}`}
-              style={active ? { background:'#0D9488' } : {}}>
+              style={active ? { background:'#0F766E' } : {}}>
               {chip.label}
-              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${active ? 'bg-white/20 text-white' : 'bg-stone-100 text-slate-600'}`}>{chip.count}</span>
+              {/* ACD-117: solid light pill + dark teal text instead of a translucent
+                  white overlay, which washed out to ~2.8:1 contrast regardless of
+                  the underlying teal shade. */}
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${active ? 'bg-white text-teal-700' : 'bg-stone-100 text-slate-600'}`}>{chip.count}</span>
             </button>
           );
         })}
@@ -189,7 +192,7 @@ export default function PipelinePage({ clients, staff, setClients, setSelectedCl
               data-testid={chip.testid}
               onClick={() => setPipelineFilter(chip.key)}
               className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${active ? 'text-white border-teal-600' : 'text-slate-600 border-stone-200 bg-white hover:border-teal-300 hover:text-teal-700'}`}
-              style={active ? { background:'#0D9488' } : {}}>
+              style={active ? { background:'#0F766E' } : {}}>
               {chip.label}
             </button>
           );

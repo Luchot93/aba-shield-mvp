@@ -448,7 +448,7 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
                 <button onClick={() => setStep('drop')} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">← Back</button>
                 <button onClick={buildPreview} disabled={!allMapped}
                   className="px-5 py-2 text-sm font-semibold text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-                  style={{ background:'#0D9488' }}>
+                  style={{ background:'#0F766E' }}>
                   Preview →
                 </button>
               </div>
@@ -620,7 +620,7 @@ export default function ImportPanel({ onClose, onImport, existingClients }) {
             <button onClick={onClose} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">Cancel</button>
             <button onClick={doImport} disabled={readyCount === 0} data-testid="import-submit"
               className="px-5 py-2 text-sm font-semibold text-white rounded-xl disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-              style={{ background:'#0D9488' }}>
+              style={{ background:'#0F766E' }}>
               {FLAGS.PIPELINE && addToPipeline
                 ? `Import ${readyCount} client${readyCount !== 1 ? 's' : ''} to pipeline`
                 : `Import ${readyCount} client${readyCount !== 1 ? 's' : ''} to directory`}

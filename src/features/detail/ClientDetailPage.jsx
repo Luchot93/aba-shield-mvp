@@ -761,7 +761,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             ? (opt.value === item.completeValue || item.completeValues?.includes(opt.value))
                               ? 'bg-emerald-600 border-emerald-600 text-white'
                               : opt.value === 'requested'
-                                ? 'bg-amber-500 border-amber-500 text-white'
+                                ? 'bg-amber-600 border-amber-600 text-white'
                                 : 'bg-slate-500 border-slate-500 text-white'
                             : 'bg-white border-stone-200 text-slate-600 hover:border-teal-300 hover:bg-teal-50/40'
                         } ${readOnly ? 'cursor-default' : 'cursor-pointer'}`}>
@@ -890,7 +890,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                                   ? 'text-white border-teal-600 hover:opacity-90'
                                   : 'text-slate-500 border-stone-200 hover:bg-stone-50'
                             }`}
-                            style={justSaved ? { background:'#10B981' } : isDirty ? { background:'#0D9488' } : {}}>
+                            style={justSaved ? { background:'#10B981' } : isDirty ? { background:'#0F766E' } : {}}>
                             {justSaved ? '✓ Saved' : 'Save'}
                           </button>
                         </div>
@@ -1471,7 +1471,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all
                       ${isCur ? 'text-white' : isDone ? 'text-teal-700 bg-teal-50 cursor-pointer hover:bg-teal-100' : 'text-slate-400'}
                       ${isViewed ? 'ring-2 ring-teal-400 ring-offset-1' : ''}`}
-                    style={isCur ? { background: m.dot } : {}}>
+                    style={isCur ? { background: m.chipBg } : {}}>
                     {isDone && <span style={{ fontSize:'10px' }}>✓</span>}
                     {m.label}
                   </div>
@@ -1679,7 +1679,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                             onClick={handleSaveSchedule}
                             disabled={!schedDraft.schedule_template.trim()}
                             className="px-3 py-1.5 text-xs font-semibold rounded-lg text-white disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
-                            style={{ background: '#0D9488' }}>
+                            style={{ background: '#0F766E' }}>
                             Confirm schedule
                           </button>
                           <button
@@ -1864,7 +1864,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                     disabled={!canAdvance}
                     onClick={() => canAdvance && setConfirmAdvance(nextStage)}
                     className={`w-full py-3 rounded-xl text-sm font-semibold transition-all ${canAdvance ? 'text-white shadow-sm hover:opacity-90' : 'bg-stone-100 text-stone-400 cursor-not-allowed'}`}
-                    style={canAdvance ? { background:'#0D9488' } : {}}>
+                    style={canAdvance ? { background:'#0F766E' } : {}}>
                     {canAdvance ? `Advance to ${SM[nextStage].label} →` : 'Complete all items to advance'}
                   </button>
                   {hasBlock && <p className="text-xs text-red-600 text-center mt-2">⚠ One or more items are blocking advance</p>}
@@ -2534,7 +2534,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
                         onClick={addNote}
                         disabled={!noteText.trim()}
                         className="flex-shrink-0 px-3 py-2 text-xs font-semibold text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-                        style={{ background:'#0D9488' }}>
+                        style={{ background:'#0F766E' }}>
                         Add Note
                       </button>
                     </div>
@@ -2684,7 +2684,7 @@ export default function ClientDetailPage({ clientId, clients, staff, setClients,
               <button data-testid="confirm-cancel" onClick={() => setConfirmAdvance(null)}
                 className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-600 border border-stone-200 hover:bg-stone-50">Cancel</button>
               <button data-testid="confirm-advance" onClick={() => doAdvance(confirmAdvance)}
-                className="flex-1 py-2 rounded-lg text-sm font-semibold text-white" style={{ background:'#0D9488' }}>Confirm</button>
+                className="flex-1 py-2 rounded-lg text-sm font-semibold text-white" style={{ background:'#0F766E' }}>Confirm</button>
             </div>
           </div>
         </div>

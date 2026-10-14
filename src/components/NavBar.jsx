@@ -80,6 +80,13 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
           </div>
 
           <nav className="flex items-center gap-0.5 flex-1">
+            {/* ACD-117: inactive-tab text is pinned to the literal original slate-400
+                hex (#94A3B8) rather than the `text-slate-400` class. That class was
+                globally darkened in tailwind.config.js to fix contrast on light/white
+                backgrounds elsewhere, but this header sits on a dark (#0B1220) bg where
+                the original lighter value already passed (~7.3:1) and the darkened
+                override would fail (~3.9:1) — same color token, two incompatible
+                contexts, so this usage opts out of the override. */}
             {[
               ...(FLAGS.METRICS && isAdmin(currentUser?.role) ? [['metrics','Metrics']] : []),
               ...(FLAGS.PIPELINE ? [['pipeline','Pipeline']] : []),
@@ -89,7 +96,7 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
               ...(FLAGS.STAFF ? [['staff','Staff']] : []),
             ].map(([id,label]) => (
               <button key={id} onClick={() => setPage(id)}
-                className={`relative px-3.5 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${page===id ? 'text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}`}
+                className={`relative px-3.5 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${page===id ? 'text-white' : 'text-[#94A3B8] hover:text-slate-200 hover:bg-white/5'}`}
                 style={{ fontFamily:'DM Sans, sans-serif' }}>
                 {page===id && <span className="absolute inset-0 rounded-md" style={{ background:'rgba(13,148,136,0.25)', border:'1px solid rgba(13,148,136,0.4)' }}/>}
                 <span className="relative">{label}</span>
@@ -121,7 +128,8 @@ export default function NavBar({ page, setPage, notifications, setNotifications,
             {/* Role switcher */}
             <div className="relative" ref={switcherRef}>
               <div className="flex flex-col items-end">
-                <span className="text-[10px] text-slate-400 mb-0.5 pr-1">Testing as:</span>
+                {/* ACD-117: literal hex, not text-slate-400 class — see comment above nav tabs for why. */}
+                <span className="text-[10px] text-[#94A3B8] mb-0.5 pr-1">Testing as:</span>
                 <button
                   onClick={() => setSwitcherOpen(o => !o)}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors"

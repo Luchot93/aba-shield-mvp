@@ -4,6 +4,11 @@
 // supabase/migrations/20260928130000_client_checklist_documents_activity.sql.
 // Covers reads AND writes: an unassigned staff member must be rejected on a
 // write attempt, not merely unable to see the row afterward.
+//
+// ACD-112: assessment_sessions joined this same table/test shape once its
+// standalone "own sessions" (bcba_id = auth.uid()) policy was replaced with
+// can_access_client(client_id) — see
+// supabase/migrations/20261015000000_acd112_assessment_sessions_admin_access.sql.
 import { test, describe, before, after } from 'node:test'
 import assert from 'node:assert/strict'
 import { seed, teardown, clientFor } from './setup.js'
@@ -35,6 +40,10 @@ const TABLES = [
   {
     name: 'activity_log',
     insertRow: (clientId, tag) => ({ client_id: clientId, action: `rls_write_${tag}` }),
+  },
+  {
+    name: 'assessment_sessions',
+    insertRow: (clientId, tag) => ({ client_id: clientId, bcba_name: `rls_write_${tag}` }),
   },
 ]
 

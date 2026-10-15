@@ -2,6 +2,7 @@ import { supabase } from './supabase.js'
 import { IS_E2E } from './e2e/flag.js'
 import * as store from './e2e/store.js'
 import { mkChecklist } from '../constants/checklist.js'
+import { isAdmin } from '../utils/permissions.js'
 
 const PHASE2_DEFAULTS = {
   assessment_session: null,
@@ -325,12 +326,11 @@ function fromDbRow(row) {
   return out
 }
 
-export async function getAssessmentSessionsByBcba(bcbaId) {
-  if (IS_E2E) return store.sessionsByBcba(bcbaId).map(fromDbRow)
-  const { data, error } = await supabase
-    .from('assessment_sessions')
-    .select('*')
-    .eq('bcba_id', bcbaId)
+export async function getAssessmentSessionsByBcba(bcbaId, role) {
+  if (IS_E2E) return store.sessionsByBcba(bcbaId, role).map(fromDbRow)
+  let query = supabase.from('assessment_sessions').select('*')
+  if (!isAdmin(role)) query = query.eq('bcba_id', bcbaId)
+  const { data, error } = await query
   if (error) throw error
   return data.map(fromDbRow)
 }

@@ -91,7 +91,7 @@ export default function App() {
     setClientsLoading(true);
     Promise.all([
       getClients(currentUser.id),
-      getAssessmentSessionsByBcba(currentUser.id),
+      getAssessmentSessionsByBcba(currentUser.id, currentUser.role),
     ])
       .then(([rows, sessions]) => {
         const sessionByClientId = new Map(sessions.map(s => [s.clientId, s]));

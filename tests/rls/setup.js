@@ -127,7 +127,8 @@ export async function seed() {
     childInserts.push(
       adminClient.from('checklist_items').insert({ client_id: client.id, stage: 'intake', item_key: 'rls_fixture_item' }),
       adminClient.from('documents').insert({ client_id: client.id, storage_path: `${client.id}/rls-fixture.pdf`, file_name: 'rls-fixture.pdf' }),
-      adminClient.from('activity_log').insert({ client_id: client.id, actor_id: users.admin, action: 'rls_fixture_seeded' })
+      adminClient.from('activity_log').insert({ client_id: client.id, actor_id: users.admin, action: 'rls_fixture_seeded' }),
+      adminClient.from('assessment_sessions').insert({ client_id: client.id, bcba_id: users.bcba, bcba_name: 'rls_fixture_seeded' })
     )
   }
   const childResults = await Promise.all(childInserts)
@@ -144,7 +145,8 @@ export async function seed() {
 }
 
 // Deletes the two fixture clients (cascades to checklist_items/documents/
-// activity_log via `on delete cascade`), then the four fixture staff rows
+// activity_log/assessment_sessions via `on delete cascade`), then the four
+// fixture staff rows
 // (no cascade on staff.user_id — must go first or deleteUser() below fails
 // on a foreign key violation), then the four fixture auth.users (cascades to
 // profiles).

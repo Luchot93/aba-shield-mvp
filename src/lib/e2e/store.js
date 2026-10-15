@@ -7,6 +7,7 @@
 // localStorage access, and the production guard live inside functions that only
 // run when a db.js function is actually called, which only happens when IS_E2E.
 import { SEED_CLIENTS, SEED_STAFF } from '../../constants/seedData.js';
+import { isAdmin } from '../../utils/permissions.js';
 
 const LS_KEY = 'aba_e2e_store';
 const ADMIN = { id: 'u1', full_name: 'Admin User', email: 'admin@abashield.com', role: 'admin' };
@@ -137,8 +138,9 @@ export function getProfileFor(userId) {
 }
 
 // --- Assessment sessions (raw snake_case rows; db.js applies fromDbRow) ---
-export function sessionsByBcba(bcbaId) {
+export function sessionsByBcba(bcbaId, role) {
   ensureInit();
+  if (isAdmin(role)) return state.sessions;
   return state.sessions.filter(s => s.bcba_id === bcbaId);
 }
 export function sessionByClient(clientId) {

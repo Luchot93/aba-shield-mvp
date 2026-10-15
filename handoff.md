@@ -1,80 +1,113 @@
 # Session Handoff
 
-_Last updated: 2026-10-14_
+_Last updated: 2026-10-15_
 
 ## 1. Goal we are moving towards
 
-Ticket-driven session: [ACD-100](https://awcbehavioralhealth.atlassian.net/browse/ACD-100)
-— "Wire client documents (upload/download) to real Supabase storage + table."
-The ticket's premise (filed 2026-09-29) was that the entire Documents tab was
-client-side-only and every upload was lost on refresh/logout.
+Ticket-driven session: [ACD-112](https://awcbehavioralhealth.atlassian.net/browse/ACD-112)
+— "`getAssessmentSessionsByBcba` has no admin-sees-all branch — admins can't
+see assessment data for clients not assigned to their own `bcba_id`." Filed
+during ACD-87 manual QA; confirmed real (unlike the two adjacent tickets
+triaged earlier this session, ACD-105 and ACD-106 — see below).
 
-**Status: done.** Investigation before writing any code found the ticket's
-scope was ~95% already shipped — under ACD-108 (merged 2026-09-30, one day
-after ACD-100 was filed), which nobody circled back to link/close. Real gap
-found and fixed: one checklist item, "Referral request form," was never
-converted to the real upload path. Fixed, tested, merged to `dev` (PR #152)
-then promoted to `main` (PR #153), both merged. Jira ACD-100 commented with
-the plain-English explanation and moved to Done.
+**Status: done.** Fixed at both layers it actually lived in — the app query
+and, discovered mid-session, the database's own RLS policy — then promoted
+`feat/ACD-112-admin-sees-all-assessment-sessions` → `dev` (PR #154) → `main`
+(PR #155), both merged. Jira ACD-112 commented with a plain-English
+explanation and moved to Done.
+
+Two smaller, earlier items in this same session, also resolved:
+- **ACD-105** (Dependabot/CI secrets or similar — availability-feature
+  investigation): held off: feature has no current product need, revisit
+  when a scheduler feature is built. Moved to HOLD with a plain-English
+  comment, no code changed.
+- **ACD-106**: investigated and closed as already resolved — moved to Done.
 
 ## 2. Current state of the code
 
 **Merged and live on both `dev` and `main`. Local `main` and `dev`
-fast-forwarded to match `origin` at session close. Nothing outstanding on
-any feature branch** (`feat/ACD-100-wire-referral-form-upload`, now merged,
-still exists on GitHub — not deleted, per standing feedback not to prune
-branches as an automatic follow-on to a merge).
+fast-forwarded to match `origin` at session close.** Feature branch
+`feat/ACD-112-admin-sees-all-assessment-sessions` still exists on GitHub
+(not deleted, per standing policy of not pruning branches as an automatic
+follow-on to a merge).
 
-- **Already-working, confirmed by reading the code (not just the ticket)**:
-  `uploadDocument()` in `src/lib/db.js` uploads to the `client-documents`
-  Storage bucket and inserts into the `documents` table (`client_id, stage,
-  storage_path, file_name, mime_type, uploaded_by, doc_type, field_label`);
-  `getDocumentsByClientIds()` reads real rows + batch-generates signed URLs;
-  the Documents tab and Download button already consumed this real data.
-  `doc_type`/`field_label` columns already existed via a follow-up migration
-  (`20260930174958_documents_add_doc_type_and_field_label.sql`) — the
-  ticket's "add document_type column" ask was already done too.
-- **The one real gap, now fixed**: `src/constants/checklist.js` — the
-  `referral_form` intake checklist item was `type:'upload'`, a dead-end
-  pattern wired only to a local-state helper (`pushDoc()` in
-  `ClientDetailPage.jsx`) that never touched Supabase — the only document
-  type in the app that still worked that way. Changed to `type:'file_upload'`
-  (matching every sibling item), which routes through the real
-  `pushDocUpload()` → `uploadDocument()` path.
-- **Dead-code cleanup**: with `referral_form` converted, removed the
-  now-zero-caller "card-style upload" render branch (`item.type === 'upload'`)
-  and the `pushDoc()` helper from `ClientDetailPage.jsx`.
-- **Tests updated**: `tests/pipeline.spec.js`'s two tests that drove the old
-  button via `.click()` on a `data-testid="upload-referral_form"` button now
-  drive the real file input (`setInputFiles`), following the same
-  row-by-label-text pattern already used in `tests/upload-validation.spec.js`.
-- **Verification**: `npm run build` clean. `tests/pipeline.spec.js` +
-  `tests/upload-validation.spec.js`: 97 passed, 29 skipped (gated
-  Metrics/Reassessment specs, expected), 0 failed.
+- **Bug, confirmed by reading the code before changing anything**:
+  `getAssessmentSessionsByBcba(bcbaId)` in `src/lib/db.js` unconditionally
+  filtered `.eq('bcba_id', bcbaId)` — an admin got back only sessions they
+  personally created, same restriction as a BCBA/BCaBA/RBT, with no
+  "admin sees everything" branch.
+- **App-layer fix**: `getAssessmentSessionsByBcba` and the E2E mock's
+  `sessionsByBcba` (`src/lib/e2e/store.js`) now take a `role` parameter and
+  skip the `bcba_id` filter when `isAdmin(role)` (reusing the existing
+  `src/utils/permissions.js` helper). Call site in `src/App.jsx` updated to
+  pass `currentUser.role`.
+- **DB-layer fix (the part that actually matters in production)**: the
+  app-layer change alone would NOT have worked against real Supabase.
+  `assessment_sessions` was the one client-scoped table still gated by the
+  old ownership-only `"own sessions"` policy (`bcba_id = auth.uid()`, `FOR
+  ALL`, no admin bypass) — independent of what the app queries for, RLS
+  silently filtered rows underneath it. Dropped that policy, replaced with
+  the same `can_access_client(client_id)` select/insert/update split every
+  other client-scoped table already uses (`checklist_items`, `documents`,
+  `activity_log`, `behavior_session_logs`, `skill_session_logs`,
+  `caregiver_training_session_logs`). Applied via Supabase MCP to both the
+  RLS dev project (`aaqhoqzmkunsrfhcmlop`) and production
+  (`qravuejkiluimaihhbrf`); local migration file committed:
+  `supabase/migrations/20261015000000_acd112_assessment_sessions_admin_access.sql`.
+- **Accepted tradeoff, confirmed with product owner before applying**: this
+  also grants an assigned RBT read/write access to a client's assessment
+  session, where previously only the creating BCBA could see it. If
+  leadership wants RBTs excluded from assessment data specifically, that
+  needs a narrower follow-up (e.g. a `can_access_client` variant that
+  excludes RBT) — not a reason to revert this.
+- **Test coverage added**: `tests/rls/child-tables.test.js` gained an
+  `assessment_sessions` entry in its parameterized `TABLES` array, running
+  it through the same admin/assigned/unassigned read+write matrix as the
+  other client-scoped tables. `tests/rls/setup.js` now seeds a fixture
+  `assessment_sessions` row per fixture client (it previously only seeded
+  `checklist_items`/`documents`/`activity_log`) — without this the new
+  assertions failed with 0 rows instead of the expected counts, since there
+  was nothing to find regardless of policy correctness.
+- **Verification**: `npm run test:rls` 47/47 passing. `npm run build` clean.
+  Playwright `security-permissions.spec.js` + `pipeline.spec.js`: 95 passed,
+  31 skipped (gated Metrics/Reassessment specs, expected), 0 failed.
+  Supabase `get_advisors` (security) on production confirmed no new issues
+  introduced by the RLS policy change.
 
 ## 3. Files actively being edited
 
 None — everything from this session is committed, merged, and deployed.
-Touched this session: `src/constants/checklist.js`,
-`src/features/detail/ClientDetailPage.jsx`, `tests/pipeline.spec.js`,
+Touched this session: `src/lib/db.js`, `src/lib/e2e/store.js`, `src/App.jsx`,
+`tests/rls/child-tables.test.js`, `tests/rls/setup.js`,
+`supabase/migrations/20261015000000_acd112_assessment_sessions_admin_access.sql`,
 and `handoff.md` itself at session close.
 
 ## 4. Everything tried that failed / walked back
 
-- Nothing walked back this session — the scoped fix was small and landed
-  clean on the first pass.
-- Worth flagging as a near-miss: ACD-100 could easily have been
-  re-implemented from scratch from its (stale) description alone, which
-  would have duplicated ACD-108's work. Caught only by reading `db.js`,
-  the migrations, and `ClientDetailPage.jsx` directly before writing any
-  code, rather than trusting the ticket text as current. Worth the same
-  "verify against the actual code before proposing/building" discipline on
-  any older ticket that sat open a while before being picked up.
+- Nothing walked back on the code itself. The one real correction mid-session
+  was in scope, not approach: the first pass of the fix was app-layer only
+  (passing `role` through `getAssessmentSessionsByBcba`). Before declaring
+  it done, checking `assessment_sessions`'s actual RLS policy (prompted by
+  the user's own verification question about the access model) surfaced
+  that the database would still return zero rows to an admin regardless of
+  the app-layer change — RLS is enforced independently of the application
+  query. This was caught and fixed in the same session, before anything was
+  applied to production, not after.
+- Worth flagging as a near-miss avoided: a prior migration's comment
+  (`20261014121000_fix_can_access_client_rls_staff_id.sql`) explicitly
+  described `assessment_sessions.bcba_id` as a "genuinely different,
+  correctly-designed" ownership column (FK'd to `auth.users`, not an
+  assignment column) and left it alone on purpose. ACD-112 is a deliberate,
+  product-approved reversal of that prior call — converting
+  `assessment_sessions` from an ownership model to the assignment model via
+  `can_access_client()`. Documented directly in the new migration's header
+  comment so a future session doesn't read the old comment and "fix" this
+  back.
 
 ## 5. Next steps
 
-No ticket is actively in progress. Backlog carried forward, with ACD-100
-now removed (resolved this session):
+No ticket is actively in progress. Backlog carried forward, with ACD-105,
+ACD-106, and ACD-112 now removed (resolved this session):
 
 1. **ACD-115** (Tailwind/Vite major-version upgrade, from ACD-94) — still
    unstarted.
@@ -83,31 +116,32 @@ now removed (resolved this session):
    Still unstarted.
 3. **ACD-101** (DNS/Resend domain verification) — still To Do, unassigned,
    still blocked on owning/controlling a real domain. Unchanged.
-4. **ACD-118** (new this session) — the Login-page a11y test flakiness
-   noted in the ACD-99 QA report (passed in isolation, failed once in a
-   long combined run) — not investigated yet; worth a look if it recurs.
-5. **ACD-119** (new this session) — Dependabot PR #137 (`@sentry/react`
-   10→11 major-version bump) merged to `main` previously, outside a
-   session — still not re-verified against `sentry.js`'s API usage.
-6. **ACD-120** (new this session) — the `openClientTab` Playwright helper
-   bug, carried forward across several prior handoffs without its own
-   ticket. Confirmed via JQL that ACD-105/106/109-113 do not cover it.
-   Everything else from the ACD-82 through ACD-98 handoffs' outstanding
-   items (ACD-113, ACD-112, ACD-111, ACD-109, ACD-110, ACD-105, ACD-106)
-   — see git history for earlier handoff versions if needed.
+4. **ACD-118** — the Login-page a11y test flakiness noted in the ACD-99 QA
+   report (passed in isolation, failed once in a long combined run) — not
+   investigated yet; worth a look if it recurs.
+5. **ACD-119** — Dependabot PR #137 (`@sentry/react` 10→11 major-version
+   bump) merged to `main` previously, outside a session — still not
+   re-verified against `sentry.js`'s API usage.
+6. **ACD-120** — the `openClientTab` Playwright helper bug, carried forward
+   across several prior handoffs without its own ticket. Still outstanding.
 7. 4 open Dependabot dependency-bump PRs still open as of this session's
    close (#133 react-dom 18→19, #134 vite 5→8.3.4, #135
    @vitejs/plugin-react 4→6.1.2, #136 tailwindcss 3→4.3.3) — all
    major-version bumps, none reviewed or merged yet, overlapping with
    ACD-115's scope. Unchanged from prior handoffs.
-8. GitHub's 5 Dependabot *vulnerability alerts* (1 high, 4 moderate) —
-   confirmed this session (`gh api repos/Luchot93/aba-shield-mvp/dependabot/alerts`)
-   all 5 are on `vite`/`esbuild`/`postcss-selector-parser`, i.e. fully
-   covered by **ACD-115**'s existing scope (Tailwind/Vite major-version
-   upgrade). No separate ticket needed — resolved once ACD-115 lands.
-9. **ACD-121** (new this session) — ACD-100's own "out of scope"
-   follow-up: a document-signature-request notification (flagging that
-   a specific document, e.g. a treatment plan, is awaiting a signed
-   reupload). Needs a decision on how a "reupload" gets explicitly
-   represented (e.g. a `supersedes_id` or `status` column) before it can
-   be built — not started.
+8. GitHub's 5 Dependabot *vulnerability alerts* (1 high, 4 moderate) — all 5
+   on `vite`/`esbuild`/`postcss-selector-parser`, fully covered by
+   **ACD-115**'s existing scope. No separate ticket needed.
+9. **ACD-121** — ACD-100's own "out of scope" follow-up: a
+   document-signature-request notification. Needs a decision on how a
+   "reupload" gets explicitly represented before it can be built — not
+   started.
+10. **New, surfaced by this session's architecture discussion but not
+    pursued**: the user asked how to make admin-sees-all consistent across
+    Pipeline/Client/Assessment/Sessions. Answer was "it mostly already is" —
+    `can_access_client()` already covers Pipeline (`clients`),
+    Client-detail child tables, and Sessions logs; `assessment_sessions` was
+    the only outlier, now fixed by this session. No remaining known gaps in
+    this pattern, but if a *new* client-scoped table is added later, it
+    should use `can_access_client()` from the start rather than inventing a
+    fresh ownership-only policy — the same mistake `assessment_sessions` had.

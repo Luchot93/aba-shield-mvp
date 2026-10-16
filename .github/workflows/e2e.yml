@@ -15,7 +15,15 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
       - run: npx playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+      - run: npx playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
       # VITE_E2E=1 is set by playwright.config.js's webServer command, so the app
       # boots with the mock Supabase seam. No secrets needed: auth, data, and
       # storage are all in-memory. CI=1 (set by GitHub Actions) → headless + retries.

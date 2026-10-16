@@ -4,62 +4,83 @@ _Last updated: 2026-10-16_
 
 ## 1. Goal we are moving towards
 
-Ticket-driven session: [ACD-107](https://awcbehavioralhealth.atlassian.net/browse/ACD-107)
-— "Cache Playwright browser binary in E2E CI workflow." `.github/workflows/e2e.yml` had no
-cache for the Chromium binary, so every CI run re-downloaded it from scratch via
-`npx playwright install --with-deps chromium`. A run during the ACD-74 PR session
-(2026-09-30) took 6m46s on that step vs. a normal ~33s baseline — diagnosed at the time as
-transient CI runner/network variance, but the lack of caching meant this class of slowdown
-could recur unpredictably.
+Ticket-driven session: [ACD-110](https://awcbehavioralhealth.atlassian.net/browse/ACD-110)
+— "Rewrite stale Playwright Staff suite for real-backend invite/edit/revoke/bulk-import flow."
+The old Staff Page suite in `tests/pipeline.spec.js` was written against a local-state-only mock
+(hardcoded seed counts/IDs, synchronous invite/revoke) that ACD-76 had already made stale by
+switching Staff invite/edit/revoke/bulk-import to a real `manage-staff` edge-function-shaped flow
+(mocked via `VITE_E2E=1` in E2E, not real Supabase). The suite needed a new test approach, not
+just touch-ups, and was carrying real coverage gaps (no bulk-import tests, no NPI-validation
+error-path test, no empty-date-persists-as-null test).
 
-**Status: done.** Added an `actions/cache@v4` step for `~/.cache/ms-playwright`, keyed on
-the hash of `package-lock.json` (busts automatically when the pinned `@playwright/test`
-version changes). On a cache hit, skips the full install and only runs
-`playwright install-deps chromium` for OS-level deps; on a miss, falls back to the original
-full install. `feat/ACD-107-cache-playwright-ci-binary` → `dev` (PR #158) → `main` (PR #159),
-both merged. Jira ACD-107 commented with a plain-English explanation and moved to Done.
+A side question came up mid-session: whether the bulk-invite tests would fail because of
+ACD-101 (DNS/Resend domain verification still unresolved). Traced through
+`supabase/functions/manage-staff/index.ts` and confirmed the mock backend
+(`src/lib/e2e/mockSupabase.js`) never calls `auth.admin.inviteUserByEmail()` — it only validates
+the payload and writes to the in-memory store — so ACD-101 has zero effect on these tests.
+
+**Status: done.** All 6 planned sub-tasks implemented, verified, and shipped.
 
 ## 2. Current state of the code
 
 **Merged and live on both `dev` and `main`.**
 
-- **Change**: `.github/workflows/e2e.yml` — added the `actions/cache@v4` step plus
-  conditional `if:` branches on the two install steps (full install on cache miss,
-  `install-deps` only on cache hit).
-- **Validated before commit**: workflow YAML parsed cleanly with `js-yaml`, and `actionlint`
-  (downloaded fresh, run once, then removed) reported zero issues.
-- **Verified live on `main` after merge**: watched [run 38934355058](https://github.com/Luchot93/aba-shield-mvp/actions/runs/38934355058)
-  to completion — overall conclusion `success`. Confirmed step-by-step: `actions/cache@v4`
-  ran (cache miss, expected on the very first run with this workflow), the full
-  `playwright install --with-deps chromium` step ran and succeeded, the cache-hit fallback
-  step correctly **skipped**, `test:e2e` passed, artifact upload succeeded, and
-  `Post Run actions/cache@v4` saved the cache for the next run. The *next* push to `main`
-  should hit the cache and skip the full Chromium download — not yet observed, since no
-  further push has happened since.
-- Feature branch `feat/ACD-107-cache-playwright-ci-binary` still exists on GitHub (not
-  deleted, per standing policy of not pruning branches as an automatic follow-on to a merge).
+- **Change**: `tests/pipeline.spec.js` — Staff Page describe block only:
+  - Added `window.__E2E_RESET__?.()` call to `beforeEach`, matching the existing
+    `import.spec.js` reset-isolation pattern, so Staff tests no longer leak state across runs.
+  - De-hardcoded seed-derived counts/IDs (total staff, BCBA/BCaBA count, RBT count, active
+    count, search-by-name/cert-number targets) to compute from `SEED_STAFF()` instead of magic
+    numbers/strings — satisfies ACD-110's AC3 ("no hardcoded seed-data counts/IDs remain").
+  - Added `'Save edit with cert expiry cleared persists as empty, not the old value'` — confirms
+    `StaffCard.jsx`'s `handleEditSave` null-coercion round-trips end-to-end.
+  - Added `'invite with invalid NPI surfaces the backend validation error'` — the one
+    invite-time validation error from `manage-staff`'s mock reachable through real UI
+    interaction (duplicate-email is caught client-side first); exercises `functionError.js`'s
+    fallback path (no `friendlyInviteError` branch for this message, so the raw backend string
+    surfaces verbatim).
+  - Added `'bulk import CSV happy path invites new staff'` and `'bulk import flags an existing
+    staff email as already in system'` — new coverage for `BulkInvitePanel.jsx`'s 3-step
+    drop/map/preview flow, using the same in-memory `Buffer.from(...)` CSV-construction pattern
+    `import.spec.js` already uses (no on-disk fixtures).
+  - Deliberately left untouched: `'expanded card shows assigned clients'` (still hardcodes
+    `staff-card-u2`/`'Emma Thompson'`) — judged out of scope, validates a Pipeline/Clients
+    fixture relationship, not a Staff seed count.
+- **Validated before commit**: ran the Staff Page subset alone (23/23 passed), then the full
+  `tests/pipeline.spec.js` file (90 passed, 0 failed, 28 skipped — the skips are the
+  `gated(FLAGS.METRICS)`/`gated(FLAGS.REASSESSMENT)` suites, correctly inactive given current
+  flag state, not a regression).
+- `ACD-110-rewrite-staff-playwright-suite` → `dev` ([PR #160](https://github.com/Luchot93/aba-shield-mvp/pull/160)) → `main`
+  ([PR #161](https://github.com/Luchot93/aba-shield-mvp/pull/161)), both merged. Jira ACD-110
+  commented with a plain-English explanation (including the ACD-101-independence finding) and
+  moved to Done.
+- Local `main` and `dev` fast-forwarded to match `origin/main`/`origin/dev` at session close.
+- Feature branch `ACD-110-rewrite-staff-playwright-suite` still exists on GitHub (not deleted,
+  per standing policy of not pruning branches as an automatic follow-on to a merge).
 
 ## 3. Files actively being edited
 
-None — everything from this session is committed, merged, and deployed. Touched this
-session: `.github/workflows/e2e.yml`, and `handoff.md` itself at session close.
+None — everything from this session is committed, merged, and deployed. Touched this session:
+`tests/pipeline.spec.js`, and `handoff.md` itself at session close.
 
 ## 4. Everything tried that failed / walked back
 
-Nothing walked back. One self-correction worth noting: local YAML/`actionlint` validation
-was requested and done *before* committing, not after — no round-trip of "commit, discover
-a syntax problem, fix" occurred.
+Nothing walked back. All test assertions (preview/result banner text, toast error text, CSV
+auto-mapping behavior) were derived by careful static reading of `BulkInvitePanel.jsx`,
+`mockSupabase.js`, and `functionError.js` before writing the tests, then verified correct on
+the first full test run — no round-trip of "write test, run, discover wrong assertion, fix"
+was needed.
 
 ## 5. Next steps
 
-No ticket is actively in progress. Backlog carried forward, with ACD-107 now removed
+No ticket is actively in progress. Backlog carried forward, with ACD-110 now removed
 (resolved this session):
 
 1. **ACD-115** (Tailwind/Vite major-version upgrade, from ACD-94) — still unstarted.
 2. Carried over from ACD-92 — the follow-up re-test of `manage-staff`'s invite happy-path
    once Supabase's invite emails aren't rate-limited. Still unstarted.
 3. **ACD-101** (DNS/Resend domain verification) — still To Do, unassigned, still blocked on
-   owning/controlling a real domain. Unchanged.
+   owning/controlling a real domain. Unchanged. (Confirmed this session, incidentally, that it
+   does NOT block Staff E2E test coverage — see section 1.)
 4. **ACD-118** — the Login-page a11y test flakiness noted in the ACD-99 QA report (passed in
    isolation, failed once in a long combined run) — not investigated yet; worth a look if it
    recurs.
@@ -68,19 +89,14 @@ No ticket is actively in progress. Backlog carried forward, with ACD-107 now rem
    usage.
 6. **ACD-120** — the `openClientTab` Playwright helper bug, carried forward across several
    prior handoffs without its own ticket. Still outstanding.
-7. **Dependabot PR set has changed since the last handoff** — re-checked live during this
-   session's close rather than copied forward stale: 5 open PRs now, not 4. #133
-   (react-dom 18→19), #135 (@vitejs/plugin-react 4→6.1.2), and #136 (tailwindcss 3→4.3.3)
-   are still open and unreviewed. The old #134 (vite 5→8.3.4 alone) appears superseded by
-   two new PRs: **#156** (grouped minor-and-patch bump, 4 updates) and **#157** (vite
-   5.4.21→8.3.4). None of these 5 reviewed or merged yet; all overlap with ACD-115's scope.
-8. GitHub's Dependabot *vulnerability alerts* (previously reported as 1 high, 4 moderate) —
-   not re-checked this session; last known status fully covered by **ACD-115**'s existing
-   scope. Worth a fresh check next time since the PR set above changed. No separate ticket
-   needed.
-9. **ACD-121** — ACD-100's own "out of scope" follow-up: a document-signature-request
+7. Dependabot PR set — not re-checked this session beyond the incidental "5 vulnerabilities
+   (1 high, 4 moderate)" notice GitHub printed on push, matching the last known count. Worth a
+   full fresh check (open PR list + vulnerability alerts) next session since it's been a couple
+   sessions since the last real audit. All known overlap with ACD-115's scope. No separate
+   ticket needed beyond that.
+8. **ACD-121** — ACD-100's own "out of scope" follow-up: a document-signature-request
    notification. Needs a decision on how a "reupload" gets explicitly represented before it
    can be built — not started.
-10. No remaining known gaps in the `can_access_client()` admin-access pattern (confirmed
-    during the ACD-112 session); if a *new* client-scoped table is added later, it should use
-    `can_access_client()` from the start.
+9. No remaining known gaps in the `can_access_client()` admin-access pattern (confirmed
+   during the ACD-112 session); if a *new* client-scoped table is added later, it should use
+   `can_access_client()` from the start.

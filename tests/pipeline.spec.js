@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { FLAGS } from '../src/constants/featureFlags.js';
 import { loginAsAdmin as baseLogin } from './helpers/auth.js';
+import { SEED_STAFF } from '../src/constants/seedData.js';
 
 // Every describe in this file exercises Phase-2 surfaces gated by a feature flag
 // (Pipeline, Staff, Metrics, Reassessment). Each block auto-skips while its flag is
@@ -555,16 +556,28 @@ gated(FLAGS.PIPELINE)('ABA Shield — Clients Page', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 gated(FLAGS.STAFF)('ABA Shield — Staff Page', () => {
 
+  // Derived from the live seed rather than hardcoded, so these stay correct if
+  // SEED_STAFF() ever changes (ACD-110).
+  const seedStaff       = SEED_STAFF();
+  const totalStaffCount = seedStaff.length;
+  const bcbaCount       = seedStaff.filter(s => s.role === 'bcba' || s.role === 'bcaba').length;
+  const rbtCount        = seedStaff.filter(s => s.role === 'rbt').length;
+  const activeCount     = seedStaff.filter(s => s.status === 'active').length;
+  const s1              = seedStaff.find(s => s.id === 's1');
+  const rachelFirstName = s1.name.split(' ')[1];
+
   test.beforeEach(async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => window.__E2E_RESET__?.());
     await loginAsAdmin(page);
     await page.getByRole('button', { name: 'Staff' }).click();
     await page.waitForSelector('[data-testid="staff-page"]');
   });
 
   // ── Grid renders ──────────────────────────────────────────────────────────
-  test('shows all 12 seed staff cards', async ({ page }) => {
+  test('shows all seed staff cards', async ({ page }) => {
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(12);
+    await expect(cards).toHaveCount(totalStaffCount);
   });
 
   test('stats strip shows correct totals', async ({ page }) => {
@@ -575,28 +588,28 @@ gated(FLAGS.STAFF)('ABA Shield — Staff Page', () => {
   });
 
   // ── Tabs ─────────────────────────────────────────────────────────────────
-  test('BCBAs tab shows only 5 BCBAs', async ({ page }) => {
+  test('BCBAs tab shows only BCBA/BCaBA staff', async ({ page }) => {
     await page.getByTestId('tab-bcbas').click();
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(5);
+    await expect(cards).toHaveCount(bcbaCount);
   });
 
-  test('RBTs tab shows only 7 RBTs', async ({ page }) => {
+  test('RBTs tab shows only RBT staff', async ({ page }) => {
     await page.getByTestId('tab-rbts').click();
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(7);
+    await expect(cards).toHaveCount(rbtCount);
   });
 
   // ── Search ────────────────────────────────────────────────────────────────
   test('search by name filters cards', async ({ page }) => {
-    await page.locator('[data-testid="staff-search"]').fill('Rachel');
+    await page.locator('[data-testid="staff-search"]').fill(rachelFirstName);
     const cards = page.locator('[data-testid="staff-grid"] > div');
     await expect(cards).toHaveCount(1);
-    await expect(cards.first()).toContainText('Rachel Kim');
+    await expect(cards.first()).toContainText(s1.name);
   });
 
   test('search by cert number filters cards', async ({ page }) => {
-    await page.locator('[data-testid="staff-search"]').fill('BCBA-112233');
+    await page.locator('[data-testid="staff-search"]').fill(s1.cert_number);
     const cards = page.locator('[data-testid="staff-grid"] > div');
     await expect(cards).toHaveCount(1);
   });
@@ -610,16 +623,15 @@ gated(FLAGS.STAFF)('ABA Shield — Staff Page', () => {
   // ── Filter chips ──────────────────────────────────────────────────────────
   test('Available filter shows only active staff', async ({ page }) => {
     await page.getByTestId('staff-filter-available').click();
-    // 12 active in seed data (u2 + u4 + s1-s10)
     const cards = page.locator('[data-testid="staff-grid"] > div');
-    await expect(cards).toHaveCount(12);
+    await expect(cards).toHaveCount(activeCount);
   });
 
   // ── Card expand ───────────────────────────────────────────────────────────
   test('clicking card expands to show email and details', async ({ page }) => {
     await page.locator('[data-testid="staff-card-s1"]').click();
     await expect(page.locator('[data-testid="staff-expanded-s1"]')).toBeVisible();
-    await expect(page.locator('[data-testid="staff-expanded-s1"]')).toContainText('r.kim@abashield.com');
+    await expect(page.locator('[data-testid="staff-expanded-s1"]')).toContainText(s1.email);
   });
 
   test('expanded card shows assigned clients', async ({ page }) => {
@@ -643,7 +655,7 @@ gated(FLAGS.STAFF)('ABA Shield — Staff Page', () => {
     await page.locator('[data-testid="edit-cert-number-s1"]').fill('BCBA-CHANGED');
     await page.getByTestId('staff-card-s1').locator('text=Cancel').click();
     await expect(page.locator('[data-testid="edit-form-s1"]')).not.toBeVisible();
-    await expect(page.locator('[data-testid="staff-card-s1"]')).toContainText('BCBA-112233');
+    await expect(page.locator('[data-testid="staff-card-s1"]')).toContainText(s1.cert_number);
   });
 
   test('Save edit updates the card', async ({ page }) => {
@@ -652,6 +664,20 @@ gated(FLAGS.STAFF)('ABA Shield — Staff Page', () => {
     await page.locator('[data-testid="edit-cert-number-s1"]').triple_click?.() || await page.locator('[data-testid="edit-cert-number-s1"]').fill('BCBA-UPDATED');
     await page.locator('[data-testid="save-staff-s1"]').click();
     await expect(page.locator('[data-testid="edit-form-s1"]')).not.toBeVisible();
+  });
+
+  // StaffCard.jsx's handleEditSave converts an emptied date input to `null`
+  // before calling onEdit, since a `date` column rejects `''`. Confirms that
+  // conversion round-trips correctly end-to-end, not just that the field exists.
+  test('Save edit with cert expiry cleared persists as empty, not the old value', async ({ page }) => {
+    await page.locator('[data-testid="staff-card-s1"]').click();
+    await page.locator('[data-testid="edit-staff-s1"]').click();
+    await page.locator('[data-testid="edit-cert-expiry-s1"]').fill('');
+    await page.locator('[data-testid="save-staff-s1"]').click();
+    await expect(page.locator('[data-testid="edit-form-s1"]')).not.toBeVisible();
+
+    await page.locator('[data-testid="edit-staff-s1"]').click();
+    await expect(page.locator('[data-testid="edit-cert-expiry-s1"]')).toHaveValue('');
   });
 
   // ── Invite panel ──────────────────────────────────────────────────────────
@@ -716,6 +742,69 @@ gated(FLAGS.STAFF)('ABA Shield — Staff Page', () => {
     const list = page.locator('[data-testid="pending-invites-list"]');
     const panel = page.locator('[data-testid="invite-panel"]');
     await expect(panel).not.toContainText('Revoke Me');
+  });
+
+  // S1's email-duplicate error is intercepted client-side (InvitePanel's
+  // existingEmails check) before any request reaches the backend, so it isn't
+  // reachable through real UI interaction. NPI format is NOT checked client-side,
+  // so it's the one invite-time validation error from manage-staff's mock that a
+  // real user flow can actually trigger — exercises functionError.js's fallback
+  // path (no friendlyInviteError branch for this specific message).
+  test('invite with invalid NPI surfaces the backend validation error', async ({ page }) => {
+    await page.locator('[data-testid="invite-btn"]').click();
+    await page.locator('[data-testid="role-bcba"]').click();
+    await page.locator('[data-testid="invite-name"]').fill('Dr. Bad NPI');
+    await page.locator('[data-testid="invite-email"]').fill('bad.npi@clinic.com');
+    await page.locator('[data-testid="invite-npi"]').fill('123');
+    await page.locator('[data-testid="invite-submit"]').click();
+    await expect(page.locator('[data-testid="staff-toast"]')).toBeVisible();
+    await expect(page.locator('[data-testid="staff-toast"]')).toContainText('npi must be exactly 10 digits');
+    // Rejected invite must not appear anywhere in the grid or pending list.
+    await expect(page.locator('[data-testid="staff-grid"]')).not.toContainText('Dr. Bad NPI');
+  });
+
+  // ── Bulk import ───────────────────────────────────────────────────────────
+  const BULK_CSV_HEADERS = 'Full name,Email,Role';
+  function bulkCsvBuffer(rows) {
+    return Buffer.from([BULK_CSV_HEADERS, ...rows].join('\n'), 'utf-8');
+  }
+  async function uploadBulkCsv(page, buffer) {
+    await page.locator('[data-testid="bulk-import-btn"]').click();
+    await page.getByTestId('bulk-invite-panel').waitFor();
+    await page.getByTestId('bulk-invite-panel').locator('input[type=file]')
+      .setInputFiles({ name: 'staff.csv', mimeType: 'text/csv', buffer });
+    await page.getByTestId('bulk-invite-mapping').waitFor();
+    await page.getByRole('button', { name: /Preview/ }).click();
+    await page.getByTestId('bulk-invite-preview').waitFor();
+  }
+
+  test('bulk import CSV happy path invites new staff', async ({ page }) => {
+    const before = await page.locator('[data-testid="staff-grid"] > div').count();
+    await uploadBulkCsv(page, bulkCsvBuffer([
+      'Dr. Noor Ibrahim,noor.ibrahim@clinic.com,BCBA',
+      'Sam Okafor,sam.okafor@clinic.com,RBT',
+    ]));
+
+    await expect(page.getByTestId('bulk-invite-preview')).toContainText('2 new staff members ready');
+    await page.getByTestId('bulk-invite-submit').click();
+
+    await expect(page.getByTestId('bulk-invite-results')).toContainText('2 of 2 invitations sent successfully');
+    await page.getByTestId('bulk-invite-done').click();
+
+    await expect(page.locator('[data-testid="staff-grid"]')).toContainText('Dr. Noor Ibrahim');
+    await expect(page.locator('[data-testid="staff-grid"]')).toContainText('Sam Okafor');
+    await expect(page.locator('[data-testid="staff-grid"] > div')).toHaveCount(before + 2);
+  });
+
+  test('bulk import flags an existing staff email as already in system', async ({ page }) => {
+    await uploadBulkCsv(page, bulkCsvBuffer([
+      'Brand New Hire,new.hire@clinic.com,RBT',
+      `${s1.name},${s1.email},BCBA`,
+    ]));
+
+    const summary = page.getByTestId('bulk-invite-preview');
+    await expect(summary).toContainText('1 new staff member ready');
+    await expect(summary).toContainText('1 already in system');
   });
 
 });
